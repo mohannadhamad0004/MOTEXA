@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment variables and secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Expo
+.expo/
+**/.expo/
+dist/
+web-build/
+
+# Generated files
+backend/src/generated/
+**/generated/prisma/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local files
+.DS_Store
+Thumbs.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Build output
+build/
+coverage/
