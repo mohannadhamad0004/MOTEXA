@@ -1,0 +1,95 @@
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  CUSTOMER
+  MECHANIC
+  PARTS_PROVIDER
+  TOW_PROVIDER
+}
+
+enum AccountStatus {
+  ACTIVE
+  PENDING
+  SUSPENDED
+  REJECTED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+}
+
+model User {
+  id           String        @id @default(uuid())
+  fullName     String
+  email        String        @unique
+  passwordHash String
+  role         UserRole
+  status       AccountStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  adminPermissions AdminPermission[]
+
+  sentInvitations AdminInvitation[] @relation("InvitationSender")
+  acceptedInvitation AdminInvitation? @relation("InvitationRecipient")
+
+  @@index([role, status])
+}
+
+model AdminPermission {
+  id         String @id @default(uuid())
+  adminId    String
+  permission String
+
+  admin User @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@unique([adminId, permission])
+}
+
+
+model AdminInvitation {
+  id        String @id @default(uuid())
+  email     String
+  fullName  String
+  tokenHash String @unique
+
+  status      InvitationStatus @default(PENDING)
+  expiresAt   DateTime
+ permission String
+
+  invitedById String
+  invitedBy   User @relation("InvitationSender", fields: [invitedById], references: [id])
+
+  acceptedById String? @unique
+  acceptedBy   User? @relation("InvitationRecipient", fields: [acceptedById], references: [id])
+
+  createdAt  DateTime @default(now())
+  acceptedAt DateTime?
+
+  @@index([email, status])
+}
+
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actorId   String?
+  action    String
+  targetId  String?
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@index([actorId, createdAt])
+}

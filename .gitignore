@@ -1,0 +1,36 @@
+node_modules/
+**/node_modules/
+
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+.expo/
+**/.expo/
+dist/
+web-build/
+
+backend/src/generated/
+**/generated/prisma/
+
+*.log
+build/
+coverage/
+
+*.db
+*.sqlite
+*.sqlite3
+
+Thumbs.db
+Desktop.ini
+# Local AI development tools
+**/.agents/
+**/.claude/
+**/.cursor/
+**/.codex/
+**/.windsurf/
+# Additional development tool files
+**/.devin/
