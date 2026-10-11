@@ -1,0 +1,229 @@
+/* Directory row: ruled, flat, scannable. Photo | identity + skills | trust + rating + services | actions. */
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-5) 0;
+  border-bottom: 1px solid var(--color-border);
+  transition: background-color var(--transition-fast);
+}
+
+.row:hover {
+  background: var(--color-surface-subtle);
+}
+
+.row:focus-within {
+  box-shadow: inset 2px 0 0 var(--color-primary);
+}
+
+.photo {
+  grid-row: 1 / span 2;
+  width: 112px;
+  height: 112px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  background: var(--color-surface-subtle);
+}
+
+/* No workshop photo: the mechanic's avatar, centered in the same slot */
+.portrait {
+  grid-row: 1 / span 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 112px;
+  height: 112px;
+}
+
+@media (min-width: 768px) {
+  .portrait {
+    width: 160px;
+    height: 120px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .portrait {
+    grid-row: 1;
+    width: 176px;
+    height: 132px;
+  }
+}
+
+.main,
+.meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.name {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.link {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+/* The whole row follows the workshop name; the actions sit above it */
+.link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.link:focus-visible {
+  outline: none;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.inline {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.inline li + li::before {
+  content: '·';
+  margin-inline: var(--space-2);
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-regular);
+}
+
+.hit {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-extrabold);
+}
+
+.trust {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  grid-column: 2;
+}
+
+.meta {
+  grid-column: 2;
+}
+
+@media (min-width: 768px) {
+  .row {
+    grid-template-columns: 160px minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: var(--space-5);
+  }
+
+  .photo {
+    grid-row: 1 / span 2;
+    width: 160px;
+    height: 120px;
+  }
+
+  .main {
+    grid-column: 2;
+  }
+
+  .meta {
+    grid-column: 3;
+  }
+
+  .actions {
+    grid-column: 2 / span 2;
+  }
+}
+
+@media (min-width: 1280px) {
+  .row {
+    grid-template-columns: 176px minmax(0, 5fr) minmax(0, 4fr) auto;
+    align-items: start;
+  }
+
+  .photo {
+    grid-row: 1;
+    width: 176px;
+    height: 132px;
+  }
+
+  .actions {
+    grid-column: 4;
+    grid-row: 1;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+}
+
+/* Compact (map page list): the whole row is one button */
+.compactItem {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.compact {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-left: 3px solid transparent;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.compact:hover {
+  background: var(--color-surface-subtle);
+}
+
+.compact[aria-pressed='true'] {
+  border-left-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.compact:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+
+.compactText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.compactName {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1.25;
+}
+
+.compact .muted {
+  font-size: var(--font-size-sm);
+}

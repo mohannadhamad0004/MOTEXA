@@ -1,0 +1,36 @@
+/* The "Need a tow now?" line under the rail's search: a quiet text button */
+.nowButton {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  text-align: left;
+  cursor: pointer;
+}
+
+.nowButton:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.nowButton:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.nowButton:focus-visible {
+  outline: none;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--focus-ring);
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+}

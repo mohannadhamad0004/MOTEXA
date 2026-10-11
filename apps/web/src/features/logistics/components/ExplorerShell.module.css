@@ -1,0 +1,275 @@
+/* The map workspace shared by /mechanics/map and /tow-companies/map (see ExplorerShell.jsx): a list rail
+   (400px) + the map, filling the screen under the navbar. The rail pieces (.top, .back, .kicker, .title,
+   .filters, .bar, .listArea, .list ...) are used by the pages that fill the rail. */
+.workspace {
+  --rail: 400px;
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0, 1fr);
+  height: calc(100dvh - var(--navbar-height) - 1px); /* the navbar's bottom border */
+  min-height: 560px;
+  overflow: hidden;
+}
+
+@media (max-width: 1023px) {
+  .workspace {
+    --rail: 340px;
+  }
+}
+
+/* ---- Rail ---- */
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.top {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.back {
+  align-self: flex-start;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.kicker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: calc(-1 * var(--space-2));
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.kicker::before {
+  content: '';
+  width: 24px;
+  height: 2px;
+  background: currentColor;
+}
+
+.title {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.filters {
+  border-top: 1px solid var(--color-border);
+}
+
+.filtersSummary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.filtersSummary:focus-visible {
+  outline: none;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--focus-ring);
+}
+
+.filters[open] .filtersSummary {
+  color: var(--color-primary);
+}
+
+.filters > div {
+  padding-bottom: var(--space-2);
+}
+
+.bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.count {
+  color: var(--color-text-muted);
+}
+
+.count strong {
+  color: var(--color-text);
+  font-size: var(--font-size-lg);
+}
+
+.sort {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 130px;
+}
+
+.sortLabel {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.listArea {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Leave room for the inspector so the last rows are never hidden under it */
+.listArea:last-child {
+  padding-bottom: var(--space-4);
+}
+
+.clear {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.clear:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* ---- Map ---- */
+
+.mapPane {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* The map fills the pane: no card, border or rounded corners. isolation keeps Leaflet's layers below the inspector. */
+.mapHost {
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
+}
+
+.mapHost > div,
+.mapHost > div > div {
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+/* ---- Selected provider: a compact panel over the map; a bottom bar on phones ---- */
+
+.inspector {
+  position: absolute;
+  bottom: var(--space-4);
+  left: calc(var(--rail) + var(--space-4));
+  z-index: 2;
+  width: min(420px, calc(100% - var(--rail) - 2 * var(--space-4)));
+  max-height: calc(100% - 2 * var(--space-4));
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ---- Phones: List | Map ---- */
+
+.switch {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .switch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg);
+  }
+
+  .switchButton {
+    min-height: 48px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    color: var(--color-text-muted);
+    font: inherit;
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-bold);
+    cursor: pointer;
+  }
+
+  .switchButton[aria-pressed='true'] {
+    border-bottom-color: var(--color-primary);
+    color: var(--color-text);
+    font-weight: var(--font-weight-extrabold);
+  }
+
+  .switchButton:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--color-primary);
+  }
+
+  .workspace[data-view='list'] .mapPane,
+  .workspace[data-view='map'] .rail {
+    display: none;
+  }
+
+  /* On a phone the whole list view scrolls, header included */
+  .rail {
+    overflow-y: auto;
+    border-right: 0;
+  }
+
+  .listArea {
+    flex: none;
+    overflow: visible;
+  }
+
+  /* With a provider selected the bar covers the bottom of the screen: the list keeps room under its last row */
+  .workspace[data-selected] .rail {
+    padding-bottom: 150px;
+  }
+
+  .inspector {
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    max-height: 40%;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+  }
+}

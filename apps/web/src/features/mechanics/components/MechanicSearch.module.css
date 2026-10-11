@@ -1,0 +1,127 @@
+/* One ruled search: underline tabs, one big field, one button. No surrounding card. */
+.search {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.search [role='tab'] {
+  padding-inline: var(--space-4);
+  font-size: var(--font-size-md);
+}
+
+.search [role='tab']:first-child {
+  padding-left: 0;
+}
+
+.search [role='tab'][aria-selected='true'] {
+  font-weight: var(--font-weight-extrabold);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+
+.panel {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The shared quiet SearchBar and the city field, set at the same large size */
+.panel form {
+  width: 100%;
+}
+
+.panel input[type='search'],
+.input {
+  width: 100%;
+  min-height: 64px;
+  padding-block: 0;
+  padding-inline-end: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: clamp(1.125rem, 1rem + 0.6vw, 1.5rem);
+  font-weight: var(--font-weight-semibold);
+}
+
+.panel input::placeholder {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-regular);
+}
+
+/* The city field has no magnifier, so no room is kept for one */
+.input {
+  padding-inline-start: 0;
+}
+
+.panel input:focus-visible {
+  outline: none;
+  box-shadow: inset 0 -3px 0 var(--color-primary);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The small technical label above the field */
+.label {
+  margin-bottom: calc(-1 * var(--space-2));
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hint {
+  color: var(--color-text-muted);
+}
+
+.hint strong {
+  color: var(--color-text);
+}
+
+@media (max-width: 479px) {
+  .row {
+    flex-wrap: wrap;
+    border-bottom: 0;
+  }
+
+  .panel {
+    flex-basis: 100%;
+    border-bottom: 1px solid var(--color-border-strong);
+  }
+
+  .button {
+    flex: 1;
+  }
+}
+
+/* Compact: the list rail of the map page */
+.compact .row {
+  gap: var(--space-2);
+}
+
+.compact [role='tab'] {
+  padding-inline: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.compact [role='tab']:first-child {
+  padding-left: var(--space-2);
+}
+
+.compact .panel input[type='search'],
+.compact .input {
+  min-height: 48px;
+  font-size: var(--font-size-md);
+}

@@ -6,3 +6,6 @@ dist/
 *.log
 .idea/
 .DS_Store
+
+.playwright-mcp/
+/*.png
