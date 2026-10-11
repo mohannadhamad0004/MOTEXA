@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 import { SkeletonRows } from '../../../components/Skeleton.jsx'
-import StatusBadge from '../../../components/StatusBadge.jsx'
+import StatusIndicator from '../../../components/StatusIndicator.jsx'
 import { formatDate } from '../../../utils/formatDate.js'
 import { REQUEST_TYPE_LABELS, requestStatusBadge } from '../constants.js'
 import { summarizeRequest, TARGET_PATHS } from '../format.js'
@@ -33,7 +33,7 @@ export default function MyRequestsList() {
               {REQUEST_TYPE_LABELS[request.type]} to{' '}
               <Link to={TARGET_PATHS[request.target.type](request.target.id)}>{request.target.name}</Link>
             </p>
-            <StatusBadge {...requestStatusBadge(request.status)} />
+            <StatusIndicator {...requestStatusBadge(request.status)} />
           </div>
           <p className={styles.summary}>{summarizeRequest(request)}</p>
           <p className={styles.muted}>

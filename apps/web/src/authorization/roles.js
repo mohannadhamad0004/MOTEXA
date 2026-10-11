@@ -1,4 +1,4 @@
-// The five FastFix roles. Use these constants instead of typing role strings by hand.
+// The five MOTEXA roles. Use these constants instead of typing role strings by hand.
 // parts_shop and tow are company accounts, not individuals.
 export const ROLES = Object.freeze({
   CUSTOMER: 'customer',

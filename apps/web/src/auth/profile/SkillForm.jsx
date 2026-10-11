@@ -36,8 +36,8 @@ export default function SkillForm({ skill = null, listedSkills, isOnlyApproved =
     if (saved) {
       onDone(
         skill
-          ? `${skill.skill} was sent to FastFix for review.`
-          : `${values.skill} was added. It appears on your public profile once FastFix approves it.`,
+          ? `${skill.skill} was sent to MOTEXA for review.`
+          : `${values.skill} was added. It appears on your public profile once MOTEXA approves it.`,
       )
     }
   }
@@ -46,7 +46,7 @@ export default function SkillForm({ skill = null, listedSkills, isOnlyApproved =
     <form className={styles.form} onSubmit={handleSubmit} noValidate>
       {skill ? (
         <Notice tone={isOnlyApproved ? 'warning' : 'info'}>
-          A new certificate or new years of experience sends {skill.skill} back to FastFix for review. It is hidden
+          A new certificate or new years of experience sends {skill.skill} back to MOTEXA for review. It is hidden
           from your public profile until it is approved again.
           {isOnlyApproved && ' This is your only approved skill, so your profile will show no skills meanwhile.'}
         </Notice>

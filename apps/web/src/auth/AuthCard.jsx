@@ -8,7 +8,7 @@ const BENEFITS = [
 ]
 
 // Card used by the login, signup, password and approval pages. On desktop the narrow version sits
-// beside a FastFix value panel (a split screen); `wide` fits longer content such as the signup
+// beside a MOTEXA value panel (a split screen); `wide` fits longer content such as the signup
 // steps and has no panel. Phones get the card alone.
 export default function AuthCard({ title, subtitle, wide = false, footer, children }) {
   const card = (
@@ -34,7 +34,7 @@ export default function AuthCard({ title, subtitle, wide = false, footer, childr
 
   return (
     <div className={`${styles.wrapper} ${styles.split}`}>
-      <aside className={styles.brand} aria-label="Why FastFix">
+      <aside className={styles.brand} aria-label="Why MOTEXA">
         <p className={styles.brandTitle}>
           Car care you can <span className={styles.brandAccent}>trust</span>.
         </p>

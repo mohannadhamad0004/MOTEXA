@@ -1,5 +1,5 @@
 import Button from '../../../components/Button.jsx'
-import StatusBadge from '../../../components/StatusBadge.jsx'
+import StatusIndicator from '../../../components/StatusIndicator.jsx'
 import { formatFileSize } from '../../../utils/files.js'
 import { formatDuration } from '../../diagnosis/mediaRules.js'
 import { formatDateTime } from '../../requests/format.js'
@@ -31,7 +31,7 @@ export default function ScanStatusCard({ scan, active = false, onUse, onDelete, 
             {what} · {formatDateTime(scan.createdAt)}
           </p>
         </div>
-        <StatusBadge label={SCAN_STATUS_LABELS[scan.status]} tone={SCAN_STATUS_TONES[scan.status]} />
+        <StatusIndicator label={SCAN_STATUS_LABELS[scan.status]} tone={SCAN_STATUS_TONES[scan.status]} />
       </div>
 
       <ol className={styles.steps} aria-label="Scan progress">

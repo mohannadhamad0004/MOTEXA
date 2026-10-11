@@ -1,13 +1,13 @@
-﻿import { useEffect, useRef, useState } from 'react'
-import styles from './RowMenu.module.css'
+import { useEffect, useRef, useState } from 'react'
+import styles from './ActionMenu.module.css'
 
 /**
  * The "⋯" actions menu of a table row. Its clicks never reach the row (so the row doesn't open).
  * The menu is fixed-positioned from the button, so a scrolling table can't clip it.
- * @param {{ label: string, items: { label: string, onSelect: () => void, danger?: boolean }[] }} props
+ * @param {{ label: string, items: { label: string, onSelect: () => void, danger?: boolean, separated?: boolean }[] }} props
  *   label: names the button for screen readers, e.g. "Actions for Sami"
  */
-export default function RowMenu({ label, items }) {
+export default function ActionMenu({ label, items }) {
   const [position, setPosition] = useState(null) // { top, right } while open
   const buttonRef = useRef(null)
   const menuRef = useRef(null)
@@ -46,7 +46,21 @@ export default function RowMenu({ label, items }) {
   }
 
   return (
-    <span className={styles.wrap} data-no-row onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+    <span className={styles.wrap} data-no-row onClick={(event) => event.stopPropagation()} onKeyDown={(event) => {
+        event.stopPropagation() // keys inside the menu must not reach the row (Enter opens a row)
+        if (!open) return
+        if (event.key === 'Escape') {
+          close()
+          buttonRef.current?.focus()
+        } else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+          event.preventDefault()
+          const entries = [...menuRef.current.querySelectorAll('[role="menuitem"]')]
+          const at = entries.indexOf(document.activeElement)
+          const next = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: entries.length - 1 }[event.key]
+          entries[(next + entries.length) % entries.length].focus()
+        } else if (event.key === 'Tab') close()
+      }}
+    >
       <button
         ref={buttonRef}
         type="button"
@@ -61,7 +75,7 @@ export default function RowMenu({ label, items }) {
       {open && (
         <ul ref={menuRef} role="menu" className={styles.menu} style={{ top: position.top, right: position.right }}>
           {items.map((item) => (
-            <li key={item.label} role="none">
+            <li key={item.label} role="none" className={item.separated ? styles.separated : undefined}>
               <button
                 type="button"
                 role="menuitem"

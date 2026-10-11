@@ -1,5 +1,329 @@
+/* /tow-companies: the intro sits beside a ruled "dispatch desk" of quick actions; search, one directory,
+   cities and a few safety lines follow. */
 .page {
   display: flex;
   flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* ---- Top: intro | search | desk ---- */
+
+.top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-6);
+  padding-top: var(--space-4);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.kicker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.kicker::before {
+  content: '';
+  width: 40px;
+  height: 2px;
+  background: currentColor;
+}
+
+.title {
+  font-size: clamp(2.25rem, 1.2rem + 4vw, 4rem);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: -0.03em;
+  line-height: 1.06;
+  text-wrap: balance;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+@media (max-width: 479px) {
+  .nowrap {
+    white-space: normal;
+  }
+}
+
+.lead {
+  max-width: 52ch;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-lg);
+}
+
+.search {
+  min-width: 0;
+}
+
+/* The desk: two ruled action lines, each with a small technical tag */
+.desk {
+  display: flex;
+  flex-direction: column;
+  border-top: 2px solid var(--color-text);
+}
+
+.deskRow {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 64px;
+  padding: var(--space-3) var(--space-2) var(--space-3) 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.deskRow:hover:not(:disabled) {
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+}
+
+.deskRow:hover:not(:disabled) .deskText {
+  color: var(--color-primary);
+}
+
+.deskRow:focus-visible {
+  outline: none;
+  box-shadow: inset 2px 0 0 var(--color-primary);
+}
+
+.deskRow:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.deskTag {
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.deskText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1.25;
+  transition: color var(--transition-fast);
+}
+
+.deskNote {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+}
+
+/* Phones keep the order intro, search, desk. From 1024px: intro and desk on one line, search under the intro. */
+@media (min-width: 1024px) {
+  .top {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--space-6);
+    row-gap: var(--space-6);
+  }
+
+  .intro {
+    grid-column: 1 / span 7;
+    grid-row: 1;
+  }
+
+  .desk {
+    grid-column: 9 / span 4;
+    grid-row: 1;
+    align-self: end;
+  }
+
+  .search {
+    grid-column: 1 / span 8;
+    grid-row: 2;
+  }
+}
+
+/* ---- Blocks ---- */
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  scroll-margin-top: calc(var(--navbar-height) + var(--space-4));
+}
+
+.kickerTitle {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.sectionTitle {
+  font-size: clamp(1.75rem, 1.2rem + 1.8vw, 2.75rem);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+/* ---- Directory ---- */
+
+.resultsHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-text);
+}
+
+.count {
+  color: var(--color-text-muted);
+}
+
+.count strong {
+  color: var(--color-text);
+  font-size: var(--font-size-lg);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sort {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 180px;
+  margin-bottom: var(--space-2);
+}
+
+.sortLabel {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+/* ---- Cities ---- */
+
+.cities {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--color-text);
+}
+
+@media (min-width: 640px) {
+  .cities {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .cities {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.city {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: var(--space-3) var(--space-2) var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  text-decoration: none;
+  transition: background-color var(--transition-fast);
+}
+
+.city:hover {
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+}
+
+.city:hover .cityName {
+  color: var(--color-primary);
+}
+
+.city:focus-visible {
+  outline: none;
+  box-shadow: inset 2px 0 0 var(--color-primary);
+}
+
+.cityName {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-extrabold);
+}
+
+.cityCount {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+/* ---- While you wait ---- */
+
+.tips {
+  max-width: 720px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--color-text);
+}
+
+.tips li {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+@media (max-width: 767px) {
+  .page {
+    gap: var(--space-7);
+  }
 }

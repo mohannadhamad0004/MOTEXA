@@ -90,7 +90,7 @@ export function samplePdf(fileName, title, lines = []) {
   const content = [
     `BT /F1 22 Tf 60 720 Td (${escapePdf(title)}) Tj ET`,
     ...lines.map((line, i) => `BT /F1 13 Tf 60 ${680 - i * 24} Td (${escapePdf(line)}) Tj ET`),
-    'BT /F1 10 Tf 60 60 Td (Sample document generated for the FastFix demo.) Tj ET',
+    'BT /F1 10 Tf 60 60 Td (Sample document generated for the MOTEXA demo.) Tj ET',
   ].join('\n')
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',

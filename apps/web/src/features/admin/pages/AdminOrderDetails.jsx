@@ -4,7 +4,7 @@ import Button from '../../../components/Button.jsx'
 import EmptyState from '../../../components/EmptyState.jsx'
 import Notice from '../../../components/Notice.jsx'
 import { SkeletonRows } from '../../../components/Skeleton.jsx'
-import StatusBadge from '../../../components/StatusBadge.jsx'
+import StatusIndicator from '../../../components/StatusIndicator.jsx'
 import { useToast } from '../../../components/Toast/ToastContext.js'
 import OrderDetailsSections from '../../marketplace/components/OrderDetailsSections.jsx'
 import { ORDER_STATUS, orderStatusBadge } from '../../marketplace/orderConstants.js'
@@ -41,7 +41,7 @@ export default function AdminOrderDetails() {
       description={`Checkout ${order.checkoutNumber} · ${order.shopName} · placed ${formatDateTime(order.createdAt)}`}
       actions={
         <>
-          <StatusBadge label={badge.label} tone={badge.tone} />
+          <StatusIndicator label={badge.label} tone={badge.tone} />
           <Button to="/admin/orders" variant="secondary">
             All orders
           </Button>

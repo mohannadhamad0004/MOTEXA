@@ -72,7 +72,7 @@ export function ConfirmCompletion({ request }) {
 
   if (request.status !== REQUEST_STATUS.COMPLETED || request.customerConfirmedAt) return null
   if (request.disputedAt) {
-    return <Notice tone="warning">You told FastFix this didn't happen. An admin will look into it.</Notice>
+    return <Notice tone="warning">You told MOTEXA this didn't happen. An admin will look into it.</Notice>
   }
 
   async function answer(kind) {
@@ -108,7 +108,7 @@ export function ConfirmCompletion({ request }) {
       </div>
       <Modal open={asking} title="This didn't happen?" onClose={() => setAsking(false)}>
         <p className={styles.text}>
-          FastFix will flag this request for an admin to look into. You won't be able to review {request.target.name}{' '}
+          MOTEXA will flag this request for an admin to look into. You won't be able to review {request.target.name}{' '}
           for it.
         </p>
         <div className={styles.dialogActions}>

@@ -19,7 +19,7 @@ export default function TrucksStep({ form, setField, errors }) {
     )
 
   return (
-    <StepSection title="Trucks" intro="Add every truck you'll use for FastFix tow requests.">
+    <StepSection title="Trucks" intro="Add every truck you'll use for MOTEXA tow requests.">
       <FieldError id="trucks">{errors.trucks}</FieldError>
 
       <ul className={styles.list}>

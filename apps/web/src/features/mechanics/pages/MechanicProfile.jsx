@@ -42,7 +42,7 @@ export default function MechanicProfile() {
         icon="🔧"
         headingLevel="h1"
         title="Mechanic not found"
-        description="This mechanic isn't on FastFix, or their account is still being reviewed."
+        description="This mechanic isn't on MOTEXA, or their account is still being reviewed."
         action={<Button to="/mechanics">Back to mechanics</Button>}
       />
     )
@@ -101,7 +101,7 @@ export default function MechanicProfile() {
             </li>
           ))}
         </ul>
-        <p className={styles.muted}>Each skill listed here was checked against a certificate by the FastFix team.</p>
+        <p className={styles.muted}>Each skill listed here was checked against a certificate by the MOTEXA team.</p>
       </section>
 
       <section className={styles.section} aria-labelledby="gallery-title">

@@ -69,7 +69,7 @@ export default function CartPage() {
 
       <CartChangesNotice changes={view.changes} />
 
-      <Card as="section" aria-labelledby="fit-title" className={styles.fit}>
+      <Card flat as="section" aria-labelledby="fit-title" className={styles.fit}>
         <h2 id="fit-title" className={styles.fitTitle}>
           Check that parts fit your car
         </h2>

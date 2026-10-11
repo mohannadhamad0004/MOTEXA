@@ -59,13 +59,13 @@ function TrucksPage() {
       <header className={styles.header}>
         <div>
           <h1 className={styles.title}>Your trucks</h1>
-          <p className={styles.subtitle}>{user.name} · the trucks you use for FastFix tow requests.</p>
+          <p className={styles.subtitle}>{user.name} · the trucks you use for MOTEXA tow requests.</p>
         </div>
         <Button onClick={() => setEditing({ mode: 'add' })}>+ Add truck</Button>
       </header>
 
       <Notice tone="info">
-        New trucks, and changes to a plate number, type, max weight or document, are checked by FastFix before they
+        New trucks, and changes to a plate number, type, max weight or document, are checked by MOTEXA before they
         appear on your public profile. Status and photos change right away.
       </Notice>
 

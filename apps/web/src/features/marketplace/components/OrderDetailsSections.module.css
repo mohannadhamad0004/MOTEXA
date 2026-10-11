@@ -61,6 +61,15 @@
   gap: var(--space-3);
 }
 
+.items li > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.items li > strong {
+  flex-shrink: 0;
+}
+
 .items li + li {
   padding-top: var(--space-3);
   border-top: 1px solid var(--color-border);
@@ -99,5 +108,32 @@
 
   .side {
     order: -1;
+  }
+}
+
+/* Flat refinement: an 8 / 4 split, sections divided by thin rules instead of boxed cards */
+.layout {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-7);
+}
+
+.layout section[class] {
+  padding: 0 0 var(--space-5);
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.layout .side {
+  padding-left: var(--space-6);
+  border-left: 1px solid var(--color-border);
+}
+
+@media (max-width: 900px) {
+  .layout .side {
+    padding-left: 0;
+    border-left: 0;
   }
 }

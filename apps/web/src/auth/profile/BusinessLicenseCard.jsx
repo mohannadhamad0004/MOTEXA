@@ -34,7 +34,7 @@ export default function BusinessLicenseCard() {
     try {
       await service.submitBusinessLicense(file)
       setFile(null)
-      toast.success('Your new license was sent to FastFix for review.')
+      toast.success('Your new license was sent to MOTEXA for review.')
     } catch (err) {
       setError(err.message)
     } finally {
@@ -61,7 +61,7 @@ export default function BusinessLicenseCard() {
       <FileUpload
         id="businessLicense"
         label={pending ? 'Replace the license waiting for review' : 'Upload a new license'}
-        hint="E.g. when it was renewed. FastFix checks it before it replaces the current one."
+        hint="E.g. when it was renewed. MOTEXA checks it before it replaces the current one."
         kind="document"
         value={file}
         onChange={(next) => {

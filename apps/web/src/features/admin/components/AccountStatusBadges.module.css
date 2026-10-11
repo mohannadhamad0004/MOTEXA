@@ -1,5 +1,5 @@
 .badges {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  gap: var(--space-1) var(--space-3);
 }

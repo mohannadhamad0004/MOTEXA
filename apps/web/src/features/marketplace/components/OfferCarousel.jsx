@@ -52,6 +52,32 @@ export default function OfferCarousel({ banners }) {
       onFocus={() => setPaused(true)}
       onBlur={(event) => !event.currentTarget.contains(event.relatedTarget) && setPaused(false)}
     >
+      <div className={styles.header}>
+        <h2 className={styles.kicker}>Offers</h2>
+        {positions > 1 && (
+          <div className={styles.controls}>
+            <button type="button" className={styles.arrow} onClick={() => go(index - 1)} aria-label="Previous offers">
+              ‹
+            </button>
+            <div className={styles.dots}>
+              {Array.from({ length: positions }, (_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className={`${styles.dot} ${i === index ? styles.dotActive : ''}`}
+                  onClick={() => go(i)}
+                  aria-label={`Show offers ${i + 1} of ${positions}`}
+                  aria-current={i === index ? 'true' : undefined}
+                />
+              ))}
+            </div>
+            <button type="button" className={styles.arrow} onClick={() => go(index + 1)} aria-label="Next offers">
+              ›
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className={styles.viewport}>
         <ul
           className={`${styles.track} ${reducedMotion ? styles.still : ''}`}
@@ -88,29 +114,6 @@ export default function OfferCarousel({ banners }) {
           })}
         </ul>
       </div>
-
-      {positions > 1 && (
-        <div className={styles.controls}>
-          <button type="button" className={styles.arrow} onClick={() => go(index - 1)} aria-label="Previous offers">
-            ‹
-          </button>
-          <div className={styles.dots}>
-            {Array.from({ length: positions }, (_, i) => (
-              <button
-                key={i}
-                type="button"
-                className={`${styles.dot} ${i === index ? styles.dotActive : ''}`}
-                onClick={() => go(i)}
-                aria-label={`Show offers ${i + 1} of ${positions}`}
-                aria-current={i === index ? 'true' : undefined}
-              />
-            ))}
-          </div>
-          <button type="button" className={styles.arrow} onClick={() => go(index + 1)} aria-label="Next offers">
-            ›
-          </button>
-        </div>
-      )}
     </section>
   )
 }

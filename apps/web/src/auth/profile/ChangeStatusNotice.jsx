@@ -40,7 +40,7 @@ export default function ChangeStatusNotice({ change, children, onWithdrawn = () 
       <div className={styles.body}>
         {children}
         {pending ? (
-          <p>Sent {formatDate(change.submittedAt)}. Your public profile keeps the approved one until FastFix approves it.</p>
+          <p>Sent {formatDate(change.submittedAt)}. Your public profile keeps the approved one until MOTEXA approves it.</p>
         ) : (
           <p>
             <strong>Reason:</strong> {change.rejectionReason}

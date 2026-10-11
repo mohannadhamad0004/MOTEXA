@@ -1,11 +1,21 @@
-﻿.main {
+.main {
   max-width: var(--content-width);
   margin: 0 auto;
   padding: var(--space-5) var(--space-4) var(--space-8);
 }
 
-.main[data-wide] {
+.main[data-wide='wide'] {
   max-width: var(--content-width-wide);
+}
+
+.main[data-wide='admin'] {
+  max-width: var(--content-width-admin);
+}
+
+/* A workspace page (the map): edge to edge, no padding; the page sizes itself to the screen */
+.main[data-wide='full'] {
+  max-width: none;
+  padding: 0;
 }
 
 @media (min-width: 768px) {

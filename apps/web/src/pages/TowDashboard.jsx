@@ -2,7 +2,7 @@ import ProviderRequests from '../features/requests/components/ProviderRequests.j
 import ResponderEmergencies from '../features/requests/emergency/components/ResponderEmergencies.jsx'
 import Button from '../components/Button.jsx'
 import Card from '../components/Card.jsx'
-import StatusBadge from '../components/StatusBadge.jsx'
+import StatusIndicator from '../components/StatusIndicator.jsx'
 import styles from './TowDashboard.module.css'
 
 // TODO: replace with real API call
@@ -62,7 +62,7 @@ function RequestCard({ request, action }) {
             {request.id} · requested at {request.requestedAt} · {request.distanceKm} km
           </p>
         </div>
-        <StatusBadge label={request.status} tone={request.status === 'Pending' ? 'warning' : 'info'} />
+        <StatusIndicator label={request.status} tone={request.status === 'Pending' ? 'warning' : 'info'} />
       </div>
       <p className={styles.reason}>{request.reason}</p>
       <dl className={styles.route}>

@@ -73,3 +73,24 @@
   font-weight: var(--font-weight-bold);
   font-variant-numeric: tabular-nums;
 }
+
+/* Flat refinement: cards become rows on thin rules; the report is plain content under a rule */
+.list {
+  gap: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.list > .card {
+  padding: var(--space-5) var(--space-1);
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.report {
+  padding: var(--space-4) 0 0;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+}

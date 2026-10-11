@@ -51,7 +51,7 @@ export default function PackingSlipPage() {
         <header className={styles.header}>
           <div>
             <p className={styles.brand}>
-              Fast<span className={styles.brandAccent}>Fix</span>
+              <span className={styles.brandAccent}>Mo</span>texa
             </p>
             <h1 id="slip-title" className={styles.title}>
               Packing slip

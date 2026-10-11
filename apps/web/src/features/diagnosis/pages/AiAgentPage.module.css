@@ -94,3 +94,22 @@
     flex-wrap: wrap;
   }
 }
+
+/* Flat refinement: list rows on thin rules instead of one bordered box each */
+.list {
+  gap: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.item {
+  padding: var(--space-4) var(--space-2);
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+  transition: background-color var(--transition-fast);
+}
+
+.item:hover {
+  background: var(--color-surface-subtle);
+}

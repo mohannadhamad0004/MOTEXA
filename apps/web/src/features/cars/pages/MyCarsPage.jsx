@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import Badge from '../../../components/Badge.jsx'
 import Button from '../../../components/Button.jsx'
-import Card from '../../../components/Card.jsx'
 import EmptyState from '../../../components/EmptyState.jsx'
+import ActionMenu from '../../../components/ActionMenu.jsx'
 import Modal from '../../../components/Modal.jsx'
 import { SkeletonCards } from '../../../components/Skeleton.jsx'
 import { useToast } from '../../../components/Toast/ToastContext.js'
@@ -54,41 +54,42 @@ export default function MyCarsPage() {
       ) : (
         <ul className={styles.grid}>
           {cars.map((car) => (
-            <Card as="li" key={car.id} padding="none" className={styles.card}>
-              <CarPhoto car={car} />
-              <div className={styles.body}>
-                <div>
-                  <h2 className={styles.name}>
-                    <Link to={`/my-cars/${car.id}`} className={styles.link}>
-                      {car.nickname || carTitle(car)}
-                    </Link>
-                  </h2>
-                  {car.nickname && <p className={styles.muted}>{carTitle(car)}</p>}
-                  {hasScan(car) && <Badge tone="info">3D model (scanned)</Badge>}
-                </div>
-                <dl className={styles.facts}>
-                  <div>
-                    <dt>Mileage</dt>
-                    <dd>{formatMileage(car.mileageKm)}</dd>
-                  </div>
-                  <div>
-                    <dt>VIN</dt>
-                    <dd className={styles.vin}>{car.vin || '—'}</dd>
-                  </div>
-                </dl>
-                <div className={styles.actions}>
-                  <Button to={`/my-cars/${car.id}`} size="sm">
-                    History
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={() => setEditing({ car })}>
-                    Edit
-                  </Button>
-                  <Button size="sm" variant="ghost" className={styles.delete} onClick={() => setDeleting(car)}>
-                    Delete
-                  </Button>
-                </div>
+            <li key={car.id} className={styles.card}>
+              <div className={styles.thumb}>
+                <CarPhoto car={car} />
               </div>
-            </Card>
+              <div className={styles.main}>
+                <h2 className={styles.name}>
+                  <Link to={`/my-cars/${car.id}`} className={styles.link}>
+                    {car.nickname || carTitle(car)}
+                  </Link>
+                </h2>
+                {car.nickname && <p className={styles.muted}>{carTitle(car)}</p>}
+                {hasScan(car) && <Badge tone="info">3D model (scanned)</Badge>}
+              </div>
+              <dl className={styles.facts}>
+                <div>
+                  <dt>Mileage</dt>
+                  <dd>{formatMileage(car.mileageKm)}</dd>
+                </div>
+                <div>
+                  <dt>VIN</dt>
+                  <dd className={styles.vin}>{car.vin || '—'}</dd>
+                </div>
+              </dl>
+              <div className={styles.actions}>
+                <Button to={`/my-cars/${car.id}`} size="sm">
+                  History
+                </Button>
+                <ActionMenu
+                  label={`Actions for ${car.nickname || carTitle(car)}`}
+                  items={[
+                    { label: 'Edit car', onSelect: () => setEditing({ car }) },
+                    { label: 'Delete car', onSelect: () => setDeleting(car), danger: true },
+                  ]}
+                />
+              </div>
+            </li>
           ))}
         </ul>
       )}

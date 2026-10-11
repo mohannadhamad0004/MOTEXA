@@ -1,4 +1,4 @@
-﻿/* Design tokens: every color, size, space, radius and shadow in the app comes from here.
+/* Design tokens: every color, size, space, radius and shadow in the app comes from here.
    Component styles use var(--token) only - no raw colors or pixel sizes for these.
 
    Themes: <html data-theme="light"> or <html data-theme="dark">. The inline script in index.html
@@ -214,14 +214,14 @@
   --font-sans: 'Cairo', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Arabic', sans-serif;
   --font-mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
 
-  --font-size-xs: 0.75rem; /* 12px: badges, captions */
+  --font-size-xs: 0.8125rem; /* 13px: badges, captions */
   --font-size-sm: 0.875rem; /* 14px: small text, labels */
   --font-size-md: 1rem; /* 16px: body */
   --font-size-lg: 1.125rem; /* 18px: lead text, card titles */
   --font-size-h4: 1.125rem;
   --font-size-h3: 1.25rem;
-  --font-size-h2: clamp(1.375rem, 1.2rem + 0.75vw, 1.75rem);
-  --font-size-h1: clamp(1.75rem, 1.45rem + 1.25vw, 2.25rem);
+  --font-size-h2: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem); /* 20-24px */
+  --font-size-h1: clamp(1.875rem, 1.6rem + 0.9vw, 2.125rem); /* 30-34px */
   --font-size-display: clamp(2rem, 1.4rem + 2.6vw, 3.25rem); /* home page headline */
   /* Older names, still used by page titles */
   --font-size-xl: var(--font-size-h1);
@@ -249,10 +249,10 @@
 
   /* ---- Shape ---- */
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-pill: 999px;
 
   --transition-fast: 180ms ease; /* 150-220ms: buttons, cards, tabs, inputs, nav */
@@ -260,7 +260,8 @@
   /* ---- Layout ---- */
 
   --content-width: 1280px; /* normal pages */
-  --content-width-wide: 1440px; /* directories, marketplace, admin (see components/Layout/wideRoutes.js) */
+  --content-width-wide: 1560px; /* directory + map, marketplace (see components/Layout/wideRoutes.js) */
+  --content-width-admin: 1780px; /* admin: the sidebar plus content up to about 1440px */
   --navbar-height: 64px;
 
   --z-sticky: 10;

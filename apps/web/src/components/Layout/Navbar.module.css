@@ -1,4 +1,4 @@
-﻿.navbar {
+.navbar {
   position: sticky;
   top: 0;
   z-index: var(--z-navbar);
@@ -17,8 +17,16 @@
   padding: var(--space-2) var(--space-4);
 }
 
-.inner[data-wide] {
+.inner[data-wide='wide'] {
   max-width: var(--content-width-wide);
+}
+
+.inner[data-wide='admin'] {
+  max-width: var(--content-width-admin);
+}
+
+.inner[data-wide='full'] {
+  max-width: none;
 }
 
 @media (min-width: 1280px) {
@@ -54,8 +62,27 @@
   color: var(--color-accent-contrast);
 }
 
-.brandAccent {
+/* Signed in on a phone: Emergency, bell, account and menu need the room, so the logo shows alone */
+@media (max-width: 479px) {
+  .inner[data-signed-in] {
+    gap: var(--space-3);
+  }
+
+  .inner[data-signed-in] .wordmark {
+    display: none;
+  }
+
+  .inner[data-signed-in] .account {
+    gap: var(--space-1);
+  }
+}
+
+.wordmark {
   color: var(--color-text);
+}
+
+.brandAccent {
+  color: var(--color-accent);
 }
 
 .links {
@@ -191,7 +218,8 @@
   display: none;
 }
 
-@media (max-width: 767px) {
+/* Collapses below 1024px: the links, theme switch, bell and account menu don't fit at tablet width */
+@media (max-width: 1023px) {
   .links,
   .guestActions,
   .desktopOnly {

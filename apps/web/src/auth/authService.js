@@ -214,7 +214,7 @@ export function createAuthService(store) {
     // Same message for an unknown email and a wrong password, so it doesn't reveal which emails exist.
     if (!user || user.password !== password) throw new AuthError('Email or password is incorrect.')
     if (user.suspended) {
-      throw new AuthError('This account is suspended. Contact FastFix support if you think this is a mistake.')
+      throw new AuthError('This account is suspended. Contact MOTEXA support if you think this is a mistake.')
     }
 
     store.write({ ...state, sessionUserId: user.id })

@@ -4,7 +4,8 @@ import styles from './ScrollRow.module.css'
 
 // A titled row that scrolls sideways: "View all" link and left / right arrows on desktop; on
 // phones and touch screens the arrows are hidden and the row is swiped. `children` are <li>s.
-export default function ScrollRow({ title, viewAllTo, viewAllLabel = 'View all', children }) {
+// `editorial`: a heavy rule above, a bigger title and square arrows (public catalog pages).
+export default function ScrollRow({ title, viewAllTo, viewAllLabel = 'View all', editorial = false, children }) {
   const titleId = useId()
   const trackRef = useRef(null)
   const [edges, setEdges] = useState({ start: true, end: false })
@@ -32,7 +33,7 @@ export default function ScrollRow({ title, viewAllTo, viewAllLabel = 'View all',
   }
 
   return (
-    <section className={styles.row} aria-labelledby={titleId}>
+    <section className={`${styles.row} ${editorial ? styles.editorial : ''}`} aria-labelledby={titleId}>
       <div className={styles.header}>
         <h2 id={titleId} className={styles.title}>
           {title}

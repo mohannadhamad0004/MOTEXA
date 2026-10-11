@@ -1,7 +1,7 @@
 import { Navigate, useNavigate } from 'react-router'
 import Button from '../components/Button.jsx'
 import Notice from '../components/Notice.jsx'
-import StatusBadge from '../components/StatusBadge.jsx'
+import StatusIndicator from '../components/StatusIndicator.jsx'
 import { ROLE_HOME_PATHS } from '../authorization/roles.js'
 import { ACCOUNT_STATUS, STATUS_BADGES } from './constants.js'
 import { useAuth } from './useAuth.js'
@@ -39,13 +39,13 @@ export default function PendingApprovalPage() {
     >
       <div className={styles.status}>
         <span>Status:</span>
-        <StatusBadge label={badge.label} tone={badge.tone} />
+        <StatusIndicator label={badge.label} tone={badge.tone} />
       </div>
 
       {rejected && (
         <Notice tone="danger" title="Reason">
           <p>{user.rejectionReason}</p>
-          <p>Contact FastFix support if you have questions about this decision.</p>
+          <p>Contact MOTEXA support if you have questions about this decision.</p>
         </Notice>
       )}
 

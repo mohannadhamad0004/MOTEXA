@@ -7,7 +7,7 @@ import Card from '../../../components/Card.jsx'
 import EmptyState from '../../../components/EmptyState.jsx'
 import Notice from '../../../components/Notice.jsx'
 import { SkeletonRows } from '../../../components/Skeleton.jsx'
-import StatusBadge from '../../../components/StatusBadge.jsx'
+import StatusIndicator from '../../../components/StatusIndicator.jsx'
 import TagBadges from '../../../components/TagBadges.jsx'
 import { resolveTags } from '../../../context/TagsContext.js'
 import { AskAboutPartButton } from '../../requests/components/RequestButtons.jsx'
@@ -57,7 +57,7 @@ export default function PartDetailsPage() {
         icon="🔧"
         headingLevel="h1"
         title="Part not found"
-        description="This part isn't for sale any more, or its shop is no longer on FastFix."
+        description="This part isn't for sale any more, or its shop is no longer on MOTEXA."
         action={<Button to="/marketplace">Back to marketplace</Button>}
       />
     )
@@ -97,7 +97,7 @@ export default function PartDetailsPage() {
 
         <div className={styles.info}>
           <div className={styles.badges}>
-            <StatusBadge label={conditionLabel} tone={conditionTone[part.condition]} />
+            <StatusIndicator label={conditionLabel} tone={conditionTone[part.condition]} />
             <Badge>{typeLabel}</Badge>
             {fits === true && <Badge tone="success">✓ Fits your {vehicleName(vehicle)}</Badge>}
             {fits === false && <Badge tone="danger">Doesn&apos;t fit your {vehicleName(vehicle)}</Badge>}

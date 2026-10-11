@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import StatusBadge from '../../../components/StatusBadge.jsx'
+import StatusIndicator from '../../../components/StatusIndicator.jsx'
 import { towProblemLabel } from '../../logistics/constants.js'
 import { formatPrice } from '../../marketplace/format.js'
 import { formatCar } from '../carDetails.js'
@@ -21,7 +21,7 @@ export default function RequestSummary({ request, showReportLink = false }) {
         <p className={styles.type}>
           {REQUEST_TYPE_LABELS[request.type]} · <span className={styles.muted}>{request.id}</span>
         </p>
-        <StatusBadge label={badge.label} tone={badge.tone} />
+        <StatusIndicator label={badge.label} tone={badge.tone} />
       </div>
 
       <dl className={styles.facts}>

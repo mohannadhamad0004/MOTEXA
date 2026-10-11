@@ -2,9 +2,9 @@ import { useAuthQuery } from '../../auth/useAuth.js'
 import { ROLES } from '../../authorization/roles.js'
 import { useMarketplaceQuery } from '../marketplace/MarketplaceContext.js'
 
-// Where the car should go: a FastFix mechanic, a parts shop, or any address.
+// Where the car should go: a MOTEXA mechanic, a parts shop, or any address.
 export const DESTINATION_KINDS = Object.freeze([
-  { value: 'mechanic', label: 'A FastFix mechanic' },
+  { value: 'mechanic', label: 'A MOTEXA mechanic' },
   { value: 'shop', label: 'A parts shop' },
   { value: 'custom', label: 'Another address' },
 ])

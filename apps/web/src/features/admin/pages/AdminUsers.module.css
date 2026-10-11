@@ -1,19 +1,41 @@
-﻿.name {
+.directory {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The person: avatar as the visual anchor, then the name (strongest) over the email (quiet) */
+.person {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  align-self: flex-start;
   padding: 0;
   border: 0;
   border-radius: var(--radius-sm);
   background: none;
   color: var(--color-text);
   font-family: inherit;
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
-  text-align: left;
+  line-height: 1.3;
+  text-align: start;
+  overflow-wrap: anywhere;
   cursor: pointer;
 }
 
 .name:hover {
   color: var(--color-primary);
-  text-decoration: underline;
 }
 
 .name:focus-visible {
@@ -21,15 +43,55 @@
   box-shadow: var(--focus-ring);
 }
 
-.subline {
-  display: block;
+.email {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.role {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.joined {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
 
 .muted {
   color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* "Joined" only needs its label when the column header is hidden (compact list) */
+@container (min-width: 900px) {
+  .joinedLabel {
+    display: none;
+  }
+}
+
+/* Compact list: the status badges get a full line (Approved + Suspended side by side), role and
+   joined date share the line beneath */
+@container (max-width: 899px) {
+  .directory [data-col='status'] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .directory [data-col='role'],
+  .directory [data-col='joined'] {
+    grid-row: 3;
+  }
 }
 
 .drawerBody {

@@ -60,12 +60,22 @@
 
 .underline .tab {
   margin-bottom: -1px;
-  border-bottom: 3px solid transparent;
+  border-bottom: 2px solid transparent;
 }
 
 .underline .selected {
-  border-bottom-color: var(--color-accent);
-  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+/* Counts in underline tabs are plain numbers, not pills */
+.underline .count {
+  min-width: 0;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-regular);
 }
 
 /* ---- Pills: a segmented switch inside a card ---- */

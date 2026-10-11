@@ -107,7 +107,7 @@ export default function PartForm({ shopId, part = null, vehicles, onSaved, onCan
   }
 
   return (
-    <Card as="form" padding="lg" className={styles.form} onSubmit={handleSubmit} aria-labelledby="part-form-title">
+    <Card flat as="form" padding="lg" className={styles.form} onSubmit={handleSubmit} aria-labelledby="part-form-title">
       <h2 id="part-form-title" className={styles.title}>
         {editing ? `Edit "${part.name}"` : 'Add a part'}
       </h2>

@@ -1,4 +1,4 @@
-# FastFix — Project To-Do
+# MOTEXA — Project To-Do
 
 ✅ = done  ⬜ = not done yet
 
@@ -9,7 +9,7 @@ Most "done" frontend items still use **mock data**. They become real in Phase 3 
 - ✅ React web app installed and running (Vite)
 - ✅ PostgreSQL installed on your computer
 - ⬜ React Native / Expo installed and a mobile app created
-- ✅ GitHub repo (FastFIX), working branch `mohand`, PR-into-main workflow
+- ✅ GitHub repo (MOTEXA), working branch `mohand`, PR-into-main workflow
 - ✅ Monorepo layout: `apps/{web,mobile,api}`, `packages/shared`
 - ✅ `.gitignore` (`node_modules/`, `.env`, `.claude/`, `.idea/`)
 - ✅ `CLAUDE.md` with stack, roles, folder conventions
@@ -87,7 +87,7 @@ Most "done" frontend items still use **mock data**. They become real in Phase 3 
 - ⬜ Parts, shops, mechanics, tow companies from the database
 - ⬜ Part compatibility tables (VehicleVariant + PartFitment) for shared parts
 - ⬜ Backend smart search with PostgreSQL pg_trgm + synonyms
-- ⬜ Buying parts: real orders/payment, or sale outside FastFix? (not decided yet)
+- ⬜ Buying parts: real orders/payment, or sale outside MOTEXA? (not decided yet)
 
 ## Phase 7 — Tow logistics
 - ⬜ Find nearest available trucks, rank by driving time (Mapbox or openrouteservice)
@@ -108,6 +108,6 @@ Most "done" frontend items still use **mock data**. They become real in Phase 3 
 - ⬜ AI accuracy evaluation from the mechanic corrections
 
 ## Open decisions
-- ⬜ Buying parts: orders and payment inside FastFix, or contact only?
+- ⬜ Buying parts: orders and payment inside MOTEXA, or contact only?
 - ⬜ Ratings and reviews?
 - ⬜ Arabic language support (right-to-left layout)?

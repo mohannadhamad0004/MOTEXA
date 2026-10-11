@@ -178,7 +178,7 @@ export default function SellingSettingsForm() {
             checked={values.card}
             onChange={(checked) => setValue('card', checked)}
             label="Card payment"
-            hint="Paid online through FastFix's payment provider; you never handle card details."
+            hint="Paid online through MOTEXA's payment provider; you never handle card details."
           />
         </div>
       </fieldset>

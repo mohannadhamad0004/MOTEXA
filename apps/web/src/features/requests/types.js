@@ -31,7 +31,7 @@
  *                    car: CarDetails, carId?: string, problemType: TowProblemType, note: string }
  *   part_question: { partId: string, message: string, quantity: number }
  * @property {{ orderId: string, checkoutNumber: string, shopName: string, name: string, quantity: number, priceIls: number }[]} [purchasedParts]
- *   service: parts the mechanic bought through FastFix for this request (features/marketplace orders)
+ *   service: parts the mechanic bought through MOTEXA for this request (features/marketplace orders)
  * @property {Completion} [completion]  set when the provider marks the request completed
  *   (completion.completedAt is the request's completedAt)
  */

@@ -38,7 +38,7 @@ function CompleteForm({ request, trucks, onClose }) {
   const [values, setValues] = useState({
     confirmedDiagnosis: request.details.diagnosis?.possibleCauses[0]?.cause ?? '',
     workDone: '',
-    // Parts bought through FastFix for this request start as "parts used"
+    // Parts bought through MOTEXA for this request start as "parts used"
     parts: request.purchasedParts?.length
       ? request.purchasedParts.map(({ name, quantity, priceIls }) => ({
           ...newPart(),

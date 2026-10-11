@@ -1,4 +1,4 @@
-# FastFIX
+# MOTEXA
 
 Car maintenance platform: customers upload a photo, video or audio of a car problem, an AI gives a preliminary diagnosis, and a mechanic confirms it.
 

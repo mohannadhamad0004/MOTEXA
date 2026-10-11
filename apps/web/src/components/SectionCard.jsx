@@ -24,7 +24,7 @@ export default function SectionCard({ title, description, action, headingLevel =
         </div>
         {action && <div className={styles.action}>{action}</div>}
       </div>
-      {children}
+      <div className={styles.body}>{children}</div>
     </section>
   )
 }

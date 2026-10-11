@@ -5,7 +5,7 @@ import Card from '../../../components/Card.jsx'
 import EmptyState from '../../../components/EmptyState.jsx'
 import Notice from '../../../components/Notice.jsx'
 import { SkeletonRows } from '../../../components/Skeleton.jsx'
-import StatusBadge from '../../../components/StatusBadge.jsx'
+import StatusIndicator from '../../../components/StatusIndicator.jsx'
 import { formatDateTime } from '../../requests/format.js'
 import { formatPrice } from '../format.js'
 import { orderStatusBadge } from '../orderConstants.js'
@@ -71,7 +71,7 @@ export default function CheckoutConfirmationPage() {
                   <h2 id={`order-${order.id}`} className={styles.shop}>
                     {order.shopName}
                   </h2>
-                  <StatusBadge label={badge.label} tone={badge.tone} />
+                  <StatusIndicator label={badge.label} tone={badge.tone} />
                 </div>
                 <ul className={styles.items}>
                   {order.items.map((item) => (

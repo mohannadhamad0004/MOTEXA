@@ -3,7 +3,7 @@ import Button from '../../../components/Button.jsx'
 import Card from '../../../components/Card.jsx'
 import EmptyState from '../../../components/EmptyState.jsx'
 import { SkeletonRows } from '../../../components/Skeleton.jsx'
-import StatusBadge from '../../../components/StatusBadge.jsx'
+import StatusIndicator from '../../../components/StatusIndicator.jsx'
 import Tabs, { TabPanel } from '../../../components/Tabs.jsx'
 import { formatDateTime } from '../../requests/format.js'
 import { formatPrice } from '../format.js'
@@ -80,7 +80,7 @@ export default function ShopOrdersPage() {
                         </Link>
                         <span className={styles.muted}> · {order.checkoutNumber}</span>
                       </p>
-                      <StatusBadge label={badge.label} tone={badge.tone} />
+                      <StatusIndicator label={badge.label} tone={badge.tone} />
                     </div>
                     <p className={styles.muted}>
                       {itemCount} {itemCount === 1 ? 'part' : 'parts'} ·{' '}

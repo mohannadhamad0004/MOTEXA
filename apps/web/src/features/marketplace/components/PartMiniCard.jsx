@@ -6,14 +6,15 @@ import { formatPrice } from '../format.js'
 import PartPhoto from './PartPhoto.jsx'
 import styles from './PartMiniCard.module.css'
 
-// A small part card for the product rows: icon, name, brand, shop, price (with the old price and
-// the discount when on offer) and low stock. The whole card links to the part page.
-export default function PartMiniCard({ part, shop, tags }) {
+// An image-led part card for the catalog sections: the photo first, then name, brand and shop, price
+// (with the old price and the discount when on offer) and low stock. The whole card links to the part
+// page. `featured` is the large version used for the first part of "Most popular".
+export default function PartMiniCard({ part, shop, tags, featured = false }) {
   const discount = discountPercent(part)
   const offer = isOnOffer(part, tags)
   return (
-    <Card as="article" interactive padding="none" className={styles.card}>
-      <PartPhoto part={part}>
+    <Card as="article" interactive padding="none" className={`${styles.card} ${featured ? styles.featured : ''}`}>
+      <PartPhoto part={part} className={styles.photo}>
         {offer && <span className={styles.offer}>{discount > 0 ? `−${discount}%` : 'Offer'}</span>}
         {part.stock === 0 && <span className={styles.soldOut}>Out of stock</span>}
       </PartPhoto>

@@ -77,12 +77,12 @@ export default function TruckForm({ truck = null, onDone, onCancel }) {
         const { sentForReview } = await service.updateTruck(truck.id, values)
         onDone(
           sentForReview
-            ? `${values.plateNumber.trim()} was saved and sent to FastFix for review.`
+            ? `${values.plateNumber.trim()} was saved and sent to MOTEXA for review.`
             : `${values.plateNumber.trim()} was saved.`,
         )
       } else {
         await service.addTruck(values)
-        onDone(`${values.plateNumber.trim()} was added. It appears on your public profile once FastFix approves it.`)
+        onDone(`${values.plateNumber.trim()} was added. It appears on your public profile once MOTEXA approves it.`)
       }
     } catch (error) {
       if (error instanceof TruckError && error.field) {
@@ -99,7 +99,7 @@ export default function TruckForm({ truck = null, onDone, onCancel }) {
     <form className={styles.form} onSubmit={handleSubmit} noValidate>
       {!truck && (
         <Notice tone="info">
-          FastFix checks every new truck and its documents before it appears on your public profile.
+          MOTEXA checks every new truck and its documents before it appears on your public profile.
         </Notice>
       )}
 
@@ -163,7 +163,7 @@ export default function TruckForm({ truck = null, onDone, onCancel }) {
 
       {willReview && (
         <Notice tone="warning" title="This change needs a new review">
-          A new plate number, type, max weight or document sends this truck back to FastFix. It is hidden from
+          A new plate number, type, max weight or document sends this truck back to MOTEXA. It is hidden from
           your public profile until an admin approves it.
         </Notice>
       )}

@@ -57,7 +57,7 @@ export const ROLE_CHOICES = Object.freeze([
   {
     role: ROLES.PARTS_SHOP,
     title: 'Parts Shop',
-    text: 'Open your shop on the FastFix marketplace and sell parts.',
+    text: 'Open your shop on the MOTEXA marketplace and sell parts.',
     needsApproval: true,
   },
   {

@@ -66,7 +66,14 @@ export default function AdminUserDetails() {
     >
       {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}
 
-      <section className={styles.card} aria-label="Account status">
+      <div className={styles.layout}>
+        <div className={styles.main}>
+          <section className={styles.block} aria-label="Submitted details">
+            <AccountSummary account={user} />
+          </section>
+        </div>
+        <aside className={styles.rail}>
+      <section className={styles.block} aria-label="Account status">
         <div className={styles.statusRow}>
           <AccountStatusBadges account={user} />
           {publicPath && <Link to={`${publicPath}${user.id}`}>View public page</Link>}
@@ -90,14 +97,13 @@ export default function AdminUserDetails() {
       </section>
 
       {tagType && (
-        <section className={styles.card}>
+        <section className={styles.block}>
           <TagPicker targetType={tagType} targetId={user.id} tagIds={user.tagIds ?? []} />
         </section>
       )}
 
-      <section className={styles.card} aria-label="Submitted details">
-        <AccountSummary account={user} />
-      </section>
+        </aside>
+      </div>
     </AdminPage>
   )
 }

@@ -4,14 +4,19 @@ import Button from '../../../components/Button.jsx'
 import Notice from '../../../components/Notice.jsx'
 import { SkeletonRows } from '../../../components/Skeleton.jsx'
 import { formatDate } from '../../../utils/formatDate.js'
-import PartCard from '../../marketplace/components/PartCard.jsx'
+import StatusIndicator from '../../../components/StatusIndicator.jsx'
+import { CONDITIONS, PART_TYPES } from '../../marketplace/constants.js'
+import { formatPartFit, formatPrice } from '../../marketplace/format.js'
+import PartPhoto from '../../marketplace/components/PartPhoto.jsx'
+import DetailList from '../components/DetailList.jsx'
+import ShortId from '../components/ShortId.jsx'
 import AdminPage from '../components/AdminPage.jsx'
 import ReasonDialog from '../components/ReasonDialog.jsx'
 import TagPicker from '../components/TagPicker.jsx'
 import { useAdminQuery, useAdminService } from '../AdminContext.js'
 import styles from './AdminListingDetails.module.css'
 
-// /admin/listings/:partId - one part: how it looks publicly, its tags, and hide / unhide.
+// /admin/listings/:partId - the moderation inspector for one part: its state and hidden reason, a read-only\n// look at the shop's data, its tags, and hide / unhide. Nothing here edits the shop's data.
 export default function AdminListingDetails() {
   const { partId } = useParams()
   const service = useAdminService()
@@ -68,29 +73,77 @@ export default function AdminListingDetails() {
     >
       {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}
 
-      {part.hidden ? (
-        <Notice tone="danger" title={`Hidden since ${formatDate(part.hidden.hiddenAt)}`}>
-          <p>Reason shown to the shop: {part.hidden.reason}</p>
-        </Notice>
-      ) : (
-        part.shopSuspended && (
-          <Notice tone="warning">
-            This part isn't public because its shop is suspended.{' '}
-            <Link to={`/admin/users/${part.shopId}`}>View the shop account</Link>
-          </Notice>
-        )
-      )}
+      <section className={styles.moderation} aria-labelledby="moderation-title">
+        <h2 id="moderation-title" className={styles.kicker}>
+          Moderation
+        </h2>
+        {part.hidden ? (
+          <>
+            <p className={styles.stateLine}>
+              <StatusIndicator label="Hidden" tone="danger" />
+              <span className={styles.muted}>since {formatDate(part.hidden.hiddenAt)}</span>
+            </p>
+            <p className={styles.reason}>
+              <span className={styles.reasonLabel}>Reason shown to the shop</span>
+              {part.hidden.reason}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className={styles.stateLine}>
+              <StatusIndicator label="Visible" tone="success" />
+              {part.shopSuspended && <StatusIndicator label="Not public: shop suspended" tone="warning" />}
+            </p>
+            {part.shopSuspended && (
+              <p className={styles.muted}>
+                This part isn't public because its shop is suspended. <Link to={`/admin/users/${part.shopId}`}>View the shop account</Link>
+              </p>
+            )}
+          </>
+        )}
+      </section>
 
       <div className={styles.layout}>
-        <div className={styles.preview}>
-          <p className={styles.label}>Public card</p>
-          <PartCard part={part} showShop={false} />
+        <div className={styles.image}>
+          <PartPhoto part={part} size="large" />
         </div>
-        <section className={styles.card}>
-          <TagPicker targetType="part" targetId={part.id} tagIds={part.tagIds ?? []} />
-        </section>
+        <div className={styles.facts}>
+          <section aria-labelledby="part-title" className={styles.group}>
+            <h2 id="part-title" className={styles.kicker}>
+              Part
+            </h2>
+            <DetailList
+              items={[
+                { label: 'Brand', value: part.brand },
+                { label: 'OEM number', value: part.oemNumber },
+                { label: 'Manufacturer number', value: part.manufacturerNumber },
+                { label: 'Category', value: part.category },
+                { label: 'Type', value: PART_TYPES.find((t) => t.value === part.type)?.label },
+                { label: 'Condition', value: CONDITIONS.find((c) => c.value === part.condition)?.label },
+                { label: 'Fits', value: formatPartFit(part) },
+              ]}
+            />
+          </section>
+          <section aria-labelledby="shop-title" className={styles.group}>
+            <h2 id="shop-title" className={styles.kicker}>
+              Shop listing
+            </h2>
+            <DetailList
+              items={[
+                { label: 'Shop', value: <Link to={`/admin/users/${part.shopId}`}>{part.shopName}</Link> },
+                { label: 'Price', value: <span className={styles.number}>{formatPrice(part.priceIls)}</span> },
+                { label: 'Stock', value: <span className={styles.number}>{part.stock}</span> },
+                { label: 'Added', value: formatDate(part.addedAt) },
+                { label: 'ID', value: <ShortId id={part.id} full /> },
+              ]}
+            />
+            <p className={styles.muted}>Part data belongs to the shop. Admins can hide it or change its tags, not edit it.</p>
+          </section>
+          <section aria-labelledby="tags-title" className={styles.group}>
+            <TagPicker targetType="part" targetId={part.id} tagIds={part.tagIds ?? []} />
+          </section>
+        </div>
       </div>
-
       <ReasonDialog
         open={hiding}
         title="Hide this part?"

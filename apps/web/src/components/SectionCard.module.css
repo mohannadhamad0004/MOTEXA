@@ -1,13 +1,18 @@
+/* A flat settings section: a thin rule, the heading and its help text on the left, the fields on the
+   right (stacked on narrow screens). No card. */
 .card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4) var(--space-7);
   min-width: 0;
-  padding: var(--space-5);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border-strong);
+}
+
+@media (min-width: 1000px) {
+  .card {
+    grid-template-columns: minmax(220px, 1fr) minmax(0, 2.4fr);
+  }
 }
 
 .header {
@@ -26,11 +31,11 @@
 }
 
 .title {
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-h2);
 }
 
 .description {
-  max-width: 65ch;
+  max-width: 45ch;
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
@@ -39,8 +44,9 @@
   flex-shrink: 0;
 }
 
-@media (max-width: 560px) {
-  .card {
-    padding: var(--space-4);
-  }
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
 }

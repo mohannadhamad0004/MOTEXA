@@ -4,7 +4,6 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
 }
 
 .padding-none {
@@ -72,4 +71,14 @@
 
 .cover:focus-visible {
   outline: none;
+}
+
+/* Flat: a section on a thin rule, not a box */
+.card.flat {
+  padding: var(--space-5) 0 0;
+  border: 0;
+  border-top: 1px solid var(--color-border-strong);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }

@@ -1,19 +1,49 @@
-﻿.name {
+.workspace {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The part: a small photo as the anchor, then the name (strongest) over its numbers (quiet) */
+.part {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.thumb {
+  flex-shrink: 0;
+  width: 72px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
   padding: 0;
   border: 0;
   border-radius: var(--radius-sm);
   background: none;
   color: var(--color-text);
   font-family: inherit;
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
-  text-align: left;
+  line-height: 1.3;
+  text-align: start;
+  overflow-wrap: anywhere;
   cursor: pointer;
 }
 
 .name:hover {
   color: var(--color-primary);
-  text-decoration: underline;
 }
 
 .name:focus-visible {
@@ -21,15 +51,53 @@
   box-shadow: var(--focus-ring);
 }
 
-.subline {
-  display: block;
+.meta {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.shop {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.shopCell {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+/* The wide list has a Shop column, so the line under the name is only for narrower lists */
+@container (min-width: 1040px) {
+  .shop {
+    display: none;
+  }
+}
+
+.photo {
+  max-width: 320px;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+
+.price {
+  font-variant-numeric: tabular-nums;
 }
 
 .muted {
   color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .drawerBody {
@@ -42,4 +110,50 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
+}
+
+/* Compact list: line 1 is photo, name, numbers and shop with the price and the menu at its end;
+   line 2 is the status, under the text */
+@container (max-width: 899px) {
+  .part {
+    padding-inline-end: 112px;
+  }
+
+  .priceCell {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    margin-inline-end: 44px;
+    z-index: 1;
+  }
+
+  .directory [data-col='status'],
+  .workspace [data-col='status'] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    padding-inline-start: 88px;
+  }
+}
+
+/* Phone: the price moves down to the status line so the name keeps the full width */
+@container (max-width: 520px) {
+  .thumb {
+    width: 56px;
+  }
+
+  .part {
+    gap: var(--space-3);
+    padding-inline-end: 44px;
+  }
+
+  .priceCell {
+    grid-column: 2;
+    grid-row: 2;
+    margin-inline-end: 0;
+  }
+
+  .workspace [data-col='status'] {
+    grid-column: 1;
+    padding-inline-start: 68px;
+  }
 }

@@ -71,7 +71,7 @@ export default function CarDetailsPage() {
               <dd className={styles.vin}>{car.vin || '—'}</dd>
             </div>
             <div>
-              <dt>Repairs on FastFix</dt>
+              <dt>Repairs on MOTEXA</dt>
               <dd>{history?.length ?? '…'}</dd>
             </div>
           </dl>

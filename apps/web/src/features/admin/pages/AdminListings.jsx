@@ -1,25 +1,25 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
+import ActionMenu from '../../../components/ActionMenu.jsx'
 import Button from '../../../components/Button.jsx'
-import Drawer from '../../../components/Drawer.jsx'
-import Input from '../../../components/Input.jsx'
+import DetailDrawer from '../../../components/DetailDrawer.jsx'
+import FilterToolbar, { FilterMenu } from '../../../components/FilterToolbar.jsx'
+import FlatDataList from '../../../components/FlatDataList.jsx'
 import Notice from '../../../components/Notice.jsx'
-import Select from '../../../components/Select.jsx'
+import PageIntro from '../../../components/PageIntro.jsx'
+import PageShell from '../../../components/PageShell.jsx'
+import SearchBar from '../../../components/SearchBar.jsx'
 import { SkeletonRows } from '../../../components/Skeleton.jsx'
-import StatusBadge from '../../../components/StatusBadge.jsx'
+import StatusIndicator from '../../../components/StatusIndicator.jsx'
 import TagBadges from '../../../components/TagBadges.jsx'
 import { useToast } from '../../../components/Toast/ToastContext.js'
 import { resolveTags, useTags } from '../../../context/TagsContext.js'
 import { formatDate } from '../../../utils/formatDate.js'
 import { createWordIndex, searchWords } from '../../../utils/wordSearch.js'
-import PartCard from '../../marketplace/components/PartCard.jsx'
+import PartPhoto from '../../marketplace/components/PartPhoto.jsx'
 import { formatPrice } from '../../marketplace/format.js'
-import AdminPage from '../components/AdminPage.jsx'
-import AdminTable from '../components/AdminTable.jsx'
 import DetailList from '../components/DetailList.jsx'
-import FilterToolbar, { FilterField } from '../components/FilterToolbar.jsx'
 import ReasonDialog from '../components/ReasonDialog.jsx'
-import RowMenu from '../components/RowMenu.jsx'
 import ShortId from '../components/ShortId.jsx'
 import { useAdminQuery, useAdminService } from '../AdminContext.js'
 import styles from './AdminListings.module.css'
@@ -36,9 +36,9 @@ const NONE = []
 
 // The one status of a part: hidden by an admin, its shop is suspended, or visible (text + color).
 function PartStatus({ part }) {
-  if (part.hidden) return <StatusBadge label="Hidden" tone="danger" />
-  if (part.shopSuspended) return <StatusBadge label="Shop suspended" tone="warning" />
-  return <StatusBadge label="Visible" tone="success" />
+  if (part.hidden) return <StatusIndicator label="Hidden" tone="danger" />
+  if (part.shopSuspended) return <StatusIndicator label="Shop suspended" tone="warning" />
+  return <StatusIndicator label="Visible" tone="success" />
 }
 
 // /admin/listings?q=...&show=hidden - every part from every shop, including hidden ones. A row opens
@@ -75,6 +75,7 @@ export default function AdminListings() {
     [index, query, show],
   )
   const open = parts.find((p) => p.id === openId) ?? null
+  const openTags = resolveTags(open?.tagIds, tags)
 
   async function unhide(part) {
     try {
@@ -85,6 +86,15 @@ export default function AdminListings() {
     }
   }
 
+  async function copyId(part) {
+    try {
+      await navigator.clipboard.writeText(part.id)
+      toast.success('ID copied.')
+    } catch {
+      toast.error("Couldn't copy the ID.")
+    }
+  }
+
   function setFilter(key, value) {
     const next = new URLSearchParams(searchParams)
     if (value) next.set(key, value)
@@ -92,98 +102,120 @@ export default function AdminListings() {
     setSearchParams(next, { replace: true })
   }
 
+  const columns = [
+    {
+      key: 'part',
+      header: 'Part',
+      render: (p) => {
+        return (
+          <span className={styles.part}>
+            <span className={styles.thumb}>
+              <PartPhoto part={p} />
+            </span>
+            <span className={styles.who}>
+              <button type="button" className={styles.name} onClick={() => setOpenId(p.id)}>
+                {p.name}
+              </button>
+              <span className={styles.meta}>
+                {[p.oemNumber, p.brand, p.category].filter(Boolean).join(' · ')}
+              </span>
+              <span className={styles.shop}>{p.shopName}</span>
+            </span>
+          </span>
+        )
+      },
+    },
+    { key: 'shop', header: 'Shop', optional: true, render: (p) => <span className={styles.shopCell}>{p.shopName}</span> },
+    { key: 'price', header: 'Price', align: 'end', cellClassName: styles.priceCell, render: (p) => <strong className={styles.price}>{formatPrice(p.priceIls)}</strong> },
+    { key: 'status', header: 'Status', render: (p) => <PartStatus part={p} /> },
+    {
+      key: 'actions',
+      header: <span className={styles.srOnly}>Actions</span>,
+      align: 'end',
+      render: (p) => (
+        <ActionMenu
+          label={`Actions for ${p.name}`}
+          items={[
+            { label: 'View details', onSelect: () => setOpenId(p.id) },
+            { label: 'Copy part ID', onSelect: () => copyId(p) },
+            p.hidden
+              ? { label: 'Unhide part', onSelect: () => unhide(p), separated: true }
+              : { label: 'Hide part', onSelect: () => setHiding(p), danger: true, separated: true },
+          ]}
+        />
+      ),
+    },
+  ]
+
   return (
-    <AdminPage title="Listings" description="All parts from all shops. Hide a part that breaks the rules; the shop sees your reason.">
-      <FilterToolbar canReset={Boolean(query || show)} onReset={() => setSearchParams({}, { replace: true })}>
-        <FilterField label="Search" grow>
-          <Input
-            type="search"
-            value={query}
-            placeholder="Part name, number, brand, shop or tag"
-            onChange={(event) => setFilter('q', event.target.value)}
-          />
-        </FilterField>
-        <FilterField label="Show">
-          <Select value={show} onChange={(event) => setFilter('show', event.target.value)}>
+    <PageShell>
+      <PageIntro
+        eyebrow="Operations / Listings"
+        title="Listings"
+        description="All parts from all shops. Hide a part that breaks the rules; the shop sees your reason."
+      />
+
+      <section className={styles.workspace} aria-label="Listings">
+        <FilterToolbar
+          search={
+            <SearchBar
+              quiet
+              id="listing-search"
+              value={query}
+              onChange={(value) => setFilter('q', value)}
+              label="Search listings"
+              placeholder="Part name, number, brand, shop or tag"
+            />
+          }
+          canReset={Boolean(query || show)}
+          onReset={() => setSearchParams({}, { replace: true })}
+        >
+          <FilterMenu label="Show" value={show} onChange={(event) => setFilter('show', event.target.value)}>
             {VISIBILITY.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
-          </Select>
-        </FilterField>
-      </FilterToolbar>
+          </FilterMenu>
+        </FilterToolbar>
 
-      {error && <Notice tone="danger">Couldn't load listings: {error.message}</Notice>}
-      {!data && !error && <SkeletonRows label="Loading…" />}
-      {data && (
-        <>
-          <p className={styles.muted} aria-live="polite">
-            {results.length} of {parts.length} parts
-          </p>
-          <AdminTable
-            caption="Parts"
-            emptyText="No parts match."
-            rows={results}
-            selectedKey={openId}
-            onRowOpen={(p) => setOpenId(p.id)}
-            columns={[
-              {
-                key: 'part',
-                header: 'Part',
-                render: (p) => (
-                  <>
-                    <button type="button" className={styles.name} onClick={() => setOpenId(p.id)}>
-                      {p.name}
-                    </button>
-                    <span className={styles.subline}>
-                      {p.oemNumber} · {p.brand} · {p.category}
-                    </span>
-                  </>
-                ),
-              },
-              { key: 'id', header: 'ID', nowrap: true, render: (p) => <ShortId id={p.id} /> },
-              { key: 'shop', header: 'Shop', render: (p) => p.shopName },
-              { key: 'price', header: 'Price', align: 'right', nowrap: true, render: (p) => formatPrice(p.priceIls) },
-              {
-                key: 'tags',
-                header: 'Tags',
-                render: (p) => {
-                  const partTags = resolveTags(p.tagIds, tags)
-                  return partTags.length ? <TagBadges tags={partTags} /> : '—'
-                },
-              },
-              { key: 'status', header: 'Status', render: (p) => <PartStatus part={p} /> },
-              {
-                key: 'actions',
-                header: 'Actions',
-                align: 'right',
-                nowrap: true,
-                render: (p) => (
-                  <RowMenu
-                    label={`Actions for ${p.name}`}
-                    items={[
-                      { label: 'View details', onSelect: () => setOpenId(p.id) },
-                      p.hidden
-                        ? { label: 'Unhide part', onSelect: () => unhide(p) }
-                        : { label: 'Hide part', onSelect: () => setHiding(p), danger: true },
-                    ]}
-                  />
-                ),
-              },
-            ]}
-          />
-        </>
-      )}
+        {error && <Notice tone="danger">Couldn't load listings: {error.message}</Notice>}
+        {!data && !error && <SkeletonRows label="Loading…" />}
+        {data && (
+          <>
+            <p className={styles.muted} aria-live="polite">
+              {results.length} of {parts.length} parts
+            </p>
+            <FlatDataList
+              label="Parts"
+              widths="minmax(300px, 3fr) minmax(140px, 1.2fr) 100px 150px 44px"
+              mediumWidths="minmax(300px, 3fr) 100px 150px 44px"
+              emptyText="No parts match."
+              rows={results}
+              selectedKey={openId}
+              onRowOpen={(p) => setOpenId(p.id)}
+              columns={columns}
+            />
+          </>
+        )}
+      </section>
 
-      <Drawer open={Boolean(open)} narrow title={open?.name ?? ''} onClose={() => setOpenId(null)}>
+      <DetailDrawer open={Boolean(open)} title={open?.name ?? ''} onClose={() => setOpenId(null)}>
         {open && (
           <div className={styles.drawerBody}>
             <PartStatus part={open} />
-            <PartCard part={open} showShop={false} />
+            <div className={styles.photo}>
+              <PartPhoto part={open} size="large" />
+            </div>
             <DetailList
               items={[
                 { label: 'Shop', value: open.shopName },
+                { label: 'Price', value: formatPrice(open.priceIls) },
+                { label: 'Category', value: open.category },
+                { label: 'Brand', value: open.brand },
+                { label: 'OEM number', value: open.oemNumber },
+                { label: 'Manufacturer number', value: open.manufacturerNumber },
+                { label: 'Tags', value: openTags.length > 0 ? <TagBadges tags={openTags} /> : null },
                 { label: 'Added', value: formatDate(open.addedAt) },
                 { label: 'Hidden since', value: open.hidden && formatDate(open.hidden.hiddenAt) },
                 { label: 'Reason shown to shop', value: open.hidden?.reason },
@@ -204,7 +236,7 @@ export default function AdminListings() {
             </div>
           </div>
         )}
-      </Drawer>
+      </DetailDrawer>
 
       <ReasonDialog
         open={Boolean(hiding)}
@@ -220,6 +252,6 @@ export default function AdminListings() {
           setHiding(null)
         }}
       />
-    </AdminPage>
+    </PageShell>
   )
 }

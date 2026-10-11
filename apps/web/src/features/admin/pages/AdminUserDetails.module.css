@@ -1,12 +1,39 @@
-.card {
+﻿/* 8 / 4: the submitted details on the left, status and tags in a rail */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+}
+
+@media (min-width: 1100px) {
+  .layout {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: var(--space-7);
+  }
+
+  .rail {
+    padding-left: var(--space-6);
+    border-left: 1px solid var(--color-border);
+  }
+}
+
+.main,
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.block {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: var(--space-5);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+}
+
+.rail .block + .block {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
 }
 
 .statusRow {
@@ -15,13 +42,13 @@
   align-items: center;
   gap: var(--space-3);
   font-size: var(--font-size-sm);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .facts {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
   margin: 0;
   font-size: var(--font-size-sm);
 }
@@ -29,22 +56,11 @@
 .facts dt {
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
 }
 
 .facts dd {
   margin: 0;
   overflow-wrap: anywhere;
-}
-
-.muted {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-}
-
-@media (max-width: 560px) {
-  .card {
-    padding: var(--space-4);
-  }
 }

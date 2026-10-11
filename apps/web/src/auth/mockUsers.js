@@ -154,7 +154,7 @@ export const seedUsers = [
     ...base({
       id: 'u-1',
       role: ROLES.ADMIN,
-      name: 'FastFix Admin',
+      name: 'MOTEXA Admin',
       email: 'admin@fastfix.test',
       phone: '',
       createdAt: '2026-09-01T08:00:00.000Z',

@@ -4,12 +4,12 @@ Public directory of approved mechanics. Anyone can browse it without logging in.
 
 | Path | Purpose |
 | --- | --- |
-| `pages/MechanicsDirectory.jsx` | `/mechanics` - hero search (problem or skill / city / my location, with symptom matching), AI banner, skill tiles with photos, rows (specialists for your car, top rated, near you, mobile, 24/7), results as cards + map with filters (skill, service, car make) and sort, then how it works, mechanics by city, why FastFix. In the URL: `?q=brakes&city=Nablus&skill=Electrical&mode=on_site&make=Toyota&sort=rating` (the AI diagnosis links here with its suggested skill; any capitalization works) |
+| `pages/MechanicsDirectory.jsx` | `/mechanics` - hero search (problem or skill / city / my location, with symptom matching), AI banner, skill tiles with photos, rows (specialists for your car, top rated, near you, mobile, 24/7), results as cards + map with filters (skill, service, car make) and sort, then how it works, mechanics by city, why MOTEXA. In the URL: `?q=brakes&city=Nablus&skill=Electrical&mode=on_site&make=Toyota&sort=rating` (the AI diagnosis links here with its suggested skill; any capitalization works) |
 | `symptoms.js` | Symptom words -> skill ("squeaking brakes" -> Brakes). Edit this list to teach the search new symptoms |
 | `mechanicsSearch.js` | `findMechanics` (search, city, filters, sort, distance), `mechanicsByCity`, `skillCounts`, `allMakes` - pure functions |
 | `skills.js`, `images.js`, `mechanicImages.json` | Photo search words for the skill tiles and workshop covers; the downloaded photos (written by `npm run images:fetch`) |
 | `components/MechanicMiniCard.jsx`, `MechanicFilters.jsx`, `MechanicSections.jsx` | Row card, filter bar, AI banner and trust section |
-| `pages/MechanicProfile.jsx` | `/mechanics/:mechanicId` - photo, workshop, address, description, services (on-site with cities, workshop visit, online consultation), skills with years, "Verified by FastFix", workshop photos, "Request service" |
+| `pages/MechanicProfile.jsx` | `/mechanics/:mechanicId` - photo, workshop, address, description, services (on-site with cities, workshop visit, online consultation), skills with years, "Verified by MOTEXA", workshop photos, "Request service" |
 | `components/MechanicCard.jsx` | One mechanic in the results: workshop cover photo, avatar, rating, badges, top skills, View profile / Request service |
 | `components/ServiceModeBadges.jsx` | The service modes a mechanic offers, as badges |
 | `searchMechanics.js` | Search index over the mechanics (uses `utils/wordSearch.js`, the marketplace's word-level fuzzy approach) |

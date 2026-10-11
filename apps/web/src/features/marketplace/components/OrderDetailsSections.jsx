@@ -8,13 +8,14 @@ import { FULFILLMENT_METHODS, paymentLabel } from '../shopCommerce.js'
 import OrderTimeline from './OrderTimeline.jsx'
 import styles from './OrderDetailsSections.module.css'
 
-const CANCELLED_BY = { buyer: 'Cancelled by the customer', shop: 'Rejected by the shop', admin: 'Cancelled by FastFix' }
-const STOCK_TEXT = {
-  reserved: 'Reserved: held for this order, deducted from your stock when you confirm it.',
-  deducted: 'Deducted from your stock.',
+const CANCELLED_BY = { buyer: 'Cancelled by the customer', shop: 'Rejected by the shop', admin: 'Cancelled by MOTEXA' }
+// whose is 'your' for the shop's own page and 'the shop's' for the admin's.
+const stockText = (whose) => ({
+  reserved: `Reserved: held for this order, deducted from ${whose} stock when ${whose === 'your' ? 'you confirm' : 'the shop confirms'} it.`,
+  deducted: `Deducted from ${whose} stock.`,
   released: 'Released: the reserved units went back on sale.',
-  returned: 'Returned to your stock.',
-}
+  returned: `Returned to ${whose} stock.`,
+})
 
 // Everything about one order, read-only: who ordered, items and totals, delivery or pickup,
 // payment, the linked service request, stock and the status timeline. Used by the shop's order page
@@ -158,7 +159,7 @@ export default function OrderDetailsSections({ order, audience = 'shop', request
           <h2 id="order-stock-title" className={styles.title}>
             Stock
           </h2>
-          <p className={styles.muted}>{STOCK_TEXT[order.stockState] ?? '—'}</p>
+          <p className={styles.muted}>{stockText(audience === 'admin' ? "the shop's" : 'your')[order.stockState] ?? '—'}</p>
         </Card>
       </div>
     </div>

@@ -1,17 +1,13 @@
-import styles from './AdminPage.module.css'
+import PageIntro from '../../../components/PageIntro.jsx'
+import PageShell from '../../../components/PageShell.jsx'
 
-// Title, short description and optional actions at the top of an admin page, then the content.
-export default function AdminPage({ title, description, actions, children }) {
+// Every admin page: the shared page shell and the intro (OPERATIONS / SECTION kicker, title,
+// description, main action), then the content.
+export default function AdminPage({ title, description, actions, eyebrow = `Operations / ${title}`, children }) {
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <div>
-          <h1 className={styles.title}>{title}</h1>
-          {description && <p className={styles.description}>{description}</p>}
-        </div>
-        {actions && <div className={styles.actions}>{actions}</div>}
-      </header>
+    <PageShell>
+      <PageIntro eyebrow={eyebrow} title={title} description={description} actions={actions} />
       {children}
-    </div>
+    </PageShell>
   )
 }

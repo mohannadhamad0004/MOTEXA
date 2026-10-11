@@ -33,7 +33,7 @@ app.use((error, _req, res, _next) => {
 });
 
 app.listen(port, () => {
-  console.log(`FastFix API listening on http://localhost:${port}`);
+  console.log(`MOTEXA API listening on http://localhost:${port}`);
   if (usingMemoryDatabase) {
     console.log("No DATABASE_URL: using an in-memory database with the mock data (resets on restart).");
     // Create it now, so the first request doesn't wait for it

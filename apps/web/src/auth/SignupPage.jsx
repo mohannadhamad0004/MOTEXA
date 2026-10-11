@@ -27,7 +27,7 @@ export default function SignupPage() {
   return (
     <AuthCard
       wide
-      title={role ? `Sign up as ${ACCOUNT_TYPE_LABELS[role]}` : 'Create your FastFix account'}
+      title={role ? `Sign up as ${ACCOUNT_TYPE_LABELS[role]}` : 'Create your MOTEXA account'}
       subtitle={subtitle}
       footer={
         <>

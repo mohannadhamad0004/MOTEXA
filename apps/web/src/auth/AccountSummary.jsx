@@ -1,5 +1,5 @@
 import FilePreview from '../components/FilePreview.jsx'
-import StatusBadge from '../components/StatusBadge.jsx'
+import StatusIndicator from '../components/StatusIndicator.jsx'
 import { ROLES } from '../authorization/roles.js'
 import { formatDate } from '../utils/formatDate.js'
 import {
@@ -36,7 +36,7 @@ export default function AccountSummary({ account, renderSkillActions = null }) {
             <h3 className={styles.name}>{account.name}</h3>
             <p className={styles.muted}>{ACCOUNT_TYPE_LABELS[role]}</p>
           </div>
-          {status && <StatusBadge label={status.label} tone={status.tone} />}
+          {status && <StatusIndicator label={status.label} tone={status.tone} />}
         </div>
         <dl className={styles.details}>
           <Detail label="Email" value={account.email} />
@@ -65,7 +65,7 @@ export default function AccountSummary({ account, renderSkillActions = null }) {
                 <li key={skill.id} className={styles.card}>
                   <div className={styles.cardHeader}>
                     <p className={styles.cardTitle}>{skill.skill}</p>
-                    {skillStatus && <StatusBadge label={skillStatus.label} tone={skillStatus.tone} />}
+                    {skillStatus && <StatusIndicator label={skillStatus.label} tone={skillStatus.tone} />}
                   </div>
                   <p className={styles.muted}>
                     {skill.years} {Number(skill.years) === 1 ? 'year' : 'years'} of experience
@@ -105,7 +105,7 @@ export default function AccountSummary({ account, renderSkillActions = null }) {
                     <p className={styles.cardTitle}>
                       Truck {index + 1}: {truck.plateNumber}
                     </p>
-                    {review && <StatusBadge label={review.label} tone={review.tone} />}
+                    {review && <StatusIndicator label={review.label} tone={review.tone} />}
                   </div>
                   <p className={styles.muted}>
                     {truckTypeLabel(truck.type)} · carries up to {Number(truck.maxWeightKg).toLocaleString('en')} kg
@@ -135,7 +135,7 @@ export default function AccountSummary({ account, renderSkillActions = null }) {
                 <li key={change.field} className={styles.card}>
                   <div className={styles.cardHeader}>
                     <p className={styles.cardTitle}>{REVIEWED_FIELD_LABELS[change.field]}</p>
-                    <StatusBadge label={badge.label} tone={badge.tone} />
+                    <StatusIndicator label={badge.label} tone={badge.tone} />
                   </div>
                   {change.value instanceof Blob ? (
                     <FileGroup title="New file" files={change.value} small />

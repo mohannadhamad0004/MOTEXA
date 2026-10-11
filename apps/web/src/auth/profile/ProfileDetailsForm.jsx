@@ -89,7 +89,7 @@ export default function ProfileDetailsForm() {
     const sent = result.sentForReview.map((field) => REVIEWED_FIELD_LABELS[field].toLowerCase())
     toast.success(
       sent.length
-        ? `Saved. Your new ${sent.join(' and ')} was sent to FastFix for review.`
+        ? `Saved. Your new ${sent.join(' and ')} was sent to MOTEXA for review.`
         : 'Your profile was saved.',
     )
   }
@@ -110,7 +110,7 @@ export default function ProfileDetailsForm() {
           {...props}
           hint={
             isReviewed
-              ? `Changing this sends it to FastFix for review. Your public profile shows "${user[name]}" until it is approved.`
+              ? `Changing this sends it to MOTEXA for review. Your public profile shows "${user[name]}" until it is approved.`
               : props.hint
           }
         />

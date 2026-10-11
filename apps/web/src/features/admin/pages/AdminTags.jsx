@@ -7,6 +7,7 @@ import { useToast } from '../../../components/Toast/ToastContext.js'
 import { tagColor } from '../../../utils/tagColors.js'
 import AdminPage from '../components/AdminPage.jsx'
 import Tabs from '../../../components/Tabs.jsx'
+import ActionMenu from '../../../components/ActionMenu.jsx'
 import TagForm from '../components/TagForm.jsx'
 import { useAdminQuery, useAdminService } from '../AdminContext.js'
 import { TAG_TYPES } from '../constants.js'
@@ -108,12 +109,13 @@ export default function AdminTags() {
                         Used on {tag.usage} {tag.usage === 1 ? 'item' : 'items'}
                       </span>
                       <span className={styles.rowActions}>
-                        <Button variant="secondary" onClick={() => setEditingId(tag.id)}>
-                          Rename / color
-                        </Button>
-                        <Button variant="danger" onClick={() => setDeleting(tag)}>
-                          Delete
-                        </Button>
+                        <ActionMenu
+                          label={`Actions for the tag ${tag.name}`}
+                          items={[
+                            { label: 'Rename / color', onSelect: () => setEditingId(tag.id) },
+                            { label: 'Delete', onSelect: () => setDeleting(tag), danger: true },
+                          ]}
+                        />
                       </span>
                     </div>
                   )}

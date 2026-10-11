@@ -7,8 +7,10 @@ import { ACCOUNT_STATUS, ACCOUNT_TYPE_LABELS, accountStatusBadge } from '../auth
 import { useAuth } from '../auth/useAuth.js'
 import ThemeToggle from '../components/Layout/ThemeToggle.jsx'
 import Notice from '../components/Notice.jsx'
+import PageHeader from '../components/PageHeader.jsx'
+import PageShell from '../components/PageShell.jsx'
 import SectionCard from '../components/SectionCard.jsx'
-import StatusBadge from '../components/StatusBadge.jsx'
+import StatusIndicator from '../components/StatusIndicator.jsx'
 import styles from './AccountPage.module.css'
 
 // /account - private account and security settings, for every role (pending and rejected accounts
@@ -20,19 +22,21 @@ export default function AccountPage() {
   const approved = user.status === ACCOUNT_STATUS.APPROVED
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>Account</h1>
-        <p className={styles.subtitle}>
-          Private settings - only you see these.
-          {approved && (
-            <>
-              {' '}
-              What others see is on <Link to="/profile">your profile</Link>.
-            </>
-          )}
-        </p>
-      </header>
+    <PageShell>
+      <PageHeader
+        title="Account"
+        description={
+          <>
+            Private settings - only you see these.
+            {approved && (
+              <>
+                {' '}
+                What others see is on <Link to="/profile">your profile</Link>.
+              </>
+            )}
+          </>
+        }
+      />
 
       {!approved && (
         <Notice tone={user.status === ACCOUNT_STATUS.REJECTED ? 'danger' : 'warning'}>
@@ -54,7 +58,7 @@ export default function AccountPage() {
           <div>
             <dt>Status</dt>
             <dd>
-              <StatusBadge label={status.label} tone={status.tone} />
+              <StatusIndicator label={status.label} tone={status.tone} />
             </dd>
           </div>
         </dl>
@@ -75,6 +79,6 @@ export default function AccountPage() {
       <SectionCard title="Sessions">
         <LogoutEverywhere />
       </SectionCard>
-    </div>
+    </PageShell>
   )
 }

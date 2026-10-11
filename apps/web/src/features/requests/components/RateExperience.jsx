@@ -38,7 +38,7 @@ export default function RateExperience({ request, compact = false }) {
             {review.comment && !compact && <q className={styles.comment}>{review.comment}</q>}
           </div>
           {review.hiddenReason && (
-            <Notice tone="warning">FastFix hid your review from the public pages: {review.hiddenReason}</Notice>
+            <Notice tone="warning">MOTEXA hid your review from the public pages: {review.hiddenReason}</Notice>
           )}
           {status.canEdit ? (
             <div className={styles.editRow}>

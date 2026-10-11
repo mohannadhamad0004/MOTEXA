@@ -3,11 +3,11 @@ import { ACCOUNT_TYPE_LABELS, STATUS_BADGES, verificationMethodLabel } from '../
 import Button from '../../../components/Button.jsx'
 import Notice from '../../../components/Notice.jsx'
 import { useToast } from '../../../components/Toast/ToastContext.js'
-import StatusBadge from '../../../components/StatusBadge.jsx'
+import StatusIndicator from '../../../components/StatusIndicator.jsx'
 import { formatDate } from '../../../utils/formatDate.js'
 import AccountReview from '../components/AccountReview.jsx'
 import AdminPage from '../components/AdminPage.jsx'
-import AdminTable from '../components/AdminTable.jsx'
+import DataList from '../../../components/DataList.jsx'
 import ShortId from '../components/ShortId.jsx'
 import UpdateReview from '../components/UpdateReview.jsx'
 import { SkeletonRows } from '../../../components/Skeleton.jsx'
@@ -67,7 +67,7 @@ export default function AdminApprovals() {
   return (
     <AdminPage
       title="Approvals"
-      description="Review new mechanics, parts shops and tow companies before they appear on FastFix, and the changes approved accounts send in (names, licenses, skills, trucks)."
+      description="Review new mechanics, parts shops and tow companies before they appear on MOTEXA, and the changes approved accounts send in (names, licenses, skills, trucks)."
     >
       <Tabs
         label="Approval queues"
@@ -188,7 +188,7 @@ export default function AdminApprovals() {
 
 function ReviewHistory({ history }) {
   return (
-    <AdminTable
+    <DataList
       caption="Approved and rejected signups"
       emptyText="No decisions yet."
       rows={history}
@@ -206,7 +206,7 @@ function ReviewHistory({ history }) {
         {
           key: 'decision',
           header: 'Decision',
-          render: (row) => <StatusBadge label={STATUS_BADGES[row.status].label} tone={STATUS_BADGES[row.status].tone} />,
+          render: (row) => <StatusIndicator label={STATUS_BADGES[row.status].label} tone={STATUS_BADGES[row.status].tone} />,
         },
         { key: 'date', header: 'Date', nowrap: true, render: (row) => formatDate(row.reviewedAt) },
         { key: 'method', header: 'Verified by', nowrap: true, render: (row) => verificationMethodLabel(row.method) },

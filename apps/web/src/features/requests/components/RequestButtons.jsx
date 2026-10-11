@@ -8,12 +8,13 @@ import TowRequestForm from './TowRequestForm.jsx'
 // and sends logged-out visitors to log in first (see RequestAction).
 
 /** "Request service" on a mechanic's profile. Customers only. */
-export function RequestServiceButton({ mechanic, className }) {
+export function RequestServiceButton({ mechanic, className, variant = 'primary' }) {
   return (
     <RequestAction
       type={REQUEST_TYPES.SERVICE}
       label="Request service"
       title={`Request service from ${mechanic.workshopName}`}
+      variant={variant}
       className={className}
       renderForm={(props) => <ServiceRequestForm mechanic={mechanic} {...props} />}
     />
@@ -21,12 +22,13 @@ export function RequestServiceButton({ mechanic, className }) {
 }
 
 /** "Request tow" on a tow company's profile. Customers only. */
-export function RequestTowButton({ company, pickupPosition = null, className }) {
+export function RequestTowButton({ company, pickupPosition = null, className, variant = 'primary' }) {
   return (
     <RequestAction
       type={REQUEST_TYPES.TOW}
       label="Request tow"
       title={`Request a tow from ${company.name}`}
+      variant={variant}
       className={className}
       renderForm={(props) => <TowRequestForm company={company} pickupPosition={pickupPosition} {...props} />}
     />

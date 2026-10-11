@@ -9,6 +9,7 @@ export default function SearchBar({
   value,
   onChange,
   id = 'part-search',
+  quiet = false, // a flat underlined field for toolbars
   label = 'Search by part number, name or car',
   placeholder = 'Search by part number, name or car - e.g. steering wheel hyundai accent',
 }) {
@@ -42,7 +43,7 @@ export default function SearchBar({
   return (
     <form
       role="search"
-      className={styles.form}
+      className={`${styles.form} ${quiet ? styles.quiet : ''}`}
       onSubmit={(event) => {
         event.preventDefault()
         if (text !== committed.current) commit(text)

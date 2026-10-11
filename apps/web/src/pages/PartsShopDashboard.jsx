@@ -5,8 +5,9 @@ import Badge from '../components/Badge.jsx'
 import Button from '../components/Button.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import Notice from '../components/Notice.jsx'
+import ActionMenu from '../components/ActionMenu.jsx'
 import { SkeletonRows } from '../components/Skeleton.jsx'
-import StatusBadge from '../components/StatusBadge.jsx'
+import StatusIndicator from '../components/StatusIndicator.jsx'
 import DeletePartDialog from '../features/marketplace/components/DeletePartDialog.jsx'
 import PartForm from '../features/marketplace/components/PartForm.jsx'
 import { getVehicleOptions } from '../features/marketplace/filters.js'
@@ -117,7 +118,7 @@ export default function PartsShopDashboard() {
       {hiddenParts.length > 0 && (
         <Notice
           tone="warning"
-          title={`${hiddenParts.length} ${hiddenParts.length === 1 ? 'part is' : 'parts are'} hidden from the marketplace by FastFix`}
+          title={`${hiddenParts.length} ${hiddenParts.length === 1 ? 'part is' : 'parts are'} hidden from the marketplace by MOTEXA`}
         >
           <ul className={styles.hiddenList}>
             {hiddenParts.map((part) => (
@@ -126,7 +127,7 @@ export default function PartsShopDashboard() {
               </li>
             ))}
           </ul>
-          <p>Fix the listing and contact FastFix support to have it shown again.</p>
+          <p>Fix the listing and contact MOTEXA support to have it shown again.</p>
         </Notice>
       )}
 
@@ -192,7 +193,7 @@ export default function PartsShopDashboard() {
                 <tr key={part.id} className={part.id === editId ? styles.editingRow : undefined}>
                   <td>
                     {part.name}{' '}
-                    {part.hidden && <StatusBadge label="Hidden by admin" tone="danger" />}
+                    {part.hidden && <StatusIndicator label="Hidden by admin" tone="danger" />}
                     <span className={styles.partId}>
                       {part.oemNumber} · {part.brand}
                     </span>
@@ -203,14 +204,13 @@ export default function PartsShopDashboard() {
                     {part.reserved > 0 && <span className={styles.partId}>{part.reserved} reserved for orders</span>}
                   </td>
                   <td className={styles.actionsCell}>
-                    <div className={styles.rowActions}>
-                      <Button variant="secondary" size="sm" onClick={() => startEdit(part)} aria-label={`Edit ${part.name}`}>
-                        Edit
-                      </Button>
-                      <Button variant="secondary" size="sm" onClick={() => setDeleting(part)} aria-label={`Delete ${part.name}`}>
-                        Delete
-                      </Button>
-                    </div>
+                    <ActionMenu
+                      label={`Actions for ${part.name}`}
+                      items={[
+                        { label: 'Edit part', onSelect: () => startEdit(part) },
+                        { label: 'Delete part', onSelect: () => setDeleting(part), danger: true },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}

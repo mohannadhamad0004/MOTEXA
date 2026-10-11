@@ -72,10 +72,10 @@ export default function LoginPage() {
   return (
     <AuthCard
       title="Log in"
-      subtitle={redirect ? "Log in and we'll take you back to where you were." : 'Welcome back to FastFix.'}
+      subtitle={redirect ? "Log in and we'll take you back to where you were." : 'Welcome back to MOTEXA.'}
       footer={
         <>
-          New to FastFix? <Link to="/signup">Create an account</Link>
+          New to MOTEXA? <Link to="/signup">Create an account</Link>
         </>
       }
     >

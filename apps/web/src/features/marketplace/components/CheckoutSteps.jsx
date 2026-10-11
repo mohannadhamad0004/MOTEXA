@@ -1,4 +1,4 @@
-﻿import { useId, useState } from 'react'
+import { useId, useState } from 'react'
 import Badge from '../../../components/Badge.jsx'
 import Button from '../../../components/Button.jsx'
 import Card from '../../../components/Card.jsx'
@@ -32,7 +32,7 @@ function ChoiceCard({ name, value, checked, disabled = false, onChange, title, c
 
 function ShopStepCard({ group, children }) {
   return (
-    <Card as="section" aria-labelledby={`step-${group.shop.id}`} className={styles.shopCard}>
+    <Card flat as="section" aria-labelledby={`step-${group.shop.id}`} className={styles.shopCard}>
       <header className={styles.shopHeader}>
         <h2 id={`step-${group.shop.id}`} className={styles.shopName}>
           {group.shop.name}
@@ -290,14 +290,14 @@ export function PaymentStep({ view, choices, errors, onChange }) {
 }
 
 // TODO: replace with the payment provider's hosted checkout. Card details are entered on the
-// provider's page and never reach FastFix, so there are deliberately no card fields here.
+// provider's page and never reach MOTEXA, so there are deliberately no card fields here.
 function CardPaymentPlaceholder() {
   return (
     <div className={styles.cardPlaceholder} role="note">
       <Badge tone="info">Placeholder</Badge>
       <p className={styles.placeholderTitle}>Secure card payment will open here</p>
       <p className={styles.muted}>
-        You&apos;ll pay on our payment provider&apos;s secure page. FastFix never sees or stores your card number.
+        You&apos;ll pay on our payment provider&apos;s secure page. MOTEXA never sees or stores your card number.
       </p>
     </div>
   )
@@ -313,7 +313,7 @@ export function ServiceRequestStep({ requests, value, onChange, workshop, view }
   return (
     <div className={styles.stack}>
       <p className={styles.intro}>Buying parts for a job? Link the purchase to the service request.</p>
-      <Card className={styles.shopCard}>
+      <Card flat className={styles.shopCard}>
         <TextField
           id="service-request"
           as="select"

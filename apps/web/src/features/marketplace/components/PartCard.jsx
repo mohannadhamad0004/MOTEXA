@@ -1,7 +1,6 @@
 import { Link } from 'react-router'
 import Badge from '../../../components/Badge.jsx'
 import Card from '../../../components/Card.jsx'
-import StatusBadge from '../../../components/StatusBadge.jsx'
 import TagBadges from '../../../components/TagBadges.jsx'
 import { resolveTags, useTags } from '../../../context/TagsContext.js'
 import { CONDITIONS, LOW_STOCK_THRESHOLD, PART_TYPES } from '../constants.js'
@@ -11,8 +10,6 @@ import { RatingSummary } from '../../requests/components/Stars.jsx'
 import Highlight from './Highlight.jsx'
 import PartPhoto from './PartPhoto.jsx'
 import styles from './PartCard.module.css'
-
-const conditionTone = { new: 'success', used: 'warning', refurbished: 'info' }
 
 function stockStatus(stock) {
   if (stock === 0) return { label: 'Out of stock', className: styles.outOfStock }

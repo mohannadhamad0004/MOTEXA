@@ -1,10 +1,9 @@
 import { useAuth } from '../../../auth/useAuth.js'
 import { isApprovedTruck } from '../../../auth/reviewItems.js'
 import Button from '../../../components/Button.jsx'
-import Card from '../../../components/Card.jsx'
 import Notice from '../../../components/Notice.jsx'
 import { SkeletonRows } from '../../../components/Skeleton.jsx'
-import StatusBadge from '../../../components/StatusBadge.jsx'
+import StatusIndicator from '../../../components/StatusIndicator.jsx'
 import { REQUEST_TYPE_LABELS, requestStatusBadge } from '../constants.js'
 import { summarizeRequest } from '../format.js'
 import { useRequestsQuery } from '../RequestsContext.js'
@@ -35,21 +34,21 @@ export default function ProviderRequests() {
       {requests?.length > 0 && (
         <ul className={styles.list}>
           {requests.map((request) => (
-            <Card as="li" key={request.id} padding="md" className={styles.item}>
+            <li key={request.id} className={styles.item}>
               <div className={styles.text}>
                 <p className={styles.name}>
                   {REQUEST_TYPE_LABELS[request.type]} · {request.sender.name}
                 </p>
                 <p className={styles.muted}>{summarizeRequest(request)}</p>
               </div>
-              <StatusBadge {...requestStatusBadge(request.status)} />
+              <StatusIndicator {...requestStatusBadge(request.status)} />
               <div className={styles.actions}>
                 <ProviderCompletion request={request} trucks={trucks} />
                 <Button to={`/chats/${request.id}`} size="sm" variant="secondary">
                   Open chat
                 </Button>
               </div>
-            </Card>
+            </li>
           ))}
         </ul>
       )}

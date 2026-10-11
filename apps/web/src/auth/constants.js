@@ -63,7 +63,7 @@ export const VERIFICATION_METHODS = Object.freeze([
 export const verificationMethodLabel = (value) =>
   VERIFICATION_METHODS.find((method) => method.value === value)?.label ?? '—'
 
-// Label and StatusBadge tone for each status.
+// Label and StatusIndicator tone for each status.
 export const STATUS_BADGES = Object.freeze({
   [ACCOUNT_STATUS.PENDING]: { label: 'Pending review', tone: 'warning' },
   [ACCOUNT_STATUS.APPROVED]: { label: 'Approved', tone: 'success' },

@@ -80,3 +80,27 @@
 .route dd {
   margin: 0;
 }
+
+/* Flat refinement: jobs are rows divided by thin rules, with the route set out in two columns */
+.list {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.list > .card {
+  padding: var(--space-4) var(--space-1);
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.route {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-7);
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}

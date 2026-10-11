@@ -2,7 +2,7 @@ import ProviderRequests from '../features/requests/components/ProviderRequests.j
 import ResponderEmergencies from '../features/requests/emergency/components/ResponderEmergencies.jsx'
 import Button from '../components/Button.jsx'
 import Card from '../components/Card.jsx'
-import StatusBadge from '../components/StatusBadge.jsx'
+import StatusIndicator from '../components/StatusIndicator.jsx'
 import styles from './MechanicDashboard.module.css'
 
 // TODO: replace with real API call
@@ -85,7 +85,7 @@ export default function MechanicDashboard() {
                   {request.id} · {request.customer} · {request.mediaType} uploaded
                 </p>
               </div>
-              <StatusBadge
+              <StatusIndicator
                 label={`${request.aiReport.urgency} urgency`}
                 tone={urgencyTone[request.aiReport.urgency]}
               />

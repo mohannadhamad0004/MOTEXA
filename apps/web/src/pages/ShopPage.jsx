@@ -41,7 +41,7 @@ export default function ShopPage() {
         icon="🏪"
         headingLevel="h1"
         title="Shop not found"
-        description="This shop doesn't exist or is no longer on FastFix."
+        description="This shop doesn't exist or is no longer on MOTEXA."
         action={<Button to="/marketplace">Back to marketplace</Button>}
       />
     )

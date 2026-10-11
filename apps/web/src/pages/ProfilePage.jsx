@@ -1,4 +1,4 @@
-﻿import { Link } from 'react-router'
+import { Link } from 'react-router'
 import { ACCOUNT_TYPE_LABELS, REVIEW_STATUS } from '../auth/constants.js'
 import BusinessLicenseCard from '../auth/profile/BusinessLicenseCard.jsx'
 import ProfileDetailsForm from '../auth/profile/ProfileDetailsForm.jsx'
@@ -11,6 +11,7 @@ import { usePermission } from '../authorization/usePermission.js'
 import Avatar from '../components/Avatar.jsx'
 import Button from '../components/Button.jsx'
 import Notice from '../components/Notice.jsx'
+import PageShell from '../components/PageShell.jsx'
 import SectionCard from '../components/SectionCard.jsx'
 import SellingSettingsForm from '../features/marketplace/components/SellingSettingsForm.jsx'
 import MyRequestsList from '../features/requests/components/MyRequestsList.jsx'
@@ -49,7 +50,7 @@ export default function ProfilePage() {
     (user.pendingChanges ?? []).filter((c) => c.status === REVIEW_STATUS.REJECTED).length
 
   return (
-    <div className={styles.page}>
+    <PageShell>
       <header className={styles.header}>
         <Avatar file={user.profilePhoto} name={user.name} size="lg" />
         <div className={styles.headerText}>
@@ -70,14 +71,14 @@ export default function ProfilePage() {
       </header>
 
       {waiting.length > 0 && (
-        <Notice tone="warning" title={`${waiting.length} ${waiting.length === 1 ? 'update is' : 'updates are'} waiting for FastFix review`}>
+        <Notice tone="warning" title={`${waiting.length} ${waiting.length === 1 ? 'update is' : 'updates are'} waiting for MOTEXA review`}>
           {waiting.map((item) => item.label).join(', ')}. Your public profile keeps showing the approved information
           until then.
         </Notice>
       )}
       {rejectedCount > 0 && (
         <Notice tone="danger">
-          FastFix didn't approve {rejectedCount === 1 ? 'one of your updates' : `${rejectedCount} of your updates`}.
+          MOTEXA didn't approve {rejectedCount === 1 ? 'one of your updates' : `${rejectedCount} of your updates`}.
           The reason is shown next to {rejectedCount === 1 ? 'it' : 'each one'} below.
         </Notice>
       )}
@@ -87,7 +88,7 @@ export default function ProfilePage() {
         description={
           user.role === ROLES.CUSTOMER || user.role === ROLES.ADMIN
             ? undefined
-            : 'Photos, descriptions and addresses are saved right away. A new business or workshop name is checked by FastFix first.'
+            : 'Photos, descriptions and addresses are saved right away. A new business or workshop name is checked by MOTEXA first.'
         }
       >
         <ProfileDetailsForm />
@@ -103,7 +104,7 @@ export default function ProfilePage() {
           </SectionCard>
           <SectionCard
             title="Skills"
-            description="Each skill needs a certificate. New skills and new certificates are checked by FastFix; only approved skills are public."
+            description="Each skill needs a certificate. New skills and new certificates are checked by MOTEXA; only approved skills are public."
           >
             <SkillsManager />
           </SectionCard>
@@ -120,7 +121,7 @@ export default function ProfilePage() {
       )}
 
       {(user.role === ROLES.PARTS_SHOP || user.role === ROLES.TOW) && (
-        <SectionCard title="Business license" description="Only FastFix admins see your license - it is never public.">
+        <SectionCard title="Business license" description="Only MOTEXA admins see your license - it is never public.">
           <BusinessLicenseCard />
         </SectionCard>
       )}
@@ -142,6 +143,6 @@ export default function ProfilePage() {
           <MyRequestsList />
         </SectionCard>
       )}
-    </div>
+    </PageShell>
   )
 }

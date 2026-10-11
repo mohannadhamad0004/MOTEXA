@@ -62,7 +62,7 @@ export default function ReportPage() {
         <header className={styles.header}>
           <div>
             <p className={styles.brand}>
-              Fast<span className={styles.brandAccent}>Fix</span>
+              <span className={styles.brandAccent}>Mo</span>texa
             </p>
             <h1 id="report-title" className={styles.title}>
               {isService ? 'Service report' : 'Tow report'}
@@ -166,7 +166,7 @@ export default function ReportPage() {
           <ConfirmCompletion request={request} />
           <RateExperience request={request} compact />
           <p className={styles.muted}>
-            FastFix report {request.id}. The AI diagnosis is a preliminary assessment; the mechanic&apos;s diagnosis
+            MOTEXA report {request.id}. The AI diagnosis is a preliminary assessment; the mechanic&apos;s diagnosis
             is the final one.
           </p>
         </footer>

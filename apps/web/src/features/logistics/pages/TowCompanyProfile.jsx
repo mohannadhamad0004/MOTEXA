@@ -37,7 +37,7 @@ export default function TowCompanyProfile() {
         icon="🚚"
         headingLevel="h1"
         title="Tow company not found"
-        description="This company isn't on FastFix, or its account is still being reviewed."
+        description="This company isn't on MOTEXA, or its account is still being reviewed."
         action={<Button to="/tow-companies">Back to tow companies</Button>}
       />
     )

@@ -1,105 +1,153 @@
-﻿/* Same band as the home page hero (pages/Home.module.css): cream-to-sand in light, espresso in dark. */
+/* Flat editorial hero: 7/5 on desktop, hairline structure, no band or gradient. */
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-5);
-  margin: 0 calc(-1 * var(--space-4));
-  padding: var(--space-6) var(--space-4);
-  background:
-    radial-gradient(ellipse at 85% 0%, color-mix(in srgb, var(--color-hero-glow) 22%, transparent), transparent 55%),
-    linear-gradient(160deg, var(--color-hero-from), var(--color-hero-to));
-  color: var(--color-hero-text);
-}
-
-@media (min-width: 768px) {
-  .hero {
-    margin: 0;
-    padding: var(--space-7) var(--space-6);
-    border-radius: var(--radius-xl);
-  }
+  gap: var(--space-6);
+  padding-bottom: var(--space-7);
+  border-bottom: 1px solid var(--color-border-strong);
 }
 
 @media (min-width: 1024px) {
   .hero {
-    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-    align-items: center;
-    gap: var(--space-7);
-    padding: var(--space-8) var(--space-8);
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    align-items: end;
+    column-gap: var(--space-6);
+    padding-top: var(--space-4);
+  }
+
+  .intro {
+    grid-column: 1 / span 8;
+  }
+
+  .garage {
+    grid-column: 9 / span 4;
   }
 }
 
 .intro {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.kicker {
+  display: flex;
+  align-items: center;
   gap: var(--space-3);
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.kicker::before {
+  content: '';
+  width: 40px;
+  height: 2px;
+  background: currentColor;
 }
 
 .title {
-  font-size: var(--font-size-display);
+  font-size: clamp(2.25rem, 1rem + 5vw, 4.75rem);
   font-weight: var(--font-weight-extrabold);
-  letter-spacing: -0.02em;
-  line-height: var(--line-height-tight);
+  letter-spacing: -0.035em;
+  line-height: 1.04;
+  text-wrap: balance;
 }
 
 .accent {
-  color: var(--color-hero-accent);
+  color: var(--color-primary);
 }
 
 .subtitle {
-  color: var(--color-hero-muted);
+  color: var(--color-text-muted);
   font-size: var(--font-size-lg);
 }
 
+/* The search: one ruled bar, big type, the primary action attached */
 .search {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  width: 100%;
+  max-width: 880px;
   margin-top: var(--space-3);
 }
 
 .label {
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-bold);
+  font-weight: var(--font-weight-semibold);
 }
 
 .searchRow {
   display: flex;
-  gap: var(--space-2);
-}
-
-.searchRow > :first-child {
-  flex: 1;
-  min-width: 0;
+  align-items: stretch;
+  border-top: 2px solid var(--color-text);
+  border-bottom: 1px solid var(--color-border-strong);
 }
 
 .searchInput {
-  min-height: 52px;
-  border-radius: var(--radius-lg);
-  font-size: var(--font-size-lg);
+  flex: 1;
+  min-width: 0;
+  min-height: 64px;
+  padding: 0 var(--space-3) 0 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: clamp(1.125rem, 1rem + 0.6vw, 1.5rem);
+  font-weight: var(--font-weight-semibold);
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-regular);
+}
+
+.searchInput:focus-visible {
+  outline: none;
+  box-shadow: inset 0 -3px 0 var(--color-primary);
+}
+
+.searchRow > .searchButton {
+  align-self: center;
+  margin: var(--space-2) 0 var(--space-2) var(--space-2);
 }
 
 @media (max-width: 479px) {
   .searchRow {
-    flex-direction: column;
+    flex-wrap: wrap;
+    border-bottom: 0;
+  }
+
+  .searchInput {
+    flex-basis: 100%;
+    border-bottom: 1px solid var(--color-border-strong);
+  }
+
+  .searchRow > .searchButton {
+    flex: 1;
+    margin: var(--space-3) 0 0;
   }
 }
 
-/* My Garage: on the normal surface color, so it reads as the one control that matters */
+/* My Garage: a dossier entry, not a box. Heavy rule on top; the vehicle name is the biggest type here. */
 .garage {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-5);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-hero-card);
-  color: var(--color-text);
-  border: 2px solid transparent;
-  transition: border-color var(--transition-fast);
+  padding-top: var(--space-4);
+  border-top: 2px solid var(--color-text);
 }
 
-.garage.selected {
-  border-color: var(--color-primary);
+.selected {
+  border-top-color: var(--color-primary);
 }
 
 .garageTitle {
@@ -107,25 +155,50 @@
   align-items: center;
   gap: var(--space-2);
   color: var(--color-primary);
-  font-size: var(--font-size-h4);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .vehicleName {
-  font-size: var(--font-size-h2);
+  display: flex;
+  flex-direction: column;
+  font-size: clamp(1.75rem, 1.2rem + 1.6vw, 2.5rem);
   font-weight: var(--font-weight-extrabold);
-  line-height: var(--line-height-tight);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
-.garageText {
+.vehicleYear {
   color: var(--color-text-muted);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0;
 }
 
-.selected .garageText {
-  color: var(--color-success);
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-weight: var(--font-weight-semibold);
+}
+
+.dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-success);
+}
+
+.empty {
+  color: var(--color-text-muted);
 }
 
 .garageActions {
   display: flex;
-  gap: var(--space-2);
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin-left: calc(-1 * var(--space-4));
 }

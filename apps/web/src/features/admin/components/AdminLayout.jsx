@@ -16,36 +16,30 @@ const ICONS = {
   orders: 'M5 7h14l-1 13H6zM9 7a3 3 0 0 1 6 0',
 }
 
-// Grouped like the work: what to decide, what to manage, what is happening. `badge` names the
+// Grouped like the work: the overview, what to manage, and the day-to-day operations. `badge` names the
 // pending count (from useAdminAttention) shown next to a section.
 const groups = [
-  { label: null, items: [{ to: '/admin', label: 'Overview', icon: 'overview', end: true }] },
-  {
-    label: 'Review',
-    items: [
-      { to: '/admin/approvals', label: 'Approvals', icon: 'approvals', badge: 'approvals' },
-      { to: '/admin/reviews', label: 'Reviews', icon: 'reviews', badge: 'reports' },
-    ],
-  },
+  { label: 'Overview', items: [{ to: '/admin', label: 'Overview', icon: 'overview', end: true }] },
   {
     label: 'Management',
     items: [
+      { to: '/admin/approvals', label: 'Approvals', icon: 'approvals', badge: 'approvals' },
       { to: '/admin/users', label: 'Users', icon: 'users' },
       { to: '/admin/listings', label: 'Listings', icon: 'listings' },
       { to: '/admin/tags', label: 'Tags', icon: 'tags' },
     ],
   },
   {
-    label: 'Activity',
+    label: 'Operations',
     items: [
       { to: '/admin/requests', label: 'Requests', icon: 'requests' },
       { to: '/admin/orders', label: 'Orders', icon: 'orders' },
+      { to: '/admin/reviews', label: 'Reviews', icon: 'reviews', badge: 'reports' },
     ],
   },
 ]
-
 const Icon = ({ name }) => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d={ICONS[name]} />
   </svg>
 )
@@ -68,6 +62,10 @@ function AdminShell() {
   return (
     <div className={`${styles.layout} ${collapsed ? styles.collapsed : ''}`}>
       <nav className={styles.sidebar} aria-label="Admin sections">
+        <p className={styles.brand}>
+          MOTEXA
+          <span className={styles.brandSub}>Operations</span>
+        </p>
         <button
           type="button"
           className={styles.collapse}

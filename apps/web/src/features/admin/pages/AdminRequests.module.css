@@ -1,44 +1,112 @@
-.filter {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  max-width: 260px;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-bold);
-}
-
-.subline {
-  display: block;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
-}
-
-.details {
-  /* two lines at most; the drawer has the full text */
-  display: -webkit-box;
-  min-width: 200px;
-  max-width: 320px;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  font-size: var(--font-size-sm);
-}
-
-.muted {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-}
-
-.emergencies {
+.section {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
+/* Section title: quiet, with the count beside it */
 .heading {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-extrabold);
+}
+
+.count {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+}
+
+p.count {
+  font-size: var(--font-size-sm);
+}
+
+/* Type: a small line icon and its label, with the id (or problem) underneath */
+.type {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.icon,
+.urgentIcon {
+  box-sizing: content-box;
+  flex-shrink: 0;
+  padding: var(--space-2);
+  border-radius: 50%;
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+}
+
+/* An emergency that is still active: the only warning color in a row */
+.urgentIcon {
+  background: var(--color-danger-bg);
   color: var(--color-danger);
-  font-size: var(--font-size-h3);
+}
+
+.primary {
+  display: block;
+  font-weight: var(--font-weight-semibold);
+}
+
+.subline {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.value {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.id {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}
+
+.link {
+  display: block;
+  /* 44px tap area; the negative margin keeps the row height */
+  padding-block: 9px;
+  margin-block: -9px;
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.link:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.details {
+  /* two lines at most; the drawer has the full text */
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.inlineDetails {
+  display: none;
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.statusStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
 }
 
 .drawerBody {
@@ -52,4 +120,96 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.none {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* No emergencies: the title and its note share one quiet line */
+.sectionQuiet {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-4);
+  padding-block: var(--space-2);
+}
+
+.sectionQuiet .heading {
+  font-size: var(--font-size-lg);
+}
+
+/* Compact list: the date and its time share one line */
+@container (max-width: 899px) {
+  .date .primary,
+  .date .subline {
+    display: inline;
+  }
+
+  .date .subline {
+    margin-inline-start: var(--space-2);
+  }
+}
+
+/* Compact list: the type and its id (or problem) share the first line */
+@container (max-width: 899px) {
+  .type .primary,
+  .type .subline,
+  .type .id {
+    display: inline;
+  }
+
+  .type .subline,
+  .type .id {
+    margin-inline-start: var(--space-2);
+  }
+
+  .type {
+    align-items: center;
+  }
+
+  .icon,
+  .urgentIcon {
+    margin-top: 0;
+  }
+}
+
+/* The Details column is hidden below 1040px: show the same summary under the request instead */
+@container (max-width: 1039px) {
+  .inlineDetails {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+}
+
+.inspectorSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.inspectorSection + .inspectorSection {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.inspectorTitle {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }

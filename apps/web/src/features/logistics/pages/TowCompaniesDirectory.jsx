@@ -1,134 +1,65 @@
-import { useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router'
-import { useAuthQuery } from '../../../auth/useAuth.js'
-import { ROLES } from '../../../authorization/roles.js'
+import { Link } from 'react-router'
 import Button from '../../../components/Button.jsx'
 import EmptyState from '../../../components/EmptyState.jsx'
 import Notice from '../../../components/Notice.jsx'
+import Select from '../../../components/Select.jsx'
 import { SkeletonCards } from '../../../components/Skeleton.jsx'
-import { useTags } from '../../../context/TagsContext.js'
-import { useRatingSummaries } from '../../requests/ReviewsContext.js'
+import ServiceFilter from '../components/ServiceFilter.jsx'
+import TowCompanyRow from '../components/TowCompanyRow.jsx'
+import TowSearch from '../components/TowSearch.jsx'
 import { TOW_SORTS } from '../constants.js'
-import TowCompanyCard from '../components/TowCompanyCard.jsx'
-import { CitiesGrid, FeaturedTowCompanies, HowItWorks, SafetyTips } from '../components/TowSections.jsx'
-import ResultsLayout from '../components/ResultsLayout.jsx'
-import TowSearchHero from '../components/TowSearchHero.jsx'
-import { findCity } from '../cities.js'
-import { nearestCity } from '../geo.js'
-import { createTowCompanyIndex } from '../searchTowCompanies.js'
-import { companiesByCity, findTowCompanies, nearbyCoveredCities } from '../towSearch.js'
-import { useGeolocation } from '../useGeolocation.js'
+import { useTowSearch } from '../useTowSearch.js'
 import styles from './TowCompaniesDirectory.module.css'
 
-// TODO: replace with real API call (GET /api/tow-companies)
-const loadTowCompanies = (service) => service.getDirectory(ROLES.TOW)
+const scrollToResults = () => document.getElementById('results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
-const NONE = []
-const SORTS = ['nearest', 'rating', 'trucks']
+const TIPS = [
+  'Turn on your hazard lights.',
+  'Stay off the road: wait behind the barrier or well away from traffic.',
+  'Keep your phone charged, and keep it with you.',
+]
 
-// /tow-companies - find a tow company: search by city, company name or the browser's location,
-// filter by service, sort, and see the results as cards and on a map. City, name, service and sort
-// are in the URL (?city=Nablus&service=local&sort=rating). The customer's position is never
-// stored: it stays in this page's state, and only goes into a tow request the customer confirms.
+// /tow-companies - find a tow company. One page, one job: search (by city, company name or the browser's
+// location), and one directory of verified companies with a service filter and sort. The map is its own
+// page (/tow-companies/map) and gets the same search through the URL. City, name, service and sort are
+// in the URL (?city=Nablus&q=rescue&service=local&sort=rating). "Need a tow now?" keeps only companies
+// with a truck free right now. The customer's position is never stored: it stays in this page's state,
+// and only goes into a tow request the customer confirms.
 export default function TowCompaniesDirectory() {
-  const { data, error } = useAuthQuery(loadTowCompanies)
-  const [searchParams, setSearchParams] = useSearchParams()
-  const geo = useGeolocation()
-  const [mode, setMode] = useState('city')
-  const [emergency, setEmergency] = useState(false)
-
-  const city = findCity(searchParams.get('city') ?? '')?.name ?? ''
-  const query = searchParams.get('q') ?? ''
-  const service = searchParams.get('service') ?? ''
-  const tags = useTags()
-  const ratings = useRatingSummaries()
-  const companies = data ?? NONE
-  const index = useMemo(() => createTowCompanyIndex(companies, tags), [companies, tags])
-
-  // Where distances are measured from: the customer's position, or the middle of the searched city.
-  const userPosition = mode !== 'city' ? geo.position : null
-  const origin = useMemo(() => {
-    if (userPosition) return userPosition
-    const centre = mode === 'city' && city ? findCity(city) : null
-    return centre && { lat: centre.lat, lng: centre.lng }
-  }, [userPosition, mode, city])
-  const requestedSort = searchParams.get('sort')
-  // Nearest when there is a position, otherwise best rated (or best name match when searching by name).
-  const sort = SORTS.includes(requestedSort) && (origin || requestedSort !== 'nearest')
-    ? requestedSort
-    : origin ? 'nearest' : mode === 'name' && query ? 'search' : 'rating'
-
-  const results = useMemo(
-    () => findTowCompanies(companies, { mode, city, query, origin, service, emergency, sort, index, ratings }),
-    [companies, mode, city, query, origin, service, emergency, sort, index, ratings],
-  )
-  const byCity = useMemo(() => companiesByCity(companies), [companies])
-  const areaName = mode === 'location' && origin ? nearestCity(origin).city.name : city
-  const nearbyCities = useMemo(
-    () => nearbyCoveredCities(companies, origin, areaName),
-    [companies, origin, areaName],
-  )
-
-  function setParam(key, value) {
-    setSearchParams(
-      (current) => {
-        const next = new URLSearchParams(current)
-        if (value) next.set(key, value)
-        else next.delete(key)
-        return next
-      },
-      { replace: true },
-    )
-  }
-
-  function changeMode(next) {
-    setMode(next)
-    setEmergency(false)
-  }
-
-  // "Use my location": on failure the hero shows why and we go back to searching by city.
-  async function locate(isEmergency = false) {
-    const position = await geo.locate()
-    changeMode(position ? 'location' : 'city')
-    if (position) {
-      setEmergency(isEmergency)
-      setParam('sort', '')
-    }
-    return position
-  }
-
-  function pickCity(name) {
-    changeMode('city')
-    setParam('city', name)
-  }
-
-  const summary = emergency
-    ? 'with a truck available now, nearest first'
-    : mode === 'location' && origin
-      ? `near ${areaName}`
-      : mode === 'name' && query
-        ? `matching "${query}"`
-        : city
-          ? `covering ${city}`
-          : 'all verified companies'
+  const search = useTowSearch()
+  const { data, error, results, ratings, service, sort, origin, geo, emergency } = search
 
   return (
     <div className={styles.page}>
-      <TowSearchHero
-        mode={mode}
-        onModeChange={changeMode}
-        city={city}
-        onCityChange={(name) => setParam('city', name)}
-        query={query}
-        onQueryChange={(text) => setParam('q', text.trim())}
-        service={service}
-        onServiceChange={(value) => setParam('service', value)}
-        locating={geo.status === 'locating'}
-        located={geo.status === 'ready'}
-        locationError={geo.status === 'error' ? geo.error : null}
-        onLocate={() => locate()}
-        onEmergency={() => locate(true)}
-      />
+      <header className={styles.top}>
+        <div className={styles.intro}>
+          <p className={styles.kicker}>Towing</p>
+          <h1 className={styles.title}>
+            Roadside help when your car <span className={styles.nowrap}>cannot make the trip.</span>
+          </h1>
+          <p className={styles.lead}>Find a verified tow company that covers your area. Every company is checked by MOTEXA.</p>
+        </div>
+
+        <section className={styles.search} aria-label="Search tow companies">
+          <TowSearch search={search} idPrefix="tow-by" onSearched={scrollToResults} />
+        </section>
+
+        <nav className={styles.desk} aria-label="Quick actions">
+          <Link to={`/tow-companies/map${search.search}`} className={styles.deskRow}>
+            <span className={styles.deskTag}>Map</span>
+            <span className={styles.deskText}>View towing on map</span>
+            <span aria-hidden="true">→</span>
+          </Link>
+          <button type="button" className={styles.deskRow} onClick={() => search.locate(true)} disabled={geo.status === 'locating'}>
+            <span className={styles.deskTag}>Now</span>
+            <span className={styles.deskText}>
+              Need a tow now? Use my location
+              <span className={styles.deskNote}>Shows companies with a truck free right now, nearest first.</span>
+            </span>
+            <span aria-hidden="true">→</span>
+          </button>
+        </nav>
+      </header>
 
       {error ? (
         <EmptyState icon="⚠" title="Couldn't load tow companies" description="Please try again in a moment." />
@@ -136,50 +67,106 @@ export default function TowCompaniesDirectory() {
         <SkeletonCards label="Loading tow companies…" />
       ) : (
         <>
-          <ResultsLayout
-            results={results}
-            renderCard={({ item, distanceKm }, { highlighted }) => (
-              <TowCompanyCard
-                company={item}
-                rating={ratings[item.id]}
-                distanceKm={distanceKm}
-                highlighted={highlighted}
-                pickupPosition={geo.position}
-              />
+          <section id="results" className={styles.block} aria-labelledby="tow-results">
+            <div className={styles.resultsHead}>
+              <h2 id="tow-results" className={styles.sectionTitle}>
+                Available tow companies
+              </h2>
+              <p className={styles.count} aria-live="polite">
+                <strong>{results.length}</strong> {results.length === 1 ? 'company' : 'companies'}
+                <span className={styles.summary}> · {search.summary}</span>
+              </p>
+            </div>
+
+            <div className={styles.toolbar}>
+              <ServiceFilter service={service} onChange={(value) => search.setParam('service', value)} />
+              <label className={styles.sort}>
+                <span className={styles.sortLabel}>Sort</span>
+                <Select size="sm" value={sort} onChange={(event) => search.setParam('sort', event.target.value)}>
+                  {sort === 'search' && <option value="search">Best match</option>}
+                  {TOW_SORTS.map((item) => (
+                    <option key={item.value} value={item.value} disabled={item.value === 'nearest' && !origin}>
+                      {item.label}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+            </div>
+
+            {emergency && (
+              <Notice tone="info">
+                Showing only companies with a truck free right now.{' '}
+                <Button variant="ghost" size="sm" onClick={() => search.setEmergency(false)}>
+                  Show all nearby companies
+                </Button>
+              </Notice>
             )}
-            sorts={TOW_SORTS}
-            noun="company"
-            emptyTitle="No tow companies cover this area yet"
-            pin="truck"
-            origin={origin}
-            isUserLocation={Boolean(userPosition)}
-            summary={summary}
-            sort={sort}
-            onSortChange={(value) => setParam('sort', value)}
-            canSortNearest={Boolean(origin)}
-            nearbyCities={nearbyCities}
-            onPickCity={pickCity}
-            note={
-              emergency && (
-                <Notice tone="info">
-                  Showing only companies with a truck free right now.{' '}
-                  <Button variant="ghost" size="sm" onClick={() => setEmergency(false)}>
-                    Show all nearby companies
-                  </Button>
-                </Notice>
-              )
-            }
-          />
-          <HowItWorks />
-          <CitiesGrid
-            cities={byCity}
-            onPick={() => {
-              changeMode('city')
-              document.getElementById('results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }}
-          />
-          <FeaturedTowCompanies companies={companies} ratings={ratings} />
-          <SafetyTips />
+
+            {results.length === 0 ? (
+              <EmptyState
+                icon="🚚"
+                title="No tow companies cover this area yet"
+                description={search.nearbyCities.length > 0 ? 'Try a nearby city, or remove a filter.' : 'Try a different city or remove a filter.'}
+                action={
+                  search.nearbyCities.length > 0 && (
+                    <div className={styles.suggestions}>
+                      {search.nearbyCities.map((city) => (
+                        <Button key={city.name} variant="secondary" onClick={() => search.pickCity(city.name)}>
+                          Try {city.name}
+                        </Button>
+                      ))}
+                    </div>
+                  )
+                }
+              />
+            ) : (
+              <ul className={styles.list}>
+                {results.map(({ item, distanceKm }) => (
+                  <li key={item.id}>
+                    <TowCompanyRow company={item} rating={ratings[item.id]} distanceKm={distanceKm} pickupPosition={geo.position} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {search.byCity.length > 0 && (
+            <section className={styles.block} aria-labelledby="tow-cities">
+              <h2 id="tow-cities" className={styles.kickerTitle}>
+                Tow companies by city
+              </h2>
+              <ul className={styles.cities}>
+                {search.byCity.map(({ city, count }) => (
+                  <li key={city.name}>
+                    <Link
+                      to={`/tow-companies?city=${encodeURIComponent(city.name)}`}
+                      className={styles.city}
+                      onClick={() => {
+                        search.changeMode('city')
+                        scrollToResults()
+                      }}
+                    >
+                      <span className={styles.cityName}>{city.name}</span>
+                      <span className={styles.cityCount}>
+                        {count} {count === 1 ? 'company' : 'companies'}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <aside className={styles.block} aria-labelledby="tow-wait">
+            <h2 id="tow-wait" className={styles.kickerTitle}>
+              While you wait
+            </h2>
+            <ul className={styles.tips}>
+              {TIPS.map((tip) => (
+                <li key={tip}>{tip}</li>
+              ))}
+            </ul>
+          </aside>
         </>
       )}
     </div>

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/Button.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import SearchBar from '../components/SearchBar.jsx'
@@ -73,7 +73,7 @@ export default function Marketplace() {
         <div className={styles.headerTop}>
           <div>
             <h1 className={styles.title}>Parts marketplace</h1>
-            <p className={styles.subtitle}>Search parts from every shop on FastFix.</p>
+            <p className={styles.subtitle}>Search parts from every shop on MOTEXA.</p>
           </div>
           <CartLinks />
         </div>

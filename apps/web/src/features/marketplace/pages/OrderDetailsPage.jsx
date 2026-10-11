@@ -1,4 +1,4 @@
-﻿import { useCallback, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useAuth } from '../../../auth/useAuth.js'
 import { ROLES } from '../../../authorization/roles.js'
@@ -9,7 +9,7 @@ import { TextField } from '../../../components/FormField.jsx'
 import Modal from '../../../components/Modal.jsx'
 import Notice from '../../../components/Notice.jsx'
 import { SkeletonRows } from '../../../components/Skeleton.jsx'
-import StatusBadge from '../../../components/StatusBadge.jsx'
+import StatusIndicator from '../../../components/StatusIndicator.jsx'
 import { useToast } from '../../../components/Toast/ToastContext.js'
 import { formatDateTime } from '../../requests/format.js'
 import RateExperience from '../../requests/components/RateExperience.jsx'
@@ -23,7 +23,7 @@ import styles from './OrderDetailsPage.module.css'
 const CANCELLED_TITLES = {
   buyer: 'You cancelled this order',
   shop: 'The shop rejected this order',
-  admin: 'FastFix cancelled this order',
+  admin: 'MOTEXA cancelled this order',
 }
 
 // /orders/:orderId - one order in full: items, delivery or pickup, payment, status timeline, the
@@ -92,7 +92,7 @@ export default function OrderDetailsPage() {
         </Button>
         <div className={styles.titleRow}>
           <h1 className={styles.title}>Order {order.id}</h1>
-          <StatusBadge label={badge.label} tone={badge.tone} />
+          <StatusIndicator label={badge.label} tone={badge.tone} />
         </div>
         <p className={styles.muted}>
           Checkout {order.checkoutNumber} · placed {formatDateTime(order.createdAt)} · <Link to={`/shops/${order.shopId}`}>{order.shopName}</Link>
@@ -121,7 +121,7 @@ export default function OrderDetailsPage() {
 
       <div className={styles.layout}>
         <div className={styles.main}>
-          <Card as="section" aria-labelledby="items-title">
+          <Card flat as="section" aria-labelledby="items-title">
             <h2 id="items-title" className={styles.sectionTitle}>
               Items
             </h2>
@@ -157,7 +157,7 @@ export default function OrderDetailsPage() {
             </dl>
           </Card>
 
-          <Card as="section" aria-labelledby="fulfillment-title">
+          <Card flat as="section" aria-labelledby="fulfillment-title">
             <h2 id="fulfillment-title" className={styles.sectionTitle}>
               {pickup ? 'Pickup' : 'Delivery'}
             </h2>
@@ -190,7 +190,7 @@ export default function OrderDetailsPage() {
             )}
           </Card>
 
-          <Card as="section" aria-labelledby="payment-title">
+          <Card flat as="section" aria-labelledby="payment-title">
             <h2 id="payment-title" className={styles.sectionTitle}>
               Payment
             </h2>
@@ -208,7 +208,7 @@ export default function OrderDetailsPage() {
         </div>
 
         <div className={styles.side}>
-          <Card as="section" aria-labelledby="timeline-title">
+          <Card flat as="section" aria-labelledby="timeline-title">
             <h2 id="timeline-title" className={styles.sectionTitle}>
               Status
             </h2>
@@ -216,7 +216,7 @@ export default function OrderDetailsPage() {
           </Card>
 
           {order.serviceRequestId && user.role === ROLES.MECHANIC && (
-            <Card as="section" aria-labelledby="request-title">
+            <Card flat as="section" aria-labelledby="request-title">
               <h2 id="request-title" className={styles.sectionTitle}>
                 Service request
               </h2>

@@ -6,7 +6,7 @@ import { TextField } from '../../../components/FormField.jsx'
 import Modal from '../../../components/Modal.jsx'
 import Notice from '../../../components/Notice.jsx'
 import { SkeletonRows } from '../../../components/Skeleton.jsx'
-import StatusBadge from '../../../components/StatusBadge.jsx'
+import StatusIndicator from '../../../components/StatusIndicator.jsx'
 import { useToast } from '../../../components/Toast/ToastContext.js'
 import { formatDateTime } from '../../requests/format.js'
 import OrderDetailsSections from '../components/OrderDetailsSections.jsx'
@@ -82,7 +82,7 @@ export default function ShopOrderDetailsPage() {
         </Button>
         <div className={styles.titleRow}>
           <h1 className={styles.title}>Order {order.id}</h1>
-          <StatusBadge label={badge.label} tone={badge.tone} />
+          <StatusIndicator label={badge.label} tone={badge.tone} />
         </div>
         <p className={styles.muted}>
           Checkout {order.checkoutNumber} · placed {formatDateTime(order.createdAt)}

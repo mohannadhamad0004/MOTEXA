@@ -83,7 +83,7 @@ export function createRequestsService(store, { auth, marketplace }) {
   async function findTarget(type, targetId, data) {
     if (type === REQUEST_TYPES.SERVICE) {
       const mechanic = await auth.getDirectoryEntry(ROLES.MECHANIC, targetId)
-      if (!mechanic) throw new RequestError('This mechanic is not available on FastFix.')
+      if (!mechanic) throw new RequestError('This mechanic is not available on MOTEXA.')
       if (!mechanic.serviceModes.includes(data.mode)) {
         throw new RequestError(`${mechanic.workshopName} doesn't offer ${serviceModeLabel(data.mode)}.`, 'mode')
       }
@@ -91,7 +91,7 @@ export function createRequestsService(store, { auth, marketplace }) {
     }
     if (type === REQUEST_TYPES.TOW) {
       const company = await auth.getDirectoryEntry(ROLES.TOW, targetId)
-      if (!company) throw new RequestError('This tow company is not available on FastFix.')
+      if (!company) throw new RequestError('This tow company is not available on MOTEXA.')
       return { id: company.id, type: ROLES.TOW, name: company.name }
     }
     // Part question: the target is the shop; the part must be one of that shop's parts.
@@ -296,7 +296,7 @@ export function createRequestsService(store, { auth, marketplace }) {
     )
   }
 
-  // --- Parts bought through FastFix for a service request (features/marketplace orders) ----------
+  // --- Parts bought through MOTEXA for a service request (features/marketplace orders) ----------
 
   /**
    * The service requests the logged-in mechanic is working on (not completed yet): the ones a parts
@@ -373,7 +373,7 @@ export function createRequestsService(store, { auth, marketplace }) {
   }
 }
 
-// Parts the mechanic bought through FastFix for this request always end up in the final report,
+// Parts the mechanic bought through MOTEXA for this request always end up in the final report,
 // even if the row was removed from the completion form: they are added (and counted in the total)
 // unless a "parts used" row with the same name is already there.
 function addPurchasedParts(completion, request) {

@@ -1,21 +1,23 @@
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--space-3);
-}
-
-.search {
-  flex: 1 1 280px;
-}
-
-.filter {
+.workspace {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  min-width: 180px;
-  font-size: var(--font-size-sm);
+  gap: var(--space-4);
+}
+
+.order {
+  color: var(--color-text);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
+  text-decoration: none;
+}
+
+.order:hover {
+  color: var(--color-primary);
+}
+
+.primary {
+  display: block;
+  font-weight: var(--font-weight-semibold);
 }
 
 .subline {
@@ -24,7 +26,71 @@
   font-size: var(--font-size-xs);
 }
 
-.muted {
+.total {
+  font-variant-numeric: tabular-nums;
+}
+
+.count {
   color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Compact layout (the list is narrower than 900px): the second line of a cell sits beside its value */
+@container (max-width: 899px) {
+  .primary,
+  .subline {
+    display: inline;
+  }
+
+  .subline {
+    margin-inline-start: var(--space-2);
+  }
+}
+
+/* Phone: not enough width to sit beside the value, so it goes back underneath */
+@container (max-width: 520px) {
+  .primary,
+  .subline {
+    display: block;
+  }
+
+  .subline {
+    margin-inline-start: 0;
+  }
+
+  .order {
+    display: inline;
+  }
+}
+
+/* Phone: three lines per order. Line 1: order, items, total and the menu. Line 2: customer and shop.
+   Line 3: status and date. */
+@container (max-width: 520px) {
+  .orderCell .subline,
+  .date .primary,
+  .date .subline {
+    display: inline;
+  }
+
+  .orderCell .subline,
+  .date .subline {
+    margin-inline-start: var(--space-2);
+  }
+
+  .totalCell {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    margin-inline-end: 44px;
+    z-index: 1;
+  }
 }

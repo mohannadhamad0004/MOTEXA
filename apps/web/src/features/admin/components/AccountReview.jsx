@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import AccountSummary from '../../../auth/AccountSummary.jsx'
-import { SKILL_STATUS, VERIFICATION_METHODS } from '../../../auth/constants.js'
+import { SKILL_STATUS, STATUS_BADGES, VERIFICATION_METHODS } from '../../../auth/constants.js'
 import { ROLES } from '../../../authorization/roles.js'
 import Button from '../../../components/Button.jsx'
 import { FieldError, TextField } from '../../../components/FormField.jsx'
 import Notice from '../../../components/Notice.jsx'
+import StatusIndicator from '../../../components/StatusIndicator.jsx'
 import { useAdminService } from '../AdminContext.js'
 import { AdminError } from '../adminService.js'
 import ReasonDialog from './ReasonDialog.jsx'
@@ -76,6 +77,7 @@ export default function AccountReview({ account, onDone }) {
 
   return (
     <div className={styles.review}>
+      <div className={styles.main}>
       {isMechanic && (
         <Notice tone="info">
           Approve or reject each skill on its own. Only approved skills appear on the mechanic's public profile.
@@ -101,11 +103,13 @@ export default function AccountReview({ account, onDone }) {
             : null
         }
       />
+      </div>
 
-      <section className={styles.decision} aria-labelledby="decision-title">
+      <aside className={styles.decision} aria-labelledby="decision-title">
         <h3 id="decision-title" className={styles.decisionTitle}>
-          Decision
+          Verification
         </h3>
+        <StatusIndicator label={STATUS_BADGES[account.status].label} tone={STATUS_BADGES[account.status].tone} />
 
         {isMechanic && (
           <div id="review-skills" tabIndex={-1} className={styles.skillSummary}>
@@ -160,7 +164,7 @@ export default function AccountReview({ account, onDone }) {
           </Button>
           <p className={styles.muted}>Not sure yet? Leave it - the account stays pending.</p>
         </div>
-      </section>
+      </aside>
 
       <ReasonDialog
         open={rejecting}

@@ -3,7 +3,7 @@ import Button from '../../components/Button.jsx'
 import FilePreview from '../../components/FilePreview.jsx'
 import Modal from '../../components/Modal.jsx'
 import Notice from '../../components/Notice.jsx'
-import StatusBadge from '../../components/StatusBadge.jsx'
+import StatusIndicator from '../../components/StatusIndicator.jsx'
 import { useToast } from '../../components/Toast/ToastContext.js'
 import { formatDate } from '../../utils/formatDate.js'
 import { REVIEW_STATUS, REVIEW_STATUS_BADGES } from '../constants.js'
@@ -58,17 +58,17 @@ export default function SkillsManager() {
                   <h3 className={styles.name}>{skill.skill}</h3>
                   <p className={styles.muted}>{years(skill.years)}</p>
                 </div>
-                <StatusBadge label={badge.label} tone={badge.tone} />
+                <StatusIndicator label={badge.label} tone={badge.tone} />
               </div>
 
               {skill.status === REVIEW_STATUS.PENDING && (
                 <p className={styles.muted}>
-                  Sent {formatDate(skill.submittedAt)}. Not on your public profile until FastFix approves it.
+                  Sent {formatDate(skill.submittedAt)}. Not on your public profile until MOTEXA approves it.
                 </p>
               )}
               {rejected && (
                 <Notice tone="danger" title="Why it wasn't approved">
-                  {skill.rejectionReason || 'No reason was given. Contact FastFix support if you have questions.'}
+                  {skill.rejectionReason || 'No reason was given. Contact MOTEXA support if you have questions.'}
                 </Notice>
               )}
 
@@ -131,7 +131,7 @@ export default function SkillsManager() {
         {removing && (
           <div className={styles.dialog}>
             <p>
-              It disappears from your profile. To list it again later, add it with a certificate and wait for FastFix
+              It disappears from your profile. To list it again later, add it with a certificate and wait for MOTEXA
               to approve it.
             </p>
             {removeError && <Notice tone="danger">{removeError}</Notice>}

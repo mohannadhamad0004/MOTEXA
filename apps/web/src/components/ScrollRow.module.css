@@ -95,6 +95,25 @@
   white-space: nowrap;
 }
 
+.editorial {
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-text);
+}
+
+.editorial .title {
+  font-size: clamp(1.5rem, 1.1rem + 1.2vw, 2rem);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.editorial .arrow {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+}
+
 @media (max-width: 1023px) {
   .track {
     grid-auto-columns: minmax(170px, calc((100% - 2 * var(--space-4)) / 3));

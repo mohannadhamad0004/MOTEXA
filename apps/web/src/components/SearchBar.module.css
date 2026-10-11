@@ -69,3 +69,26 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* Toolbar variant: no box, just an underline */
+.quiet::before {
+  left: var(--space-1);
+}
+
+.quiet::after {
+  left: calc(var(--space-1) + 12px);
+}
+
+.quiet .input {
+  min-height: 44px;
+  padding-inline-start: calc(var(--space-1) + 28px);
+  border-width: 0 0 1px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.quiet .input:focus-visible {
+  border-bottom-color: var(--color-primary);
+  box-shadow: 0 1px 0 var(--color-primary);
+}

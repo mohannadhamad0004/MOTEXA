@@ -1,21 +1,22 @@
-﻿import { useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { ACCOUNT_STATUS, ACCOUNT_TYPE_LABELS, verificationMethodLabel } from '../../../auth/constants.js'
 import { ROLES } from '../../../authorization/roles.js'
+import ActionMenu from '../../../components/ActionMenu.jsx'
+import Avatar from '../../../components/Avatar.jsx'
 import Button from '../../../components/Button.jsx'
-import Drawer from '../../../components/Drawer.jsx'
-import Input from '../../../components/Input.jsx'
+import DetailDrawer from '../../../components/DetailDrawer.jsx'
+import FilterToolbar, { FilterMenu } from '../../../components/FilterToolbar.jsx'
+import FlatDataList from '../../../components/FlatDataList.jsx'
 import Notice from '../../../components/Notice.jsx'
-import Select from '../../../components/Select.jsx'
+import PageIntro from '../../../components/PageIntro.jsx'
+import PageShell from '../../../components/PageShell.jsx'
+import SearchBar from '../../../components/SearchBar.jsx'
 import { SkeletonRows } from '../../../components/Skeleton.jsx'
 import { useToast } from '../../../components/Toast/ToastContext.js'
 import { formatDate } from '../../../utils/formatDate.js'
 import AccountStatusBadges from '../components/AccountStatusBadges.jsx'
-import AdminPage from '../components/AdminPage.jsx'
-import AdminTable from '../components/AdminTable.jsx'
 import DetailList from '../components/DetailList.jsx'
-import FilterToolbar, { FilterField } from '../components/FilterToolbar.jsx'
-import RowMenu from '../components/RowMenu.jsx'
 import ShortId from '../components/ShortId.jsx'
 import { useSuspendAction } from '../components/SuspendButton.jsx'
 import { useAdminQuery } from '../AdminContext.js'
@@ -32,8 +33,7 @@ const STATUS_FILTERS = [
 ]
 const hasStatus = (user, status) => !status || (status === 'suspended' ? user.suspended : user.status === status)
 
-const matches = (user, query) =>
-  !query || [user.name, user.email, user.city, user.workshopName].some((text) => text?.toLowerCase().includes(query))
+const matches = (user, query) => !query || [user.name, user.email, user.city, user.workshopName].some((text) => text?.toLowerCase().includes(query))
 
 // /admin/users?q=...&role=mechanic&status=suspended - every account, with search, role and status
 // filters. A row opens a quick-detail drawer (full page: /admin/users/:id); suspend and reactivate
@@ -62,96 +62,130 @@ export default function AdminUsers() {
     setSearchParams(next, { replace: true })
   }
 
+  const columns = [
+    {
+      key: 'person',
+      header: 'Person',
+      render: (u) => (
+        <span className={styles.person}>
+          <Avatar file={u.profilePhoto} name={u.name} size="sm" />
+          <span className={styles.who}>
+            <button type="button" className={styles.name} onClick={() => setOpenId(u.id)}>
+              {u.name}
+            </button>
+            <span className={styles.email}>{u.email}</span>
+          </span>
+        </span>
+      ),
+    },
+    { key: 'role', header: 'Role', render: (u) => <span className={styles.role}>{ACCOUNT_TYPE_LABELS[u.role]}</span> },
+    { key: 'status', header: 'Status', render: (u) => <AccountStatusBadges account={u} /> },
+    {
+      key: 'joined',
+      header: 'Joined',
+      render: (u) => (
+        <span className={styles.joined}>
+          <span className={styles.joinedLabel}>Joined </span>
+          {formatDate(u.createdAt)}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: <span className={styles.srOnly}>Actions</span>,
+      align: 'end',
+      render: (u) => <UserRowMenu user={u} onOpen={() => setOpenId(u.id)} onChanged={done} onError={failed} />,
+    },
+  ]
+
   return (
-    <AdminPage title="Users" description="Every account on FastFix. Suspended accounts can't log in and are hidden from public pages.">
-      <FilterToolbar canReset={Boolean(query || role || status)} onReset={() => setSearchParams({}, { replace: true })}>
-        <FilterField label="Search" grow>
-          <Input
-            type="search"
-            value={query}
-            placeholder="Name, email, city or workshop"
-            onChange={(event) => setFilter('q', event.target.value)}
-          />
-        </FilterField>
-        <FilterField label="Role">
-          <Select value={role} onChange={(event) => setFilter('role', event.target.value)}>
-            <option value="">All roles</option>
+    <PageShell>
+      <PageIntro
+        eyebrow="Operations / Users"
+        title="Users"
+        description="Every account on MOTEXA. Suspended accounts can't log in and are hidden from public pages."
+      />
+
+      <section className={styles.directory} aria-label="Users">
+        <FilterToolbar
+          search={
+            <SearchBar
+              quiet
+              id="user-search"
+              value={query}
+              onChange={(value) => setFilter('q', value)}
+              label="Search users"
+              placeholder="Name, email, city or workshop"
+            />
+          }
+          canReset={Boolean(query || role || status)}
+          onReset={() => setSearchParams({}, { replace: true })}
+        >
+          <FilterMenu label="Role" value={role} onChange={(event) => setFilter('role', event.target.value)}>
+            <option value="">All</option>
             {Object.values(ROLES).map((value) => (
               <option key={value} value={value}>
                 {ACCOUNT_TYPE_LABELS[value]}
               </option>
             ))}
-          </Select>
-        </FilterField>
-        <FilterField label="Status">
-          <Select value={status} onChange={(event) => setFilter('status', event.target.value)}>
+          </FilterMenu>
+          <FilterMenu label="Status" value={status} onChange={(event) => setFilter('status', event.target.value)}>
             {STATUS_FILTERS.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {option.value ? option.label : 'All'}
               </option>
             ))}
-          </Select>
-        </FilterField>
-      </FilterToolbar>
+          </FilterMenu>
+        </FilterToolbar>
 
-      {error && <Notice tone="danger">Couldn't load users: {error.message}</Notice>}
-      {!users && !error && <SkeletonRows label="Loading…" />}
+        {error && <Notice tone="danger">Couldn't load users: {error.message}</Notice>}
+        {!users && !error && <SkeletonRows label="Loading…" />}
 
-      {users && (
-        <>
-          <p className={styles.muted} aria-live="polite">
-            {results.length} of {users.length} accounts
-          </p>
-          <AdminTable
-            caption="Users"
-            emptyText="No accounts match these filters."
-            rows={results}
-            selectedKey={openId}
-            onRowOpen={(u) => setOpenId(u.id)}
-            columns={[
-              {
-                key: 'name',
-                header: 'Name',
-                render: (u) => (
-                  <>
-                    <button type="button" className={styles.name} onClick={() => setOpenId(u.id)}>
-                      {u.name}
-                    </button>
-                    <span className={styles.subline}>{u.email}</span>
-                  </>
-                ),
-              },
-              { key: 'id', header: 'ID', nowrap: true, render: (u) => <ShortId id={u.id} /> },
-              { key: 'role', header: 'Role', nowrap: true, render: (u) => ACCOUNT_TYPE_LABELS[u.role] },
-              { key: 'status', header: 'Status', render: (u) => <AccountStatusBadges account={u} /> },
-              { key: 'joined', header: 'Joined', nowrap: true, render: (u) => formatDate(u.createdAt) },
-              {
-                key: 'actions',
-                header: 'Actions',
-                align: 'right',
-                nowrap: true,
-                render: (u) => <UserRowMenu user={u} onOpen={() => setOpenId(u.id)} onChanged={done} onError={failed} />,
-              },
-            ]}
-          />
-        </>
-      )}
+        {users && (
+          <>
+            <p className={styles.muted} aria-live="polite">
+              {results.length} of {users.length} accounts
+            </p>
+            <FlatDataList
+              label="Users"
+              widths="minmax(240px, 2.2fr) minmax(110px, 0.9fr) minmax(150px, 1.2fr) 110px 44px"
+              emptyText="No accounts match these filters."
+              rows={results}
+              selectedKey={openId}
+              onRowOpen={(u) => setOpenId(u.id)}
+              columns={columns}
+            />
+          </>
+        )}
+      </section>
 
-      <Drawer open={Boolean(open)} narrow title={open?.name ?? ''} onClose={() => setOpenId(null)}>
+      <DetailDrawer open={Boolean(open)} title={open?.name ?? ''} onClose={() => setOpenId(null)}>
         {open && <UserDetails user={open} onChanged={done} onError={failed} />}
-      </Drawer>
-    </AdminPage>
+      </DetailDrawer>
+    </PageShell>
   )
 }
 
 // The ⋯ menu of one row: quick view, the full page, suspend or reactivate (not for admins).
 function UserRowMenu({ user, onOpen, onChanged, onError }) {
   const suspend = useSuspendAction(user, { onChanged, onError })
-  const items = [{ label: 'View details', onSelect: onOpen }]
-  if (user.role !== ROLES.ADMIN) items.push({ label: suspend.label, onSelect: suspend.act, danger: !user.suspended })
+  const toast = useToast()
+  const copyId = async () => {
+    try {
+      await navigator.clipboard.writeText(user.id)
+      toast.success('ID copied.')
+    } catch {
+      toast.error("Couldn't copy the ID.")
+    }
+  }
+  const items = [
+    { label: 'View details', onSelect: onOpen },
+    { label: 'Copy user ID', onSelect: copyId },
+  ]
+  if (user.role !== ROLES.ADMIN) items.push({ label: suspend.label, onSelect: suspend.act, danger: !user.suspended, separated: true })
   return (
     <>
-      <RowMenu label={`Actions for ${user.name}`} items={items} />
+      <ActionMenu label={`Actions for ${user.name}`} items={items} />
       {suspend.dialog}
     </>
   )

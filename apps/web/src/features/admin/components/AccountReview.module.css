@@ -1,7 +1,15 @@
 .review {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-6);
+}
+
+.main {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  min-width: 0;
 }
 
 .decision {
@@ -90,4 +98,28 @@
   border-color: var(--color-danger);
   background: var(--color-danger-bg);
   color: var(--color-danger);
+}
+
+/* Flat refinement: the decision sits under a rule, not in a tinted box */
+.decision {
+  padding: var(--space-5) 0 0;
+  border: 0;
+  border-top: 1px solid var(--color-border-strong);
+  border-radius: 0;
+  background: transparent;
+}
+
+/* Document-review workspace: submitted material (8 columns) beside a sticky verification rail (4) */
+@container (min-width: 740px) {
+  .review {
+    grid-template-columns: minmax(0, 2fr) minmax(250px, 1fr);
+  }
+
+  .decision {
+    position: sticky;
+    top: calc(var(--navbar-height) + var(--space-4));
+    padding: 0 0 0 var(--space-5);
+    border-top: 0;
+    border-left: 1px solid var(--color-border);
+  }
 }

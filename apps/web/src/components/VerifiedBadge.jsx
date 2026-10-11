@@ -1,6 +1,6 @@
 import styles from './VerifiedBadge.module.css'
 
-// "Verified by FastFix": an admin checked this account's documents and approved it.
+// "Verified by MOTEXA": an admin checked this account's documents and approved it.
 export default function VerifiedBadge() {
   return (
     <span className={styles.badge} title="An admin checked this account's certificates and documents">
@@ -19,7 +19,7 @@ export default function VerifiedBadge() {
           strokeLinejoin="round"
         />
       </svg>
-      Verified by FastFix
+      Verified by MOTEXA
     </span>
   )
 }

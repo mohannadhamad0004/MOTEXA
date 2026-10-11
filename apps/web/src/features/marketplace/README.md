@@ -1,6 +1,6 @@
 # marketplace
 
-Parts, accessories, motors and headlights sold by the independent parts shops on FastFix. Customers and mechanics search across all shops, see which parts fit their car (including parts shared across models), and later preview accessories in 3D.
+Parts, accessories, motors and headlights sold by the independent parts shops on MOTEXA. Customers and mechanics search across all shops, see which parts fit their car (including parts shared across models), and later preview accessories in 3D.
 
 Used by `src/pages/Marketplace.jsx` (`/marketplace`), `src/pages/ShopPage.jsx` (`/shops/:shopId`) and `src/pages/PartsShopDashboard.jsx` (`/parts-shop`).
 

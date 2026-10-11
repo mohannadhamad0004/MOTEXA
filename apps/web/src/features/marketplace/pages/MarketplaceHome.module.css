@@ -1,30 +1,11 @@
-﻿.page {
+.page {
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
 }
 
-.section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.sectionTitle {
-  font-size: var(--font-size-h2);
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 @media (max-width: 767px) {
   .page {
-    gap: var(--space-6);
+    gap: var(--space-7);
   }
 }

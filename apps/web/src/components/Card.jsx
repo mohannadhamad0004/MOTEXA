@@ -8,12 +8,15 @@ import styles from './Card.module.css'
  * @param {boolean} [props.interactive]   hover lift and border, for cards that link somewhere.
  *   Make the whole card clickable with a link that has the `Card.cover` class (see MechanicCard).
  * @param {boolean} [props.elevated]      a stronger shadow, for hero and highlighted cards
+ * @param {boolean} [props.flat]          no box: a section on a thin rule. For ordinary information and
+ *   forms; cards stay for real objects (products, providers, vehicles).
  */
 export default function Card({
   as: Element = 'div',
   padding = 'md',
   interactive = false,
   elevated = false,
+  flat = false,
   className = '',
   ...props
 }) {
@@ -22,6 +25,7 @@ export default function Card({
     styles[`padding-${padding}`],
     interactive && styles.interactive,
     elevated && styles.elevated,
+    flat && styles.flat,
     className,
   ]
     .filter(Boolean)

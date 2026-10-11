@@ -9,7 +9,7 @@
 // marketplace; if anything changed since the buyer added it to the cart, it refuses with
 // OrderError code 'changed' until the buyer accepts the changes (cartService.acceptChanges).
 //
-// Card payments: card details never touch FastFix. The real flow redirects to the payment
+// Card payments: card details never touch MOTEXA. The real flow redirects to the payment
 // provider's hosted checkout and the provider tells our api when the payment went through. The
 // mock marks card orders as paid right away and shows a placeholder where the hosted page opens.
 //
@@ -186,7 +186,7 @@ export function createOrdersService(store, { auth, marketplace, requests, cart, 
     const refund = updated.payment.status === 'refunded' ? ' Your payment is being refunded.' : ''
     if (by !== 'buyer') {
       notifications.notify(order.buyerId, {
-        title: by === 'shop' ? 'Order rejected' : 'Order cancelled by FastFix',
+        title: by === 'shop' ? 'Order rejected' : 'Order cancelled by MOTEXA',
         body: `${order.shopName} · ${order.checkoutNumber}: ${reason}.${refund}`,
         link: `/orders/${order.id}`,
       })

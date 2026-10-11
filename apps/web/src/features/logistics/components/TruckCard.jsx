@@ -6,7 +6,7 @@ import Card from '../../../components/Card.jsx'
 import FileImage from '../../../components/FileImage.jsx'
 import Notice from '../../../components/Notice.jsx'
 import Select from '../../../components/Select.jsx'
-import StatusBadge from '../../../components/StatusBadge.jsx'
+import StatusIndicator from '../../../components/StatusIndicator.jsx'
 import { formatWeight, truckTypeLabel } from '../format.js'
 import styles from './TruckCard.module.css'
 
@@ -35,11 +35,11 @@ export default function TruckCard({ truck, onStatusChange, onEdit, onRemove, sta
               {typeLabel} · carries up to {formatWeight(truck.maxWeightKg)}
             </p>
           </div>
-          <StatusBadge label={review.label} tone={review.tone} />
+          <StatusIndicator label={review.label} tone={review.tone} />
         </div>
 
         {truck.reviewStatus === 'pending' && (
-          <p className={styles.muted}>Not on your public profile until FastFix approves it.</p>
+          <p className={styles.muted}>Not on your public profile until MOTEXA approves it.</p>
         )}
         {truck.reviewStatus === 'rejected' && (
           <Notice tone="danger" title="Not approved">

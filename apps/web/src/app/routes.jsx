@@ -25,6 +25,7 @@ import AdminTags from '../features/admin/pages/AdminTags.jsx'
 import AdminUserDetails from '../features/admin/pages/AdminUserDetails.jsx'
 import AdminUsers from '../features/admin/pages/AdminUsers.jsx'
 import TowCompaniesDirectory from '../features/logistics/pages/TowCompaniesDirectory.jsx'
+import TowCompaniesMap from '../features/logistics/pages/TowCompaniesMap.jsx'
 import TowCompanyProfile from '../features/logistics/pages/TowCompanyProfile.jsx'
 import TowTrucks from '../features/logistics/pages/TowTrucks.jsx'
 import DevImagesPage from '../features/marketplace/pages/DevImagesPage.jsx'
@@ -46,6 +47,7 @@ import ShopOrderDetailsPage from '../features/marketplace/pages/ShopOrderDetails
 import ShopOrdersPage from '../features/marketplace/pages/ShopOrdersPage.jsx'
 import MechanicProfile from '../features/mechanics/pages/MechanicProfile.jsx'
 import MechanicsDirectory from '../features/mechanics/pages/MechanicsDirectory.jsx'
+import MechanicsMap from '../features/mechanics/pages/MechanicsMap.jsx'
 import ChatsPage from '../features/requests/pages/ChatsPage.jsx'
 import ReportPage from '../features/requests/pages/ReportPage.jsx'
 import ReportsPage from '../features/requests/pages/ReportsPage.jsx'
@@ -84,8 +86,10 @@ export const router = createBrowserRouter([
       },
       { path: '/shops/:shopId', element: <ShopPage /> },
       { path: '/mechanics', element: <MechanicsDirectory /> },
+      { path: '/mechanics/map', element: <MechanicsMap /> },
       { path: '/mechanics/:mechanicId', element: <MechanicProfile /> },
       { path: '/tow-companies', element: <TowCompaniesDirectory /> },
+      { path: '/tow-companies/map', element: <TowCompaniesMap /> },
       { path: '/tow-companies/:companyId', element: <TowCompanyProfile /> },
 
       // Development only: left out of production builds
