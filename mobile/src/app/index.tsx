@@ -81,12 +81,15 @@ export default function Index() {
       }),
     ]).start();
 
-    // Go to Login
-    const timer = setTimeout(() => {
-      router.replace("/auth/login");
-    }, 4000);
+  
+   
+   // Navigate to role selection after splash animation
+const timer = setTimeout(() => {
+  router.replace("/choose-role");
+}, 4000);
 
-    return () => clearTimeout(timer);
+return () => clearTimeout(timer);
+   
   }, []);
 
   const animatedLineWidth = lineWidth.interpolate({

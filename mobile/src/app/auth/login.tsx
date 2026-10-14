@@ -59,7 +59,8 @@ const [isLoading, setIsLoading] = useState(false);
     ]).start();
   }, [fadeAnim, slideAnim, logoScale]);
 
- const handleLogin = async () => {
+ 
+const handleLogin = async () => {
   if (isLoading) return;
 
   setError("");
@@ -123,22 +124,20 @@ const [isLoading, setIsLoading] = useState(false);
             ? "البريد الإلكتروني أو كلمة المرور غير صحيحة."
             : "Invalid email or password."
           : response.status === 403
-            ? isArabic
-              ? "الحساب غير مفعّل حاليًا."
-              : "This account is not active."
-            : isArabic
-              ? "تعذّر تسجيل الدخول. حاولي مرة أخرى."
-              : "Login failed. Please try again."
+          ? isArabic
+            ? "الحساب غير مفعّل حاليًا."
+            : "This account is not active."
+          : isArabic
+          ? "تعذّر تسجيل الدخول. حاولي مرة أخرى."
+          : "Login failed. Please try again."
       );
       return;
     }
 
     const role = data.user?.role;
+    const status = data.user?.status;
 
-    if (
-      role !== "SUPER_ADMIN" &&
-      role !== "ADMIN"
-    ) {
+    if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
       setError(
         isArabic
           ? "هذه البوابة مخصصة للمسؤولين فقط."
@@ -148,11 +147,62 @@ const [isLoading, setIsLoading] = useState(false);
     }
 
     if (
-      data.user?.status !== "ACTIVE" ||
+      status !== "ACTIVE" ||
       typeof data.accessToken !== "string" ||
       !data.accessToken
     ) {
-      throw new Error("Invalid login response");
+      setError(
+        isArabic
+          ? "استجابة تسجيل الدخول غير صالحة."
+          : "Invalid login response."
+      );
+      return;
+    }
+
+    // Verify permissions from the backend before navigation.
+    const meResponse = await fetch(
+      `${apiUrl.replace(/\/$/, "")}/auth/me`,
+      {
+        headers: {
+          Authorization: `Bearer ${data.accessToken}`,
+        },
+      }
+    );
+
+    const meData = await meResponse.json();
+    const currentUser = meData.user;
+
+    if (
+      !meResponse.ok ||
+      !meData.success ||
+      currentUser?.status !== "ACTIVE"
+    ) {
+      setError(
+        isArabic
+          ? "تعذّر التحقق من صلاحيات الحساب."
+          : "Could not verify account permissions."
+      );
+      return;
+    }
+
+    const permissions: string[] = Array.isArray(
+      currentUser.adminPermissions
+    )
+      ? currentUser.adminPermissions.map(
+          (item: { permission: string }) => item.permission
+        )
+      : [];
+
+    if (
+      currentUser.role === "ADMIN" &&
+      !permissions.includes("MANAGE_MECHANICS")
+    ) {
+      setError(
+        isArabic
+          ? "هذه الواجهة غير مخصصة لقسمك الإداري."
+          : "This portal is not assigned to your department."
+      );
+      return;
     }
 
     await SecureStore.setItemAsync(
@@ -162,8 +212,14 @@ const [isLoading, setIsLoading] = useState(false);
 
     setPassword("");
 
-    router.replace("/admin/(tabs)");
-  } catch {
+    if (currentUser.role === "SUPER_ADMIN") {
+      router.replace("/admin/(tabs)");
+    } else if (currentUser.role === "ADMIN") {
+      router.replace("/mechanics-admin");
+    }
+  } catch (error) {
+    console.error("Login error:", error);
+
     setError(
       isArabic
         ? "تعذّر الاتصال بالخادم. تأكدي من تشغيل Backend والاتصال بالشبكة."
@@ -173,6 +229,7 @@ const [isLoading, setIsLoading] = useState(false);
     setIsLoading(false);
   }
 };
+
 
   return (
     <LinearGradient

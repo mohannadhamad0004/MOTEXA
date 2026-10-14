@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import {
   Alert,
   ScrollView,
@@ -30,7 +32,78 @@ const C = {
 export default function SuperAdminDashboardScreen() {
   const { isArabic, toggleLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
+const [dashboardStats, setDashboardStats] = useState<{
+  administrators: number;
+  mechanics: number;
+  pendingMechanics: number;
+  pendingInvitations: number;
+} | null>(null);
 
+const [statsLoading, setStatsLoading] = useState(true);
+const [statsError, setStatsError] = useState(false);
+
+useFocusEffect(
+  useCallback(() => {
+    let active = true;
+
+    const loadDashboard = async () => {
+      setStatsLoading(true);
+      setStatsError(false);
+
+      try {
+        const token = await SecureStore.getItemAsync(
+          "motexa_access_token"
+        );
+
+        const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+
+        if (!token || !apiUrl) {
+          throw new Error("Missing authentication or API URL");
+        }
+
+        const response = await fetch(
+          `${apiUrl.replace(/\/$/, "")}/admin-management/dashboard`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Dashboard API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.success || !data.stats) {
+          throw new Error("Invalid dashboard response");
+        }
+
+        if (active) {
+          setDashboardStats(data.stats);
+        }
+      } catch (error) {
+        console.error("Dashboard error:", error);
+
+        if (active) {
+          setDashboardStats(null);
+          setStatsError(true);
+        }
+      } finally {
+        if (active) {
+          setStatsLoading(false);
+        }
+      }
+    };
+
+    loadDashboard();
+
+    return () => {
+      active = false;
+    };
+  }, [])
+);
   const t = useMemo(
     () =>
       isArabic
@@ -112,16 +185,54 @@ export default function SuperAdminDashboardScreen() {
     Alert.alert(title, message);
   };
 
-  const stats: {
-    label: string;
-    value: string;
-    icon: IconName;
-  }[] = [
-    { label: t.admins, value: "3", icon: "shield-outline" },
-    { label: t.mechanics, value: "86", icon: "construct-outline" },
-    { label: t.providers, value: "42", icon: "storefront-outline" },
-    { label: t.requests, value: "124", icon: "document-text-outline" },
-  ];
+ const stats: {
+  label: string;
+  value: string;
+  icon: IconName;
+}[] = [
+  {
+    label: t.admins,
+    value: statsLoading
+      ? "…"
+      : statsError
+        ? "—"
+        : String(dashboardStats?.administrators ?? 0),
+    icon: "shield-outline",
+  },
+  {
+    label: t.mechanics,
+    value: statsLoading
+      ? "…"
+      : statsError
+        ? "—"
+        : String(dashboardStats?.mechanics ?? 0),
+    icon: "construct-outline",
+  },
+  {
+    label: isArabic ? "مزودو قطع الغيار" : "Parts Providers",
+    value: "—",
+    icon: "storefront-outline",
+  },
+  {
+    label: isArabic ? "مزودو السحب" : "Tow Providers",
+    value: "—",
+    icon: "car-outline",
+  },
+  {
+    label: t.requests,
+    value: "—",
+    icon: "document-text-outline",
+  },
+  {
+    label: isArabic ? "مراجعات الميكانيكيين" : "Mechanic Reviews",
+    value: statsLoading
+      ? "…"
+      : statsError
+        ? "—"
+        : String(dashboardStats?.pendingMechanics ?? 0),
+    icon: "time-outline",
+  },
+];
 
   const actions: {
     label: string;
@@ -222,14 +333,7 @@ export default function SuperAdminDashboardScreen() {
             <Ionicons name="shield-checkmark" size={26} color={C.bronze} />
           </View>
 
-          <View style={styles.demoTag}>
-            <Ionicons
-              name="information-circle-outline"
-              size={15}
-              color={C.bronze}
-            />
-            <Text style={styles.demoText}>{t.demo}</Text>
-          </View>
+          
         </LinearGradient>
 
         {/* Overview */}
@@ -251,46 +355,7 @@ export default function SuperAdminDashboardScreen() {
           ))}
         </View>
 
-        {/* Attention */}
-        <LinearGradient
-          colors={["rgba(160,91,49,0.24)", "rgba(61,39,27,0.8)"]}
-          style={styles.noticeCard}
-        >
-          <View style={styles.noticeRow}>
-            <View style={styles.noticeIcon}>
-              <Ionicons
-                name="alert-circle-outline"
-                size={23}
-                color={C.bronze}
-              />
-            </View>
-
-            <View style={styles.noticeText}>
-              <Text style={[styles.noticeTitle, isArabic && styles.textRight]}>
-                {t.pending}
-              </Text>
-
-              <Text
-                style={[styles.noticeDescription, isArabic && styles.textRight]}
-              >
-                {t.pendingText}
-              </Text>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => router.push("/admin/(tabs)/providers")}
-          >
-            <Text style={styles.primaryButtonText}>{t.review}</Text>
-
-            <Ionicons
-              name={isArabic ? "arrow-back-outline" : "arrow-forward-outline"}
-              size={18}
-              color="#24140D"
-            />
-          </TouchableOpacity>
-        </LinearGradient>
+       
 
         {/* Quick Actions */}
         <SectionTitle title={t.quick} isArabic={isArabic} />
@@ -320,38 +385,6 @@ export default function SuperAdminDashboardScreen() {
           ))}
         </View>
 
-        {/* Recent Activity */}
-        <SectionTitle title={t.activity} isArabic={isArabic} />
-
-        <View style={styles.activityCard}>
-          <ActivityRow
-            icon="person-add-outline"
-            title={t.first}
-            description={t.firstDesc}
-            time={t.now}
-            isArabic={isArabic}
-          />
-
-          <View style={styles.divider} />
-
-          <ActivityRow
-            icon="build-outline"
-            title={t.second}
-            description={t.secondDesc}
-            time={t.earlier}
-            isArabic={isArabic}
-          />
-
-          <View style={styles.divider} />
-
-          <ActivityRow
-            icon="mail-outline"
-            title={t.third}
-            description={t.thirdDesc}
-            time={t.today}
-            isArabic={isArabic}
-          />
-        </View>
 
         <TouchableOpacity
           style={styles.profileShortcut}

@@ -1,6 +1,7 @@
 
 import { Router } from "express";
 import argon2 from "argon2";
+import { createHash } from "node:crypto";
 import jwt from "jsonwebtoken";
 import { prisma } from "../prisma.js";
 
@@ -22,9 +23,16 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: email.trim().toLowerCase() },
-    });
+   const user = await prisma.user.findUnique({
+  where: { email: email.trim().toLowerCase() },
+  include: {
+    adminPermissions: {
+      select: {
+        permission: true,
+      },
+    },
+  },
+});
 
     if (!user) {
       return res.status(401).json({
@@ -72,13 +80,17 @@ router.post("/login", async (req, res) => {
       success: true,
       message: "Login successful.",
       accessToken: token,
-      user: {
-        id: user.id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-        status: user.status,
-      },
+     user: {
+  id: user.id,
+  fullName: user.fullName,
+  email: user.email,
+  role: user.role,
+  status: user.status,
+  adminPermissions:
+    user.role === "ADMIN"
+      ? user.adminPermissions.map((item) => item.permission)
+      : [],
+},
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -173,6 +185,191 @@ router.get("/me", async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Internal server error.",
+    });
+  }
+});
+router.post("/admin/verify-invitation", async (req, res) => {
+  try {
+    const { token } = req.body ?? {};
+
+    if (typeof token !== "string" || !/^[a-f0-9]{64}$/.test(token)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid invitation token.",
+      });
+    }
+
+    const tokenHash = createHash("sha256")
+      .update(token)
+      .digest("hex");
+
+    const invitation = await prisma.adminInvitation.findUnique({
+      where: { tokenHash },
+      select: {
+        email: true,
+        fullName: true,
+        permission: true,
+        status: true,
+        expiresAt: true,
+      },
+    });
+
+    if (
+      !invitation ||
+      invitation.status !== "PENDING" ||
+      invitation.expiresAt <= new Date()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invitation is invalid or expired.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      invitation: {
+        email: invitation.email,
+        fullName: invitation.fullName,
+        permission: invitation.permission,
+      },
+    });
+  } catch (error) {
+    console.error("Verify invitation error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to verify invitation.",
+    });
+  }
+});
+router.post("/admin/activate", async (req, res) => {
+  try {
+    const { token, password } = req.body ?? {};
+
+    if (
+      typeof token !== "string" ||
+      !/^[a-f0-9]{64}$/.test(token) ||
+      typeof password !== "string"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid activation information.",
+      });
+    }
+
+    if (
+      password.length < 12 ||
+      !/[A-Z]/.test(password) ||
+      !/[a-z]/.test(password) ||
+      !/[0-9]/.test(password) ||
+      !/[^A-Za-z0-9]/.test(password)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Password does not meet security requirements.",
+      });
+    }
+
+    const tokenHash = createHash("sha256")
+      .update(token)
+      .digest("hex");
+
+    const invitation = await prisma.adminInvitation.findUnique({
+      where: { tokenHash },
+    });
+
+    if (
+      !invitation ||
+      invitation.status !== "PENDING" ||
+      invitation.expiresAt <= new Date()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invitation is invalid or expired.",
+      });
+    }
+
+    const passwordHash = await argon2.hash(password);
+
+    const result = await prisma.$transaction(async (tx) => {
+      // حجز الدعوة ذريًا لمنع تفعيلها مرتين
+      const claimed = await tx.adminInvitation.updateMany({
+        where: {
+          id: invitation.id,
+          status: "PENDING",
+          expiresAt: { gt: new Date() },
+        },
+        data: {
+          status: "ACCEPTED",
+          acceptedAt: new Date(),
+        },
+      });
+
+      if (claimed.count !== 1) {
+        throw new Error("INVITATION_ALREADY_USED");
+      }
+
+      const user = await tx.user.create({
+        data: {
+          fullName: invitation.fullName,
+          email: invitation.email,
+          passwordHash,
+          role: "ADMIN",
+          status: "ACTIVE",
+          adminPermissions: {
+            create: {
+              permission: invitation.permission,
+            },
+          },
+        },
+      });
+
+      await tx.adminInvitation.update({
+        where: { id: invitation.id },
+        data: { acceptedById: user.id },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: user.id,
+          action: "ADMIN_INVITATION_ACCEPTED",
+          targetId: user.id,
+          details: {
+            invitationId: invitation.id,
+            permission: invitation.permission,
+          },
+        },
+      });
+
+      return user;
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Administrator account activated successfully.",
+      user: {
+        id: result.id,
+        fullName: result.fullName,
+        email: result.email,
+        role: result.role,
+      },
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "INVITATION_ALREADY_USED"
+    ) {
+      return res.status(409).json({
+        success: false,
+        message: "Invitation has already been used or expired.",
+      });
+    }
+
+    console.error("Admin activation error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Account activation failed.",
     });
   }
 });

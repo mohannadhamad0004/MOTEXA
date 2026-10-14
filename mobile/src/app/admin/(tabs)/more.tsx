@@ -1,5 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useState } from "react";
+import MotexaDialog from "../../../components/MotexaDialog";
 import {
   ScrollView,
   StyleSheet,
@@ -10,10 +12,36 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useLanguage } from "../../../i18n/LanguageContext";
-
+import * as SecureStore from "expo-secure-store";
+import { Alert } from "react-native";
 export default function MoreScreen() {
   const { isArabic, toggleLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
+ const [logoutVisible, setLogoutVisible] = useState(false);
+const [loggingOut, setLoggingOut] = useState(false);
+
+const handleLogout = () => {
+  setLogoutVisible(true);
+};
+
+const confirmLogout = async () => {
+  if (loggingOut) return;
+
+  try {
+    setLoggingOut(true);
+
+    await SecureStore.deleteItemAsync("motexa_access_token");
+
+    setLogoutVisible(false);
+    router.dismissAll();
+    router.replace("/");
+  } catch (error) {
+    console.error("Sign out failed:", error);
+    setLogoutVisible(false);
+  } finally {
+    setLoggingOut(false);
+  }
+};
 
   const menuItems = [
     {
@@ -40,6 +68,14 @@ export default function MoreScreen() {
       icon: "help-circle-outline" as const,
       action: () => {},
     },
+    {
+  title: isArabic ? "تسجيل الخروج" : "Sign Out",
+  subtitle: isArabic
+    ? "الخروج من حسابك الحالي"
+    : "Sign out of your current account",
+  icon: "log-out-outline" as const,
+  action: handleLogout,
+},
   ];
 
   return (
@@ -140,7 +176,23 @@ export default function MoreScreen() {
           </Text>
           <Text style={styles.version}>Version 1.0.0</Text>
         </View>
+
       </ScrollView>
+      <MotexaDialog
+  visible={logoutVisible}
+  type="warning"
+  title={isArabic ? "تسجيل الخروج؟" : "Sign Out?"}
+  message={
+    isArabic
+      ? "هل تريدين تسجيل الخروج من حساب Super Admin؟"
+      : "Are you sure you want to sign out of your Super Admin account?"
+  }
+  confirmText={isArabic ? "تسجيل الخروج" : "Sign Out"}
+  cancelText={isArabic ? "إلغاء" : "Cancel"}
+  loading={loggingOut}
+  onConfirm={confirmLogout}
+  onCancel={() => setLogoutVisible(false)}
+/>
     </View>
   );
 }
