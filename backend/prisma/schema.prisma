@@ -24,10 +24,18 @@ enum AccountStatus {
   REJECTED
 }
 
+
 enum InvitationStatus {
   PENDING
   ACCEPTED
   REVOKED
+}
+enum MechanicVerificationStatus {
+  PENDING
+  NEEDS_COMPLETION
+  VERIFIED
+  REJECTED
+  SUSPENDED
 }
 
 model User {
@@ -37,11 +45,13 @@ model User {
   passwordHash String
   role         UserRole
   status       AccountStatus @default(PENDING)
+  mechanicProfile MechanicProfile?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   adminPermissions AdminPermission[]
+  
 
   sentInvitations AdminInvitation[] @relation("InvitationSender")
   acceptedInvitation AdminInvitation? @relation("InvitationRecipient")
@@ -92,4 +102,37 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@index([actorId, createdAt])
+}
+model MechanicProfile {
+  id     String @id @default(uuid())
+  userId String @unique
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  phoneNumber String?
+  nationalId  String?
+
+  nationalIdDocumentUrl String?
+  licenseDocumentUrl    String?
+  certificateUrl        String?
+
+  yearsOfExperience Int?
+  workshopName      String?
+
+  specializations String[]
+
+  offersOnSite  Boolean @default(false)
+  offersWorkshop Boolean @default(false)
+  offersOnline   Boolean @default(false)
+
+  verificationStatus MechanicVerificationStatus @default(PENDING)
+
+  reviewNotes String?
+  reviewedById String?
+  reviewedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([verificationStatus])
 }

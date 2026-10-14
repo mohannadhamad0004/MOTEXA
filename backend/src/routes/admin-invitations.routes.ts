@@ -24,16 +24,16 @@ if (typeof fullName !== "string" || !fullName.trim()) {
   });
 }
 
-    if (
-      typeof email !== "string" ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
-     typeof permission !== "string"
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Valid email and permissions are required.",
-      });
-    }
+  if (
+  typeof email !== "string" ||
+  !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
+  typeof permission !== "string"
+) {
+  return res.status(400).json({
+    success: false,
+    message: "Valid email and permissions are required.",
+  });
+}
 
     const normalizedEmail = email.trim().toLowerCase();
 
@@ -101,20 +101,21 @@ const invitation = await prisma.adminInvitation.create({
   invitedById: res.locals.authUser.id,
 },
 });
+const activationLink =
+  `motexa://auth/admin-activation?token=${encodeURIComponent(token)}`;
 
-    return res.status(201).json({
-      success: true,
-      message: "Administrator invitation created.",
-     
-invitation: {
-  id: invitation.id,
-  email: invitation.email,
-  status: invitation.status,
-permission: invitation.permission,
-  expiresAt: invitation.expiresAt,
-},
-
-    });
+return res.status(201).json({
+  success: true,
+  message: "Administrator invitation created.",
+  invitation: {
+    id: invitation.id,
+    email: invitation.email,
+    status: invitation.status,
+    permission: invitation.permission,
+    expiresAt: invitation.expiresAt,
+  },
+  activationLink,
+});
   } catch (error) {
     console.error("Create invitation error:", error);
 
@@ -166,6 +167,89 @@ router.get("/", async (_req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to load administrators.",
+    });
+  }
+});
+router.patch("/:id/revoke", async (req, res) => {
+  try {
+    const invitationId = req.params.id;
+
+    if (typeof invitationId !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid invitation ID.",
+      });
+    }
+
+    const result = await prisma.adminInvitation.updateMany({
+      where: {
+        id: invitationId,
+        status: "PENDING",
+      },
+      data: {
+        status: "REVOKED",
+      },
+    });
+
+    if (result.count === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Pending invitation not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Invitation revoked successfully.",
+    });
+  } catch (error) {
+    console.error("Revoke invitation error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to revoke invitation.",
+    });
+  }
+});
+router.patch("/:id/status", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { status } = req.body ?? {};
+
+    if (typeof id !== "string" ||
+        !["ACTIVE", "SUSPENDED"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid administrator ID or status.",
+      });
+    }
+
+    const result = await prisma.user.updateMany({
+      where: {
+        id,
+        role: "ADMIN",
+        status: status === "ACTIVE" ? "SUSPENDED" : "ACTIVE",
+      },
+      data: { status },
+    });
+
+    if (result.count === 0) {
+      return res.status(409).json({
+        success: false,
+        message: "Administrator not found or status already updated.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Administrator status changed to ${status}.`,
+    });
+  } catch (error) {
+    console.error("Update admin status error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update administrator status.",
     });
   }
 });

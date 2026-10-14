@@ -2,7 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useCallback, useEffect } from "react";
+import * as Clipboard from "expo-clipboard";
 import { useMemo, useState } from "react";
+import MotexaDialog from "../../components/MotexaDialog";
 import {
     Alert,
     FlatList,
@@ -89,12 +91,17 @@ export default function AdminManagementScreen() {
   const insets = useSafeAreaInsets();
 
 const [admins, setAdmins] = useState<AdminAccount[]>([]);
+const [activationLink, setActivationLink] = useState<string | null>(null);
 const [loading, setLoading] = useState(true);  
 const [modalVisible, setModalVisible] = useState(false);
 const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [selectedRole, setSelectedRole] = useState<AdminRole>("mechanics");
+  const [revokeTarget, setRevokeTarget] = useState<AdminAccount | null>(null);
+const [revoking, setRevoking] = useState(false);
+const [statusTarget, setStatusTarget] = useState<AdminAccount | null>(null);
+const [updatingStatus, setUpdatingStatus] = useState(false);
   const loadAdmins = useCallback(async () => {
   try {
     setLoading(true);
@@ -273,6 +280,13 @@ const addAdmin = async () => {
     );
 
     const result = await response.json();
+    console.log("Invitation response check:", {
+  success: result.success,
+  responseKeys: Object.keys(result),
+  hasActivationLink:
+    typeof result.activationLink === "string" &&
+    result.activationLink.length > 0,
+});
 
     if (!response.ok || !result.success) {
       throw new Error(
@@ -281,18 +295,22 @@ const addAdmin = async () => {
     }
 
     setModalVisible(false);
-    setName("");
-    setEmail("");
-    setSelectedRole("mechanics");
+setName("");
+setEmail("");
+setSelectedRole("mechanics");
 
-    await loadAdmins();
+await loadAdmins();
 
-    Alert.alert(
-      isArabic ? "تم إنشاء الدعوة" : "Invitation Created",
-      isArabic
-        ? "تم حفظ دعوة المسؤول في قاعدة البيانات بنجاح. إرسال البريد الإلكتروني لم يُفعّل بعد."
-        : "The invitation was saved in the database. Email delivery is not enabled yet."
-    );
+if (typeof result.activationLink === "string" && result.activationLink) {
+  setActivationLink(result.activationLink);
+} else {
+  Alert.alert(
+    isArabic ? "تم إنشاء الدعوة" : "Invitation Created",
+    isArabic
+      ? "تم حفظ الدعوة، لكن لم يُرجع الخادم رابط التفعيل."
+      : "Invitation saved, but the server did not return an activation link."
+  );
+}
   } catch (error) {
     Alert.alert(
       isArabic ? "فشلت العملية" : "Operation Failed",
@@ -305,42 +323,103 @@ const addAdmin = async () => {
   }
 };
 
-  const toggleSuspension = (admin: AdminAccount) => {
-    if (admin.status === "invited") {
-      Alert.alert(
-        isArabic ? "دعوة معلّقة" : "Pending Invitation",
-        isArabic
-          ? "إدارة الدعوات ستكون متاحة بعد ربط الخادم."
-          : "Invitation management will be available after backend integration.",
-      );
-      return;
+const toggleSuspension = (admin: AdminAccount) => {
+  if (admin.status === "invited") {
+    setRevokeTarget(admin);
+  } else {
+    setStatusTarget(admin);
+  }
+};
+
+const confirmRevoke = async () => {
+  if (!revokeTarget || revoking) return;
+
+  try {
+    setRevoking(true);
+
+    const token = await SecureStore.getItemAsync(
+      "motexa_access_token"
+    );
+
+    if (!token || !API_URL) {
+      throw new Error("Missing authentication or API URL.");
     }
 
-    const nextStatus: AdminStatus =
-      admin.status === "active" ? "suspended" : "active";
-
-    Alert.alert(
-      isArabic ? "تأكيد التغيير التجريبي" : "Confirm Demo Change",
-      isArabic
-        ? "سيتم تغيير حالة المسؤول داخل الواجهة فقط."
-        : "This will change the administrator status in the demo UI only.",
-      [
-        {
-          text: labels.cancel,
-          style: "cancel",
+    const response = await fetch(
+      `${API_URL.replace(/\/$/, "")}/admin-invitations/${revokeTarget.id}/revoke`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-        {
-          text: isArabic ? "تأكيد" : "Confirm",
-          onPress: () =>
-            setAdmins((current) =>
-              current.map((item) =>
-                item.id === admin.id ? { ...item, status: nextStatus } : item,
-              ),
-            ),
-        },
-      ],
+      }
     );
-  };
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || "Failed to revoke invitation.");
+    }
+
+    setRevokeTarget(null);
+    await loadAdmins();
+  } catch (error) {
+    Alert.alert(
+      isArabic ? "فشل إلغاء الدعوة" : "Revoke Failed",
+      error instanceof Error ? error.message : "Connection failed."
+    );
+  } finally {
+    setRevoking(false);
+  }
+};
+const confirmStatusChange = async () => {
+  if (!statusTarget || updatingStatus || statusTarget.status === "invited") {
+    return;
+  }
+
+  const newStatus =
+    statusTarget.status === "active" ? "SUSPENDED" : "ACTIVE";
+
+  try {
+    setUpdatingStatus(true);
+
+    const token = await SecureStore.getItemAsync(
+      "motexa_access_token"
+    );
+
+    if (!token || !API_URL) {
+      throw new Error("Missing authentication or API URL.");
+    }
+
+    const response = await fetch(
+      `${API_URL.replace(/\/$/, "")}/admin-invitations/${statusTarget.id}/status`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: newStatus }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || "Failed to update administrator.");
+    }
+
+    setStatusTarget(null);
+    await loadAdmins();
+  } catch (error) {
+    Alert.alert(
+      isArabic ? "فشل تحديث الحالة" : "Update Failed",
+      error instanceof Error ? error.message : "Connection failed."
+    );
+  } finally {
+    setUpdatingStatus(false);
+  }
+};
 
   const renderAdmin = ({ item }: { item: AdminAccount }) => {
     const statusColor =
@@ -379,29 +458,29 @@ const addAdmin = async () => {
           </View>
         </View>
 
-        {item.status !== "invited" && (
+       
+          {(
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => toggleSuspension(item)}
           >
-            <Ionicons
-              name={
-                item.status === "active"
-                  ? "pause-circle-outline"
-                  : "checkmark-circle-outline"
-              }
-              size={18}
-              color={COLORS.bronze}
-            />
-            <Text style={styles.actionText}>
-              {item.status === "active"
-                ? isArabic
-                  ? "تعليق تجريبي"
-                  : "Demo Suspend"
-                : isArabic
-                  ? "إعادة تفعيل تجريبية"
-                  : "Demo Reactivate"}
-            </Text>
+    <Ionicons
+  name={
+    item.status === "invited"
+      ? "close-circle-outline"
+      : item.status === "active"
+        ? "pause-circle-outline"
+        : "checkmark-circle-outline"
+  }
+  size={18}
+  color={COLORS.bronze}
+/><Text style={styles.actionText}>
+  {item.status === "invited"
+    ? isArabic ? "إلغاء الدعوة" : "Revoke Invitation"
+    : item.status === "active"
+      ? isArabic ? "تعليق المسؤول" : "Suspend Admin"
+      : isArabic ? "إعادة تفعيل المسؤول" : "Reactivate Admin"}
+</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -441,18 +520,7 @@ const addAdmin = async () => {
             <Text style={styles.heading}>{labels.title}</Text>
             <Text style={styles.subtitle}>{labels.subtitle}</Text>
 
-            <View style={styles.demoNotice}>
-              <Ionicons
-                name="information-circle-outline"
-                size={20}
-                color={COLORS.bronze}
-              />
-              <Text style={styles.demoText}>
-                {isArabic
-                  ? "وضع تجريبي: لا توجد حسابات حقيقية أو دعوات مرسلة."
-                  : "Demo mode: No real accounts or invitations are created."}
-              </Text>
-            </View>
+            
 
             <View style={styles.statsRow}>
               {[
@@ -572,7 +640,148 @@ const addAdmin = async () => {
             </ScrollView>
           </View>
         </View>
-      </Modal>
+              </Modal>
+
+     <Modal
+  visible={activationLink !== null}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setActivationLink(null)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalCard}>
+      <Text style={styles.modalTitle}>
+        {isArabic
+          ? "رابط تفعيل المسؤول"
+          : "Administrator Activation Link"}
+      </Text>
+
+      <Text
+        selectable
+        style={{
+          color: COLORS.text,
+          fontSize: 13,
+          lineHeight: 22,
+          marginBottom: 20,
+        }}
+      >
+        {activationLink}
+      </Text>
+
+      {/* Copy Link */}
+      <TouchableOpacity
+        style={styles.modalSubmit}
+        onPress={async () => {
+          if (!activationLink) return;
+
+          await Clipboard.setStringAsync(activationLink);
+
+          Alert.alert(
+            isArabic ? "تم النسخ" : "Copied",
+            isArabic
+              ? "تم نسخ رابط التفعيل."
+              : "Activation link copied."
+          );
+        }}
+      >
+        <Text style={styles.modalSubmitText}>
+          {isArabic ? "نسخ الرابط" : "Copy Link"}
+        </Text>
+      </TouchableOpacity>
+
+      {/* Open Activation */}
+      <TouchableOpacity
+        style={styles.modalSubmit}
+        onPress={() => {
+          if (!activationLink) return;
+
+          try {
+            const url = new URL(activationLink);
+            const token = url.searchParams.get("token");
+
+            if (!token) {
+              Alert.alert(
+                "Invalid Link",
+                "Activation token is missing."
+              );
+              return;
+            }
+
+            setActivationLink(null);
+
+            router.push({
+              pathname: "/auth/admin-activation",
+              params: { token },
+            });
+          } catch {
+            Alert.alert(
+              "Invalid Link",
+              "Unable to open activation link."
+            );
+          }
+        }}
+      >
+        <Text style={styles.modalSubmitText}>
+          {isArabic
+            ? "فتح صفحة التفعيل"
+            : "Open Activation"}
+        </Text>
+      </TouchableOpacity>
+
+      {/* Close */}
+      <TouchableOpacity
+        style={styles.cancelButton}
+        onPress={() => setActivationLink(null)}
+      >
+        <Text style={styles.cancelText}>
+          {isArabic ? "إغلاق" : "Close"}
+        </Text>
+      </TouchableOpacity>
+    </View>
+    <MotexaDialog
+  visible={statusTarget !== null}
+  type="warning"
+  title={
+    statusTarget?.status === "active"
+      ? isArabic ? "تعليق المسؤول؟" : "Suspend Administrator?"
+      : isArabic ? "إعادة تفعيل المسؤول؟" : "Reactivate Administrator?"
+  }
+  message={
+    statusTarget?.status === "active"
+      ? isArabic
+        ? `هل تريدين تعليق حساب ${statusTarget?.name ?? ""}؟`
+        : `Suspend the account of ${statusTarget?.name ?? ""}?`
+      : isArabic
+        ? `هل تريدين إعادة تفعيل حساب ${statusTarget?.name ?? ""}؟`
+        : `Reactivate the account of ${statusTarget?.name ?? ""}?`
+  }
+  confirmText={
+    statusTarget?.status === "active"
+      ? isArabic ? "تعليق" : "Suspend"
+      : isArabic ? "إعادة تفعيل" : "Reactivate"
+  }
+  cancelText={isArabic ? "رجوع" : "Cancel"}
+  loading={updatingStatus}
+  onConfirm={confirmStatusChange}
+  onCancel={() => setStatusTarget(null)}
+/>
+  </View>
+</Modal>
+      <MotexaDialog
+  visible={revokeTarget !== null}
+  type="warning"
+  title={isArabic ? "إلغاء الدعوة؟" : "Revoke Invitation?"}
+  message={
+    isArabic
+      ? `هل تريدين إلغاء دعوة ${revokeTarget?.name ?? ""}؟ لن يتمكن من تفعيل الحساب بهذه الدعوة.`
+      : `Are you sure you want to revoke the invitation for ${revokeTarget?.name ?? ""}? This invitation will no longer be valid.`
+  }
+  confirmText={isArabic ? "إلغاء الدعوة" : "Revoke"}
+  cancelText={isArabic ? "رجوع" : "Cancel"}
+  loading={revoking}
+  onConfirm={confirmRevoke}
+  onCancel={() => setRevokeTarget(null)}
+/>
     </View>
   );
 }

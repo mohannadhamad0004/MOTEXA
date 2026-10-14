@@ -33,7 +33,7 @@ export default function AdminActivationScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
 
-  const handleActivation = () => {
+  const handleActivation = async () => {
     setError("");
 
     if (!token) {
@@ -75,19 +75,60 @@ export default function AdminActivationScreen() {
       );
       return;
     }
+try {
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
-    // TODO: Backend integration
-    // POST /api/auth/admin/activate
-    // Server verifies the invitation token, its expiration,
-    // one-time use, invited email and assigned permissions.
-    // Never activate an admin account on the client alone.
-
-    Alert.alert(
-      isArabic ? "التفعيل غير متاح بعد" : "Activation Unavailable",
+  if (!apiUrl) {
+    setError(
       isArabic
-        ? "تم التحقق من المدخلات، لكن تفعيل الحساب يحتاج إلى Backend وقاعدة بيانات. لم يتم إنشاء أي حساب."
-        : "Inputs are valid, but account activation requires the backend and database. No account has been created.",
+        ? "عنوان الخادم غير مضبوط."
+        : "Backend URL is not configured."
     );
+    return;
+  }
+
+  const response = await fetch(`${apiUrl}/auth/admin/activate`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      token,
+      password,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || !data.success) {
+    setError(
+      data.message ||
+        (isArabic
+          ? "فشل تفعيل الحساب."
+          : "Account activation failed.")
+    );
+    return;
+  }
+
+  Alert.alert(
+    isArabic ? "تم تفعيل الحساب" : "Account Activated",
+    isArabic
+      ? "تم إنشاء حسابك بنجاح. يمكنك الآن تسجيل الدخول."
+      : "Your account is ready. You can now sign in.",
+    [
+      {
+        text: isArabic ? "تسجيل الدخول" : "Sign In",
+        onPress: () => router.replace("/auth/login"),
+      },
+    ]
+  );
+} catch {
+  setError(
+    isArabic
+      ? "تعذر الاتصال بالخادم. تأكدي من تشغيل الـ Backend."
+      : "Unable to connect to the server."
+  );
+}
   };
 
   return (
