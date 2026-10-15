@@ -135,3 +135,113 @@ export async function requireMechanicsAdmin(
     res.status(500).json({ success: false, message: "Internal server error." });
   }
 }
+
+/** Tow administration access: SUPER_ADMIN, or ADMIN holding MANAGE_TOWING. Use after requireAuth. */
+export async function requireTowAdmin(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const user = res.locals.authUser as { id: string; role: string } | undefined;
+    let allowed = user?.role === "SUPER_ADMIN";
+
+    if (!allowed && user?.role === "ADMIN") {
+      allowed = !!(await prisma.adminPermission.findUnique({
+        where: {
+          adminId_permission: {
+            adminId: user.id,
+            permission: "MANAGE_TOWING",
+          },
+        },
+      }));
+    }
+
+    if (!allowed) {
+      res.status(403).json({
+        success: false,
+        message: "Tow administration access required.",
+      });
+      return;
+    }
+
+    next();
+  } catch (error) {
+    console.error("Tow admin check error:", error);
+    res.status(500).json({ success: false, message: "Internal server error." });
+  }
+}
+
+/** Tow company access: role TOW_PROVIDER (requireAuth already guarantees an ACTIVE account). */
+export function requireTowProvider(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  const user = res.locals.authUser;
+
+  if (!user || user.role !== "TOW_PROVIDER" || user.status !== "ACTIVE") {
+    res.status(403).json({
+      success: false,
+      message: "Tow company access required.",
+    });
+    return;
+  }
+
+  next();
+}
+
+/** Parts administration access: SUPER_ADMIN, or ADMIN holding MANAGE_SPARE_PARTS. Use after requireAuth. */
+export async function requirePartsAdmin(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const user = res.locals.authUser as { id: string; role: string } | undefined;
+    let allowed = user?.role === "SUPER_ADMIN";
+
+    if (!allowed && user?.role === "ADMIN") {
+      allowed = !!(await prisma.adminPermission.findUnique({
+        where: {
+          adminId_permission: {
+            adminId: user.id,
+            permission: "MANAGE_SPARE_PARTS",
+          },
+        },
+      }));
+    }
+
+    if (!allowed) {
+      res.status(403).json({
+        success: false,
+        message: "Parts administration access required.",
+      });
+      return;
+    }
+
+    next();
+  } catch (error) {
+    console.error("Parts admin check error:", error);
+    res.status(500).json({ success: false, message: "Internal server error." });
+  }
+}
+
+/** Parts shop access: role PARTS_PROVIDER (requireAuth already guarantees an ACTIVE account). */
+export function requirePartsProvider(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  const user = res.locals.authUser;
+
+  if (!user || user.role !== "PARTS_PROVIDER" || user.status !== "ACTIVE") {
+    res.status(403).json({
+      success: false,
+      message: "Parts shop access required.",
+    });
+    return;
+  }
+
+  next();
+}

@@ -1,9 +1,10 @@
-// TEMPORARY DEVELOPMENT IMPLEMENTATION (in-memory mock, no backend models exist yet).
-// Tow feature: types + MOCK data layer + the two service facades used by the screens.
+// Tow feature: types + REST client for the two service facades used by the screens.
 // Screens only call `towFleetService` (provider) and `towAdminService` (admin).
-// To go real: re-implement those two objects with fetch() calls to the REST API.
-// Everything below `// ---- MOCK ----` is throwaway development data (in memory, resets on reload).
-// SECURITY: the ownership/permission checks in the mock mimic what the backend MUST enforce.
+// The backend (backend/src/routes/tow.routes.ts) enforces roles and ownership; the screen gates are UX only.
+// NOT persisted yet (later step): truck photo and truck/company documents. The server returns them empty,
+// and the provider form's photo/document inputs are not sent.
+
+import { api } from "../shared/api";
 
 export type Verification = "PENDING" | "APPROVED" | "REJECTED";
 export type Operational = "AVAILABLE" | "BUSY" | "OUT_OF_SERVICE";
@@ -44,7 +45,7 @@ export type Truck = {
 
 export type TowCompany = {
   id: string;
-  ownerEmail: string; // links the mock company to a real seeded login
+  ownerEmail: string;
   name: string;
   contactName: string;
   phone: string;
@@ -58,181 +59,120 @@ export type TruckInput = Pick<Truck, "type" | "plate" | "make" | "model" | "year
 
 export type CompanyRow = TowCompany & { truckCount: number; pendingTruckCount: number };
 
-// ---- MOCK ----
-const iso = (d: string) => new Date(d).toISOString();
-const doc = (kind: DocKind, exp?: string): TruckDocument => ({
-  kind,
-  fileName: `${kind.toLowerCase()}.jpg`,
-  expiresAt: exp ?? null,
+// ---- API shapes -> screen shapes ----
+
+type ApiTruck = {
+  id: string;
+  companyId: string;
+  plateNumber: string;
+  make: string;
+  model: string;
+  year: number | null;
+  truckType: TruckType;
+  verificationStatus: Verification;
+  operationalStatus: Operational;
+  rejectionReason: string | null;
+  photoUri: string | null;
+  documents: TruckDocument[];
+  history: HistoryEntry[];
+};
+
+type ApiCompany = {
+  id: string;
+  companyName: string;
+  contactName: string;
+  ownerEmail: string;
+  phone: string;
+  city: string;
+  verificationStatus: Verification;
+  documents: { kind: string; fileName: string }[];
+};
+
+const toTruck = (t: ApiTruck): Truck => ({
+  id: t.id,
+  companyId: t.companyId,
+  photoUri: t.photoUri,
+  type: t.truckType,
+  plate: t.plateNumber,
+  make: t.make,
+  model: t.model,
+  year: t.year,
+  verification: t.verificationStatus,
+  operational: t.operationalStatus,
+  hasActiveJob: false, // no jobs yet
+  documents: t.documents,
+  rejectionReason: t.rejectionReason,
+  history: t.history,
 });
-const submitted = (at: string, actor: string): HistoryEntry => ({ at: iso(at), actor, action: "SUBMITTED" });
 
-const companies: TowCompany[] = [
-  {
-    id: "co-a", ownerEmail: "tow@motexa.test", name: "Al-Noor Recovery & Towing Services Company",
-    contactName: "Test Tow Company", phone: "+962 79 000 0001", city: "Amman", verification: "APPROVED",
-    documents: [{ kind: "Commercial registration", fileName: "cr-alnoor.pdf" }, { kind: "Operating licence", fileName: "licence-alnoor.pdf" }],
-  },
-  {
-    id: "co-b", ownerEmail: "tow.b@motexa.test", name: "Desert Hook Towing",
-    contactName: "Khaled Nasser", phone: "+962 79 000 0002", city: "Zarqa", verification: "PENDING",
-    documents: [{ kind: "Commercial registration", fileName: "cr-desert.pdf" }],
-  },
-  {
-    id: "co-c", ownerEmail: "tow.c@motexa.test", name: "Quick Lift",
-    contactName: "Sami Haddad", phone: "+962 79 000 0003", city: "Irbid", verification: "REJECTED",
-    documents: [{ kind: "Commercial registration", fileName: "cr-quick.pdf" }],
-  },
-];
+const toCompany = (c: ApiCompany): TowCompany => ({
+  id: c.id,
+  ownerEmail: c.ownerEmail,
+  name: c.companyName,
+  contactName: c.contactName,
+  phone: c.phone,
+  city: c.city,
+  verification: c.verificationStatus,
+  documents: c.documents,
+});
 
-const trucks: Truck[] = [
-  {
-    id: "tr-a1", companyId: "co-a", type: "FLATBED", plate: "10-12345", make: "Isuzu", model: "NPR", year: 2021,
-    verification: "APPROVED", operational: "AVAILABLE", hasActiveJob: false,
-    documents: [doc("REGISTRATION", "2027-05-01"), doc("INSURANCE", "2027-02-01")],
-    history: [submitted("2026-03-01", "Test Tow Company"), { at: iso("2026-03-03"), actor: "Test Super Admin", action: "APPROVED" }],
-  },
-  {
-    id: "tr-a2", companyId: "co-a", type: "HOOK_CHAIN", plate: "20-67890", make: "Mitsubishi", model: "Canter", year: 2019,
-    verification: "APPROVED", operational: "BUSY", hasActiveJob: true,
-    documents: [doc("REGISTRATION", "2027-01-01"), doc("INSURANCE", "2027-01-01")],
-    history: [submitted("2026-03-01", "Test Tow Company"), { at: iso("2026-03-03"), actor: "Test Super Admin", action: "APPROVED" }],
-  },
-  {
-    id: "tr-a3", companyId: "co-a", type: "WHEEL_LIFT", plate: "30-11122", make: "Hino", model: "300", year: 2023,
-    verification: "PENDING", operational: "AVAILABLE", hasActiveJob: false,
-    documents: [doc("REGISTRATION", "2028-01-01"), doc("INSURANCE", "2027-09-01")],
-    history: [submitted("2026-10-01", "Test Tow Company")],
-  },
-  {
-    id: "tr-a4", companyId: "co-a", type: "HEAVY_DUTY", plate: "40-99887", make: "Volvo", model: "FM", year: 2016,
-    verification: "APPROVED", operational: "OUT_OF_SERVICE", hasActiveJob: false,
-    documents: [doc("REGISTRATION", "2027-03-01"), doc("INSURANCE", "2025-12-31")], // insurance expired
-    history: [submitted("2026-02-01", "Test Tow Company"), { at: iso("2026-02-04"), actor: "Test Super Admin", action: "APPROVED" }],
-  },
-  {
-    id: "tr-a5", companyId: "co-a", type: "FLATBED", plate: "50-00001", make: "Ford", model: "F-650", year: 2012,
-    verification: "REJECTED", operational: "OUT_OF_SERVICE", hasActiveJob: false, rejectionReason: "Registration photo is unreadable. Please upload a clear copy.",
-    documents: [doc("REGISTRATION"), doc("INSURANCE", "2027-01-01")],
-    history: [submitted("2026-08-01", "Test Tow Company"), { at: iso("2026-08-02"), actor: "Test Admin Towing", action: "REJECTED", reason: "Registration photo is unreadable. Please upload a clear copy." }],
-  },
-  {
-    id: "tr-b1", companyId: "co-b", type: "FLATBED", plate: "11-22233", make: "Isuzu", model: "NQR", year: 2020,
-    verification: "PENDING", operational: "AVAILABLE", hasActiveJob: false,
-    documents: [doc("REGISTRATION", "2027-06-01"), doc("INSURANCE", "2027-06-01")],
-    history: [submitted("2026-10-05", "Khaled Nasser")],
-  },
-  {
-    id: "tr-c1", companyId: "co-c", type: "WHEEL_LIFT", plate: "12-44455", make: "Hyundai", model: "HD65", year: 2018,
-    verification: "REJECTED", operational: "OUT_OF_SERVICE", hasActiveJob: false, rejectionReason: "Company licence not valid.",
-    documents: [doc("REGISTRATION", "2027-06-01"), doc("INSURANCE", "2027-06-01")],
-    history: [submitted("2026-09-01", "Sami Haddad"), { at: iso("2026-09-02"), actor: "Test Admin Towing", action: "REJECTED", reason: "Company licence not valid." }],
-  },
-];
+/** Only vehicle fields go to the server; status/moderation fields can never be sent from here. */
+const toVehicleBody = (i: TruckInput) => ({
+  truckType: i.type,
+  plateNumber: i.plate.trim(),
+  make: i.make,
+  model: i.model,
+  year: i.year,
+});
 
-const wait = <T,>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), 250));
-const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
-let seq = 100;
-
-function myCompany(actor: Actor) {
-  const c = companies.find((x) => x.ownerEmail === actor.email);
-  if (!c) throw new Error("No tow company is linked to this account.");
-  return c;
-}
-/** Ownership check: the server must do this for every provider mutation. */
-function ownTruck(actor: Actor, id: string) {
-  const co = myCompany(actor);
-  const t = trucks.find((x) => x.id === id);
-  if (!t || t.companyId !== co.id) throw new Error("Forbidden: this truck belongs to another company.");
-  return t;
-}
-
-// ---- Provider (TOW_PROVIDER) ----
+// ---- Provider (TOW_PROVIDER). The actor argument is kept for the screens; the server uses the token. ----
 export const towFleetService = {
-  async getMyFleet(actor: Actor) {
-    const company = myCompany(actor);
-    return wait(clone({ company, trucks: trucks.filter((t) => t.companyId === company.id) }));
+  async getMyFleet(_actor: Actor) {
+    const [c, t] = await Promise.all([
+      api<{ company: ApiCompany }>("GET", "/tow/me/company"),
+      api<{ trucks: ApiTruck[] }>("GET", "/tow/me/trucks"),
+    ]);
+    return { company: toCompany(c.company), trucks: t.trucks.map(toTruck) };
   },
-  async getMyTruck(actor: Actor, id: string) {
-    return wait(clone(ownTruck(actor, id)));
+  async getMyTruck(_actor: Actor, id: string) {
+    const r = await api<{ truck: ApiTruck }>("GET", `/tow/me/trucks/${id}`);
+    return toTruck(r.truck);
   },
-  async addTruck(actor: Actor, input: TruckInput) {
-    const co = myCompany(actor);
-    if (trucks.some((t) => t.plate.toLowerCase() === input.plate.trim().toLowerCase()))
-      throw new Error("A truck with this plate already exists.");
-    const { type, plate, make, model, year, photoUri, documents } = input;
-    const t: Truck = {
-      type, make, model, year, photoUri, documents,
-      plate: plate.trim(),
-      id: `tr-new-${++seq}`,
-      companyId: co.id,
-      verification: "PENDING", // never starts approved
-      operational: "OUT_OF_SERVICE",
-      hasActiveJob: false,
-      history: [{ at: new Date().toISOString(), actor: actor.fullName, action: "SUBMITTED" }],
-    };
-    trucks.push(t);
-    return wait(clone(t));
+  async addTruck(_actor: Actor, input: TruckInput) {
+    const r = await api<{ truck: ApiTruck }>("POST", "/tow/me/trucks", toVehicleBody(input));
+    return toTruck(r.truck);
   },
-  async updateTruck(actor: Actor, id: string, input: TruckInput) {
-    const t = ownTruck(actor, id);
-    // Provider can never change verification/operational/moderation fields through this call.
-    const { type, plate, make, model, year, photoUri, documents } = input; // whitelist: never trust extra fields
-    Object.assign(t, { type, plate: plate.trim(), make, model, year, photoUri, documents });
-    return wait(clone(t));
+  async updateTruck(_actor: Actor, id: string, input: TruckInput) {
+    const r = await api<{ truck: ApiTruck }>("PATCH", `/tow/me/trucks/${id}`, toVehicleBody(input));
+    return toTruck(r.truck);
   },
-  async removeTruck(actor: Actor, id: string) {
-    const t = ownTruck(actor, id);
-    if (t.hasActiveJob) throw new Error("This truck is engaged in a service and cannot be removed.");
-    trucks.splice(trucks.indexOf(t), 1);
-    return wait(true);
+  async removeTruck(_actor: Actor, id: string) {
+    await api("DELETE", `/tow/me/trucks/${id}`);
+    return true;
   },
 };
 
 // ---- Admin (SUPER_ADMIN or ADMIN + MANAGE_TOWING) ----
 type AdminActor = Actor & { role: string; permissions: string[] };
-function assertTowAdmin(a: AdminActor) {
-  const ok = a.role === "SUPER_ADMIN" || (a.role === "ADMIN" && a.permissions.includes("MANAGE_TOWING"));
-  if (!ok) throw new Error("Forbidden: MANAGE_TOWING permission required.");
-}
 
 export const towAdminService = {
-  async listCompanies(a: AdminActor): Promise<CompanyRow[]> {
-    assertTowAdmin(a);
-    return wait(
-      clone(
-        companies.map((c) => {
-          const own = trucks.filter((t) => t.companyId === c.id);
-          return { ...c, truckCount: own.length, pendingTruckCount: own.filter((t) => t.verification === "PENDING").length };
-        })
-      )
-    );
+  async listCompanies(_a: AdminActor): Promise<CompanyRow[]> {
+    const r = await api<{ companies: (ApiCompany & { truckCount: number; pendingTruckCount: number })[] }>("GET", "/admin/tow/companies");
+    return r.companies.map((c) => ({ ...toCompany(c), truckCount: c.truckCount, pendingTruckCount: c.pendingTruckCount }));
   },
   /** Also returns trucks so the list screen can search by plate / type. */
-  async listTrucks(a: AdminActor) {
-    assertTowAdmin(a);
-    return wait(clone(trucks));
+  async listTrucks(_a: AdminActor) {
+    const r = await api<{ trucks: ApiTruck[] }>("GET", "/admin/tow/trucks");
+    return r.trucks.map(toTruck);
   },
-  async getCompany(a: AdminActor, id: string) {
-    assertTowAdmin(a);
-    const company = companies.find((c) => c.id === id);
-    if (!company) throw new Error("Company not found.");
-    return wait(clone({ company, trucks: trucks.filter((t) => t.companyId === id) }));
+  async getCompany(_a: AdminActor, id: string) {
+    const r = await api<{ company: ApiCompany; trucks: ApiTruck[] }>("GET", `/admin/tow/companies/${id}`);
+    return { company: toCompany(r.company), trucks: r.trucks.map(toTruck) };
   },
   /** Admin may only decide. No field of the truck itself is editable here. */
-  async decideTruck(a: AdminActor, truckId: string, decision: { approve: true } | { approve: false; reason: string }) {
-    assertTowAdmin(a);
-    const t = trucks.find((x) => x.id === truckId);
-    if (!t) throw new Error("Truck not found.");
-    if (!decision.approve && !decision.reason.trim()) throw new Error("A rejection reason is required.");
-    t.verification = decision.approve ? "APPROVED" : "REJECTED";
-    t.rejectionReason = decision.approve ? null : decision.reason.trim();
-    t.history.push({
-      at: new Date().toISOString(),
-      actor: a.fullName,
-      action: decision.approve ? "APPROVED" : "REJECTED",
-      reason: decision.approve ? undefined : decision.reason.trim(),
-    });
-    return wait(clone(t));
+  async decideTruck(_a: AdminActor, truckId: string, decision: { approve: true } | { approve: false; reason: string }) {
+    const body = decision.approve ? { decision: "APPROVED" } : { decision: "REJECTED", reason: decision.reason.trim() };
+    const r = await api<{ truck: ApiTruck }>("PATCH", `/admin/tow/trucks/${truckId}/decision`, body);
+    return toTruck(r.truck);
   },
 };

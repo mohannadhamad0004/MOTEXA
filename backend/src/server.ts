@@ -2,6 +2,8 @@ import adminInvitationRoutes from "./routes/admin-invitations.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import mechanicApplicationRoutes from "./routes/mechanic-applications.routes.js";
 import mechanicReviewRoutes from "./routes/mechanic-review.routes.js";
+import towRoutes from "./routes/tow.routes.js";
+import partsRoutes from "./routes/parts.routes.js";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -26,6 +28,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin-management", adminRoutes);
 app.use("/api/admin-invitations", adminInvitationRoutes);
 app.use("/api/mechanic-review", mechanicReviewRoutes);
+app.use("/api", towRoutes);
+app.use("/api", partsRoutes);
 app.listen(PORT, () => {
   console.log(`MOTEXA Server running on http://localhost:${PORT}`);
 });
