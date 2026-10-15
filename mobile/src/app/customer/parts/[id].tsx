@@ -5,7 +5,7 @@ import { catalogService } from "../../../features/catalog/catalogService";
 import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
 import { StockStateBadge } from "../../../features/parts/partsBits";
 import { C } from "../../../features/shared/palette";
-import { Async, Badge, Button, Card, Header, Section, Thumb, useL, useLoad } from "../../../features/shared/ui";
+import { Async, Button, Card, Header, Section, Thumb, useL, useLoad } from "../../../features/shared/ui";
 
 export default function CustomerPartDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -71,10 +71,7 @@ export default function CustomerPartDetail() {
             </Card>
 
             <View style={{ height: 8 }} />
-            <Button disabled icon="chatbubble-ellipses-outline" label={`${t("Ask the shop", "اسأل المتجر")} — ${t("Coming soon", "قريبًا")}`} onPress={() => {}} />
-            <View style={[row, { marginTop: 10 }]}>
-              <Badge tone="neutral" icon="time-outline" label={t("Requests are coming soon", "الطلبات قادمة قريبًا")} />
-            </View>
+            <Button icon="chatbubble-ellipses-outline" label={t("Ask the shop", "اسأل المتجر")} onPress={() => router.push({ pathname: "/customer/inquiry/new", params: { productId: p.id } })} />
           </>
         )}
       </Async>

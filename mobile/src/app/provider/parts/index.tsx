@@ -42,6 +42,8 @@ export default function MyParts() {
                   <VerificationBadge value={shop.verification} prefix={t("Shop", "المتجر")} />
                 </View>
               )}
+              <Button variant="ghost" label={t("Customer questions", "أسئلة العملاء")} icon="chatbubbles-outline" onPress={() => router.push("/provider/parts/inquiries")} />
+              <View style={{ height: 10 }} />
               <Button label={t("Add part", "إضافة قطعة")} icon="add-circle-outline" onPress={() => router.push("/provider/parts/new")} />
               <View style={{ height: 16 }} />
               <SearchBar value={q} onChange={setQ} placeholder={t("Name, brand or part number", "الاسم أو العلامة أو رقم القطعة")} />

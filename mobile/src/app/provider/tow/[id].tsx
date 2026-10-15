@@ -145,6 +145,7 @@ function TruckView({ truck, onChange }: { truck: Truck; onChange: () => void }) 
   const { type } = useTruckLabels();
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  const [statusBusy, setStatusBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   if (editing) return <TruckForm truck={truck} onSaved={() => { setEditing(false); onChange(); }} onCancel={() => setEditing(false)} />;
@@ -155,6 +156,19 @@ function TruckView({ truck, onChange }: { truck: Truck; onChange: () => void }) 
       goBack("/provider/tow");
     } catch (e: any) {
       setErr(e.message);
+    }
+  };
+
+  const setOperational = async (value: "AVAILABLE" | "OUT_OF_SERVICE") => {
+    setStatusBusy(true);
+    setErr(null);
+    try {
+      await towFleetService.setOperational(asActor(user), truck.id, value);
+      onChange();
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setStatusBusy(false);
     }
   };
 
@@ -178,6 +192,22 @@ function TruckView({ truck, onChange }: { truck: Truck; onChange: () => void }) 
           <VerificationBadge value={truck.verification} prefix={t("Approval", "الاعتماد")} />
           <OperationalBadge value={truck.operational} />
         </View>
+        {truck.verification === "APPROVED" && !truck.hasActiveJob && (
+          <View style={{ marginTop: 12 }}>
+            <Button
+              variant="ghost"
+              icon={truck.operational === "AVAILABLE" ? "pause-circle-outline" : "play-circle-outline"}
+              label={truck.operational === "AVAILABLE" ? t("Set out of service", "تعيين خارج الخدمة") : t("Set available", "تعيين كمتاح")}
+              disabled={statusBusy}
+              onPress={() => setOperational(truck.operational === "AVAILABLE" ? "OUT_OF_SERVICE" : "AVAILABLE")}
+            />
+          </View>
+        )}
+        {truck.hasActiveJob && (
+          <View style={{ marginTop: 12 }}>
+            <Notice icon="navigate-outline">{t("This truck is on an active job. Its status changes when the job ends.", "هذه الشاحنة في مهمة نشطة. تتغير حالتها عند انتهاء المهمة.")}</Notice>
+          </View>
+        )}
         {truck.rejectionReason ? (
           <View style={{ marginTop: 12 }}>
             <Notice tone="danger" icon="close-circle-outline">{truck.rejectionReason}</Notice>
@@ -195,7 +225,7 @@ function TruckView({ truck, onChange }: { truck: Truck; onChange: () => void }) 
       <View style={{ height: 20 }} />
       {err ? <Notice tone="danger" icon="alert-circle-outline">{err}</Notice> : null}
       <View style={{ gap: 8 }}>
-        <Button icon="create-outline" label={t("Edit truck", "تعديل الشاحنة")} onPress={() => setEditing(true)} />
+        <Button icon="create-outline" label={t("Edit truck", "تعديل الشاحنة")} disabled={truck.hasActiveJob} onPress={() => setEditing(true)} />
         {truck.hasActiveJob && (
           <Notice icon="lock-closed-outline">
             {t("This truck is engaged in a service and cannot be removed until it finishes.", "هذه الشاحنة منشغلة بخدمة ولا يمكن إزالتها حتى تنتهي.")}

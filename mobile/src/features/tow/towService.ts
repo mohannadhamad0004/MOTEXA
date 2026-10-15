@@ -77,6 +77,7 @@ type ApiTruck = {
   rejectionReason: string | null;
   photoUri: string | null;
   documents: (TruckDocument & { expired?: boolean })[];
+  hasActiveJob: boolean;
   missingForApproval?: string[];
   history: HistoryEntry[];
 };
@@ -104,7 +105,7 @@ const toTruck = (t: ApiTruck): Truck => ({
   year: t.year,
   verification: t.verificationStatus,
   operational: t.operationalStatus,
-  hasActiveJob: false, // no jobs yet
+  hasActiveJob: t.hasActiveJob,
   documents: t.documents,
   rejectionReason: t.rejectionReason,
   history: t.history,
@@ -168,6 +169,11 @@ export const towFleetService = {
   },
   async updateTruck(_actor: Actor, id: string, input: TruckInput) {
     const r = await api<{ truck: ApiTruck }>("PATCH", `/tow/me/trucks/${id}`, await toVehicleBody(input));
+    return toTruck(r.truck);
+  },
+  /** Company-controlled availability of an APPROVED truck. The server refuses it while the truck is on a job. */
+  async setOperational(_actor: Actor, id: string, value: "AVAILABLE" | "OUT_OF_SERVICE") {
+    const r = await api<{ truck: ApiTruck }>("PATCH", `/tow/me/trucks/${id}/status`, { operationalStatus: value });
     return toTruck(r.truck);
   },
   async removeTruck(_actor: Actor, id: string) {

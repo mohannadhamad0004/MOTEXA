@@ -245,3 +245,22 @@ export function requirePartsProvider(
 
   next();
 }
+
+/** Customer access: role CUSTOMER (requireAuth already guarantees an ACTIVE account). */
+export function requireCustomer(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  const user = res.locals.authUser;
+
+  if (!user || user.role !== "CUSTOMER") {
+    res.status(403).json({
+      success: false,
+      message: "Customer access required.",
+    });
+    return;
+  }
+
+  next();
+}

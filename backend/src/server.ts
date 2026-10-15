@@ -6,6 +6,8 @@ import towRoutes from "./routes/tow.routes.js";
 import partsRoutes from "./routes/parts.routes.js";
 import filesRoutes from "./routes/files.routes.js";
 import catalogRoutes from "./routes/catalog.routes.js";
+import partInquiryRoutes from "./routes/part-inquiries.routes.js";
+import towRequestRoutes from "./routes/tow-requests.routes.js";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -23,6 +25,9 @@ app.use("/api", towRoutes);
 app.use("/api", partsRoutes);
 app.use("/api/files", filesRoutes);
 app.use("/api/catalog", catalogRoutes);
+// Request routes parse their own (small) JSON bodies after authentication.
+app.use("/api", partInquiryRoutes);
+app.use("/api", towRequestRoutes);
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {

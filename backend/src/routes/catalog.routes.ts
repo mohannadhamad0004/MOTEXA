@@ -159,7 +159,8 @@ router.get("/tow/companies", async (req, res) => {
     });
     return res.json({
       success: true,
-      companies: companies.map((c) => ({
+      // A company with no approved truck has nothing to offer a customer yet, so it is not listed.
+      companies: companies.filter((c) => c.trucks.length > 0).map((c) => ({
         id: c.id,
         name: c.companyName,
         city: c.city,
@@ -196,7 +197,7 @@ router.get("/tow/companies/:id", async (req, res) => {
         },
       },
     });
-    if (!c) return bad(res, 404, "Company not found.");
+    if (!c || c.trucks.length === 0) return bad(res, 404, "Company not found.");
     // Available trucks first. No plate numbers: customers never see them.
     const trucks = [...c.trucks].sort((a, b) => Number(b.operationalStatus === "AVAILABLE") - Number(a.operationalStatus === "AVAILABLE"));
     return res.json({
