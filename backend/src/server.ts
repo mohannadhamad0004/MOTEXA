@@ -5,6 +5,7 @@ import mechanicReviewRoutes from "./routes/mechanic-review.routes.js";
 import towRoutes from "./routes/tow.routes.js";
 import partsRoutes from "./routes/parts.routes.js";
 import filesRoutes from "./routes/files.routes.js";
+import catalogRoutes from "./routes/catalog.routes.js";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -21,6 +22,7 @@ app.use("/api/mechanic-applications", mechanicApplicationRoutes);
 app.use("/api", towRoutes);
 app.use("/api", partsRoutes);
 app.use("/api/files", filesRoutes);
+app.use("/api/catalog", catalogRoutes);
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {

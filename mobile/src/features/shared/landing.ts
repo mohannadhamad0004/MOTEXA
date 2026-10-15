@@ -24,6 +24,7 @@ export function landingFor(role: string, permissions: string[]): Href | null {
     case "PARTS_PROVIDER":
       return "/provider/parts";
     case "CUSTOMER":
+      return "/customer";
     case "MECHANIC":
       return "/home";
     default:
