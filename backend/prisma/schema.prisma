@@ -51,7 +51,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   adminPermissions AdminPermission[]
-  
+  mechanicApplication MechanicApplication?
 
   sentInvitations AdminInvitation[] @relation("InvitationSender")
   acceptedInvitation AdminInvitation? @relation("InvitationRecipient")
@@ -135,4 +135,95 @@ model MechanicProfile {
   updatedAt DateTime @updatedAt
 
   @@index([verificationStatus])
+}
+
+// ---- Mechanic verification application (submitted at signup, reviewed by admins later) ----
+
+enum ReviewItemStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Internal review pipeline. AWAITING_AUTHORITY / DECIDED are added by the later authority-verification task.
+enum MechanicReviewStatus {
+  PENDING_REVIEW
+  NEEDS_CORRECTION
+  MANUAL_REVIEW
+  READY_FOR_AUTHORITY
+  REJECTED
+}
+
+// An admin's pre-review OBSERVATION. It is never a verdict on authenticity.
+enum PreReviewObservation {
+  NOT_REVIEWED
+  INFORMATION_MATCHES
+  MISSING_INFORMATION
+  DOCUMENT_UNREADABLE
+  EXPIRED
+  MANUAL_REVIEW_REQUIRED
+}
+
+enum MechanicDocumentKind {
+  LICENCE
+  CERTIFICATE
+}
+
+model MechanicApplication {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  phone           String
+  city            String
+  workshopName    String
+  workshopAddress String
+
+  licenceNumber     String
+  licenceHolderName String
+  issuingAuthority  String
+  licenceIssueDate  DateTime?
+  licenceExpiryDate DateTime?
+
+  authorizationAccepted   Boolean
+  authorizationAcceptedAt DateTime
+
+  submittedAt DateTime @default(now())
+
+  reviewStatus MechanicReviewStatus @default(PENDING_REVIEW)
+  reviewReason String?
+
+  // Pre-review observations, tracked separately for the person and for the workshop.
+  professionalPreReview     PreReviewObservation @default(NOT_REVIEWED)
+  professionalPreReviewNote String?
+  workshopPreReview         PreReviewObservation @default(NOT_REVIEWED)
+  workshopPreReviewNote     String?
+
+  skills   MechanicSkillApplication[]
+  documents MechanicDocument[]
+}
+
+// One row per claimed skill so each can be approved independently later.
+model MechanicSkillApplication {
+  id            String              @id @default(uuid())
+  applicationId String
+  application   MechanicApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  name          String
+  status        ReviewItemStatus    @default(PENDING)
+  rejectionReason String?
+
+  @@unique([applicationId, name])
+}
+
+// PRIVATE verification files. storageKey is internal and must never be returned by public APIs.
+model MechanicDocument {
+  id            String               @id @default(uuid())
+  applicationId String
+  application   MechanicApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  kind          MechanicDocumentKind
+  title         String
+  mimeType      String
+  sizeBytes     Int
+  storageKey    String
+  createdAt     DateTime             @default(now())
 }

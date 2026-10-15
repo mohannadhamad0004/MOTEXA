@@ -34,3 +34,5 @@ Thumbs.db
 # Build output
 build/
 coverage/
+# Private uploaded verification documents (dev local disk)
+storage/

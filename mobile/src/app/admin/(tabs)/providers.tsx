@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLanguage } from "../../../i18n/LanguageContext";
+import { canManageParts, canManageTow, useSession } from "../../../features/shared/session";
 
 type ProviderType = {
   id: string;
@@ -165,6 +166,14 @@ export default function ProvidersScreen() {
       ? "مركز إدارة شبكة MOTEXA"
       : "MOTEXA SERVICE NETWORK CONTROL",
   };
+
+  // Parts / Tow entries are offered only to admins allowed to manage them (UX gate; the routes re-check).
+  const session = useSession();
+  const visibleProviderTypes = providerTypes.filter((p) => {
+    if (p.id === "parts") return session.status === "ready" && canManageParts(session.user);
+    if (p.id === "tow") return session.status === "ready" && canManageTow(session.user);
+    return true;
+  });
 
   const totalPending = providerTypes.reduce(
     (total, provider) => total + provider.pending,
@@ -344,7 +353,7 @@ export default function ProvidersScreen() {
           />
 
           <View style={styles.providerList}>
-            {providerTypes.map((provider) => (
+            {visibleProviderTypes.map((provider) => (
               <TouchableOpacity
                 key={provider.id}
                 activeOpacity={0.82}
@@ -352,6 +361,8 @@ export default function ProvidersScreen() {
 onPress={() => {
   if (provider.id === "mechanics") {
 router.push("/admin/mechanics");  }
+  if (provider.id === "parts") router.push("/admin/shops");
+  if (provider.id === "tow") router.push("/admin/tow");
 }}
               >
                 <LinearGradient

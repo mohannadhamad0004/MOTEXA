@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
+    "seed:test": "tsx src/seed/test-accounts.ts",
     "start": "node dist/server.js",
     "postinstall": "prisma skills sync || exit 0"
   },
