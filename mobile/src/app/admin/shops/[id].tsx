@@ -1,12 +1,78 @@
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { View } from "react-native";
-import { partsAdminService } from "../../../features/parts/partsService";
+import { Text, View } from "react-native";
+import { StockBadge, fitmentSummary } from "../../../features/parts/partsBits";
+import { Product, partsAdminService } from "../../../features/parts/partsService";
 import { HistoryList, KV, PrivateDocs, VerificationBadge } from "../../../features/shared/blocks";
+import { C } from "../../../features/shared/palette";
 import { asActor, useSessionUser } from "../../../features/shared/session";
 import {
-  Async, Button, Card, Header, Notice, ReasonPanel, Screen, Section, useL, useLoad,
+  Async, Badge, Button, Card, Empty, Header, Notice, ReasonPanel, Screen, Section, Thumb, useL, useLoad,
 } from "../../../features/shared/ui";
+
+/** One product with the only product action an admin has: hide it (reason required) or show it again. */
+function ProductModeration({ product: p, onDone }: { product: Product; onDone: () => void }) {
+  const user = useSessionUser();
+  const { t, row, align } = useL();
+  const [hiding, setHiding] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const change = async (c: { hidden: true; reason: string } | { hidden: false }) => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await partsAdminService.setProductVisibility(asActor(user), p.id, c);
+      setHiding(false);
+      onDone();
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <View style={[row, { gap: 14 }]}>
+        <Thumb uri={p.imageUri} icon="cube-outline" size={64} />
+        <View style={{ flex: 1 }}>
+          <Text numberOfLines={2} style={[{ color: C.text, fontSize: 15, fontWeight: "800" }, align]}>{p.name}</Text>
+          <Text numberOfLines={1} style={[{ color: C.textMuted, fontSize: 12, marginTop: 3 }, align]}>{p.brand} · {p.partNumber}</Text>
+          <Text numberOfLines={1} style={[{ color: C.textDim, fontSize: 12, marginTop: 2 }, align]}>{fitmentSummary(p, t)}</Text>
+        </View>
+      </View>
+      <View style={[row, { flexWrap: "wrap", alignItems: "center", gap: 6, marginTop: 12 }]}>
+        <Text style={{ color: C.accent, fontSize: 15, fontWeight: "800", marginHorizontal: 4 }}>{p.price.toFixed(2)}</Text>
+        <Badge tone="neutral" label={`${t("Qty", "الكمية")} ${p.stock}`} />
+        <StockBadge stock={p.stock} />
+        {p.hidden && <Badge tone="danger" icon="eye-off-outline" label={t("Hidden", "مخفية")} />}
+      </View>
+      {p.hidden && p.hiddenReason ? (
+        <View style={{ marginTop: 12 }}>
+          <Notice tone="danger" icon="eye-off-outline">{p.hiddenReason}</Notice>
+        </View>
+      ) : null}
+      {err ? <View style={{ marginTop: 12 }}><Notice tone="danger" icon="alert-circle-outline">{err}</Notice></View> : null}
+      <View style={{ marginTop: 12, gap: 8 }}>
+        {!hiding && !p.hidden && (
+          <Button variant="ghost" icon="eye-off-outline" label={t("Hide", "إخفاء")} disabled={busy} onPress={() => setHiding(true)} />
+        )}
+        {!hiding && p.hidden && (
+          <Button variant="ghost" icon="eye-outline" label={t("Show again", "إظهار مرة أخرى")} disabled={busy} onPress={() => change({ hidden: false })} />
+        )}
+        {hiding && (
+          <ReasonPanel
+            title={t("Reason for hiding (required)", "سبب الإخفاء (مطلوب)")}
+            confirmLabel={t("Confirm hide", "تأكيد الإخفاء")}
+            onCancel={() => setHiding(false)}
+            onConfirm={(reason) => change({ hidden: true, reason })}
+          />
+        )}
+      </View>
+    </Card>
+  );
+}
 
 export default function AdminShopDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -83,6 +149,12 @@ export default function AdminShopDetail() {
                 />
               )}
             </Card>
+            <Section title={`${t("Products", "المنتجات")} (${s.products.length})`} />
+            {s.products.length ? (
+              s.products.map((p) => <ProductModeration key={p.id} product={p} onDone={state.reload} />)
+            ) : (
+              <Empty icon="cube-outline" text={t("This shop has no products yet.", "لا توجد منتجات لهذا المتجر بعد.")} />
+            )}
             <Section title={t("Verification history", "سجل الاعتماد")} />
             <HistoryList items={s.history} />
           </>

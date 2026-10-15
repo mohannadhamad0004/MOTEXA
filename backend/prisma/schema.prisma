@@ -354,7 +354,8 @@ model PartsProduct {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  files ProviderFile[]
+  files     ProviderFile[]
+  fitments  PartsFitment[]
 
   @@index([shopId])
   @@index([partNumberNormalized])
@@ -408,4 +409,25 @@ model ProviderFile {
   @@index([ownerUserId])
   @@index([towCompanyId])
   @@index([partsShopId])
+}
+
+// ---- Vehicle fitment: which vehicles a part fits. Free text (no make/model catalogue yet). ----
+
+model PartsFitment {
+  id        String       @id @default(uuid())
+  productId String
+  product   PartsProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  make            String
+  model           String
+  makeNormalized  String // lowercase, trimmed, inner spaces collapsed: used for search
+  modelNormalized String
+  yearFrom        Int
+  yearTo          Int
+  trim            String?
+  position        Int      @default(0) // keeps the order the form entered
+  createdAt       DateTime @default(now())
+
+  @@index([makeNormalized, modelNormalized])
+  @@index([productId])
 }

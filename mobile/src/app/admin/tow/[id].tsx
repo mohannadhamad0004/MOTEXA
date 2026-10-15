@@ -7,7 +7,7 @@ import { asActor, useSessionUser } from "../../../features/shared/session";
 import {
   Async, Button, Card, Header, Notice, ReasonPanel, Screen, Section, useL, useLoad,
 } from "../../../features/shared/ui";
-import { Truck, towAdminService } from "../../../features/tow/towService";
+import { TowCompany, Truck, towAdminService } from "../../../features/tow/towService";
 import { TruckSummary, docLabel, useTruckLabels } from "../../../features/tow/truckBits";
 
 function TruckReview({ truck, onDone }: { truck: Truck; onDone: () => void }) {
@@ -74,6 +74,63 @@ function TruckReview({ truck, onDone }: { truck: Truck; onDone: () => void }) {
   );
 }
 
+/** Approve / reject the company account itself (trucks are decided one by one below). */
+function CompanyDecision({ company, onDone }: { company: TowCompany; onDone: () => void }) {
+  const user = useSessionUser();
+  const { t } = useL();
+  const [rejecting, setRejecting] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const decide = async (d: { approve: true } | { approve: false; reason: string }) => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await towAdminService.decideCompany(asActor(user), company.id, d);
+      setRejecting(false);
+      onDone();
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <Section title={t("Company decision", "قرار الشركة")} />
+      <Card>
+        <Notice icon="information-circle-outline">
+          {t(
+            "This approves the company account only. Each truck is approved separately below.",
+            "هذا اعتماد لحساب الشركة فقط. تُعتمد كل شاحنة على حدة أدناه."
+          )}
+        </Notice>
+        {company.rejectionReason ? <Notice tone="danger" icon="close-circle-outline">{company.rejectionReason}</Notice> : null}
+        {err ? <Notice tone="danger" icon="alert-circle-outline">{err}</Notice> : null}
+        {!rejecting && (
+          <View style={{ gap: 8 }}>
+            {company.verification !== "APPROVED" && (
+              <Button label={t("Approve company", "اعتماد الشركة")} icon="checkmark-circle-outline" disabled={busy} onPress={() => decide({ approve: true })} />
+            )}
+            {company.verification !== "REJECTED" && (
+              <Button label={t("Reject company", "رفض الشركة")} variant="danger" disabled={busy} onPress={() => setRejecting(true)} />
+            )}
+          </View>
+        )}
+        {rejecting && (
+          <ReasonPanel
+            title={t("Rejection reason (required)", "سبب الرفض (مطلوب)")}
+            confirmLabel={t("Confirm rejection", "تأكيد الرفض")}
+            onCancel={() => setRejecting(false)}
+            onConfirm={(reason) => decide({ approve: false, reason })}
+          />
+        )}
+      </Card>
+    </>
+  );
+}
+
 export default function AdminTowDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useSessionUser();
@@ -84,10 +141,12 @@ export default function AdminTowDetail() {
     <Screen>
       <Header brand="MOTEXA ADMIN" title={state.data?.company.name ?? t("Tow company", "شركة سحب")} back />
       <Async state={state}>
-        {({ company, trucks }) => {
-          const history = trucks.flatMap((tr) =>
-            tr.history.map((h) => ({ ...h, actor: `${h.actor} · ${tr.plate}` }))
-          ).sort((a, b) => a.at.localeCompare(b.at));
+        {({ company, trucks, companyHistory }) => {
+          // Company decisions and truck events, merged in time order.
+          const history = [
+            ...companyHistory.map((h) => ({ ...h, actor: `${h.actor} · ${t("company", "الشركة")}` })),
+            ...trucks.flatMap((tr) => tr.history.map((h) => ({ ...h, actor: `${h.actor} · ${tr.plate}` }))),
+          ].sort((a, b) => a.at.localeCompare(b.at));
           return (
             <>
               <VerificationBadge value={company.verification} />
@@ -101,6 +160,7 @@ export default function AdminTowDetail() {
                 title={t("Company documents", "مستندات الشركة")}
                 docs={company.documents.map((d) => ({ label: d.kind, fileName: d.fileName, uri: d.uri }))}
               />
+              <CompanyDecision company={company} onDone={state.reload} />
               <Section title={`${t("Trucks", "الشاحنات")} (${trucks.length})`} />
               <Text style={{ color: C.textDim, fontSize: 11, marginBottom: 10 }}>
                 {t("Each truck is approved individually. Admins review and decide; truck details are owned by the company.", "تُعتمد كل شاحنة على حدة. يراجع المسؤول ويقرر فقط؛ بيانات الشاحنة يملكها المزود.")}
