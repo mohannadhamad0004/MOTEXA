@@ -57,6 +57,8 @@ router.post("/login", async (req, res) => {
       return res.status(403).json({
         success: false,
         message: "This account is not active.",
+        role: user.role,
+        status: user.status,
       });
     }
 
@@ -162,16 +164,6 @@ router.get("/me", async (req, res) => {
       return res.status(403).json({
         success: false,
         message: "Account is not active.",
-      });
-    }
-
-    if (
-      user.role !== "SUPER_ADMIN" &&
-      user.role !== "ADMIN"
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: "Administrator access required.",
       });
     }
 
