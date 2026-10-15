@@ -66,8 +66,14 @@ const shapeCompany = (c: CompanyRow) => ({
   documents: c.files.map((f) => ({ kind: f.label ?? "Document", fileName: f.originalName, uri: filePath(f) })),
 });
 
+/** A truck is on an active job while it is the assigned truck of an ACCEPTED, EN_ROUTE or IN_PROGRESS tow request. */
+const ACTIVE_JOB = ["ACCEPTED", "EN_ROUTE", "IN_PROGRESS"] as const;
 const loadTrucks = (where: Prisma.TruckWhereInput) =>
-  prisma.truck.findMany({ where, include: { files: true }, orderBy: { createdAt: "asc" } });
+  prisma.truck.findMany({
+    where,
+    include: { files: true, towRequests: { where: { status: { in: [...ACTIVE_JOB] } }, select: { id: true }, take: 1 } },
+    orderBy: { createdAt: "asc" },
+  });
 type TruckRow = Awaited<ReturnType<typeof loadTrucks>>[number];
 
 /** What an admin needs before approving: the photo and both documents. */
@@ -94,6 +100,7 @@ const shapeTruck = (t: TruckRow, history: unknown[] = []) => {
     verificationStatus: t.verificationStatus,
     operationalStatus: t.operationalStatus,
     rejectionReason: t.rejectionReason,
+    hasActiveJob: t.towRequests.length > 0,
     photoUri: photo ? filePath(photo) : null,
     documents: t.files
       .filter((f) => f.purpose in PURPOSE_KIND)
@@ -369,6 +376,7 @@ router.patch("/tow/me/trucks/:id", ...provider, async (req, res) => {
     if (!own) return;
     if (own.company.verificationStatus === "REJECTED") return bad(res, 403, REJECTED_MSG);
     const t = own.truck;
+    if (t.towRequests.length) return bad(res, 409, "This truck is on an active job. It cannot be edited until the job ends.");
     const parsed = parseVehicle(req.body, false);
     if ("error" in parsed) return bad(res, 400, parsed.error);
     const data = parsed.data;
@@ -468,6 +476,7 @@ router.patch("/tow/me/trucks/:id/status", ...provider, async (req, res) => {
     const next = req.body?.operationalStatus;
     if (!OPERATIONAL.includes(next)) return bad(res, 400, "Operational status is invalid.");
     if (t.verificationStatus !== "APPROVED") return bad(res, 409, "Only an approved truck can change its operational status.");
+    if (t.towRequests.length) return bad(res, 409, "This truck is on an active job. Its status changes when the job ends.");
 
     await prisma.$transaction([
       prisma.truck.update({ where: { id: t.id }, data: { operationalStatus: next } }),
@@ -485,7 +494,7 @@ router.delete("/tow/me/trucks/:id", ...provider, async (req, res) => {
     const own = await ownTruck(req, res);
     if (!own) return;
     const t = own.truck;
-    if (t.operationalStatus === "BUSY") return bad(res, 409, "This truck is engaged in a service and cannot be removed.");
+    if (t.operationalStatus === "BUSY" || t.towRequests.length) return bad(res, 409, "This truck is engaged in a service and cannot be removed.");
 
     const keys = t.files.map((f) => f.storageKey);
     await prisma.$transaction([

@@ -1,9 +1,9 @@
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Text, View } from "react-native";
 import { catalogService } from "../../../features/catalog/catalogService";
 import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
 import { C } from "../../../features/shared/palette";
-import { Async, Badge, Button, Card, Empty, Header, KV, Section, Thumb, useL, useLoad } from "../../../features/shared/ui";
+import { Async, Button, Card, Empty, Header, KV, Notice, Section, Thumb, useL, useLoad } from "../../../features/shared/ui";
 import { OperationalBadge, useTruckLabels } from "../../../features/tow/truckBits";
 
 // Customers see approved trucks only, never plate numbers, documents or contact data.
@@ -48,10 +48,17 @@ export default function CustomerTowCompany() {
             )}
 
             <View style={{ height: 8 }} />
-            <Button disabled icon="navigate-outline" label={`${t("Request a tow", "اطلب سحبًا")} — ${t("Coming soon", "قريبًا")}`} onPress={() => {}} />
-            <View style={[row, { marginTop: 10 }]}>
-              <Badge tone="neutral" icon="time-outline" label={t("Requests are coming soon", "الطلبات قادمة قريبًا")} />
-            </View>
+            <Button
+              disabled={company.availableTrucks === 0}
+              icon="navigate-outline"
+              label={t("Request a tow", "اطلب سحبًا")}
+              onPress={() => router.push({ pathname: "/customer/towrequest/new", params: { companyId: company.id } })}
+            />
+            {company.availableTrucks === 0 && (
+              <View style={{ marginTop: 10 }}>
+                <Notice icon="information-circle-outline">{t("No truck is available right now. Please try again later or choose another company.", "لا توجد شاحنة متاحة الآن. حاول لاحقًا أو اختر شركة أخرى.")}</Notice>
+              </View>
+            )}
           </>
         )}
       </Async>

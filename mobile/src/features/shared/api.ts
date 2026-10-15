@@ -11,7 +11,10 @@ export async function api<T = any>(method: string, path: string, body?: unknown)
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const data = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(data?.message ?? `Request failed (${res.status})`);
+  if (!res.ok) {
+    // Callers can read extra fields the server sent with an error, e.g. `existingInquiryId` on a 409.
+    throw Object.assign(new Error(data?.message ?? `Request failed (${res.status})`), { status: res.status, data });
+  }
   return data as T;
 }
 

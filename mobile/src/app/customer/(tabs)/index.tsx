@@ -44,6 +44,8 @@ export default function CustomerHome() {
       {action("car-outline", t("Tow a car", "اسحب سيارة"), t("See approved tow companies and their trucks.", "تعرّف على شركات السحب المعتمدة وشاحناتها."), () => router.navigate("/customer/tow"))}
       {action("build-outline", t("Find a mechanic", "ابحث عن ميكانيكي"), t("Mechanic profiles are coming soon.", "ملفات الميكانيكيين قادمة قريبًا."), () => router.navigate("/customer/mechanics"))}
 
+      {action("receipt-outline", t("My requests", "طلباتي"), t("Your questions to shops and your tow requests.", "أسئلتك للمتاجر وطلبات السحب الخاصة بك."), () => router.push("/customer/requests"))}
+
       <Card>
         <View style={[row, { alignItems: "center", gap: 14 }]}>
           <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: C.accentSoft, alignItems: "center", justifyContent: "center" }}>

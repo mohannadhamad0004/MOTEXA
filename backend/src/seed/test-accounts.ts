@@ -298,6 +298,61 @@ async function seedPartsShops() {
   }
 }
 
+// Idempotent sample requests from customer@ so the new screens have data. Found by their fixed text and reset in place.
+async function seedRequests() {
+  const customer = await prisma.user.findUniqueOrThrow({ where: { email: "customer@motexa.test" } });
+  const shopUser = await prisma.user.findUniqueOrThrow({ where: { email: "shop@motexa.test" } });
+  const shop = await prisma.partsShopProfile.findUniqueOrThrow({ where: { userId: shopUser.id } });
+
+  const inquiries: { partNumber: string; quantity: number; status: "OPEN" | "ANSWERED"; messages: ["C" | "S", string][] }[] = [
+    { partNumber: "BP-0986-424", quantity: 2, status: "OPEN", messages: [["C", "Do you have these brake pads in stock for a 2016 Toyota Corolla?"]] },
+    {
+      partNumber: "W 712/95", quantity: 1, status: "ANSWERED",
+      messages: [["C", "Is this oil filter the right one for a 2012 Toyota Yaris?"], ["S", "Yes, it fits the 2012–2020 Yaris. We have it in stock."]],
+    },
+  ];
+  for (const q of inquiries) {
+    const product = await prisma.partsProduct.findFirstOrThrow({ where: { shopId: shop.id, partNumber: q.partNumber } });
+    const existing = await prisma.partInquiry.findFirst({
+      where: { customerId: customer.id, shopId: shop.id, productPartNumber: q.partNumber, messages: { some: { body: q.messages[0][1] } } },
+    });
+    if (existing) {
+      await prisma.partInquiry.update({ where: { id: existing.id }, data: { status: q.status, closedAt: null, closedById: null, productId: product.id } });
+      continue;
+    }
+    const t0 = Date.now() - 3_600_000;
+    await prisma.partInquiry.create({
+      data: {
+        customerId: customer.id, shopId: shop.id, productId: product.id, productName: product.name, productPartNumber: product.partNumber,
+        quantity: q.quantity, status: q.status,
+        messages: { create: q.messages.map(([who, body], i) => ({ senderId: who === "C" ? customer.id : shopUser.id, body, createdAt: new Date(t0 + i * 600_000) })) },
+      },
+    });
+  }
+  console.log(`customer@motexa.test           ${inquiries.length} part inquiries to shop@ (OPEN, ANSWERED)`);
+
+  const towUser = await prisma.user.findUniqueOrThrow({ where: { email: "tow@motexa.test" } });
+  const company = await prisma.towCompanyProfile.findUniqueOrThrow({ where: { userId: towUser.id } });
+  const marker = "Abdali Boulevard, Amman";
+  const reset = {
+    status: "REQUESTED" as const, assignedTruckId: null, assignedTruckType: null, assignedTruckMake: null, assignedTruckModel: null, assignedTruckYear: null,
+    declineReason: null, cancelReason: null, cancelledBy: null,
+    acceptedAt: null, declinedAt: null, enRouteAt: null, inProgressAt: null, completedAt: null, cancelledAt: null,
+  };
+  const req = await prisma.towRequest.findFirst({ where: { customerId: customer.id, companyId: company.id, pickupAddress: marker } });
+  if (req) await prisma.towRequest.update({ where: { id: req.id }, data: reset });
+  else {
+    await prisma.towRequest.create({
+      data: {
+        customerId: customer.id, companyId: company.id, pickupAddress: marker, dropoffAddress: "Sweileh, near the main roundabout",
+        contactPhone: "+962 79 555 0100", vehicleMake: "Toyota", vehicleModel: "Corolla", vehicleYear: 2016,
+        notes: "Car will not start. Parked at the entrance of the building.",
+      },
+    });
+  }
+  console.log("customer@motexa.test           1 tow request to Al-Noor (REQUESTED); truck 10-12345 is APPROVED + AVAILABLE");
+}
+
 async function main() {
   const passwordHash = await argon2.hash(DEV_PASSWORD, { type: argon2.argon2id });
 
@@ -320,6 +375,7 @@ async function main() {
 
   await seedTowFleets();
   await seedPartsShops();
+  await seedRequests();
 }
 
 main()

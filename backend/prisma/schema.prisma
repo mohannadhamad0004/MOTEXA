@@ -55,6 +55,9 @@ model User {
   towCompanyProfile TowCompanyProfile?
   partsShopProfile PartsShopProfile?
   providerFiles ProviderFile[]
+  partInquiries PartInquiry[]
+  inquiryMessages PartInquiryMessage[]
+  towRequests TowRequest[]
 
   sentInvitations AdminInvitation[] @relation("InvitationSender")
   acceptedInvitation AdminInvitation? @relation("InvitationRecipient")
@@ -279,6 +282,7 @@ model TowCompanyProfile {
 
   trucks Truck[]
   files  ProviderFile[]
+  towRequests TowRequest[]
 }
 
 model Truck {
@@ -302,6 +306,7 @@ model Truck {
   updatedAt DateTime @updatedAt
 
   files ProviderFile[]
+  towRequests TowRequest[]
 
   @@index([companyId])
   @@index([verificationStatus])
@@ -330,6 +335,7 @@ model PartsShopProfile {
 
   products PartsProduct[]
   files    ProviderFile[]
+  inquiries PartInquiry[]
 }
 
 model PartsProduct {
@@ -356,6 +362,7 @@ model PartsProduct {
 
   files     ProviderFile[]
   fitments  PartsFitment[]
+  inquiries PartInquiry[]
 
   @@index([shopId])
   @@index([partNumberNormalized])
@@ -430,4 +437,106 @@ model PartsFitment {
 
   @@index([makeNormalized, modelNormalized])
   @@index([productId])
+}
+
+// ---- Requests v1: customer questions to parts shops, and tow requests to tow companies ----
+
+enum PartInquiryStatus {
+  OPEN
+  ANSWERED
+  CLOSED
+}
+
+model PartInquiry {
+  id         String @id @default(uuid())
+  customerId String
+  customer   User   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  shopId     String
+  shop       PartsShopProfile @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  // The inquiry outlives a deleted product: the name and part number are copied at creation.
+  productId         String?
+  product           PartsProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productName       String
+  productPartNumber String
+
+  quantity   Int               @default(1)
+  status     PartInquiryStatus @default(OPEN)
+  closedAt   DateTime?
+  closedById String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  messages PartInquiryMessage[]
+
+  @@index([customerId, status])
+  @@index([shopId, status])
+}
+
+model PartInquiryMessage {
+  id        String      @id @default(uuid())
+  inquiryId String
+  inquiry   PartInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User        @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime    @default(now())
+
+  @@index([inquiryId, createdAt])
+}
+
+enum TowRequestStatus {
+  REQUESTED
+  ACCEPTED
+  DECLINED
+  EN_ROUTE
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TowCancelledBy {
+  CUSTOMER
+  COMPANY
+}
+
+model TowRequest {
+  id         String            @id @default(uuid())
+  customerId String
+  customer   User              @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  companyId  String
+  company    TowCompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  assignedTruckId String?
+  assignedTruck   Truck?  @relation(fields: [assignedTruckId], references: [id], onDelete: SetNull)
+  // Copied at acceptance so history stays readable if the truck is later removed. No plate on purpose.
+  assignedTruckType  TruckType?
+  assignedTruckMake  String?
+  assignedTruckModel String?
+  assignedTruckYear  Int?
+
+  pickupAddress  String
+  dropoffAddress String
+  contactPhone   String // typed by the customer; only the receiving company sees it
+  vehicleMake    String
+  vehicleModel   String
+  vehicleYear    Int?
+  notes          String?
+
+  status        TowRequestStatus @default(REQUESTED)
+  declineReason String?
+  cancelReason  String?
+  cancelledBy   TowCancelledBy?
+
+  createdAt    DateTime  @default(now())
+  acceptedAt   DateTime?
+  declinedAt   DateTime?
+  enRouteAt    DateTime?
+  inProgressAt DateTime?
+  completedAt  DateTime?
+  cancelledAt  DateTime?
+  updatedAt    DateTime  @updatedAt
+
+  @@index([customerId, status])
+  @@index([companyId, status])
+  @@index([assignedTruckId])
 }
