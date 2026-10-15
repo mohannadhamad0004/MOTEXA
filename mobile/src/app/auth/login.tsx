@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native";
 import { useLanguage } from "../../i18n/LanguageContext";
+import { landingFor } from "../../features/shared/landing";
 
 const COLORS = {
   background: "#120D0A",
@@ -118,6 +119,11 @@ const handleLogin = async () => {
     const data = await response.json();
 
     if (!response.ok || !data.success) {
+      // A pending MECHANIC account goes to the pending screen instead of a bare error.
+      if (response.status === 403 && data.role === "MECHANIC" && data.status === "PENDING") {
+        router.replace("/auth/mechanic-pending");
+        return;
+      }
       setError(
         response.status === 401
           ? isArabic
@@ -134,17 +140,7 @@ const handleLogin = async () => {
       return;
     }
 
-    const role = data.user?.role;
     const status = data.user?.status;
-
-    if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
-      setError(
-        isArabic
-          ? "هذه البوابة مخصصة للمسؤولين فقط."
-          : "This portal is for administrators only."
-      );
-      return;
-    }
 
     if (
       status !== "ACTIVE" ||
@@ -193,10 +189,9 @@ const handleLogin = async () => {
         )
       : [];
 
-    if (
-      currentUser.role === "ADMIN" &&
-      !permissions.includes("MANAGE_MECHANICS")
-    ) {
+    const target = landingFor(currentUser.role, permissions);
+
+    if (!target) {
       setError(
         isArabic
           ? "هذه الواجهة غير مخصصة لقسمك الإداري."
@@ -212,11 +207,7 @@ const handleLogin = async () => {
 
     setPassword("");
 
-    if (currentUser.role === "SUPER_ADMIN") {
-      router.replace("/admin/(tabs)");
-    } else if (currentUser.role === "ADMIN") {
-      router.replace("/mechanics-admin");
-    }
+    router.replace(target);
   } catch (error) {
     console.error("Login error:", error);
 

@@ -33,6 +33,7 @@ export default function AdminTowList() {
         title={t("Tow Companies", "شركات السحب")}
         subtitle={t("Review tow companies and their trucks", "مراجعة شركات السحب وشاحناتها")}
         back
+        signOutButton
       />
       <SearchBar value={q} onChange={setQ} placeholder={t("Company, plate or truck type", "الشركة أو اللوحة أو نوع الشاحنة")} />
       <Segmented

@@ -26,6 +26,7 @@ export default function AdminShopsList() {
         title={t("Parts Shops", "متاجر قطع الغيار")}
         subtitle={t("Review shops applying to operate on MOTEXA", "مراجعة المتاجر الراغبة بالعمل على MOTEXA")}
         back
+        signOutButton
       />
       <SearchBar value={q} onChange={setQ} placeholder={t("Shop, owner, phone or city", "المتجر أو المالك أو الهاتف أو المدينة")} />
       <Segmented

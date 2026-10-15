@@ -224,6 +224,25 @@ export default function MechanicsAdminScreen() {
           {isArabic ? "إدارة القسم" : "Department Management"}
         </Text>
 
+        <TouchableOpacity
+          activeOpacity={0.82}
+          style={styles.featureCard}
+          onPress={() => router.push("/admin/mechanics/applications")}
+        >
+          <View style={styles.featureIcon}>
+            <Ionicons name="documents-outline" size={26} color={COLORS.bronze} />
+          </View>
+          <View style={styles.featureText}>
+            <Text style={styles.featureTitle}>
+              {isArabic ? "طلبات الميكانيكيين المقدّمة" : "Submitted applications"}
+            </Text>
+            <Text style={styles.featureDescription}>
+              {isArabic ? "مراجعة طلبات التسجيل الفعلية" : "Review real signup applications"}
+            </Text>
+          </View>
+          <Ionicons name={isArabic ? "chevron-back" : "chevron-forward"} size={20} color={COLORS.muted} />
+        </TouchableOpacity>
+
         <View style={styles.featureCard}>
           <View style={styles.featureIcon}>
             <Ionicons
