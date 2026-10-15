@@ -220,6 +220,7 @@ type ProductSeed = {
   price: number;
   stock: number;
   hiddenReason?: string; // set = hidden by MOTEXA
+  fitments?: [make: string, model: string, yearFrom: number, yearTo: number, trim?: string][];
 };
 
 const partsShops: {
@@ -234,10 +235,10 @@ const partsShops: {
       address: "Wasfi Al-Tal St., Building 14", verificationStatus: "APPROVED",
     },
     products: [
-      { name: "Front Brake Pads Set", brand: "Bosch", partNumber: "BP-0986-424", description: "Ceramic front brake pads, low dust.", price: 32.5, stock: 24 },
-      { name: "Air Filter", brand: "Mahle", partNumber: "LX-1780", description: "Panel air filter.", price: 9, stock: 12 },
-      { name: "Engine Oil Filter", brand: "Mann", partNumber: "W 712/95", description: "Spin-on oil filter.", price: 6.9, stock: 3 },
-      { name: "Alternator 120A", brand: "Denso", partNumber: "DAN-1211", description: "Remanufactured alternator, 12V 120A.", price: 145, stock: 0 },
+      { name: "Front Brake Pads Set", brand: "Bosch", partNumber: "BP-0986-424", description: "Ceramic front brake pads, low dust.", price: 32.5, stock: 24, fitments: [["Toyota", "Corolla", 2014, 2019], ["Toyota", "Camry", 2012, 2017, "2.5L"]] },
+      { name: "Air Filter", brand: "Mahle", partNumber: "LX-1780", description: "Panel air filter.", price: 9, stock: 12, fitments: [["Hyundai", "Elantra", 2016, 2020]] },
+      { name: "Engine Oil Filter", brand: "Mann", partNumber: "W 712/95", description: "Spin-on oil filter.", price: 6.9, stock: 3, fitments: [["Toyota", "Corolla", 2010, 2020], ["Toyota", "Yaris", 2012, 2020]] },
+      { name: "Alternator 120A", brand: "Denso", partNumber: "DAN-1211", description: "Remanufactured alternator, 12V 120A.", price: 145, stock: 0, fitments: [["Kia", "Sportage", 2016, 2021]] },
       {
         name: "Universal LED Headlight Bulb Kit (H4/H7/H11 compatible, extra long title for testing)", brand: "NoName",
         partNumber: "LED-UNIV-9999-EXTRA-LONG-PART-NUMBER", description: "Listing under review.", price: 18, stock: 40,
@@ -249,7 +250,7 @@ const partsShops: {
     email: "shop.pending@motexa.test",
     shop: { shopName: "Speedy Spares", phone: "+962 79 100 0002", city: "Zarqa", address: "Industrial Area, Block 3", verificationStatus: "PENDING" },
     products: [
-      { name: "Spark Plug Set", brand: "NGK", partNumber: "04465-02220", description: "Iridium spark plugs, set of 4.", price: 24, stock: 15 },
+      { name: "Spark Plug Set", brand: "NGK", partNumber: "04465-02220", description: "Iridium spark plugs, set of 4.", price: 24, stock: 15, fitments: [["Toyota", "Corolla", 2014, 2019]] },
       { name: "Cabin Air Filter", brand: "Bosch", partNumber: "CF-2210", description: "Activated carbon cabin filter.", price: 11.25, stock: 8 },
     ],
   },
@@ -269,7 +270,7 @@ async function seedPartsShops() {
       await seedFile({ ownerUserId: user.id, purpose: "PARTS_SHOP_DOCUMENT", target: { partsShopId: shop.id }, label, originalName: `${label.toLowerCase().replace(/\W+/g, "-")}.png`, color: [90, 90, 150] });
     }
     for (const p of f.products) {
-      const { hiddenReason, ...fields } = p;
+      const { hiddenReason, fitments, ...fields } = p;
       const data = {
         ...fields,
         partNumberNormalized: p.partNumber.toUpperCase().replace(/[^\p{L}\p{N}]/gu, ""),
@@ -282,6 +283,15 @@ async function seedPartsShops() {
       const product = existing
         ? await prisma.partsProduct.update({ where: { id: existing.id }, data })
         : await prisma.partsProduct.create({ data: { ...data, shopId: shop.id } });
+      // Fitments are replaced as a set on every run (idempotent).
+      await prisma.partsFitment.deleteMany({ where: { productId: product.id } });
+      if (fitments?.length) {
+        await prisma.partsFitment.createMany({
+          data: fitments.map(([make, model, yearFrom, yearTo, trim], position) => ({
+            productId: product.id, make, model, makeNormalized: make.toLowerCase(), modelNormalized: model.toLowerCase(), yearFrom, yearTo, trim: trim ?? null, position,
+          })),
+        });
+      }
       await seedFile({ ownerUserId: user.id, purpose: "PRODUCT_IMAGE", target: { productId: product.id }, originalName: `${p.partNumber.replace(/\W+/g, "-")}.png`, color: [200, 140, 70] });
     }
     console.log(`${f.email.padEnd(32)} parts shop "${f.shop.shopName}" (${f.shop.verificationStatus}), ${f.products.length} product(s)`);

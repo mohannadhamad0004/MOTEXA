@@ -25,6 +25,18 @@ function Form({ initial, product, id }: { initial: ProductInput; product?: Produ
     setF({ ...f, fitments: f.fitments.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
 
   const save = async () => {
+    // A completely empty fitment row is ignored; a half-filled one blocks saving and says which row.
+    const isEmptyRow = (x: Fitment) => !x.make.trim() && !x.model.trim() && !(x.trim ?? "").trim();
+    const badRow = f.fitments.findIndex((x) => !isEmptyRow(x) && (!x.make.trim() || !x.model.trim()));
+    if (badRow >= 0) {
+      const n = badRow + 1;
+      return setErr(
+        t(
+          `Fitment row ${n} is incomplete: enter both the make and the model, or remove the row.`,
+          `صف التوافق رقم ${n} غير مكتمل: أدخل الشركة المصنعة والطراز معًا، أو أزل الصف.`
+        )
+      );
+    }
     setBusy(true);
     setErr(null);
     try {
@@ -32,7 +44,7 @@ function Form({ initial, product, id }: { initial: ProductInput; product?: Produ
         ...f,
         price: parseFloat(price || "0"),
         stock: parseInt(stock || "0", 10),
-        fitments: f.fitments.filter((x) => x.make.trim() && x.model.trim()),
+        fitments: f.fitments.filter((x) => !isEmptyRow(x)),
       };
       if (isNew) await partsShopService.addProduct(asActor(user), input);
       else await partsShopService.updateProduct(asActor(user), id, input);

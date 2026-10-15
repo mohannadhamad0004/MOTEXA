@@ -9,7 +9,7 @@ import { type ParsedUpload, filePath, parseUpload, removeStoredFiles, storeFile 
 //  - /api/parts/me/*       PARTS_PROVIDER, always scoped to the caller's own shop.
 //  - /api/admin/parts/*    SUPER_ADMIN or ADMIN + MANAGE_SPARE_PARTS. Reviewer/moderator only: never edits product content.
 // Mounted BEFORE the global JSON parser: provider routes carry a base64 product image and parse their own
-// (larger) body, only after the caller is authenticated. Vehicle fitment is NOT stored yet (later step).
+// (larger) body, only after the caller is authenticated. Fitment is free text (no make/model catalogue yet).
 const router = Router();
 
 /** Same threshold as the mobile `LOW_STOCK_AT`: 0 = out, 1..5 = low, above = in. */
@@ -84,8 +84,8 @@ const shapeShop = (s: ShopRow, history: HistoryItem[]) => ({
   history,
 });
 
-type ProductRow = Prisma.PartsProductGetPayload<{ include: { files: true } }>;
-const withFiles = { files: true } as const;
+const withFiles = { files: true, fitments: { orderBy: { position: "asc" } } } as const;
+type ProductRow = Prisma.PartsProductGetPayload<{ include: typeof withFiles }>;
 const shapeProduct = (p: ProductRow) => ({
   id: p.id,
   shopId: p.shopId,
@@ -101,7 +101,7 @@ const shapeProduct = (p: ProductRow) => ({
     const f = p.files.find((x) => x.purpose === "PRODUCT_IMAGE");
     return f ? filePath(f) : null;
   })(),
-  fitments: [] as never[],
+  fitments: p.fitments.map((f) => ({ make: f.make, model: f.model, yearFrom: f.yearFrom, yearTo: f.yearTo, ...(f.trim ? { trim: f.trim } : {}) })),
 });
 
 // ---- product input ----
@@ -142,6 +142,42 @@ function parseProduct(body: any, full: boolean, allowEmpty = false): { data: Par
   }
   return { data };
 }
+
+// ---- fitment input: fitments?: [{ make, model, yearFrom, yearTo, trim? }] (absent = unchanged, [] = clear) ----
+
+const MAX_FITMENTS = 50;
+/** Lowercase, trimmed, inner spaces collapsed: the form used for matching. */
+const normText = (v: string) => v.trim().toLowerCase().replace(/\s+/g, " ");
+type FitRow = { make: string; model: string; makeNormalized: string; modelNormalized: string; yearFrom: number; yearTo: number; trim: string | null; position: number };
+
+function parseFitments(body: any): { rows?: FitRow[] } | { error: string } {
+  if (body?.fitments === undefined) return {};
+  if (!Array.isArray(body.fitments) || body.fitments.length > MAX_FITMENTS) return { error: `Fitment must be a list of at most ${MAX_FITMENTS} rows.` };
+  const maxYear = new Date().getFullYear() + 1;
+  const rows: FitRow[] = [];
+  const seen = new Set<string>();
+  for (const [i, raw] of (body.fitments as any[]).entries()) {
+    const at = `Fitment row ${i + 1}`;
+    const make = text(raw?.make, 60);
+    const model = text(raw?.model, 60);
+    if (!make) return { error: `${at}: make is required.` };
+    if (!model) return { error: `${at}: model is required.` };
+    const { yearFrom, yearTo } = raw ?? {};
+    const okYear = (y: unknown) => Number.isInteger(y) && (y as number) >= 1950 && (y as number) <= maxYear;
+    if (!okYear(yearFrom) || !okYear(yearTo)) return { error: `${at}: years must be whole numbers between 1950 and ${maxYear}.` };
+    if (yearFrom > yearTo) return { error: `${at}: "year from" cannot be after "year to".` };
+    if (raw.trim !== undefined && raw.trim !== null && typeof raw.trim !== "string") return { error: `${at}: trim is invalid.` };
+    const trim = typeof raw.trim === "string" && raw.trim.trim() ? raw.trim.trim().slice(0, 60) : null;
+    const key = [normText(make), normText(model), yearFrom, yearTo, (trim ?? "").toLowerCase()].join("|");
+    if (seen.has(key)) continue; // identical rows are stored once
+    seen.add(key);
+    rows.push({ make, model, makeNormalized: normText(make), modelNormalized: normText(model), yearFrom, yearTo, trim, position: rows.length });
+  }
+  return { rows };
+}
+
+const fitKey = (f: { make: string; model: string; yearFrom: number; yearTo: number; trim: string | null }) =>
+  [f.make, f.model, f.yearFrom, f.yearTo, f.trim ?? ""].join("|");
 
 // =====================================================================
 // Parts shop (PARTS_PROVIDER)
@@ -242,6 +278,8 @@ router.post("/parts/me/products", ...provider, async (req, res) => {
     const d = parsed.data as ProductFields;
     const img = parseImage(req.body);
     if ("error" in img) return bad(res, 400, img.error);
+    const fit = parseFitments(req.body);
+    if ("error" in fit) return bad(res, 400, fit.error);
 
     let imageRow: Prisma.ProviderFileCreateWithoutProductInput[] = [];
     if (img.image) {
@@ -264,7 +302,7 @@ router.post("/parts/me/products", ...provider, async (req, res) => {
     // Moderation fields are never taken from the body: a new product is always visible.
     const product = await prisma.$transaction(async (tx) => {
       const created = await tx.partsProduct.create({
-        data: { ...d, partNumberNormalized: normalizePart(d.partNumber), shopId: s.id, isHidden: false, files: { create: imageRow } },
+        data: { ...d, partNumberNormalized: normalizePart(d.partNumber), shopId: s.id, isHidden: false, files: { create: imageRow }, fitments: { create: fit.rows ?? [] } },
         include: withFiles,
       });
       await tx.auditLog.create({
@@ -289,13 +327,18 @@ router.patch("/parts/me/products/:id", ...provider, async (req, res) => {
     // Only content fields are read from the body; isHidden/hiddenReason can never be set here.
     const img = parseImage(req.body);
     if ("error" in img) return bad(res, 400, img.error);
-    const parsed = parseProduct(req.body, false, !!img.image);
+    const fit = parseFitments(req.body);
+    if ("error" in fit) return bad(res, 400, fit.error);
+    const parsed = parseProduct(req.body, false, !!img.image || fit.rows !== undefined);
     if ("error" in parsed) return bad(res, 400, parsed.error);
     const data = parsed.data;
     const p = own.product;
 
     const changed: string[] = (Object.keys(data) as (keyof ProductFields)[]).filter((k) => (k === "price" ? Number(p.price) !== data.price : data[k] !== p[k]));
     if (img.image) changed.push("image");
+    // Fitment is replaced as a set; only a real difference counts as a change. It never touches hidden status.
+    const fitChanged = fit.rows !== undefined && fit.rows.map(fitKey).join("~") !== p.fitments.map(fitKey).join("~");
+    if (fitChanged) changed.push("fitments");
     if (!changed.length) return res.json({ success: true, product: shapeProduct(p) });
 
     // Replacing the image changes nothing else (no re-verification, visibility untouched).
@@ -321,6 +364,10 @@ router.patch("/parts/me/products/:id", ...provider, async (req, res) => {
             sha256: img.image.sha256,
           },
         });
+      }
+      if (fitChanged) {
+        await tx.partsFitment.deleteMany({ where: { productId: p.id } });
+        await tx.partsFitment.createMany({ data: fit.rows!.map((r) => ({ ...r, productId: p.id })) });
       }
       await tx.partsProduct.update({
         where: { id: p.id },
@@ -351,6 +398,50 @@ router.delete("/parts/me/products/:id", ...provider, async (req, res) => {
     return res.json({ success: true });
   } catch (e) {
     return fail(res, "Parts product delete error", e);
+  }
+});
+
+// Read-only search for the future customer screens: ?make= (required) &model= &year=
+// Only visible products (not hidden) of APPROVED shops. Any logged-in account may call it.
+router.get("/parts/fitment-search", requireAuth, async (req, res) => {
+  try {
+    const make = text(req.query.make, 60);
+    if (!make) return bad(res, 400, "make is required.");
+    const model = text(req.query.model, 60);
+    const yearRaw = req.query.year;
+    let year: number | null = null;
+    if (yearRaw !== undefined && yearRaw !== "") {
+      year = Number(yearRaw);
+      if (typeof yearRaw !== "string" || !/^\d{4}$/.test(yearRaw) || !Number.isInteger(year)) return bad(res, 400, "year must be a 4-digit number.");
+    }
+
+    const match = {
+      makeNormalized: normText(make),
+      ...(model ? { modelNormalized: normText(model) } : {}),
+      ...(year !== null ? { yearFrom: { lte: year }, yearTo: { gte: year } } : {}),
+    };
+    const products = await prisma.partsProduct.findMany({
+      where: { isHidden: false, shop: { verificationStatus: "APPROVED" }, fitments: { some: match } },
+      include: { ...withFiles, fitments: { where: match, orderBy: { position: "asc" } }, shop: { select: { id: true, shopName: true, city: true } } },
+      orderBy: [{ name: "asc" }, { createdAt: "asc" }],
+      take: 50,
+    });
+    return res.json({
+      success: true,
+      products: products.map(({ shop, ...p }) => ({
+        id: p.id,
+        name: p.name,
+        brand: p.brand,
+        partNumber: p.partNumber,
+        price: p.price.toString(),
+        stock: p.stock,
+        imageUri: shapeProduct(p as ProductRow).imageUri,
+        matchedFitments: shapeProduct(p as ProductRow).fitments,
+        shop: { id: shop.id, name: shop.shopName, city: shop.city },
+      })),
+    });
+  } catch (e) {
+    return fail(res, "Parts fitment search error", e);
   }
 });
 

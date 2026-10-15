@@ -143,6 +143,27 @@ async function historyFor(truckIds: string[]) {
   return out;
 }
 
+/** Company-level decisions (approve / reject with reason) from AuditLog, with the admin's real name. */
+async function companyHistory(companyId: string) {
+  const rows = await prisma.auditLog.findMany({
+    where: { targetId: companyId, action: { in: ["TOW_COMPANY_APPROVED", "TOW_COMPANY_REJECTED"] } },
+    orderBy: { createdAt: "asc" },
+  });
+  const ids = [...new Set(rows.map((r) => r.actorId).filter((x): x is string => !!x))];
+  const users = await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, fullName: true } });
+  const names = new Map(users.map((u) => [u.id, u.fullName]));
+  return rows.map((r) => {
+    const approved = r.action === "TOW_COMPANY_APPROVED";
+    const reason = ((r.details ?? {}) as { reason?: string | null }).reason;
+    return {
+      at: r.createdAt,
+      actor: (r.actorId && names.get(r.actorId)) || "MOTEXA",
+      action: approved ? "APPROVED" : "REJECTED",
+      ...(!approved && reason ? { reason } : {}),
+    };
+  });
+}
+
 async function trucksWithHistory(trucks: TruckRow[]) {
   const h = await historyFor(trucks.map((t) => t.id));
   return trucks.map((t) => shapeTruck(t, h.get(t.id) ?? []));
@@ -537,7 +558,12 @@ router.get("/admin/tow/companies/:id", ...admin, async (req, res) => {
   try {
     const c = await loadCompany({ id: idParam(req.params.id) });
     if (!c) return bad(res, 404, "Company not found.");
-    return res.json({ success: true, company: shapeCompany(c), trucks: await trucksWithHistory(await loadTrucks({ companyId: c.id })) });
+    return res.json({
+      success: true,
+      company: shapeCompany(c),
+      companyHistory: await companyHistory(c.id),
+      trucks: await trucksWithHistory(await loadTrucks({ companyId: c.id })),
+    });
   } catch (e) {
     return fail(res, "Tow admin company error", e);
   }

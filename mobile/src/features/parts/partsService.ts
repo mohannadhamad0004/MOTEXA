@@ -48,6 +48,8 @@ export type Shop = {
   history: HistoryEntry[];
 };
 
+export type ShopDetail = Shop & { products: Product[] };
+
 export type Actor = { id: string; email: string; fullName: string };
 export type ProductInput = Omit<Product, "id" | "shopId" | "hidden" | "hiddenReason">;
 
@@ -124,6 +126,8 @@ async function toBody(i: ProductInput) {
     description: i.description,
     price: i.price,
     stock: i.stock,
+    // Always sent: the server replaces the stored set with this one.
+    fitments: i.fitments.map((f) => ({ make: f.make, model: f.model, yearFrom: f.yearFrom, yearTo: f.yearTo, trim: f.trim?.trim() || null })),
   };
   if (i.imageUri && !isServerFile(i.imageUri) && !i.imageUri.startsWith("http")) {
     body.image = { name: fileNameOf(i.imageUri, "product-image.jpg"), dataBase64: await localFileToBase64(i.imageUri) };
@@ -163,9 +167,16 @@ export const partsAdminService = {
     const r = await api<{ shops: ApiShop[] }>("GET", "/admin/parts/shops");
     return r.shops.map(toShop);
   },
-  async getShop(_a: AdminActor, id: string) {
-    const r = await api<{ shop: ApiShop }>("GET", `/admin/parts/shops/${id}`);
-    return toShop(r.shop);
+  /** The shop plus its products (read-only for admins, apart from hiding/showing). */
+  async getShop(_a: AdminActor, id: string): Promise<ShopDetail> {
+    const r = await api<{ shop: ApiShop; products: ApiProduct[] }>("GET", `/admin/parts/shops/${id}`);
+    return { ...toShop(r.shop), products: r.products.map(toProduct) };
+  },
+  /** MOTEXA moderation: hiding needs a reason; showing again clears it. Product content is never editable here. */
+  async setProductVisibility(_a: AdminActor, productId: string, change: { hidden: true; reason: string } | { hidden: false }) {
+    const body = change.hidden ? { hidden: true, reason: change.reason.trim() } : { hidden: false };
+    const r = await api<{ product: ApiProduct }>("PATCH", `/admin/parts/products/${productId}/visibility`, body);
+    return toProduct(r.product);
   },
   async decideShop(_a: AdminActor, id: string, decision: { approve: true } | { approve: false; reason: string }) {
     const body = decision.approve ? { decision: "APPROVED" } : { decision: "REJECTED", reason: decision.reason.trim() };

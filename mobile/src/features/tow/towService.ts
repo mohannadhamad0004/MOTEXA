@@ -53,6 +53,7 @@ export type TowCompany = {
   phone: string;
   city: string;
   verification: Verification;
+  rejectionReason?: string | null;
   documents: { kind: string; fileName: string; uri?: string | null }[]; // private to admin + owner
 };
 
@@ -88,6 +89,7 @@ type ApiCompany = {
   phone: string;
   city: string;
   verificationStatus: Verification;
+  rejectionReason: string | null;
   documents: { kind: string; fileName: string; uri?: string | null }[];
 };
 
@@ -116,6 +118,7 @@ const toCompany = (c: ApiCompany): TowCompany => ({
   phone: c.phone,
   city: c.city,
   verification: c.verificationStatus,
+  rejectionReason: c.rejectionReason,
   documents: c.documents,
 });
 
@@ -186,9 +189,16 @@ export const towAdminService = {
     const r = await api<{ trucks: ApiTruck[] }>("GET", "/admin/tow/trucks");
     return r.trucks.map(toTruck);
   },
+  /** `companyHistory` holds the company-level approve/reject decisions; truck events are on each truck. */
   async getCompany(_a: AdminActor, id: string) {
-    const r = await api<{ company: ApiCompany; trucks: ApiTruck[] }>("GET", `/admin/tow/companies/${id}`);
-    return { company: toCompany(r.company), trucks: r.trucks.map(toTruck) };
+    const r = await api<{ company: ApiCompany; trucks: ApiTruck[]; companyHistory: HistoryEntry[] }>("GET", `/admin/tow/companies/${id}`);
+    return { company: toCompany(r.company), trucks: r.trucks.map(toTruck), companyHistory: r.companyHistory };
+  },
+  /** Approve or reject the company account (reason required to reject). Truck approvals are separate. */
+  async decideCompany(_a: AdminActor, companyId: string, decision: { approve: true } | { approve: false; reason: string }) {
+    const body = decision.approve ? { decision: "APPROVED" } : { decision: "REJECTED", reason: decision.reason.trim() };
+    const r = await api<{ company: ApiCompany }>("PATCH", `/admin/tow/companies/${companyId}/decision`, body);
+    return toCompany(r.company);
   },
   /** Admin may only decide. No field of the truck itself is editable here. */
   async decideTruck(_a: AdminActor, truckId: string, decision: { approve: true } | { approve: false; reason: string }) {
