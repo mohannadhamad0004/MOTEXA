@@ -52,7 +52,7 @@ export default function AdminShopDetail() {
             </Card>
             <PrivateDocs
               title={t("Verification documents", "مستندات التحقق")}
-              docs={s.documents.map((d) => ({ label: d.kind, fileName: d.fileName }))}
+              docs={s.documents.map((d) => ({ label: d.kind, fileName: d.fileName, uri: d.uri }))}
             />
             <Section title={t("Decision", "القرار")} />
             <Card>

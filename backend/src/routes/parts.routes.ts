@@ -1,11 +1,15 @@
 import { Router } from "express";
+import express from "express";
+import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
 import { requireAuth, requirePartsAdmin, requirePartsProvider } from "../middleware/auth.middleware.js";
+import { type ParsedUpload, filePath, parseUpload, removeStoredFiles, storeFile } from "../uploads/providerFiles.js";
 
 // Parts shops + products. Mounted at /api.
 //  - /api/parts/me/*       PARTS_PROVIDER, always scoped to the caller's own shop.
 //  - /api/admin/parts/*    SUPER_ADMIN or ADMIN + MANAGE_SPARE_PARTS. Reviewer/moderator only: never edits product content.
-// Product images and vehicle fitment are NOT stored yet (later step): they are returned empty.
+// Mounted BEFORE the global JSON parser: provider routes carry a base64 product image and parse their own
+// (larger) body, only after the caller is authenticated. Vehicle fitment is NOT stored yet (later step).
 const router = Router();
 
 /** Same threshold as the mobile `LOW_STOCK_AT`: 0 = out, 1..5 = low, above = in. */
@@ -30,7 +34,13 @@ const normalizePart = (v: string) => v.toUpperCase().replace(/[^\p{L}\p{N}]/gu, 
 // ---- shaping ----
 
 const loadShop = (where: { id?: string; userId?: string }) =>
-  prisma.partsShopProfile.findFirst({ where, include: { user: { select: { fullName: true, email: true } } } });
+  prisma.partsShopProfile.findFirst({
+    where,
+    include: {
+      user: { select: { fullName: true, email: true } },
+      files: { where: { purpose: "PARTS_SHOP_DOCUMENT" }, orderBy: { createdAt: "asc" } },
+    },
+  });
 type ShopRow = NonNullable<Awaited<ReturnType<typeof loadShop>>>;
 
 type HistoryItem = { at: Date; actor: string; action: string; reason?: string };
@@ -70,11 +80,12 @@ const shapeShop = (s: ShopRow, history: HistoryItem[]) => ({
   licenceNumber: s.licenceNumber,
   verificationStatus: s.verificationStatus,
   rejectionReason: s.rejectionReason,
-  documents: [] as never[],
+  documents: s.files.map((f) => ({ kind: f.label ?? "Document", fileName: f.originalName, uri: filePath(f) })),
   history,
 });
 
-type ProductRow = Awaited<ReturnType<typeof prisma.partsProduct.findMany>>[number];
+type ProductRow = Prisma.PartsProductGetPayload<{ include: { files: true } }>;
+const withFiles = { files: true } as const;
 const shapeProduct = (p: ProductRow) => ({
   id: p.id,
   shopId: p.shopId,
@@ -86,7 +97,10 @@ const shapeProduct = (p: ProductRow) => ({
   stock: p.stock,
   isHidden: p.isHidden,
   hiddenReason: p.hiddenReason,
-  imageUri: null,
+  imageUri: (() => {
+    const f = p.files.find((x) => x.purpose === "PRODUCT_IMAGE");
+    return f ? filePath(f) : null;
+  })(),
   fitments: [] as never[],
 });
 
@@ -94,7 +108,7 @@ const shapeProduct = (p: ProductRow) => ({
 
 type ProductFields = { name: string; brand: string; partNumber: string; description: string | null; price: number; stock: number };
 
-function parseProduct(body: any, full: boolean): { data: Partial<ProductFields> } | { error: string } {
+function parseProduct(body: any, full: boolean, allowEmpty = false): { data: Partial<ProductFields> } | { error: string } {
   const data: Partial<ProductFields> = {};
   const has = (k: string) => body && Object.prototype.hasOwnProperty.call(body, k);
 
@@ -123,7 +137,7 @@ function parseProduct(body: any, full: boolean): { data: Partial<ProductFields> 
   if (full) {
     for (const k of ["name", "brand", "partNumber", "price", "stock"] as const) if (data[k] === undefined) return { error: `${k} is required.` };
     if (data.description === undefined) data.description = null;
-  } else if (!Object.keys(data).length) {
+  } else if (!Object.keys(data).length && !allowEmpty) {
     return { error: "No product fields to update." };
   }
   return { data };
@@ -132,7 +146,14 @@ function parseProduct(body: any, full: boolean): { data: Partial<ProductFields> 
 // =====================================================================
 // Parts shop (PARTS_PROVIDER)
 // =====================================================================
-const provider = [requireAuth, requirePartsProvider];
+const provider = [requireAuth, requirePartsProvider, express.json({ limit: "25mb" })];
+
+/** Optional { image: { name, dataBase64 } }. Returns null when no image was sent. */
+function parseImage(body: any): { image: ParsedUpload | null } | { error: string } {
+  if (body?.image === undefined || body.image === null) return { image: null };
+  const p = parseUpload(body.image, "product-image");
+  return "error" in p ? { error: `Product image: ${p.error}` } : { image: p.file };
+}
 
 async function myShop(res: any) {
   const user = res.locals.authUser as { id: string };
@@ -147,7 +168,7 @@ const REJECTED_MSG = "Your shop application was rejected. You cannot add or edit
 async function ownProduct(req: any, res: any) {
   const s = await myShop(res);
   if (!s) return null;
-  const p = await prisma.partsProduct.findFirst({ where: { id: idParam(req.params.id), shopId: s.id } });
+  const p = await prisma.partsProduct.findFirst({ where: { id: idParam(req.params.id), shopId: s.id }, include: withFiles });
   if (!p) {
     bad(res, 404, "Product not found.");
     return null;
@@ -176,6 +197,7 @@ router.get("/parts/me/products", ...provider, async (req, res) => {
 
     const norm = q ? normalizePart(q) : "";
     const products = await prisma.partsProduct.findMany({
+      include: withFiles,
       where: {
         shopId: s.id,
         ...(stock === "out" ? { stock: 0 } : stock === "low" ? { stock: { gte: 1, lte: LOW_STOCK_AT } } : stock === "in" ? { stock: { gt: LOW_STOCK_AT } } : {}),
@@ -209,6 +231,7 @@ router.get("/parts/me/products/:id", ...provider, async (req, res) => {
 });
 
 router.post("/parts/me/products", ...provider, async (req, res) => {
+  const written: string[] = [];
   try {
     const actor = res.locals.authUser as { id: string };
     const s = await myShop(res);
@@ -217,11 +240,32 @@ router.post("/parts/me/products", ...provider, async (req, res) => {
     const parsed = parseProduct(req.body, true);
     if ("error" in parsed) return bad(res, 400, parsed.error);
     const d = parsed.data as ProductFields;
+    const img = parseImage(req.body);
+    if ("error" in img) return bad(res, 400, img.error);
+
+    let imageRow: Prisma.ProviderFileCreateWithoutProductInput[] = [];
+    if (img.image) {
+      const storageKey = await storeFile(img.image);
+      written.push(storageKey);
+      imageRow = [
+        {
+          owner: { connect: { id: actor.id } },
+          purpose: "PRODUCT_IMAGE",
+          visibility: "PUBLIC",
+          originalName: img.image.originalName,
+          mimeType: img.image.mimeType,
+          sizeBytes: img.image.buffer.length,
+          storageKey,
+          sha256: img.image.sha256,
+        },
+      ];
+    }
 
     // Moderation fields are never taken from the body: a new product is always visible.
     const product = await prisma.$transaction(async (tx) => {
       const created = await tx.partsProduct.create({
-        data: { ...d, partNumberNormalized: normalizePart(d.partNumber), shopId: s.id, isHidden: false },
+        data: { ...d, partNumberNormalized: normalizePart(d.partNumber), shopId: s.id, isHidden: false, files: { create: imageRow } },
+        include: withFiles,
       });
       await tx.auditLog.create({
         data: { actorId: actor.id, action: "PARTS_PRODUCT_CREATED", targetId: created.id, details: { name: created.name, partNumber: created.partNumber } },
@@ -230,34 +274,65 @@ router.post("/parts/me/products", ...provider, async (req, res) => {
     });
     return res.status(201).json({ success: true, product: shapeProduct(product) });
   } catch (e) {
+    await removeStoredFiles(written);
     return fail(res, "Parts product create error", e);
   }
 });
 
 router.patch("/parts/me/products/:id", ...provider, async (req, res) => {
+  const written: string[] = [];
   try {
     const actor = res.locals.authUser as { id: string };
     const own = await ownProduct(req, res);
     if (!own) return;
     if (own.shop.verificationStatus === "REJECTED") return bad(res, 403, REJECTED_MSG);
     // Only content fields are read from the body; isHidden/hiddenReason can never be set here.
-    const parsed = parseProduct(req.body, false);
+    const img = parseImage(req.body);
+    if ("error" in img) return bad(res, 400, img.error);
+    const parsed = parseProduct(req.body, false, !!img.image);
     if ("error" in parsed) return bad(res, 400, parsed.error);
     const data = parsed.data;
     const p = own.product;
 
-    const changed = (Object.keys(data) as (keyof ProductFields)[]).filter((k) => (k === "price" ? Number(p.price) !== data.price : data[k] !== p[k]));
+    const changed: string[] = (Object.keys(data) as (keyof ProductFields)[]).filter((k) => (k === "price" ? Number(p.price) !== data.price : data[k] !== p[k]));
+    if (img.image) changed.push("image");
     if (!changed.length) return res.json({ success: true, product: shapeProduct(p) });
 
-    const [updated] = await prisma.$transaction([
-      prisma.partsProduct.update({
+    // Replacing the image changes nothing else (no re-verification, visibility untouched).
+    const oldImage = img.image ? p.files.find((f) => f.purpose === "PRODUCT_IMAGE") : undefined;
+    let newKey = "";
+    if (img.image) {
+      newKey = await storeFile(img.image);
+      written.push(newKey);
+    }
+    await prisma.$transaction(async (tx) => {
+      if (oldImage) await tx.providerFile.delete({ where: { id: oldImage.id } });
+      if (img.image) {
+        await tx.providerFile.create({
+          data: {
+            ownerUserId: actor.id,
+            productId: p.id,
+            purpose: "PRODUCT_IMAGE",
+            visibility: "PUBLIC",
+            originalName: img.image.originalName,
+            mimeType: img.image.mimeType,
+            sizeBytes: img.image.buffer.length,
+            storageKey: newKey,
+            sha256: img.image.sha256,
+          },
+        });
+      }
+      await tx.partsProduct.update({
         where: { id: p.id },
         data: { ...data, ...(data.partNumber ? { partNumberNormalized: normalizePart(data.partNumber) } : {}) },
-      }),
-      log(actor.id, "PARTS_PRODUCT_EDITED", p.id, { fields: changed }),
-    ]);
-    return res.json({ success: true, product: shapeProduct(updated) });
+      });
+      await tx.auditLog.create({ data: { actorId: actor.id, action: "PARTS_PRODUCT_EDITED", targetId: p.id, details: { fields: changed } } });
+    });
+    if (oldImage) await removeStoredFiles([oldImage.storageKey]); // exactly the replaced file
+    const fresh = await prisma.partsProduct.findUniqueOrThrow({ where: { id: p.id }, include: withFiles });
+    return res.json({ success: true, product: shapeProduct(fresh) });
   } catch (e) {
+    await removeStoredFiles(written);
     return fail(res, "Parts product update error", e);
   }
 });
@@ -267,10 +342,12 @@ router.delete("/parts/me/products/:id", ...provider, async (req, res) => {
     const actor = res.locals.authUser as { id: string };
     const own = await ownProduct(req, res);
     if (!own) return;
+    const keys = own.product.files.map((f) => f.storageKey);
     await prisma.$transaction([
-      log(actor.id, "PARTS_PRODUCT_REMOVED", own.product.id, { name: own.product.name, partNumber: own.product.partNumber }),
-      prisma.partsProduct.delete({ where: { id: own.product.id } }),
+      log(actor.id, "PARTS_PRODUCT_REMOVED", own.product.id, { name: own.product.name, partNumber: own.product.partNumber, files: keys.length }),
+      prisma.partsProduct.delete({ where: { id: own.product.id } }), // file rows go with it (cascade)
     ]);
+    await removeStoredFiles(keys); // exactly this product's files
     return res.json({ success: true });
   } catch (e) {
     return fail(res, "Parts product delete error", e);
@@ -280,7 +357,7 @@ router.delete("/parts/me/products/:id", ...provider, async (req, res) => {
 // =====================================================================
 // Admin (SUPER_ADMIN or ADMIN + MANAGE_SPARE_PARTS): shop decisions + product visibility only
 // =====================================================================
-const admin = [requireAuth, requirePartsAdmin];
+const admin = [requireAuth, requirePartsAdmin, express.json()];
 
 // ?status=PENDING|APPROVED|REJECTED & ?q= (shop name, owner name, phone, city)
 router.get("/admin/parts/shops", ...admin, async (req, res) => {
@@ -303,7 +380,11 @@ router.get("/admin/parts/shops", ...admin, async (req, res) => {
             }
           : {}),
       },
-      include: { user: { select: { fullName: true, email: true } }, products: { select: { isHidden: true } } },
+      include: {
+        user: { select: { fullName: true, email: true } },
+        files: { where: { purpose: "PARTS_SHOP_DOCUMENT" }, orderBy: { createdAt: "asc" } },
+        products: { select: { isHidden: true } },
+      },
       orderBy: { createdAt: "asc" },
     });
     // History is only needed on the detail view; the list carries just the synthetic submitted entry.
@@ -324,7 +405,7 @@ router.get("/admin/parts/shops/:id", ...admin, async (req, res) => {
   try {
     const s = await loadShop({ id: idParam(req.params.id) });
     if (!s) return bad(res, 404, "Shop not found.");
-    const products = await prisma.partsProduct.findMany({ where: { shopId: s.id }, orderBy: { createdAt: "asc" } });
+    const products = await prisma.partsProduct.findMany({ where: { shopId: s.id }, include: withFiles, orderBy: { createdAt: "asc" } });
     return res.json({ success: true, shop: shapeShop(s, await shopHistory(s)), products: products.map(shapeProduct) });
   } catch (e) {
     return fail(res, "Parts admin shop error", e);
@@ -368,7 +449,7 @@ router.patch("/admin/parts/products/:id/visibility", ...admin, async (req, res) 
     if (typeof hidden !== "boolean") return bad(res, 400, "hidden must be true or false.");
     const reason = text(req.body?.reason, 1000);
     if (hidden && !reason) return bad(res, 400, "A reason is required to hide a product.");
-    const p = await prisma.partsProduct.findUnique({ where: { id: idParam(req.params.id) } });
+    const p = await prisma.partsProduct.findUnique({ where: { id: idParam(req.params.id) }, include: withFiles });
     if (!p) return bad(res, 404, "Product not found.");
 
     const [updated] = await prisma.$transaction([
@@ -377,6 +458,7 @@ router.patch("/admin/parts/products/:id/visibility", ...admin, async (req, res) 
         data: hidden
           ? { isHidden: true, hiddenReason: reason, hiddenById: actor.id, hiddenAt: new Date() }
           : { isHidden: false, hiddenReason: null, hiddenById: null, hiddenAt: null },
+        include: withFiles,
       }),
       log(actor.id, hidden ? "PARTS_PRODUCT_HIDDEN" : "PARTS_PRODUCT_UNHIDDEN", p.id, { reason: hidden ? reason : null }),
     ]);
