@@ -1,6 +1,11 @@
 import "dotenv/config";
 import argon2 from "argon2";
+import { createHash, randomUUID } from "node:crypto";
+import { access, mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { deflateSync } from "node:zlib";
 import { prisma } from "../prisma.js";
+import { PROVIDER_STORAGE_DIR } from "../uploads/providerFiles.js";
 
 // DEV ONLY. Refuses to run in production or without ALLOW_DEV_SEED=true.
 // Only ever touches users whose email ends with @motexa.test.
@@ -33,6 +38,107 @@ const personas: Persona[] = [
   { email: "admin.multi@motexa.test", fullName: "Test Admin Multi", role: "ADMIN", status: "ACTIVE", permissions: ["MANAGE_MECHANICS", "MANAGE_TOWING"] },
   { email: "superadmin@motexa.test", fullName: "Test Super Admin", role: "SUPER_ADMIN", status: "ACTIVE" },
 ];
+
+// ---- Placeholder files: tiny PNGs generated right here (no downloads, no third-party images) ----
+
+const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+const crc32 = (buf: Buffer) => {
+  let c = 0xffffffff;
+  for (const b of buf) c = CRC_TABLE[(c ^ b) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+};
+const pngChunk = (type: string, data: Buffer) => {
+  const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
+  const out = Buffer.alloc(8 + data.length + 4);
+  out.writeUInt32BE(data.length, 0);
+  body.copy(out, 4);
+  out.writeUInt32BE(crc32(body), 4 + body.length);
+  return out;
+};
+/** A 96x96 solid-colour PNG with a lighter border, so each placeholder is visibly distinct. */
+function placeholderPng([r, g, b]: [number, number, number]): Buffer {
+  const size = 96;
+  const row = Buffer.alloc(1 + size * 3);
+  const raw = Buffer.alloc(row.length * size);
+  for (let y = 0; y < size; y++) {
+    const edge = y < 4 || y >= size - 4;
+    raw[y * row.length] = 0; // filter: none
+    for (let x = 0; x < size; x++) {
+      const light = edge || x < 4 || x >= size - 4;
+      const o = y * row.length + 1 + x * 3;
+      raw[o] = light ? Math.min(255, r + 70) : r;
+      raw[o + 1] = light ? Math.min(255, g + 70) : g;
+      raw[o + 2] = light ? Math.min(255, b + 70) : b;
+    }
+  }
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(size, 0);
+  ihdr.writeUInt32BE(size, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 2; // colour type: RGB
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    pngChunk("IHDR", ihdr),
+    pngChunk("IDAT", deflateSync(raw)),
+    pngChunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
+type FileTarget =
+  | { truckId: string }
+  | { productId: string }
+  | { towCompanyId: string }
+  | { partsShopId: string };
+
+/** Idempotent: one row per (target, purpose[, label]). Existing rows keep their file; a missing file is rewritten. */
+async function seedFile(opts: {
+  ownerUserId: string;
+  purpose: "TRUCK_PHOTO" | "TRUCK_REGISTRATION" | "TRUCK_INSURANCE" | "TOW_COMPANY_DOCUMENT" | "PRODUCT_IMAGE" | "PARTS_SHOP_DOCUMENT";
+  target: FileTarget;
+  originalName: string;
+  color: [number, number, number];
+  label?: string;
+  expiresAt?: string | null;
+}) {
+  const { ownerUserId, purpose, target, originalName, color, label } = opts;
+  const expiresAt = opts.expiresAt ? new Date(`${opts.expiresAt}T00:00:00.000Z`) : null;
+  const existing = await prisma.providerFile.findFirst({ where: { ...target, purpose, ...(label ? { label } : {}) } });
+  const png = placeholderPng(color);
+  await mkdir(PROVIDER_STORAGE_DIR, { recursive: true });
+  if (existing) {
+    const onDisk = await access(path.join(PROVIDER_STORAGE_DIR, existing.storageKey)).then(() => true, () => false);
+    if (!onDisk) await writeFile(path.join(PROVIDER_STORAGE_DIR, existing.storageKey), png);
+    await prisma.providerFile.update({ where: { id: existing.id }, data: { expiresAt } });
+    return;
+  }
+  const storageKey = `${randomUUID()}.png`;
+  await writeFile(path.join(PROVIDER_STORAGE_DIR, storageKey), png);
+  await prisma.providerFile.create({
+    data: {
+      ownerUserId,
+      purpose,
+      visibility: purpose === "TRUCK_PHOTO" || purpose === "PRODUCT_IMAGE" ? "PUBLIC" : "PRIVATE",
+      ...target,
+      label: label ?? null,
+      originalName,
+      mimeType: "image/png",
+      sizeBytes: png.length,
+      storageKey,
+      sha256: createHash("sha256").update(png).digest("hex"),
+      expiresAt,
+    },
+  });
+}
+
+// Registration / insurance expiry per truck; the first truck's insurance is deliberately expired.
+const TRUCK_EXPIRY: Record<string, { registration: string; insurance: string }> = {
+  "10-12345": { registration: "2027-05-01", insurance: "2025-12-31" },
+};
+const DEFAULT_EXPIRY = { registration: "2027-06-01", insurance: "2027-06-01" };
 
 type TruckSeed = {
   plateNumber: string;
@@ -72,6 +178,15 @@ const towFleets: {
   },
 ];
 
+const towCompanyDocs: Record<string, string[]> = {
+  "tow@motexa.test": ["Commercial registration", "Operating licence"],
+  "tow.pending@motexa.test": ["Commercial registration"],
+};
+const partsShopDocs: Record<string, string[]> = {
+  "shop@motexa.test": ["Commercial registration", "Owner ID"],
+  "shop.pending@motexa.test": ["Commercial registration", "Owner ID"],
+};
+
 // Idempotent: companies are keyed by owner, trucks by plate; every run resets them to the states above.
 async function seedTowFleets() {
   for (const f of towFleets) {
@@ -81,9 +196,17 @@ async function seedTowFleets() {
       update: { ...f.company, rejectionReason: null },
       create: { userId: user.id, ...f.company },
     });
+    for (const label of towCompanyDocs[f.email] ?? []) {
+      await seedFile({ ownerUserId: user.id, purpose: "TOW_COMPANY_DOCUMENT", target: { towCompanyId: company.id }, label, originalName: `${label.toLowerCase().replace(/\W+/g, "-")}.png`, color: [120, 70, 120] });
+    }
     for (const t of f.trucks) {
       const data = { ...t, rejectionReason: t.rejectionReason ?? null, companyId: company.id };
-      await prisma.truck.upsert({ where: { plateNumber: t.plateNumber }, update: data, create: data });
+      const truck = await prisma.truck.upsert({ where: { plateNumber: t.plateNumber }, update: data, create: data });
+      const exp = TRUCK_EXPIRY[t.plateNumber] ?? DEFAULT_EXPIRY;
+      const target = { truckId: truck.id };
+      await seedFile({ ownerUserId: user.id, purpose: "TRUCK_PHOTO", target, originalName: `${t.plateNumber}-photo.png`, color: [150, 96, 58] });
+      await seedFile({ ownerUserId: user.id, purpose: "TRUCK_REGISTRATION", target, originalName: `${t.plateNumber}-registration.png`, color: [58, 96, 150], expiresAt: exp.registration });
+      await seedFile({ ownerUserId: user.id, purpose: "TRUCK_INSURANCE", target, originalName: `${t.plateNumber}-insurance.png`, color: [58, 140, 96], expiresAt: exp.insurance });
     }
     console.log(`${f.email.padEnd(32)} tow company "${f.company.companyName}" (${f.company.verificationStatus}), ${f.trucks.length} truck(s)`);
   }
@@ -142,6 +265,9 @@ async function seedPartsShops() {
       update: { ...f.shop, rejectionReason: null },
       create: { userId: user.id, ...f.shop },
     });
+    for (const label of partsShopDocs[f.email] ?? []) {
+      await seedFile({ ownerUserId: user.id, purpose: "PARTS_SHOP_DOCUMENT", target: { partsShopId: shop.id }, label, originalName: `${label.toLowerCase().replace(/\W+/g, "-")}.png`, color: [90, 90, 150] });
+    }
     for (const p of f.products) {
       const { hiddenReason, ...fields } = p;
       const data = {
@@ -153,8 +279,10 @@ async function seedPartsShops() {
         hiddenAt: hiddenReason ? new Date() : null,
       };
       const existing = await prisma.partsProduct.findFirst({ where: { shopId: shop.id, partNumber: p.partNumber }, select: { id: true } });
-      if (existing) await prisma.partsProduct.update({ where: { id: existing.id }, data });
-      else await prisma.partsProduct.create({ data: { ...data, shopId: shop.id } });
+      const product = existing
+        ? await prisma.partsProduct.update({ where: { id: existing.id }, data })
+        : await prisma.partsProduct.create({ data: { ...data, shopId: shop.id } });
+      await seedFile({ ownerUserId: user.id, purpose: "PRODUCT_IMAGE", target: { productId: product.id }, originalName: `${p.partNumber.replace(/\W+/g, "-")}.png`, color: [200, 140, 70] });
     }
     console.log(`${f.email.padEnd(32)} parts shop "${f.shop.shopName}" (${f.shop.verificationStatus}), ${f.products.length} product(s)`);
   }

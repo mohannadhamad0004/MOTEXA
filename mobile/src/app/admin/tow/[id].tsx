@@ -50,7 +50,7 @@ function TruckReview({ truck, onDone }: { truck: Truck; onDone: () => void }) {
           <KV k={t("Vehicle", "المركبة")} v={[truck.make, truck.model, truck.year].filter(Boolean).join(" ")} />
           <PrivateDocs
             title={t("Documents", "المستندات")}
-            docs={truck.documents.map((d) => ({ label: docLabel(t, d.kind), fileName: d.fileName, expiresAt: d.expiresAt }))}
+            docs={truck.documents.map((d) => ({ label: docLabel(t, d.kind), fileName: d.fileName, expiresAt: d.expiresAt, uri: d.uri }))}
           />
           {truck.rejectionReason ? <Notice tone="danger" icon="close-circle-outline">{truck.rejectionReason}</Notice> : null}
           {err ? <Notice tone="danger" icon="alert-circle-outline">{err}</Notice> : null}
@@ -99,7 +99,7 @@ export default function AdminTowDetail() {
               </Card>
               <PrivateDocs
                 title={t("Company documents", "مستندات الشركة")}
-                docs={company.documents.map((d) => ({ label: d.kind, fileName: d.fileName }))}
+                docs={company.documents.map((d) => ({ label: d.kind, fileName: d.fileName, uri: d.uri }))}
               />
               <Section title={`${t("Trucks", "الشاحنات")} (${trucks.length})`} />
               <Text style={{ color: C.textDim, fontSize: 11, marginBottom: 10 }}>

@@ -1,7 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Text, View } from "react-native";
+import { Image } from "expo-image";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Modal, SafeAreaView, Text, TouchableOpacity, View } from "react-native";
+import { privateImageSource } from "./api";
 import { C } from "./palette";
-import { Badge, Card, KV, Section, useL } from "./ui";
+import { Badge, Card, IconButton, KV, Section, useL } from "./ui";
 
 type V = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -44,23 +47,80 @@ export function HistoryList({ items }: { items: Entry[] }) {
   );
 }
 
-/** Private verification documents: file names only, shown to admin and the owning provider. */
+/** Full-screen viewer for one private image. The image is fetched with the bearer token, never from a public URL. */
+function DocViewer({ doc, onClose }: { doc: { label: string; uri: string } | null; onClose: () => void }) {
+  const { t, row } = useL();
+  const [src, setSrc] = useState<{ uri: string; headers: Record<string, string> } | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const uri = doc?.uri ?? null;
+  useEffect(() => {
+    let alive = true;
+    setSrc(null);
+    setFailed(false);
+    setLoading(!!uri);
+    if (uri) privateImageSource(uri).then((s) => alive && setSrc(s), () => alive && setFailed(true));
+    return () => {
+      alive = false;
+    };
+  }, [uri]);
+  return (
+    <Modal visible={!!doc} animationType="fade" onRequestClose={onClose} transparent={false}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+        <View style={[row, { alignItems: "center", justifyContent: "space-between", padding: 14 }]}>
+          <Text numberOfLines={1} style={{ color: C.text, fontSize: 15, fontWeight: "800", flex: 1, marginHorizontal: 8 }}>{doc?.label}</Text>
+          <IconButton icon="close" label={t("Close", "إغلاق")} onPress={onClose} />
+        </View>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          {failed ? (
+            <Text style={{ color: C.danger, fontSize: 13 }}>{t("Could not load this document.", "تعذّر تحميل هذا المستند.")}</Text>
+          ) : src ? (
+            <>
+              <Image
+                source={src}
+                style={{ width: "100%", height: "100%" }}
+                contentFit="contain"
+                onLoad={() => setLoading(false)}
+                onError={() => { setLoading(false); setFailed(true); }}
+              />
+              {loading && <ActivityIndicator style={{ position: "absolute" }} size="large" color={C.accent} />}
+            </>
+          ) : (
+            <ActivityIndicator size="large" color={C.accent} />
+          )}
+        </View>
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
+/** Private verification documents. Tap a document (when it has a file) to open it in the viewer. */
 export function PrivateDocs({
   title,
   docs,
 }: {
   title: string;
-  docs: { label: string; fileName: string; expiresAt?: string | null }[];
+  docs: { label: string; fileName: string; expiresAt?: string | null; uri?: string | null }[];
 }) {
   const { t, row } = useL();
+  const [open, setOpen] = useState<{ label: string; uri: string } | null>(null);
   return (
     <>
+      <DocViewer doc={open} onClose={() => setOpen(null)} />
       <Section title={title} />
       <Card>
         {docs.map((d, i) => {
           const expired = isExpired(d.expiresAt);
           return (
-            <View key={i} style={[row, { alignItems: "center", gap: 12, paddingVertical: 8 }]}>
+            <TouchableOpacity
+              key={i}
+              disabled={!d.uri}
+              accessibilityRole="button"
+              accessibilityLabel={d.label}
+              activeOpacity={0.7}
+              onPress={() => d.uri && setOpen({ label: d.label, uri: d.uri })}
+              style={[row, { alignItems: "center", gap: 12, paddingVertical: 8 }]}
+            >
               <Ionicons name="document-lock-outline" size={22} color={C.accent} />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: C.text, fontSize: 13, fontWeight: "700" }}>{d.label}</Text>
@@ -70,7 +130,8 @@ export function PrivateDocs({
                 </Text>
               </View>
               {expired && <Badge tone="danger" label={t("Expired", "منتهية")} icon="alert-circle-outline" />}
-            </View>
+              {d.uri ? <Ionicons name="eye-outline" size={18} color={C.textMuted} /> : null}
+            </TouchableOpacity>
           );
         })}
         <Text style={{ color: C.textDim, fontSize: 11, marginTop: 8 }}>

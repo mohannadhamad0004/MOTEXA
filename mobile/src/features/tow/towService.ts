@@ -1,10 +1,12 @@
 // Tow feature: types + REST client for the two service facades used by the screens.
 // Screens only call `towFleetService` (provider) and `towAdminService` (admin).
 // The backend (backend/src/routes/tow.routes.ts) enforces roles and ownership; the screen gates are UX only.
-// NOT persisted yet (later step): truck photo and truck/company documents. The server returns them empty,
-// and the provider form's photo/document inputs are not sent.
+// Photos and documents are stored by the server (ProviderFile). Only files the user just picked are uploaded;
+// files that already live on the server are never re-sent. Private document uris stay relative ("/files/private/<id>")
+// and are opened with the bearer token by the PrivateDocs viewer.
 
 import { api } from "../shared/api";
+import { fileNameOf, isServerFile, localFileToBase64, publicImageUrl } from "../shared/files";
 
 export type Verification = "PENDING" | "APPROVED" | "REJECTED";
 export type Operational = "AVAILABLE" | "BUSY" | "OUT_OF_SERVICE";
@@ -51,7 +53,7 @@ export type TowCompany = {
   phone: string;
   city: string;
   verification: Verification;
-  documents: { kind: string; fileName: string }[]; // private to admin + owner
+  documents: { kind: string; fileName: string; uri?: string | null }[]; // private to admin + owner
 };
 
 export type Actor = { id: string; email: string; fullName: string };
@@ -73,7 +75,8 @@ type ApiTruck = {
   operationalStatus: Operational;
   rejectionReason: string | null;
   photoUri: string | null;
-  documents: TruckDocument[];
+  documents: (TruckDocument & { expired?: boolean })[];
+  missingForApproval?: string[];
   history: HistoryEntry[];
 };
 
@@ -85,13 +88,13 @@ type ApiCompany = {
   phone: string;
   city: string;
   verificationStatus: Verification;
-  documents: { kind: string; fileName: string }[];
+  documents: { kind: string; fileName: string; uri?: string | null }[];
 };
 
 const toTruck = (t: ApiTruck): Truck => ({
   id: t.id,
   companyId: t.companyId,
-  photoUri: t.photoUri,
+  photoUri: publicImageUrl(t.photoUri),
   type: t.truckType,
   plate: t.plateNumber,
   make: t.make,
@@ -116,14 +119,32 @@ const toCompany = (c: ApiCompany): TowCompany => ({
   documents: c.documents,
 });
 
-/** Only vehicle fields go to the server; status/moderation fields can never be sent from here. */
-const toVehicleBody = (i: TruckInput) => ({
-  truckType: i.type,
-  plateNumber: i.plate.trim(),
-  make: i.make,
-  model: i.model,
-  year: i.year,
-});
+/**
+ * Vehicle fields plus files. Status/moderation fields can never be sent from here.
+ * A photo or document is uploaded only when it is a newly picked local file; documents that already exist on the
+ * server are sent without data (just their expiry date), so editing never forces a re-pick.
+ */
+async function toVehicleBody(i: TruckInput) {
+  const body: Record<string, unknown> = {
+    truckType: i.type,
+    plateNumber: i.plate.trim(),
+    make: i.make,
+    model: i.model,
+    year: i.year,
+  };
+  if (i.photoUri && !isServerFile(i.photoUri) && !i.photoUri.startsWith("http")) {
+    body.photo = { name: fileNameOf(i.photoUri, "truck-photo.jpg"), dataBase64: await localFileToBase64(i.photoUri) };
+  }
+  body.documents = await Promise.all(
+    i.documents.map(async (d) => {
+      const expiresAt = d.expiresAt ? d.expiresAt.slice(0, 10) : null;
+      return d.uri && !isServerFile(d.uri)
+        ? { kind: d.kind, name: d.fileName || fileNameOf(d.uri, `${d.kind.toLowerCase()}.jpg`), dataBase64: await localFileToBase64(d.uri), expiresAt }
+        : { kind: d.kind, expiresAt };
+    })
+  );
+  return body;
+}
 
 // ---- Provider (TOW_PROVIDER). The actor argument is kept for the screens; the server uses the token. ----
 export const towFleetService = {
@@ -139,11 +160,11 @@ export const towFleetService = {
     return toTruck(r.truck);
   },
   async addTruck(_actor: Actor, input: TruckInput) {
-    const r = await api<{ truck: ApiTruck }>("POST", "/tow/me/trucks", toVehicleBody(input));
+    const r = await api<{ truck: ApiTruck }>("POST", "/tow/me/trucks", await toVehicleBody(input));
     return toTruck(r.truck);
   },
   async updateTruck(_actor: Actor, id: string, input: TruckInput) {
-    const r = await api<{ truck: ApiTruck }>("PATCH", `/tow/me/trucks/${id}`, toVehicleBody(input));
+    const r = await api<{ truck: ApiTruck }>("PATCH", `/tow/me/trucks/${id}`, await toVehicleBody(input));
     return toTruck(r.truck);
   },
   async removeTruck(_actor: Actor, id: string) {

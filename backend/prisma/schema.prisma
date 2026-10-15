@@ -54,6 +54,7 @@ model User {
   mechanicApplication MechanicApplication?
   towCompanyProfile TowCompanyProfile?
   partsShopProfile PartsShopProfile?
+  providerFiles ProviderFile[]
 
   sentInvitations AdminInvitation[] @relation("InvitationSender")
   acceptedInvitation AdminInvitation? @relation("InvitationRecipient")
@@ -277,6 +278,7 @@ model TowCompanyProfile {
   updatedAt DateTime @updatedAt
 
   trucks Truck[]
+  files  ProviderFile[]
 }
 
 model Truck {
@@ -298,6 +300,8 @@ model Truck {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  files ProviderFile[]
 
   @@index([companyId])
   @@index([verificationStatus])
@@ -325,6 +329,7 @@ model PartsShopProfile {
   updatedAt DateTime @updatedAt
 
   products PartsProduct[]
+  files    ProviderFile[]
 }
 
 model PartsProduct {
@@ -349,6 +354,58 @@ model PartsProduct {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  files ProviderFile[]
+
   @@index([shopId])
   @@index([partNumberNormalized])
+}
+
+// ---- Provider files (truck photo/documents, product image, company/shop documents) ----
+// Bytes live on local disk (backend/storage/provider-files); this table is the only way to reach them.
+
+enum ProviderFilePurpose {
+  TRUCK_PHOTO
+  TRUCK_REGISTRATION
+  TRUCK_INSURANCE
+  TOW_COMPANY_DOCUMENT
+  PRODUCT_IMAGE
+  PARTS_SHOP_DOCUMENT
+}
+
+enum ProviderFileVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+model ProviderFile {
+  id          String                 @id @default(uuid())
+  ownerUserId String
+  owner       User                   @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  purpose     ProviderFilePurpose
+  visibility  ProviderFileVisibility
+
+  // Exactly one of these is set (enforced by the application).
+  truckId      String?
+  truck        Truck?             @relation(fields: [truckId], references: [id], onDelete: Cascade)
+  towCompanyId String?
+  towCompany   TowCompanyProfile? @relation(fields: [towCompanyId], references: [id], onDelete: Cascade)
+  productId    String?
+  product      PartsProduct?      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  partsShopId  String?
+  partsShop    PartsShopProfile?  @relation(fields: [partsShopId], references: [id], onDelete: Cascade)
+
+  label        String?
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  storageKey   String    @unique
+  sha256       String
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@unique([truckId, purpose])
+  @@unique([productId, purpose])
+  @@index([ownerUserId])
+  @@index([towCompanyId])
+  @@index([partsShopId])
 }

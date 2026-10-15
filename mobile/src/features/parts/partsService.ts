@@ -1,10 +1,11 @@
 // Parts feature: types + REST client for the two service facades used by the screens.
 // Screens only call `partsShopService` (provider) and `partsAdminService` (admin).
 // The backend (backend/src/routes/parts.routes.ts) enforces roles and ownership; the screen gates are UX only.
-// NOT persisted yet (later step): product image, vehicle fitment and shop documents. The server returns them
-// empty, and the provider form's image/fitment inputs are not sent.
+// The product image is stored by the server (ProviderFile) and only uploaded when the user picked a new one.
+// NOT persisted yet (later step): vehicle fitment (returned empty, form rows are not sent).
 
 import { api } from "../shared/api";
+import { fileNameOf, isServerFile, localFileToBase64, publicImageUrl } from "../shared/files";
 
 export type Verification = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -43,7 +44,7 @@ export type Shop = {
   address: string;
   verification: Verification;
   rejectionReason?: string | null;
-  documents: { kind: string; fileName: string }[]; // private to admin + owner
+  documents: { kind: string; fileName: string; uri?: string | null }[]; // private to admin + owner
   history: HistoryEntry[];
 };
 
@@ -81,14 +82,14 @@ type ApiShop = {
   address: string | null;
   verificationStatus: Verification;
   rejectionReason: string | null;
-  documents: { kind: string; fileName: string }[];
+  documents: { kind: string; fileName: string; uri?: string | null }[];
   history: HistoryEntry[];
 };
 
 const toProduct = (p: ApiProduct): Product => ({
   id: p.id,
   shopId: p.shopId,
-  imageUri: p.imageUri,
+  imageUri: publicImageUrl(p.imageUri),
   name: p.name,
   brand: p.brand,
   partNumber: p.partNumber,
@@ -114,15 +115,21 @@ const toShop = (s: ApiShop): Shop => ({
   history: s.history,
 });
 
-/** Only content fields go to the server; moderation fields can never be sent from here. */
-const toBody = (i: ProductInput) => ({
-  name: i.name,
-  brand: i.brand,
-  partNumber: i.partNumber,
-  description: i.description,
-  price: i.price,
-  stock: i.stock,
-});
+/** Content fields (+ a newly picked image). Moderation fields can never be sent from here. */
+async function toBody(i: ProductInput) {
+  const body: Record<string, unknown> = {
+    name: i.name,
+    brand: i.brand,
+    partNumber: i.partNumber,
+    description: i.description,
+    price: i.price,
+    stock: i.stock,
+  };
+  if (i.imageUri && !isServerFile(i.imageUri) && !i.imageUri.startsWith("http")) {
+    body.image = { name: fileNameOf(i.imageUri, "product-image.jpg"), dataBase64: await localFileToBase64(i.imageUri) };
+  }
+  return body;
+}
 
 // ---- Provider (PARTS_PROVIDER). The actor argument is kept for the screens; the server uses the token. ----
 export const partsShopService = {
@@ -138,12 +145,12 @@ export const partsShopService = {
     return toProduct(r.product);
   },
   async addProduct(_actor: Actor, input: ProductInput) {
-    const r = await api<{ product: ApiProduct }>("POST", "/parts/me/products", toBody(input));
+    const r = await api<{ product: ApiProduct }>("POST", "/parts/me/products", await toBody(input));
     return toProduct(r.product);
   },
   /** Moderation fields are deliberately not part of ProductInput: shops cannot unhide a listing. */
   async updateProduct(_actor: Actor, id: string, input: ProductInput) {
-    const r = await api<{ product: ApiProduct }>("PATCH", `/parts/me/products/${id}`, toBody(input));
+    const r = await api<{ product: ApiProduct }>("PATCH", `/parts/me/products/${id}`, await toBody(input));
     return toProduct(r.product);
   },
 };

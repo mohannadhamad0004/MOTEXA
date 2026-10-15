@@ -9,6 +9,7 @@ import {
 } from "../../../features/shared/ui";
 import { DocKind, TRUCK_TYPES, Truck, TruckInput, TruckType, towFleetService } from "../../../features/tow/towService";
 import { OperationalBadge, TruckSummary, docLabel, useTruckLabels } from "../../../features/tow/truckBits";
+import { isRealDate } from "../../../features/shared/files";
 
 const KINDS: DocKind[] = ["REGISTRATION", "INSURANCE"];
 
@@ -28,13 +29,19 @@ function TruckForm({ truck, onSaved, onCancel }: { truck?: Truck; onSaved: () =>
     const uri = await pickImage();
     if (!uri) return;
     const name = uri.split("/").pop() || `${k.toLowerCase()}.jpg`;
-    setF({ ...f, documents: [...f.documents.filter((d) => d.kind !== k), { kind: k, fileName: name, uri }] });
+    const prev = f.documents.find((d) => d.kind === k);
+    setF({ ...f, documents: [...f.documents.filter((d) => d.kind !== k), { kind: k, fileName: name, uri, expiresAt: prev?.expiresAt ?? null }] });
   };
+  const expiryOf = (k: DocKind) => (f.documents.find((d) => d.kind === k)?.expiresAt ?? "").slice(0, 10);
+  const setExpiry = (k: DocKind, v: string) =>
+    setF({ ...f, documents: f.documents.map((d) => (d.kind === k ? { ...d, expiresAt: v } : d)) });
 
   const save = async () => {
     if (!f.plate.trim() || !f.make.trim() || !f.model.trim()) return setErr(t("Plate, make and model are required.", "اللوحة والشركة والطراز مطلوبة."));
     if (!f.photoUri) return setErr(t("A truck photo is required.", "صورة الشاحنة مطلوبة."));
     if (!KINDS.every(hasDoc)) return setErr(t("Attach the registration and insurance documents.", "أرفق ترخيص المركبة والتأمين."));
+    if (KINDS.some((k) => expiryOf(k) && !isRealDate(expiryOf(k))))
+      return setErr(t("Expiry date must be a real date in YYYY-MM-DD format.", "يجب أن يكون تاريخ الانتهاء تاريخًا حقيقيًا بصيغة YYYY-MM-DD."));
     setBusy(true);
     setErr(null);
     try {
@@ -106,6 +113,15 @@ function TruckForm({ truck, onSaved, onCancel }: { truck?: Truck; onSaved: () =>
               label={`${docLabel(t, k)} — ${hasDoc(k) ? t("attached", "مرفق") : t("attach", "إرفاق")}`}
               onPress={() => attach(k)}
             />
+            {hasDoc(k) && (
+              <Field
+                label={t("Expiry date (YYYY-MM-DD, optional)", "تاريخ الانتهاء (YYYY-MM-DD، اختياري)")}
+                value={expiryOf(k)}
+                placeholder="2027-12-31"
+                keyboardType="numbers-and-punctuation"
+                onChangeText={(v) => setExpiry(k, v)}
+              />
+            )}
           </View>
         ))}
         <Text style={{ color: C.textDim, fontSize: 11 }}>
@@ -171,7 +187,7 @@ function TruckView({ truck, onChange }: { truck: Truck; onChange: () => void }) 
 
       <PrivateDocs
         title={t("Documents", "المستندات")}
-        docs={truck.documents.map((d) => ({ label: docLabel(t, d.kind), fileName: d.fileName, expiresAt: d.expiresAt }))}
+        docs={truck.documents.map((d) => ({ label: docLabel(t, d.kind), fileName: d.fileName, expiresAt: d.expiresAt, uri: d.uri }))}
       />
       <Section title={t("History", "السجل")} />
       <HistoryList items={truck.history} />
