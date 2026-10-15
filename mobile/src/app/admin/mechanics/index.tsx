@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLanguage } from "../../../i18n/LanguageContext";
+import { canManageMechanics, useSession } from "../../../features/shared/session";
 
 type TabType = "applications" | "verified";
 
@@ -108,6 +109,9 @@ export default function MechanicsScreen() {
 
   // Language switch
   const { isArabic, toggleLanguage } = useLanguage();
+
+  const session = useSession();
+  const canReview = session.status === "ready" && canManageMechanics(session.user);
 
   const [activeTab, setActiveTab] = useState<TabType>("applications");
 
@@ -422,6 +426,31 @@ export default function MechanicsScreen() {
           {/* APPLICATIONS */}
           {activeTab === "applications" ? (
             <>
+              {canReview && (
+                <TouchableOpacity
+                  activeOpacity={0.82}
+                  style={[styles.applicationCard, { marginBottom: 16 }]}
+                  onPress={() => router.push("/admin/mechanics/applications")}
+                >
+                  <View style={[styles.personTop, isArabic && styles.rowReverse]}>
+                    <View style={[styles.personIdentity, isArabic && styles.rowReverse]}>
+                      <View style={styles.avatar}>
+                        <Ionicons name="document-text-outline" size={21} color="#D99B69" />
+                      </View>
+                      <View style={[styles.personInfo, isArabic && styles.alignEnd]}>
+                        <Text style={[styles.personName, isArabic && styles.textRight]}>
+                          {isArabic ? "طلبات الميكانيكيين المقدّمة" : "Submitted applications"}
+                        </Text>
+                        <Text style={[styles.personId, isArabic && styles.textRight]}>
+                          {isArabic ? "مراجعة طلبات التسجيل الفعلية" : "Review real signup applications"}
+                        </Text>
+                      </View>
+                    </View>
+                    <Ionicons name={isArabic ? "chevron-back" : "chevron-forward"} size={19} color="#D99B69" />
+                  </View>
+                </TouchableOpacity>
+              )}
+
               <SectionTitle
                 title={t.pipeline}
                 subtitle={t.pipelineSub}

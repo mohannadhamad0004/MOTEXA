@@ -99,3 +99,39 @@ export function requireSuperAdmin(
 
   next();
 }
+
+/** Mechanic review access: SUPER_ADMIN, or ADMIN holding MANAGE_MECHANICS. Use after requireAuth. */
+export async function requireMechanicsAdmin(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const user = res.locals.authUser as { id: string; role: string } | undefined;
+    let allowed = user?.role === "SUPER_ADMIN";
+
+    if (!allowed && user?.role === "ADMIN") {
+      allowed = !!(await prisma.adminPermission.findUnique({
+        where: {
+          adminId_permission: {
+            adminId: user.id,
+            permission: "MANAGE_MECHANICS",
+          },
+        },
+      }));
+    }
+
+    if (!allowed) {
+      res.status(403).json({
+        success: false,
+        message: "Mechanics administration access required.",
+      });
+      return;
+    }
+
+    next();
+  } catch (error) {
+    console.error("Mechanics admin check error:", error);
+    res.status(500).json({ success: false, message: "Internal server error." });
+  }
+}
