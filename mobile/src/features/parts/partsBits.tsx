@@ -1,8 +1,8 @@
 import { Badge, useL } from "../shared/ui";
-import { Product, stockState } from "./partsService";
+import { Fitment, stockState } from "./partsService";
 
 /** One-line fitment summary for a product ("Toyota Corolla 2014–2019 +1"). */
-export const fitmentSummary = (p: Product, t: (en: string, ar: string) => string) => {
+export const fitmentSummary = (p: { fitments: Fitment[] }, t: (en: string, ar: string) => string) => {
   if (!p.fitments.length) return t("No fitment listed", "لا يوجد توافق محدد");
   const f = p.fitments[0];
   const first = `${f.make} ${f.model} ${f.yearFrom}–${f.yearTo}`;
@@ -10,8 +10,12 @@ export const fitmentSummary = (p: Product, t: (en: string, ar: string) => string
 };
 
 export function StockBadge({ stock }: { stock: number }) {
+  return <StockStateBadge state={stockState(stock)} />;
+}
+
+/** Same badge from a state only (customers get "IN" / "LOW" / "OUT", never the exact quantity). */
+export function StockStateBadge({ state: s }: { state: "IN" | "LOW" | "OUT" }) {
   const { t } = useL();
-  const s = stockState(stock);
   if (s === "OUT") return <Badge tone="danger" icon="close-circle-outline" label={t("Out of stock", "نفد المخزون")} />;
   if (s === "LOW") return <Badge tone="accent" icon="alert-circle-outline" label={t("Low stock", "مخزون منخفض")} />;
   return <Badge tone="success" icon="checkmark-circle-outline" label={t("In stock", "متوفر")} />;
