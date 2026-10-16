@@ -272,6 +272,11 @@ model TowCompanyProfile {
   address       String?
   licenceNumber String?
 
+  // Public profile text the company edits itself. Not verification fields: editing them never changes the status.
+  description   String?
+  serviceCities String[] @default([]) // cities served besides `city`; values come from the fixed city list
+  workingHours  String?
+
   verificationStatus ProviderVerificationStatus @default(PENDING)
   rejectionReason    String?
   reviewedById       String?
@@ -295,6 +300,7 @@ model Truck {
   model       String
   year        Int?
   truckType   TruckType
+  maxWeightKg Int? // heaviest vehicle it can carry; vehicle data, so editing it sends the truck back to review
 
   verificationStatus TruckVerificationStatus @default(PENDING)
   operationalStatus  TruckOperationalStatus  @default(OUT_OF_SERVICE)
@@ -338,6 +344,17 @@ model PartsShopProfile {
   inquiries PartInquiry[]
 }
 
+enum PartCondition {
+  NEW
+  USED
+  REFURBISHED
+}
+
+enum PartType {
+  OEM
+  AFTERMARKET
+}
+
 model PartsProduct {
   id     String           @id @default(uuid())
   shopId String
@@ -350,6 +367,9 @@ model PartsProduct {
   description          String?
   price                Decimal @db.Decimal(12, 2)
   stock                Int     @default(0)
+  condition            PartCondition @default(NEW)
+  partType             PartType? // null = not specified
+  category             String? // key from src/catalogCategories.ts; null only for products made before categories existed
 
   // MOTEXA moderation: only admins write these.
   isHidden     Boolean   @default(false)
@@ -366,6 +386,8 @@ model PartsProduct {
 
   @@index([shopId])
   @@index([partNumberNormalized])
+  @@index([category])
+  @@index([condition])
 }
 
 // ---- Provider files (truck photo/documents, product image, company/shop documents) ----

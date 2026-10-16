@@ -18,9 +18,10 @@ function TruckForm({ truck, onSaved, onCancel }: { truck?: Truck; onSaved: () =>
   const { t, row } = useL();
   const { type } = useTruckLabels();
   const [f, setF] = useState<TruckInput>(
-    truck ?? { type: "FLATBED", plate: "", make: "", model: "", year: null, photoUri: null, documents: [] }
+    truck ?? { type: "FLATBED", plate: "", make: "", model: "", year: null, maxWeightKg: null, photoUri: null, documents: [] }
   );
   const [year, setYear] = useState(f.year ? String(f.year) : "");
+  const [weight, setWeight] = useState(f.maxWeightKg ? String(f.maxWeightKg) : "");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -38,6 +39,9 @@ function TruckForm({ truck, onSaved, onCancel }: { truck?: Truck; onSaved: () =>
 
   const save = async () => {
     if (!f.plate.trim() || !f.make.trim() || !f.model.trim()) return setErr(t("Plate, make and model are required.", "اللوحة والشركة والطراز مطلوبة."));
+    const kg = weight.trim() ? Number(weight.trim()) : null;
+    if (kg !== null && !(Number.isInteger(kg) && kg >= 500 && kg <= 60000))
+      return setErr(t("Max load must be a whole number of kg between 500 and 60000.", "يجب أن يكون الحمل الأقصى عددًا صحيحًا بالكيلوغرام بين 500 و60000."));
     if (!f.photoUri) return setErr(t("A truck photo is required.", "صورة الشاحنة مطلوبة."));
     if (!KINDS.every(hasDoc)) return setErr(t("Attach the registration and insurance documents.", "أرفق ترخيص المركبة والتأمين."));
     if (KINDS.some((k) => expiryOf(k) && !isRealDate(expiryOf(k))))
@@ -45,7 +49,7 @@ function TruckForm({ truck, onSaved, onCancel }: { truck?: Truck; onSaved: () =>
     setBusy(true);
     setErr(null);
     try {
-      const input = { ...f, year: year ? parseInt(year, 10) : null };
+      const input = { ...f, year: year ? parseInt(year, 10) : null, maxWeightKg: kg };
       if (truck) await towFleetService.updateTruck(asActor(user), truck.id, input);
       else await towFleetService.addTruck(asActor(user), input);
       onSaved();
@@ -65,7 +69,7 @@ function TruckForm({ truck, onSaved, onCancel }: { truck?: Truck; onSaved: () =>
       )}
       {truck && truck.verification === "APPROVED" && (
         <Notice icon="information-circle-outline">
-          {t("Changing the plate, type or documents may require MOTEXA to review this truck again.", "قد يتطلب تغيير اللوحة أو النوع أو المستندات مراجعة الشاحنة من MOTEXA مرة أخرى.")}
+          {t("Changing the plate, type, max load or documents may require MOTEXA to review this truck again.", "قد يتطلب تغيير اللوحة أو النوع أو الحمل الأقصى أو المستندات مراجعة الشاحنة من MOTEXA مرة أخرى.")}
         </Notice>
       )}
       <Card>
@@ -101,6 +105,7 @@ function TruckForm({ truck, onSaved, onCancel }: { truck?: Truck; onSaved: () =>
         <Field label={t("Make", "الشركة المصنعة")} value={f.make} onChangeText={(v) => setF({ ...f, make: v })} />
         <Field label={t("Model", "الطراز")} value={f.model} onChangeText={(v) => setF({ ...f, model: v })} />
         <Field label={t("Year", "السنة")} value={year} keyboardType="number-pad" onChangeText={setYear} />
+        <Field label={t("Max load (kg, optional)", "الحمل الأقصى (كغ، اختياري)")} value={weight} keyboardType="number-pad" maxLength={5} onChangeText={setWeight} />
       </Card>
 
       <Section title={t("Required documents", "المستندات المطلوبة")} />
@@ -184,6 +189,7 @@ function TruckView({ truck, onChange }: { truck: Truck; onChange: () => void }) 
         <KV k={t("Plate", "اللوحة")} v={truck.plate} />
         <KV k={t("Make / model", "الشركة / الطراز")} v={`${truck.make} ${truck.model}`} />
         <KV k={t("Year", "السنة")} v={truck.year} />
+        {truck.maxWeightKg ? <KV k={t("Max load", "الحمل الأقصى")} v={`${truck.maxWeightKg} ${t("kg", "كغ")}`} /> : null}
       </Card>
 
       <Section title={t("Status", "الحالة")} />

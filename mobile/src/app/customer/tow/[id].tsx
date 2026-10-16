@@ -2,14 +2,15 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Text, View } from "react-native";
 import { catalogService } from "../../../features/catalog/catalogService";
 import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
+import { cityLabel } from "../../../features/shared/cities";
 import { C } from "../../../features/shared/palette";
-import { Async, Button, Card, Empty, Header, KV, Notice, Section, Thumb, useL, useLoad } from "../../../features/shared/ui";
+import { Async, Badge, Button, Card, Empty, Header, KV, Notice, Section, Thumb, useL, useLoad } from "../../../features/shared/ui";
 import { OperationalBadge, useTruckLabels } from "../../../features/tow/truckBits";
 
 // Customers see approved trucks only, never plate numbers, documents or contact data.
 export default function CustomerTowCompany() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { t, row, align } = useL();
+  const { t, row, align, isArabic } = useL();
   const { type } = useTruckLabels();
   const state = useLoad(() => catalogService.getTowCompany(id), [id]);
 
@@ -19,11 +20,31 @@ export default function CustomerTowCompany() {
       <Async state={state}>
         {({ company, trucks }) => (
           <>
+            <Text style={[{ color: C.textMuted, fontSize: 13, marginBottom: 12 }, align]}>
+              {t("Based in", "المقر في")} {company.city}
+              {company.address ? ` · ${company.address}` : ""}
+            </Text>
+            {company.description ? (
+              <Card>
+                <Text style={[{ color: C.text, fontSize: 13, lineHeight: 20 }, align]}>{company.description}</Text>
+              </Card>
+            ) : null}
             <Card>
-              <KV k={t("City", "المدينة")} v={company.city} />
+              {company.workingHours ? <KV k={t("Working hours", "ساعات العمل")} v={company.workingHours} /> : null}
               <KV k={t("Approved trucks", "الشاحنات المعتمدة")} v={company.approvedTrucks} />
               <KV k={t("Available now", "المتاحة الآن")} v={company.availableTrucks} />
             </Card>
+
+            {company.serviceCities.length ? (
+              <>
+                <Section title={t("Service area", "منطقة الخدمة")} />
+                <View style={[row, { flexWrap: "wrap", gap: 6, marginBottom: 12 }]}>
+                  {company.serviceCities.map((x) => (
+                    <Badge key={x} tone="neutral" icon="location-outline" label={cityLabel(x, isArabic)} />
+                  ))}
+                </View>
+              </>
+            ) : null}
 
             <Section title={`${t("Trucks", "الشاحنات")} (${trucks.length})`} />
             {trucks.length ? (
@@ -36,6 +57,11 @@ export default function CustomerTowCompany() {
                       <Text numberOfLines={1} style={[{ color: C.textMuted, fontSize: 12, marginTop: 3 }, align]}>
                         {[tr.make, tr.model, tr.year].filter(Boolean).join(" ")}
                       </Text>
+                      {tr.maxWeightKg ? (
+                        <Text style={[{ color: C.textMuted, fontSize: 12, marginTop: 3 }, align]}>
+                          {t("Carries vehicles up to", "تحمل مركبات حتى")} {tr.maxWeightKg} {t("kg", "كغ")}
+                        </Text>
+                      ) : null}
                     </View>
                   </View>
                   <View style={[row, { marginTop: 12 }]}>

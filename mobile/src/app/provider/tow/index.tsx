@@ -27,6 +27,8 @@ export default function MyFleet() {
                 <VerificationBadge value={company.verification} prefix={t("Company", "الشركة")} />
               </View>
             )}
+            <Button variant="ghost" label={t("Company profile", "ملف الشركة")} icon="business-outline" onPress={() => router.push("/provider/tow/company")} />
+            <View style={{ height: 10 }} />
             <Button variant="ghost" label={t("Tow requests", "طلبات السحب")} icon="navigate-outline" onPress={() => router.push("/provider/tow/requests")} />
             <View style={{ height: 10 }} />
             <Button label={t("Add truck", "إضافة شاحنة")} icon="add-circle-outline" onPress={() => router.push("/provider/tow/new")} />

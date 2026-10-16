@@ -1,19 +1,24 @@
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { View } from "react-native";
+import { Text, View } from "react-native";
+import { C } from "../../../features/shared/palette";
 import { Fitment, Product, ProductInput, partsShopService } from "../../../features/parts/partsService";
+import { Chip } from "../../../features/catalog/catalogBits";
+import { CONDITIONS, PART_TYPES, usePartLabels } from "../../../features/catalog/partAttrs";
+import { CATALOG_GROUPS, labelOf } from "../../../features/shared/categories";
 import { asActor, useSessionUser } from "../../../features/shared/session";
 import {
   Async, Button, Card, Field, Header, Notice, Screen, Section, Thumb, goBack, pickImage, useL, useLoad,
 } from "../../../features/shared/ui";
 
 const blank: ProductInput = {
-  name: "", brand: "", partNumber: "", description: "", price: 0, stock: 0, imageUri: null, fitments: [],
+  name: "", brand: "", partNumber: "", description: "", price: 0, stock: 0, category: null, condition: "NEW", partType: null, imageUri: null, fitments: [],
 };
 
 function Form({ initial, product, id }: { initial: ProductInput; product?: Product; id: string }) {
   const user = useSessionUser();
-  const { t, row } = useL();
+  const { t, row, isArabic, align } = useL();
+  const labels = usePartLabels();
   const [f, setF] = useState(initial);
   const [price, setPrice] = useState(String(initial.price || ""));
   const [stock, setStock] = useState(String(initial.stock || ""));
@@ -37,6 +42,7 @@ function Form({ initial, product, id }: { initial: ProductInput; product?: Produ
         )
       );
     }
+    if (!f.category) return setErr(t("Choose a category.", "اختر فئة."));
     setBusy(true);
     setErr(null);
     try {
@@ -85,8 +91,41 @@ function Form({ initial, product, id }: { initial: ProductInput; product?: Produ
         <Field label={t("Brand", "العلامة التجارية")} value={f.brand} onChangeText={(v) => setF({ ...f, brand: v })} />
         <Field label={t("Part number", "رقم القطعة")} value={f.partNumber} autoCapitalize="characters" onChangeText={(v) => setF({ ...f, partNumber: v })} />
         <Field label={t("Description", "الوصف")} value={f.description} multiline onChangeText={(v) => setF({ ...f, description: v })} />
-        <Field label={t("Price", "السعر")} value={price} keyboardType="decimal-pad" onChangeText={setPrice} />
+        <Field label={t("Price (₪)", "السعر (₪)")} value={price} keyboardType="decimal-pad" onChangeText={setPrice} />
         <Field label={t("Stock quantity", "الكمية المتوفرة")} value={stock} keyboardType="number-pad" onChangeText={setStock} />
+      </Card>
+
+      <Section title={t("Condition", "الحالة")} />
+      <Card>
+        <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
+          {CONDITIONS.map((c) => (
+            <Chip key={c} label={labels.condition[c]} on={f.condition === c} onPress={() => setF({ ...f, condition: c })} />
+          ))}
+        </View>
+        <Text style={[{ color: C.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 1, marginTop: 14, marginBottom: 7 }, align]}>{t("TYPE", "النوع")}</Text>
+        <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
+          {PART_TYPES.map((p) => (
+            <Chip key={p} label={labels.type[p]} on={f.partType === p} onPress={() => setF({ ...f, partType: p })} />
+          ))}
+          <Chip label={labels.notSpecified} on={f.partType === null} onPress={() => setF({ ...f, partType: null })} />
+        </View>
+      </Card>
+
+      <Section title={t("Category", "الفئة")} />
+      {!f.category && !isNew ? (
+        <Notice tone="accent" icon="information-circle-outline">{t("This part has no category yet. Choose one to save changes.", "ليس لهذه القطعة فئة بعد. اختر فئة لحفظ التغييرات.")}</Notice>
+      ) : null}
+      <Card>
+        {CATALOG_GROUPS.map((g) => (
+          <View key={g.key} style={{ marginBottom: 12 }}>
+            <Text style={[{ color: C.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 1, marginBottom: 7 }, align]}>{labelOf(g, isArabic)}</Text>
+            <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
+              {g.categories.map((c) => (
+                <Chip key={c.key} icon={c.icon} label={labelOf(c, isArabic)} on={f.category === c.key} onPress={() => setF({ ...f, category: c.key })} />
+              ))}
+            </View>
+          </View>
+        ))}
       </Card>
 
       <Section title={t("Vehicle fitment", "توافق المركبات")} />
@@ -143,7 +182,7 @@ export default function PartDetail() {
               product={p}
               initial={{
                 name: p.name, brand: p.brand, partNumber: p.partNumber, description: p.description,
-                price: p.price, stock: p.stock, imageUri: p.imageUri, fitments: p.fitments,
+                price: p.price, stock: p.stock, category: p.category, condition: p.condition, partType: p.partType, imageUri: p.imageUri, fitments: p.fitments,
               }}
             />
           )}

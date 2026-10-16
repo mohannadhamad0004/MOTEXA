@@ -6,8 +6,11 @@ import { api } from "../shared/api";
 import { publicImageUrl } from "../shared/files";
 import type { Fitment } from "../parts/partsService";
 import type { Operational, TruckType } from "../tow/towService";
+import type { PartCondition, PartType } from "./partAttrs";
 
 export type StockLevel = "IN" | "LOW" | "OUT";
+
+export type CategoryCounts = { groups: { key: string; count: number; categories: { key: string; count: number }[] }[] };
 
 export type CatalogShopRef = { id: string; name: string; city: string };
 
@@ -19,14 +22,21 @@ export type CatalogProduct = {
   description?: string | null;
   price: number;
   stock: StockLevel;
+  category: string | null;
+  condition: PartCondition;
+  partType: PartType | null;
   imageUri: string | null;
   fitments: Fitment[];
   shop: CatalogShopRef;
 };
 
 export type PartSort = "relevance" | "price_asc" | "price_desc" | "newest";
-export type PartsQuery = { q?: string; make?: string; model?: string; year?: string; shopId?: string; sort?: PartSort; page?: number };
+export type PartsQuery = { q?: string; make?: string; model?: string; year?: string; shopId?: string; category?: string; group?: string; sort?: PartSort; page?: number;
+  // filter sheet (see filters.ts)
+  condition?: string; partType?: string; brand?: string; minPrice?: string; maxPrice?: string; inStock?: string; city?: string };
 export type PartsPage = { products: CatalogProduct[]; page: number; total: number; hasMore: boolean };
+
+export type CatalogShopRow = { id: string; name: string; city: string; productCount: number };
 
 export type CatalogShop = { id: string; name: string; city: string; address: string | null };
 
@@ -34,12 +44,17 @@ export type TowCompanyRow = {
   id: string;
   name: string;
   city: string;
+  serviceCities: string[];
+  workingHours: string | null;
   approvedTrucks: number;
   availableTrucks: number;
   truckTypes: TruckType[];
 };
 
-export type TowFilters = { city?: string; q?: string; truckType?: TruckType; sort?: "available" | "name"; availableOnly?: boolean };
+/** The company page adds the fields the list leaves out. */
+export type TowCompanyDetail = Omit<TowCompanyRow, "truckTypes"> & { address: string | null; description: string | null };
+
+export type TowFilters = { city?: string; serviceCity?: string; q?: string; truckType?: TruckType; sort?: "available" | "name"; availableOnly?: boolean };
 
 export type TowTruck = {
   id: string;
@@ -47,6 +62,7 @@ export type TowTruck = {
   make: string;
   model: string;
   year: number | null;
+  maxWeightKg: number | null;
   photoUri: string | null;
   operationalStatus: Operational;
 };
@@ -65,9 +81,21 @@ export const catalogService = {
     const r = await api<PartsPage>("GET", `/catalog/parts${qs({ ...query })}`);
     return { ...r, products: r.products.map(withImage) };
   },
+  /** Brands that really exist among the visible products (optionally within one category or group). */
+  async getBrands(f: { category?: string; group?: string } = {}) {
+    return (await api<{ brands: string[] }>("GET", `/catalog/brands${qs({ ...f })}`)).brands;
+  },
+  /** Real counts of the products a customer can see, per group and category (zero is included). */
+  async getCategories() {
+    return (await api<CategoryCounts & { success: boolean }>("GET", "/catalog/categories")).groups;
+  },
   async getPart(id: string) {
     const r = await api<{ product: CatalogProduct }>("GET", `/catalog/parts/${id}`);
     return withImage(r.product);
+  },
+  /** Approved shops, busiest first: name, city and the number of parts a customer can see. */
+  async getShops() {
+    return (await api<{ shops: CatalogShopRow[] }>("GET", "/catalog/shops")).shops;
   },
   async getShop(id: string) {
     const r = await api<{ shop: CatalogShop; products: CatalogProduct[] }>("GET", `/catalog/shops/${id}`);
@@ -78,7 +106,7 @@ export const catalogService = {
     return r.companies;
   },
   async getTowCompany(id: string) {
-    const r = await api<{ company: Omit<TowCompanyRow, "truckTypes">; trucks: TowTruck[] }>("GET", `/catalog/tow/companies/${id}`);
+    const r = await api<{ company: TowCompanyDetail; trucks: TowTruck[] }>("GET", `/catalog/tow/companies/${id}`);
     return { company: r.company, trucks: r.trucks.map((t) => ({ ...t, photoUri: publicImageUrl(t.photoUri) })) };
   },
 };

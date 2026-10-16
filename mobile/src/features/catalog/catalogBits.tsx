@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Text, TouchableOpacity, View } from "react-native";
 import { StockStateBadge, fitmentSummary } from "../parts/partsBits";
+import { formatPrice } from "../shared/money";
 import { C } from "../shared/palette";
 import { Badge, Card, Thumb, useL } from "../shared/ui";
 import { fitsCar, type CatalogProduct } from "./catalogService";
+import { ConditionBadge } from "./partAttrs";
 
 type Car = { make: string; model: string; year: string };
 export const carName = (c: Car) => [c.make, c.model, c.year].map((v) => v.trim()).filter(Boolean).join(" ");
@@ -66,8 +68,9 @@ export function ProductCard({ p, onPress, showShop = true, car = null }: { p: Ca
         </View>
       </View>
       <View style={[row, { flexWrap: "wrap", alignItems: "center", gap: 6, marginTop: 12 }]}>
-        <Text style={{ color: C.accent, fontSize: 15, fontWeight: "800", marginHorizontal: 4 }}>{p.price.toFixed(2)}</Text>
+        <Text style={{ color: C.accent, fontSize: 15, fontWeight: "800", marginHorizontal: 4 }}>{formatPrice(p.price)}</Text>
         <StockStateBadge state={p.stock} />
+        <ConditionBadge value={p.condition} />
         <FitBadge p={p} car={car} />
       </View>
       {showShop && (

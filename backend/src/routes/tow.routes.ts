@@ -1,3 +1,4 @@
+import { canonicalCity } from "../cities.js";
 import { Router } from "express";
 import express from "express";
 import type { Prisma } from "../generated/prisma/client.js";
@@ -60,6 +61,9 @@ const shapeCompany = (c: CompanyRow) => ({
   phone: c.phone,
   city: c.city,
   address: c.address,
+  description: c.description,
+  serviceCities: c.serviceCities,
+  workingHours: c.workingHours,
   licenceNumber: c.licenceNumber,
   verificationStatus: c.verificationStatus,
   rejectionReason: c.rejectionReason,
@@ -97,6 +101,7 @@ const shapeTruck = (t: TruckRow, history: unknown[] = []) => {
     model: t.model,
     year: t.year,
     truckType: t.truckType,
+    maxWeightKg: t.maxWeightKg,
     verificationStatus: t.verificationStatus,
     operationalStatus: t.operationalStatus,
     rejectionReason: t.rejectionReason,
@@ -180,7 +185,7 @@ const oneTruck = async (id: string) => (await trucksWithHistory(await loadTrucks
 
 // ---- vehicle input ----
 
-type Vehicle = { plateNumber: string; make: string; model: string; year: number | null; truckType: (typeof TRUCK_TYPES)[number] };
+type Vehicle = { plateNumber: string; make: string; model: string; year: number | null; truckType: (typeof TRUCK_TYPES)[number]; maxWeightKg: number | null };
 
 /** Returns the validated fields that were sent, or an error message. `full` requires all of them. */
 function parseVehicle(body: any, full: boolean): { data: Partial<Vehicle> } | { error: string } {
@@ -207,6 +212,11 @@ function parseVehicle(body: any, full: boolean): { data: Partial<Vehicle> } | { 
     if (y !== null && !(Number.isInteger(y) && y >= 1950 && y <= new Date().getFullYear() + 1)) return { error: "Year is invalid." };
     data.year = y;
   }
+  if (has("maxWeightKg")) {
+    const w = body.maxWeightKg;
+    if (w !== null && !(Number.isInteger(w) && w >= 500 && w <= 60000)) return { error: "Max load must be a whole number of kg between 500 and 60000." };
+    data.maxWeightKg = w;
+  }
   if (has("truckType")) {
     if (!TRUCK_TYPES.includes(body.truckType)) return { error: "Truck type is invalid." };
     data.truckType = body.truckType;
@@ -214,6 +224,7 @@ function parseVehicle(body: any, full: boolean): { data: Partial<Vehicle> } | { 
   if (full) {
     for (const k of ["plateNumber", "make", "model", "truckType"] as const) if (data[k] === undefined) return { error: `${k} is required.` };
     if (data.year === undefined) data.year = null;
+    if (data.maxWeightKg === undefined) data.maxWeightKg = null;
   }
   return { data };
 }
@@ -280,6 +291,57 @@ router.get("/tow/me/company", ...provider, async (_req, res) => {
     return res.json({ success: true, company: shapeCompany(c) });
   } catch (e) {
     return fail(res, "Tow company error", e);
+  }
+});
+
+/**
+ * Public profile text. These are not verification fields, so the status is never touched. Only the fields sent
+ * change; companyName, licence number, phone and city are not editable here.
+ */
+router.patch("/tow/me/company", ...provider, async (req, res) => {
+  try {
+    const actor = res.locals.authUser as { id: string };
+    const c = await myCompany(res);
+    if (!c) return;
+    if (c.verificationStatus === "REJECTED") return bad(res, 403, "Your company application was rejected. You cannot edit the profile.");
+    const b = req.body ?? {};
+    const has = (k: string) => Object.prototype.hasOwnProperty.call(b, k);
+    const data: Prisma.TowCompanyProfileUpdateInput = {};
+    const optText = (k: string, max: number, label: string) => {
+      const v = b[k];
+      if (v === null || v === "") return null;
+      if (typeof v !== "string") throw new Error(`${label} must be text.`);
+      if (v.trim().length > max) throw new Error(`${label} is too long (max ${max} characters).`);
+      return v.trim() || null;
+    };
+    try {
+      if (has("description")) data.description = optText("description", 600, "Description");
+      if (has("address")) data.address = optText("address", 200, "Address");
+      if (has("workingHours")) data.workingHours = optText("workingHours", 100, "Working hours");
+    } catch (e) {
+      return bad(res, 400, (e as Error).message);
+    }
+    if (has("serviceCities")) {
+      if (!Array.isArray(b.serviceCities)) return bad(res, 400, "serviceCities must be a list.");
+      const cities: string[] = [];
+      for (const v of b.serviceCities) {
+        const name = canonicalCity(v);
+        if (!name) return bad(res, 400, "Unknown city in serviceCities. Choose from the list.");
+        if (!cities.includes(name)) cities.push(name);
+      }
+      if (cities.length > 10) return bad(res, 400, "Choose at most 10 service cities.");
+      data.serviceCities = cities;
+    }
+    const fields = Object.keys(data);
+    if (!fields.length) return bad(res, 400, "Nothing to update.");
+    await prisma.$transaction(async (tx) => {
+      await tx.towCompanyProfile.update({ where: { id: c.id }, data });
+      await tx.auditLog.create({ data: { actorId: actor.id, action: "TOW_COMPANY_PROFILE_UPDATED", targetId: c.id, details: { fields } } });
+    });
+    const fresh = await loadCompany({ id: c.id });
+    return res.json({ success: true, company: shapeCompany(fresh!) });
+  } catch (e) {
+    return fail(res, "Tow company update error", e);
   }
 });
 

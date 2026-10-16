@@ -1,6 +1,9 @@
 import { Router } from "express";
 import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
+import { CATALOG_GROUPS, categoriesOfGroup, isCategory, isGroup } from "../catalogCategories.js";
+import { SERVICE_CITIES, canonicalCity } from "../cities.js";
+import { CONDITIONS, PART_TYPES } from "../partAttributes.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 
 // Read-only customer catalog: parts and tow companies. Any logged-in (ACTIVE) account may read it.
@@ -47,6 +50,9 @@ const shapeProduct = (p: ProductRow, withDescription = false) => ({
   ...(withDescription ? { description: p.description } : {}),
   price: Number(p.price),
   stock: stockState(p.stock),
+  category: p.category,
+  condition: p.condition,
+  partType: p.partType,
   imageUri: p.files[0] ? `/files/public/${p.files[0].id}` : null,
   fitments: p.fitments.map((f) => ({ make: f.make, model: f.model, yearFrom: f.yearFrom, yearTo: f.yearTo, ...(f.trim ? { trim: f.trim } : {}) })),
   shop: { id: p.shop.id, name: p.shop.shopName, city: p.shop.city },
@@ -63,7 +69,19 @@ const PART_ORDER: Record<PartSort, (a: SortRow, b: SortRow) => number> = {
   newest: (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
 };
 
-// ?q= &make= &model= &year= &shopId= &sort=relevance|price_asc|price_desc|newest &page=   (model/year need make)
+/** A list parameter: "a,b" or repeated ?x=a&x=b. Blank items are dropped, at most 20 are kept. */
+const listParam = (v: unknown) =>
+  (Array.isArray(v) ? v : [v])
+    .filter((x): x is string => typeof x === "string")
+    .flatMap((x) => x.split(","))
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .slice(0, 20);
+/** A price bound: a plain number of 0 or more. */
+const money = (v: unknown) => (typeof v === "string" && /^\d+(\.\d{1,2})?$/.test(v.trim()) && Number(v) <= 9_999_999_999.99 ? Number(v) : null);
+
+// ?q= &make= &model= &year= &shopId= &category=KEY &group=KEY &sort=relevance|price_asc|price_desc|newest &page=   (model/year need make)
+//   &condition=NEW,USED  &partType=OEM|AFTERMARKET  &brand=Bosch,Mann  &minPrice= &maxPrice=  &inStock=1  &city=Nablus (shop city, from the city list)
 router.get("/parts", async (req, res) => {
   try {
     const q = text(req.query.q, 100);
@@ -80,12 +98,45 @@ router.get("/parts", async (req, res) => {
     if (!PART_SORTS.includes(sortRaw as PartSort)) return bad(res, 400, `sort must be one of: ${PART_SORTS.join(", ")}.`);
     const sort = sortRaw as PartSort;
     const shopId = text(req.query.shopId, 64);
+    const category = typeof req.query.category === "string" ? req.query.category : "";
+    if (category && !isCategory(category)) return bad(res, 400, "Unknown category.");
+    const group = typeof req.query.group === "string" ? req.query.group : "";
+    if (group && !isGroup(group)) return bad(res, 400, "Unknown group.");
+
+    const conditions = listParam(req.query.condition);
+    if (conditions.some((c) => !CONDITIONS.includes(c as never))) return bad(res, 400, `condition must be any of: ${CONDITIONS.join(", ")}.`);
+    const partType = typeof req.query.partType === "string" ? req.query.partType : "";
+    if (partType && !PART_TYPES.includes(partType as never)) return bad(res, 400, `partType must be one of: ${PART_TYPES.join(", ")}.`);
+    const brands = listParam(req.query.brand);
+    if (brands.some((b) => b.length > 100)) return bad(res, 400, "brand is too long.");
+    const minRaw = typeof req.query.minPrice === "string" ? req.query.minPrice : "";
+    const maxRaw = typeof req.query.maxPrice === "string" ? req.query.maxPrice : "";
+    const minPrice = minRaw ? money(minRaw) : null;
+    const maxPrice = maxRaw ? money(maxRaw) : null;
+    if ((minRaw && minPrice === null) || (maxRaw && maxPrice === null)) return bad(res, 400, "minPrice and maxPrice must be numbers of 0 or more.");
+    if (minPrice !== null && maxPrice !== null && minPrice > maxPrice) return bad(res, 400, "minPrice cannot be more than maxPrice.");
+    const inStockRaw = typeof req.query.inStock === "string" ? req.query.inStock : "";
+    if (inStockRaw && !["1", "true", "0", "false"].includes(inStockRaw)) return bad(res, 400, "inStock must be 1 or 0.");
+    const cityRaw = typeof req.query.city === "string" ? req.query.city.trim() : "";
+    const city = cityRaw ? canonicalCity(cityRaw) : null;
+    if (cityRaw && !city) return bad(res, 400, "Unknown city. Choose from the city list.");
 
     const norm = q ? normalizePart(q) : "";
     const year = yearRaw ? Number(yearRaw) : null;
+    const and: Prisma.PartsProductWhereInput[] = [];
+    // a category outside the group matches nothing
+    if (group) and.push({ category: { in: [...categoriesOfGroup(group)] } });
+    if (conditions.length) and.push({ condition: { in: conditions as never[] } });
+    if (partType) and.push({ partType: partType as never });
+    if (brands.length) and.push({ OR: brands.map((b) => ({ brand: { equals: b, mode: "insensitive" as const } })) });
+    if (minPrice !== null || maxPrice !== null) and.push({ price: { ...(minPrice !== null ? { gte: minPrice } : {}), ...(maxPrice !== null ? { lte: maxPrice } : {}) } });
+    if (inStockRaw === "1" || inStockRaw === "true") and.push({ stock: { gt: 0 } });
+    if (city) and.push({ shop: { city: { equals: city, mode: "insensitive" } } });
     const where: Prisma.PartsProductWhereInput = {
       ...visible,
       ...(shopId ? { shopId } : {}),
+      ...(category ? { category } : {}),
+      ...(and.length ? { AND: and } : {}),
       ...(q
         ? {
             OR: [
@@ -130,6 +181,43 @@ router.get("/parts", async (req, res) => {
   }
 });
 
+// Distinct brands of the products a customer can see, for the filter chips. ?category= or ?group= narrows them.
+router.get("/brands", async (req, res) => {
+  try {
+    const category = typeof req.query.category === "string" ? req.query.category : "";
+    if (category && !isCategory(category)) return bad(res, 400, "Unknown category.");
+    const group = typeof req.query.group === "string" ? req.query.group : "";
+    if (group && !isGroup(group)) return bad(res, 400, "Unknown group.");
+    const rows = await prisma.partsProduct.findMany({
+      where: { ...visible, ...(category ? { category } : {}), ...(group ? { AND: [{ category: { in: [...categoriesOfGroup(group)] } }] } : {}) },
+      select: { brand: true },
+      distinct: ["brand"],
+    });
+    // one entry per spelling-ignoring-case, alphabetical, at most 100
+    const seen = new Map<string, string>();
+    for (const { brand } of rows) if (!seen.has(brand.toLowerCase())) seen.set(brand.toLowerCase(), brand);
+    const brands = [...seen.values()].sort((a, b) => a.localeCompare(b)).slice(0, 100);
+    return res.json({ success: true, brands });
+  } catch (e) {
+    return fail(res, "Catalog brands error", e);
+  }
+});
+
+// Groups with the number of products a customer can see in each category (zero is listed too, never hidden).
+router.get("/categories", async (_req, res) => {
+  try {
+    const rows = await prisma.partsProduct.groupBy({ by: ["category"], where: { ...visible, category: { not: null } }, _count: { _all: true } });
+    const count = new Map(rows.map((r) => [r.category as string, r._count._all]));
+    const groups = CATALOG_GROUPS.map((g) => {
+      const categories = g.categories.map((key) => ({ key, count: count.get(key) ?? 0 }));
+      return { key: g.key, count: categories.reduce((n, c) => n + c.count, 0), categories };
+    });
+    return res.json({ success: true, groups });
+  } catch (e) {
+    return fail(res, "Catalog categories error", e);
+  }
+});
+
 router.get("/parts/:id", async (req, res) => {
   try {
     const p = await prisma.partsProduct.findFirst({ where: { id: idParam(req.params.id), ...visible }, include: productInclude });
@@ -137,6 +225,22 @@ router.get("/parts/:id", async (req, res) => {
     return res.json({ success: true, product: shapeProduct(p, true) });
   } catch (e) {
     return fail(res, "Catalog part error", e);
+  }
+});
+
+// APPROVED shops with the number of products a customer can see in each. Busiest first, then by name. Public fields only.
+router.get("/shops", async (_req, res) => {
+  try {
+    const shops = await prisma.partsShopProfile.findMany({
+      where: { verificationStatus: "APPROVED" },
+      select: { id: true, shopName: true, city: true, _count: { select: { products: { where: { isHidden: false } } } } },
+    });
+    const list = shops
+      .map((s) => ({ id: s.id, name: s.shopName, city: s.city, productCount: s._count.products }))
+      .sort((a, b) => b.productCount - a.productCount || a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+    return res.json({ success: true, shops: list });
+  } catch (e) {
+    return fail(res, "Catalog shops error", e);
   }
 });
 
@@ -163,13 +267,16 @@ router.get("/shops/:id", async (req, res) => {
 const TRUCK_TYPES = ["FLATBED", "HOOK_CHAIN", "WHEEL_LIFT", "HEAVY_DUTY"] as const;
 const TOW_SORTS = ["available", "name"] as const;
 
-// ?city= &q= (company name) contains, case-insensitive. ?truckType= at least one APPROVED truck of that type.
+// ?city= &q= (company name) contains, case-insensitive. ?serviceCity= company city OR a service city contains it. ?truckType= at least one APPROVED truck of that type.
 // ?availableOnly=1 at least one AVAILABLE truck. ?sort=available (default: most available trucks, then name) | name.
 // Only APPROVED companies; counts only APPROVED trucks.
 router.get("/tow/companies", async (req, res) => {
   try {
     const city = text(req.query.city, 60);
     const q = text(req.query.q, 100);
+    const serviceCity = text(req.query.serviceCity, 60);
+    // A typed fragment ("nab") matches every listed service city whose name contains it.
+    const serviceMatches = serviceCity ? SERVICE_CITIES.filter((c) => c.toLowerCase().includes(serviceCity.toLowerCase())) : [];
     const truckTypeRaw = typeof req.query.truckType === "string" ? req.query.truckType : "";
     if (truckTypeRaw && !TRUCK_TYPES.includes(truckTypeRaw as never)) return bad(res, 400, `truckType must be one of: ${TRUCK_TYPES.join(", ")}.`);
     const sortRaw = typeof req.query.sort === "string" ? req.query.sort : "available";
@@ -181,11 +288,16 @@ router.get("/tow/companies", async (req, res) => {
         verificationStatus: "APPROVED",
         ...(city ? { city: { contains: city, mode: "insensitive" } } : {}),
         ...(q ? { companyName: { contains: q, mode: "insensitive" } } : {}),
+        ...(serviceCity
+          ? { OR: [{ city: { contains: serviceCity, mode: "insensitive" } }, ...(serviceMatches.length ? [{ serviceCities: { hasSome: [...serviceMatches] } }] : [])] }
+          : {}),
       },
       select: {
         id: true,
         companyName: true,
         city: true,
+        serviceCities: true,
+        workingHours: true,
         trucks: { where: { verificationStatus: "APPROVED" }, select: { truckType: true, operationalStatus: true } },
       },
     });
@@ -197,6 +309,8 @@ router.get("/tow/companies", async (req, res) => {
         id: c.id,
         name: c.companyName,
         city: c.city,
+        serviceCities: c.serviceCities,
+        workingHours: c.workingHours,
         approvedTrucks: c.trucks.length,
         availableTrucks: c.trucks.filter((t) => t.operationalStatus === "AVAILABLE").length,
         truckTypes: [...new Set(c.trucks.map((t) => t.truckType))],
@@ -217,11 +331,16 @@ router.get("/tow/companies/:id", async (req, res) => {
         id: true,
         companyName: true,
         city: true,
+        address: true,
+        description: true,
+        serviceCities: true,
+        workingHours: true,
         trucks: {
           where: { verificationStatus: "APPROVED" },
           select: {
             id: true,
             truckType: true,
+            maxWeightKg: true,
             make: true,
             model: true,
             year: true,
@@ -241,6 +360,10 @@ router.get("/tow/companies/:id", async (req, res) => {
         id: c.id,
         name: c.companyName,
         city: c.city,
+        address: c.address,
+        description: c.description,
+        serviceCities: c.serviceCities,
+        workingHours: c.workingHours,
         approvedTrucks: trucks.length,
         availableTrucks: trucks.filter((t) => t.operationalStatus === "AVAILABLE").length,
       },
@@ -250,6 +373,7 @@ router.get("/tow/companies/:id", async (req, res) => {
         make: t.make,
         model: t.model,
         year: t.year,
+        maxWeightKg: t.maxWeightKg,
         photoUri: t.files[0] ? `/files/public/${t.files[0].id}` : null,
         operationalStatus: t.operationalStatus,
       })),

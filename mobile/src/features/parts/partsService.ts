@@ -4,6 +4,7 @@
 // The product image is stored by the server (ProviderFile) and only uploaded when the user picked a new one.
 // NOT persisted yet (later step): vehicle fitment (returned empty, form rows are not sent).
 
+import type { PartCondition, PartType } from "../catalog/partAttrs";
 import { api } from "../shared/api";
 import { fileNameOf, isServerFile, localFileToBase64, publicImageUrl } from "../shared/files";
 
@@ -21,6 +22,9 @@ export type Product = {
   description: string;
   price: number;
   stock: number;
+  condition: PartCondition;
+  partType: PartType | null; // null = not specified
+  category: string | null; // key from shared/categories.ts; null on products made before categories existed
   fitments: Fitment[];
   // Moderation is owned by MOTEXA admins; providers can read it but never write it.
   hidden: boolean;
@@ -68,6 +72,9 @@ type ApiProduct = {
   description: string | null;
   price: string; // exact decimal string
   stock: number;
+  category: string | null;
+  condition: PartCondition;
+  partType: PartType | null;
   isHidden: boolean;
   hiddenReason: string | null;
   imageUri: string | null;
@@ -98,6 +105,9 @@ const toProduct = (p: ApiProduct): Product => ({
   description: p.description ?? "",
   price: Number(p.price),
   stock: p.stock,
+  category: p.category ?? null,
+  condition: p.condition ?? "NEW",
+  partType: p.partType ?? null,
   fitments: p.fitments,
   hidden: p.isHidden,
   hiddenReason: p.hiddenReason,
@@ -126,6 +136,9 @@ async function toBody(i: ProductInput) {
     description: i.description,
     price: i.price,
     stock: i.stock,
+    ...(i.category ? { category: i.category } : {}),
+    condition: i.condition,
+    partType: i.partType, // null clears it ("not specified")
     // Always sent: the server replaces the stored set with this one.
     fitments: i.fitments.map((f) => ({ make: f.make, model: f.model, yearFrom: f.yearFrom, yearTo: f.yearTo, trim: f.trim?.trim() || null })),
   };
