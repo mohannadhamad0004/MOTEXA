@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { Timeline, TowStatusBadge } from "../../../../features/requests/requestBits";
+import { Timeline, TowStatusBadge, useProblemLabels } from "../../../../features/requests/requestBits";
 import { CompanyTowRequest, companyTowRequests } from "../../../../features/requests/requestsService";
 import { C } from "../../../../features/shared/palette";
 import { asActor, useSessionUser } from "../../../../features/shared/session";
@@ -22,6 +22,7 @@ export default function CompanyRequestDetail() {
   const user = useSessionUser();
   const { t, row, align } = useL();
   const { type } = useTruckLabels();
+  const problem = useProblemLabels();
   const state = useLoad(() => companyTowRequests.get(id), [id]);
   const fleet = useLoad(() => towFleetService.getMyFleet(asActor(user)), [user.id]);
   const [mode, setMode] = useState<Mode>("none");
@@ -76,6 +77,7 @@ export default function CompanyRequestDetail() {
                 <KV k={t("Pickup", "الاستلام")} v={r.pickupAddress} />
                 <KV k={t("Destination", "الوجهة")} v={r.dropoffAddress} />
                 <KV k={t("Car", "السيارة")} v={[r.vehicle.make, r.vehicle.model, r.vehicle.year].filter(Boolean).join(" ")} />
+                <KV k={t("Problem", "المشكلة")} v={problem[r.problemType]} />
                 <KV k={t("Contact phone", "هاتف التواصل")} v={r.contactPhone} />
                 {r.notes ? <KV k={t("Notes", "ملاحظات")} v={r.notes} /> : null}
               </Card>

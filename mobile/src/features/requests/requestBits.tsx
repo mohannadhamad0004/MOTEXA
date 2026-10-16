@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Text, View } from "react-native";
 import { C } from "../shared/palette";
 import { Badge, Button, Card, Field, Notice, Section, useL } from "../shared/ui";
-import type { InquiryStatus, ThreadMessage, TowStatus } from "./requestsService";
+import type { InquiryStatus, ThreadMessage, TowProblem, TowStatus } from "./requestsService";
 
 /** Local date and time, "2026-10-15 18:30". */
 export function fmtDateTime(iso?: string | null) {
@@ -33,6 +33,19 @@ export function useTowStatusLabels() {
     IN_PROGRESS: t("In progress", "قيد التنفيذ"),
     COMPLETED: t("Completed", "مكتمل"),
     CANCELLED: t("Cancelled", "ملغى"),
+  };
+  return label;
+}
+
+export function useProblemLabels() {
+  const { t } = useL();
+  const label: Record<TowProblem, string> = {
+    WONT_START: t("Won't start", "لا تعمل"),
+    ACCIDENT: t("Accident", "حادث"),
+    FLAT_TIRE: t("Flat tire", "إطار مثقوب"),
+    OVERHEATING: t("Overheating", "ارتفاع حرارة المحرك"),
+    OUT_OF_FUEL: t("Out of fuel", "نفاد الوقود"),
+    OTHER: t("Other", "أخرى"),
   };
   return label;
 }

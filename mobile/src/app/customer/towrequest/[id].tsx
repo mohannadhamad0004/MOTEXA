@@ -2,7 +2,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
-import { TowStatusBadge, Timeline } from "../../../features/requests/requestBits";
+import { TowStatusBadge, Timeline, useProblemLabels } from "../../../features/requests/requestBits";
 import { customerTowRequests } from "../../../features/requests/requestsService";
 import { C } from "../../../features/shared/palette";
 import { Async, Button, Card, Header, KV, Notice, ReasonPanel, Section, useL, useLoad } from "../../../features/shared/ui";
@@ -12,6 +12,7 @@ export default function TowRequestStatus() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, row, align } = useL();
   const { type } = useTruckLabels();
+  const problem = useProblemLabels();
   const state = useLoad(() => customerTowRequests.get(id), [id]);
   const [cancelling, setCancelling] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -73,6 +74,7 @@ export default function TowRequestStatus() {
               <KV k={t("Pickup", "الاستلام")} v={r.pickupAddress} />
               <KV k={t("Destination", "الوجهة")} v={r.dropoffAddress} />
               <KV k={t("Car", "السيارة")} v={[r.vehicle.make, r.vehicle.model, r.vehicle.year].filter(Boolean).join(" ")} />
+              <KV k={t("Problem", "المشكلة")} v={problem[r.problemType]} />
               <KV k={t("Contact phone", "هاتف التواصل")} v={r.contactPhone} />
               {r.notes ? <KV k={t("Notes", "ملاحظات")} v={r.notes} /> : null}
             </Card>

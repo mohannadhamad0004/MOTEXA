@@ -1,7 +1,9 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
+import { Chip, ChipRow } from "../../../features/catalog/catalogBits";
 import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
-import { customerTowRequests, existingIdOf } from "../../../features/requests/requestsService";
+import { useProblemLabels } from "../../../features/requests/requestBits";
+import { TOW_PROBLEMS, TowProblem, customerTowRequests, existingIdOf } from "../../../features/requests/requestsService";
 import { catalogService } from "../../../features/catalog/catalogService";
 import { Async, Button, Card, Field, Header, Notice, Section, useL, useLoad } from "../../../features/shared/ui";
 
@@ -15,6 +17,8 @@ export default function NewTowRequest() {
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
   const [year, setYear] = useState("");
+  const [problem, setProblem] = useState<TowProblem | null>(null);
+  const problemLabel = useProblemLabels();
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -26,6 +30,7 @@ export default function NewTowRequest() {
     if (dropoff.trim().length < 3) return setErr(t("Enter the destination.", "أدخل الوجهة."));
     if (!make.trim() || !model.trim()) return setErr(t("Enter the car make and model.", "أدخل ماركة السيارة وطرازها."));
     if (y !== null && !(Number.isInteger(y) && y >= 1950 && y <= new Date().getFullYear() + 1)) return setErr(t("The car year is not valid.", "سنة السيارة غير صحيحة."));
+    if (!problem) return setErr(t("Choose what is wrong with the car.", "اختر مشكلة السيارة."));
     if (!/^[0-9+()\-\s]{6,20}$/.test(phone.trim()) || phone.replace(/\D/g, "").length < 5)
       return setErr(t("Enter a valid contact phone number.", "أدخل رقم هاتف صحيحًا للتواصل."));
     setBusy(true);
@@ -39,6 +44,7 @@ export default function NewTowRequest() {
         vehicleMake: make.trim(),
         vehicleModel: model.trim(),
         vehicleYear: y,
+        problemType: problem,
         notes: notes.trim(),
       });
       router.replace(`/customer/towrequest/${r.id}`);
@@ -74,6 +80,12 @@ export default function NewTowRequest() {
                 <Field label={t("Model", "الطراز")} value={model} onChangeText={setModel} maxLength={60} />
                 <Field label={t("Year (optional)", "السنة (اختياري)")} value={year} onChangeText={setYear} keyboardType="number-pad" maxLength={4} />
               </Card>
+              <Section title={t("What is wrong?", "ما المشكلة؟")} />
+              <ChipRow>
+                {TOW_PROBLEMS.map((k) => (
+                  <Chip key={k} label={problemLabel[k]} on={problem === k} onPress={() => setProblem(k)} />
+                ))}
+              </ChipRow>
               <Section title={t("Contact", "التواصل")} />
               <Card>
                 <Field label={t("Contact phone", "هاتف التواصل")} value={phone} onChangeText={setPhone} keyboardType="phone-pad" maxLength={20} />

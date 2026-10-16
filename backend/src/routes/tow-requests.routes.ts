@@ -36,6 +36,7 @@ class HttpError extends Error {
     super(message);
   }
 }
+const PROBLEMS = ["WONT_START", "ACCIDENT", "FLAT_TIRE", "OVERHEATING", "OUT_OF_FUEL", "OTHER"] as const;
 const text = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 const idParam = (v: unknown) => String(v);
 const send = (res: any, e: unknown, label: string) => {
@@ -81,6 +82,7 @@ const common = (r: Row) => ({
   dropoffAddress: r.dropoffAddress,
   contactPhone: r.contactPhone,
   vehicle: { make: r.vehicleMake, model: r.vehicleModel, year: r.vehicleYear },
+  problemType: r.problemType,
   notes: r.notes,
   declineReason: r.declineReason,
   cancelReason: r.cancelReason,
@@ -144,6 +146,8 @@ router.post("/requests/tow", ...customerSide, async (req, res) => {
     if (!dropoffAddress || dropoffAddress.length < 3) throw new HttpError(400, "Destination address is required.");
     if (!contactPhone || !phoneOk(contactPhone)) throw new HttpError(400, "A valid contact phone number is required.");
     if (!vehicleMake || !vehicleModel) throw new HttpError(400, "Car make and model are required.");
+    if (typeof b.problemType !== "string" || !PROBLEMS.includes(b.problemType as never)) throw new HttpError(400, `problemType is required: ${PROBLEMS.join(", ")}.`);
+    const problemType = b.problemType as (typeof PROBLEMS)[number];
     const y = b.vehicleYear;
     if (y !== undefined && y !== null && !(Number.isInteger(y) && y >= 1950 && y <= new Date().getFullYear() + 1)) throw new HttpError(400, "Car year is invalid.");
 
@@ -155,7 +159,7 @@ router.post("/requests/tow", ...customerSide, async (req, res) => {
       const active = await tx.towRequest.findFirst({ where: { customerId: me.id, companyId: company.id, status: { in: [...ACTIVE] } }, select: { id: true } });
       if (active) throw new HttpError(409, "You already have an active request with this company.", { existingRequestId: active.id });
       const created = await tx.towRequest.create({
-        data: { customerId: me.id, companyId: company.id, pickupAddress, dropoffAddress, contactPhone, vehicleMake, vehicleModel, vehicleYear: y ?? null, notes },
+        data: { customerId: me.id, companyId: company.id, pickupAddress, dropoffAddress, contactPhone, vehicleMake, vehicleModel, vehicleYear: y ?? null, problemType, notes },
       });
       await log(tx, me.id, "TOW_REQUEST_CREATED", created.id, { companyId: company.id });
       return created.id;
