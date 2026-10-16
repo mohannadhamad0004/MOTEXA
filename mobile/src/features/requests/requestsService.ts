@@ -66,6 +66,9 @@ export const shopInquiries = {
 
 export type TowStatus = "REQUESTED" | "ACCEPTED" | "DECLINED" | "EN_ROUTE" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 
+export const TOW_PROBLEMS = ["WONT_START", "ACCIDENT", "FLAT_TIRE", "OVERHEATING", "OUT_OF_FUEL", "OTHER"] as const;
+export type TowProblem = (typeof TOW_PROBLEMS)[number];
+
 type TowBase = {
   id: string;
   status: TowStatus;
@@ -73,6 +76,7 @@ type TowBase = {
   dropoffAddress: string;
   contactPhone: string;
   vehicle: { make: string; model: string; year: number | null };
+  problemType: TowProblem;
   notes: string | null;
   declineReason: string | null;
   cancelReason: string | null;
@@ -101,6 +105,7 @@ export type TowRequestInput = {
   vehicleMake: string;
   vehicleModel: string;
   vehicleYear: number | null;
+  problemType: TowProblem;
   notes: string;
 };
 

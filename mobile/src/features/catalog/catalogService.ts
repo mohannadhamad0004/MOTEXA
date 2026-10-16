@@ -24,7 +24,8 @@ export type CatalogProduct = {
   shop: CatalogShopRef;
 };
 
-export type PartsQuery = { q?: string; make?: string; model?: string; year?: string; page?: number };
+export type PartSort = "relevance" | "price_asc" | "price_desc" | "newest";
+export type PartsQuery = { q?: string; make?: string; model?: string; year?: string; shopId?: string; sort?: PartSort; page?: number };
 export type PartsPage = { products: CatalogProduct[]; page: number; total: number; hasMore: boolean };
 
 export type CatalogShop = { id: string; name: string; city: string; address: string | null };
@@ -37,6 +38,8 @@ export type TowCompanyRow = {
   availableTrucks: number;
   truckTypes: TruckType[];
 };
+
+export type TowFilters = { city?: string; q?: string; truckType?: TruckType; sort?: "available" | "name"; availableOnly?: boolean };
 
 export type TowTruck = {
   id: string;
@@ -70,8 +73,8 @@ export const catalogService = {
     const r = await api<{ shop: CatalogShop; products: CatalogProduct[] }>("GET", `/catalog/shops/${id}`);
     return { shop: r.shop, products: r.products.map(withImage) };
   },
-  async listTowCompanies(city?: string) {
-    const r = await api<{ companies: TowCompanyRow[] }>("GET", `/catalog/tow/companies${qs({ city })}`);
+  async listTowCompanies(f: TowFilters = {}) {
+    const r = await api<{ companies: TowCompanyRow[] }>("GET", `/catalog/tow/companies${qs({ ...f, availableOnly: f.availableOnly ? "1" : undefined })}`);
     return r.companies;
   },
   async getTowCompany(id: string) {
@@ -82,3 +85,20 @@ export const catalogService = {
 
 /** Last "fits my car" values, kept in memory for the current app session only. */
 export const fitMemory = { make: "", model: "", year: "" };
+
+/** Same rule as the server's fitment filter: make must match, model and year only when given. */
+export function fitsCar(p: { fitments: Fitment[] }, car: { make: string; model: string; year: string }) {
+  const n = (v: string) => v.trim().toLowerCase().replace(/\s+/g, " ");
+  const year = car.year.trim() ? Number(car.year.trim()) : null;
+  return p.fitments.some(
+    (f) => n(f.make) === n(car.make) && (!car.model.trim() || n(f.model) === n(car.model)) && (year === null || (f.yearFrom <= year && year <= f.yearTo))
+  );
+}
+
+/** The car from "Fits my car", or null when none (or an invalid year) is set. */
+export function currentCar() {
+  const { make, model, year } = fitMemory;
+  if (!make.trim()) return null;
+  if (year.trim() && !/^\d{4}$/.test(year.trim())) return null;
+  return { make, model, year };
+}

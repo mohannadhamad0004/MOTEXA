@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { TowStatusBadge, fmtDateTime } from "../../../../features/requests/requestBits";
+import { TowStatusBadge, fmtDateTime, useProblemLabels } from "../../../../features/requests/requestBits";
 import { TowStatus, companyTowRequests } from "../../../../features/requests/requestsService";
 import { C } from "../../../../features/shared/palette";
 import { Async, Card, Empty, Header, Screen, Segmented, useL, useLoad } from "../../../../features/shared/ui";
@@ -16,6 +16,7 @@ const GROUPS: Record<Exclude<Filter, "ALL">, TowStatus[]> = {
 
 export default function CompanyRequests() {
   const { t, row, align } = useL();
+  const problem = useProblemLabels();
   const [filter, setFilter] = useState<Filter>("ALL");
   const state = useLoad(() => companyTowRequests.list(), []);
 
@@ -44,7 +45,7 @@ export default function CompanyRequests() {
                   <View style={{ flex: 1 }}>
                     <Text numberOfLines={1} style={[{ color: C.text, fontSize: 15, fontWeight: "800" }, align]}>{r.customerName}</Text>
                     <Text numberOfLines={1} style={[{ color: C.textMuted, fontSize: 12, marginTop: 3 }, align]}>
-                      {r.vehicle.make} {r.vehicle.model}
+                      {r.vehicle.make} {r.vehicle.model} · {problem[r.problemType]}
                     </Text>
                   </View>
                   <TowStatusBadge value={r.status} />

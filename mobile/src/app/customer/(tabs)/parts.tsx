@@ -1,8 +1,8 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
-import { ProductCard } from "../../../features/catalog/catalogBits";
-import { CatalogProduct, catalogService, fitMemory } from "../../../features/catalog/catalogService";
+import { Chip, ChipRow, ProductCard } from "../../../features/catalog/catalogBits";
+import { CatalogProduct, PartSort, catalogService, fitMemory } from "../../../features/catalog/catalogService";
 import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
 import { C } from "../../../features/shared/palette";
 import { Button, Card, Empty, Field, Header, Notice, SearchBar, useL } from "../../../features/shared/ui";
@@ -16,6 +16,8 @@ export default function CustomerParts() {
   const [model, setModel] = useState(fitMemory.model);
   const [year, setYear] = useState(fitMemory.year);
   const [showFit, setShowFit] = useState(!!(fitMemory.make || fitMemory.model || fitMemory.year));
+
+  const [sort, setSort] = useState<PartSort>("relevance");
 
   const [items, setItems] = useState<CatalogProduct[]>([]);
   const [total, setTotal] = useState(0);
@@ -52,6 +54,7 @@ export default function CustomerParts() {
         const r = await catalogService.searchParts({
           q,
           ...(fitOn ? { make, model, year: year.trim() } : {}),
+          sort,
           page: pageNo,
         });
         if (mine !== seq.current) return;
@@ -69,7 +72,7 @@ export default function CustomerParts() {
         }
       }
     },
-    [q, make, model, year, fitOn]
+    [q, make, model, year, fitOn, sort]
   );
 
   // Search as the user types, after a short pause.
@@ -110,6 +113,13 @@ export default function CustomerParts() {
         </Card>
       )}
 
+      <ChipRow>
+        <Chip label={t("Relevance", "الأكثر صلة")} on={sort === "relevance"} onPress={() => setSort("relevance")} />
+        <Chip label={t("Price: low to high", "السعر: من الأقل إلى الأعلى")} on={sort === "price_asc"} onPress={() => setSort("price_asc")} />
+        <Chip label={t("Price: high to low", "السعر: من الأعلى إلى الأقل")} on={sort === "price_desc"} onPress={() => setSort("price_desc")} />
+        <Chip label={t("Newest", "الأحدث")} on={sort === "newest"} onPress={() => setSort("newest")} />
+      </ChipRow>
+
       {loading && !items.length ? (
         <ActivityIndicator style={{ marginTop: 40 }} size="large" color={C.accent} />
       ) : error && !items.length ? (
@@ -126,7 +136,7 @@ export default function CustomerParts() {
           </View>
           {error ? <Notice tone="danger" icon="alert-circle-outline">{error}</Notice> : null}
           {items.map((p) => (
-            <ProductCard key={p.id} p={p} onPress={() => router.push(`/customer/parts/${p.id}`)} />
+            <ProductCard key={p.id} p={p} car={fitOn ? { make, model, year } : null} onPress={() => router.push(`/customer/parts/${p.id}`)} />
           ))}
           {hasMore && (
             <Button label={loadingMore ? t("Loading…", "جارٍ التحميل…") : t("Load more", "تحميل المزيد")} variant="ghost" icon="chevron-down-outline" disabled={loadingMore} onPress={() => run(page + 1, "more")} />

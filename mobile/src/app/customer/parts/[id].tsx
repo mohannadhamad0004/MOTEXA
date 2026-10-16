@@ -1,16 +1,35 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Text, View } from "react-native";
-import { catalogService } from "../../../features/catalog/catalogService";
+import { FitBadge, ProductCard } from "../../../features/catalog/catalogBits";
+import { catalogService, currentCar, fitsCar } from "../../../features/catalog/catalogService";
 import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
 import { StockStateBadge } from "../../../features/parts/partsBits";
 import { C } from "../../../features/shared/palette";
-import { Async, Button, Card, Header, Section, Thumb, useL, useLoad } from "../../../features/shared/ui";
+import { Async, Button, Card, Header, Notice, Section, Thumb, useL, useLoad } from "../../../features/shared/ui";
+
+/** Up to 6 more visible parts of the same shop. Hidden when there are none (or the call fails). */
+function OtherFromShop({ shopId, currentId }: { shopId: string; currentId: string }) {
+  const { t } = useL();
+  const state = useLoad(() => catalogService.searchParts({ shopId }), [shopId]);
+  const car = currentCar();
+  const others = (state.data?.products ?? []).filter((x) => x.id !== currentId).slice(0, 6);
+  if (!others.length) return null;
+  return (
+    <>
+      <Section title={t("Other parts from this shop", "قطع أخرى من هذا المتجر")} />
+      {others.map((x) => (
+        <ProductCard key={x.id} p={x} showShop={false} car={car} onPress={() => router.push(`/customer/parts/${x.id}`)} />
+      ))}
+    </>
+  );
+}
 
 export default function CustomerPartDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, row, align } = useL();
   const state = useLoad(() => catalogService.getPart(id), [id]);
+  const car = currentCar();
 
   return (
     <CustomerScreen>
@@ -28,6 +47,7 @@ export default function CustomerPartDetail() {
             <View style={[row, { flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 14 }]}>
               <Text style={{ color: C.accent, fontSize: 22, fontWeight: "800", marginHorizontal: 4 }}>{p.price.toFixed(2)}</Text>
               <StockStateBadge state={p.stock} />
+              <FitBadge p={p} car={car} />
             </View>
 
             {p.description ? (
@@ -37,6 +57,10 @@ export default function CustomerPartDetail() {
                   <Text style={[{ color: C.text, fontSize: 13, lineHeight: 20 }, align]}>{p.description}</Text>
                 </Card>
               </>
+            ) : null}
+
+            {car && state.data && !fitsCar(p, car) ? (
+              <Notice tone="accent" icon="alert-circle-outline">{t("This part may not fit your car. Check the list below or ask the shop.", "قد لا تناسب هذه القطعة سيارتك. راجع القائمة أدناه أو اسأل المتجر.")}</Notice>
             ) : null}
 
             <Section title={t("Fits these vehicles", "تناسب هذه المركبات")} />
@@ -72,6 +96,8 @@ export default function CustomerPartDetail() {
 
             <View style={{ height: 8 }} />
             <Button icon="chatbubble-ellipses-outline" label={t("Ask the shop", "اسأل المتجر")} onPress={() => router.push({ pathname: "/customer/inquiry/new", params: { productId: p.id } })} />
+
+            <OtherFromShop shopId={p.shop.id} currentId={p.id} />
           </>
         )}
       </Async>

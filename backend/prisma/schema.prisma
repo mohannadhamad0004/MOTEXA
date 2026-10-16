@@ -494,6 +494,15 @@ enum TowRequestStatus {
   CANCELLED
 }
 
+enum TowProblemType {
+  WONT_START
+  ACCIDENT
+  FLAT_TIRE
+  OVERHEATING
+  OUT_OF_FUEL
+  OTHER
+}
+
 enum TowCancelledBy {
   CUSTOMER
   COMPANY
@@ -520,6 +529,8 @@ model TowRequest {
   vehicleMake    String
   vehicleModel   String
   vehicleYear    Int?
+  // Required by the API for new requests; the column default only gives rows that existed before it OTHER.
+  problemType    TowProblemType @default(OTHER)
   notes          String?
 
   status        TowRequestStatus @default(REQUESTED)

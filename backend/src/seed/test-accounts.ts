@@ -335,7 +335,7 @@ async function seedRequests() {
   const company = await prisma.towCompanyProfile.findUniqueOrThrow({ where: { userId: towUser.id } });
   const marker = "Abdali Boulevard, Amman";
   const reset = {
-    status: "REQUESTED" as const, assignedTruckId: null, assignedTruckType: null, assignedTruckMake: null, assignedTruckModel: null, assignedTruckYear: null,
+    status: "REQUESTED" as const, problemType: "WONT_START" as const, assignedTruckId: null, assignedTruckType: null, assignedTruckMake: null, assignedTruckModel: null, assignedTruckYear: null,
     declineReason: null, cancelReason: null, cancelledBy: null,
     acceptedAt: null, declinedAt: null, enRouteAt: null, inProgressAt: null, completedAt: null, cancelledAt: null,
   };
@@ -346,6 +346,7 @@ async function seedRequests() {
       data: {
         customerId: customer.id, companyId: company.id, pickupAddress: marker, dropoffAddress: "Sweileh, near the main roundabout",
         contactPhone: "+962 79 555 0100", vehicleMake: "Toyota", vehicleModel: "Corolla", vehicleYear: 2016,
+        problemType: "WONT_START",
         notes: "Car will not start. Parked at the entrance of the building.",
       },
     });

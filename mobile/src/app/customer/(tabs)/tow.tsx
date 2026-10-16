@@ -2,16 +2,31 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
+import { Chip, ChipRow } from "../../../features/catalog/catalogBits";
 import { TowCompanyRow, catalogService } from "../../../features/catalog/catalogService";
 import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
 import { C } from "../../../features/shared/palette";
-import { Badge, Button, Card, Empty, Header, Notice, SearchBar, useL } from "../../../features/shared/ui";
+import { Badge, Button, Card, Empty, Header, Notice, SearchBar, Section, useL } from "../../../features/shared/ui";
 import { useTruckLabels } from "../../../features/tow/truckBits";
+import type { TruckType } from "../../../features/tow/towService";
+
+const TRUCK_TYPES: TruckType[] = ["FLATBED", "HOOK_CHAIN", "WHEEL_LIFT", "HEAVY_DUTY"];
 
 export default function CustomerTow() {
   const { t, row, align } = useL();
   const { type } = useTruckLabels();
   const [city, setCity] = useState("");
+  const [name, setName] = useState("");
+  const [truckType, setTruckType] = useState<TruckType | null>(null);
+  const [availableOnly, setAvailableOnly] = useState(false);
+  const [sort, setSort] = useState<"available" | "name">("available");
+  const filtered = !!(city.trim() || name.trim() || truckType || availableOnly);
+  const showAll = () => {
+    setCity("");
+    setName("");
+    setTruckType(null);
+    setAvailableOnly(false);
+  };
   const [items, setItems] = useState<TowCompanyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -25,7 +40,7 @@ export default function CustomerTow() {
       else setLoading(true);
       setError(null);
       try {
-        const r = await catalogService.listTowCompanies(city);
+        const r = await catalogService.listTowCompanies({ city, q: name, truckType: truckType ?? undefined, availableOnly, sort });
         if (mine === seq.current) setItems(r);
       } catch (e: any) {
         if (mine === seq.current) setError(e.message);
@@ -36,7 +51,7 @@ export default function CustomerTow() {
         }
       }
     },
-    [city]
+    [city, name, truckType, availableOnly, sort]
   );
 
   useEffect(() => {
@@ -47,7 +62,19 @@ export default function CustomerTow() {
   return (
     <CustomerScreen tabs refreshing={refreshing} onRefresh={() => run("refresh")}>
       <Header brand="MOTEXA" title={t("Tow companies", "شركات السحب")} subtitle={t("Approved companies and their trucks", "الشركات المعتمدة وشاحناتها")} />
+      <SearchBar value={name} onChange={setName} placeholder={t("Company name", "اسم الشركة")} />
       <SearchBar value={city} onChange={setCity} placeholder={t("Filter by city", "تصفية حسب المدينة")} />
+      <ChipRow>
+        <Chip label={t("All types", "كل الأنواع")} on={truckType === null} onPress={() => setTruckType(null)} />
+        {TRUCK_TYPES.map((k) => (
+          <Chip key={k} label={type[k]} on={truckType === k} onPress={() => setTruckType(truckType === k ? null : k)} />
+        ))}
+      </ChipRow>
+      <ChipRow>
+        <Chip icon="radio-button-on" label={t("Available now", "متاح الآن")} on={availableOnly} onPress={() => setAvailableOnly(!availableOnly)} />
+        <Chip label={t("Most trucks available", "الأكثر شاحنات متاحة")} on={sort === "available"} onPress={() => setSort("available")} />
+        <Chip label={t("Name", "الاسم")} on={sort === "name"} onPress={() => setSort("name")} />
+      </ChipRow>
 
       {loading && !items.length ? (
         <ActivityIndicator style={{ marginTop: 40 }} size="large" color={C.accent} />
@@ -57,7 +84,10 @@ export default function CustomerTow() {
           <Button label={t("Retry", "إعادة المحاولة")} variant="ghost" icon="refresh-outline" onPress={() => run("replace")} />
         </View>
       ) : !items.length ? (
-        <Empty icon="car-outline" text={city.trim() ? t("No tow companies in this city.", "لا توجد شركات سحب في هذه المدينة.") : t("No tow companies are available yet.", "لا توجد شركات سحب متاحة بعد.")} />
+        <>
+          <Empty icon="car-outline" text={filtered ? t("No tow companies cover this area yet.", "لا توجد شركات سحب تغطي هذه المنطقة بعد.") : t("No tow companies are available yet.", "لا توجد شركات سحب متاحة بعد.")} />
+          {filtered ? <Button variant="ghost" icon="close-circle-outline" label={t("Show all", "عرض الكل")} onPress={showAll} /> : null}
+        </>
       ) : (
         items.map((c) => (
           <Card key={c.id} label={c.name} onPress={() => router.push(`/customer/tow/${c.id}`)}>
@@ -78,6 +108,20 @@ export default function CustomerTow() {
           </Card>
         ))
       )}
+
+      <Section title={t("While you wait", "أثناء الانتظار")} />
+      <Card>
+        {[
+          t("Turn on your hazard lights.", "شغّل أضواء التحذير."),
+          t("Stay off the road: wait behind the barrier or well away from traffic.", "ابتعد عن الطريق: انتظر خلف الحاجز أو بعيدًا عن حركة السير."),
+          t("Keep your phone charged, and keep it with you.", "أبقِ هاتفك مشحونًا واحتفظ به معك."),
+        ].map((tip, i) => (
+          <View key={i} style={[row, { alignItems: "flex-start", gap: 10, paddingVertical: 6 }]}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={C.accent} style={{ marginTop: 2 }} />
+            <Text style={[{ color: C.text, fontSize: 13, lineHeight: 19, flex: 1 }, align]}>{tip}</Text>
+          </View>
+        ))}
+      </Card>
     </CustomerScreen>
   );
 }
