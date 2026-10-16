@@ -7,6 +7,7 @@ import { asActor, useSessionUser } from "../../../features/shared/session";
 import {
   Async, Button, Card, Header, Notice, ReasonPanel, Screen, Section, useL, useLoad,
 } from "../../../features/shared/ui";
+import { cityLabel } from "../../../features/shared/cities";
 import { TowCompany, Truck, towAdminService } from "../../../features/tow/towService";
 import { TruckSummary, docLabel, useTruckLabels } from "../../../features/tow/truckBits";
 
@@ -48,6 +49,7 @@ function TruckReview({ truck, onDone }: { truck: Truck; onDone: () => void }) {
           <KV k={t("Type", "النوع")} v={type[truck.type]} />
           <KV k={t("Plate", "اللوحة")} v={truck.plate} />
           <KV k={t("Vehicle", "المركبة")} v={[truck.make, truck.model, truck.year].filter(Boolean).join(" ")} />
+          {truck.maxWeightKg ? <KV k={t("Max load", "الحمل الأقصى")} v={`${truck.maxWeightKg} ${t("kg", "كغ")}`} /> : null}
           <PrivateDocs
             title={t("Documents", "المستندات")}
             docs={truck.documents.map((d) => ({ label: docLabel(t, d.kind), fileName: d.fileName, expiresAt: d.expiresAt, uri: d.uri }))}
@@ -134,7 +136,7 @@ function CompanyDecision({ company, onDone }: { company: TowCompany; onDone: () 
 export default function AdminTowDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useSessionUser();
-  const { t } = useL();
+  const { t, isArabic } = useL();
   const state = useLoad(() => towAdminService.getCompany(asActor(user), id), [id, user.id]);
 
   return (
@@ -155,6 +157,10 @@ export default function AdminTowDetail() {
                 <KV k={t("Contact", "المسؤول")} v={company.contactName} />
                 <KV k={t("Phone", "الهاتف")} v={company.phone} />
                 <KV k={t("City", "المدينة")} v={company.city} />
+                <KV k={t("Address", "العنوان")} v={company.address} />
+                <KV k={t("Working hours", "ساعات العمل")} v={company.workingHours} />
+                <KV k={t("Service area", "منطقة الخدمة")} v={company.serviceCities.map((c) => cityLabel(c, isArabic)).join(isArabic ? "، " : ", ")} />
+                <KV k={t("Description", "الوصف")} v={company.description} />
               </Card>
               <PrivateDocs
                 title={t("Company documents", "مستندات الشركة")}

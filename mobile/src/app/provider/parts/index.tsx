@@ -4,6 +4,7 @@ import { Text, View } from "react-native";
 import { StockBadge, fitmentSummary } from "../../../features/parts/partsBits";
 import { Product, partsShopService, stockState } from "../../../features/parts/partsService";
 import { VerificationBadge } from "../../../features/shared/blocks";
+import { formatPrice } from "../../../features/shared/money";
 import { C } from "../../../features/shared/palette";
 import { asActor, useSessionUser } from "../../../features/shared/session";
 import {
@@ -74,7 +75,7 @@ export default function MyParts() {
                     </View>
                     <View style={[row, { flexWrap: "wrap", alignItems: "center", gap: 6, marginTop: 12 }]}>
                       <Text style={{ color: C.accent, fontSize: 15, fontWeight: "800", marginHorizontal: 4 }}>
-                        {p.price.toFixed(2)}
+                        {formatPrice(p.price)}
                       </Text>
                       <Badge tone="neutral" label={`${t("Qty", "الكمية")} ${p.stock}`} />
                       <StockBadge stock={p.stock} />

@@ -37,6 +37,7 @@ export type Truck = {
   make: string;
   model: string;
   year: number | null;
+  maxWeightKg: number | null;
   verification: Verification;
   operational: Operational;
   hasActiveJob: boolean;
@@ -52,13 +53,18 @@ export type TowCompany = {
   contactName: string;
   phone: string;
   city: string;
+  address: string | null;
+  description: string | null;
+  serviceCities: string[];
+  workingHours: string | null;
   verification: Verification;
   rejectionReason?: string | null;
   documents: { kind: string; fileName: string; uri?: string | null }[]; // private to admin + owner
 };
 
 export type Actor = { id: string; email: string; fullName: string };
-export type TruckInput = Pick<Truck, "type" | "plate" | "make" | "model" | "year" | "photoUri" | "documents">;
+export type TruckInput = Pick<Truck, "type" | "plate" | "make" | "model" | "year" | "maxWeightKg" | "photoUri" | "documents">;
+export type CompanyProfileInput = { description: string; address: string; workingHours: string; serviceCities: string[] };
 
 export type CompanyRow = TowCompany & { truckCount: number; pendingTruckCount: number };
 
@@ -71,6 +77,7 @@ type ApiTruck = {
   make: string;
   model: string;
   year: number | null;
+  maxWeightKg: number | null;
   truckType: TruckType;
   verificationStatus: Verification;
   operationalStatus: Operational;
@@ -89,6 +96,10 @@ type ApiCompany = {
   ownerEmail: string;
   phone: string;
   city: string;
+  address: string | null;
+  description: string | null;
+  serviceCities: string[];
+  workingHours: string | null;
   verificationStatus: Verification;
   rejectionReason: string | null;
   documents: { kind: string; fileName: string; uri?: string | null }[];
@@ -103,6 +114,7 @@ const toTruck = (t: ApiTruck): Truck => ({
   make: t.make,
   model: t.model,
   year: t.year,
+  maxWeightKg: t.maxWeightKg ?? null,
   verification: t.verificationStatus,
   operational: t.operationalStatus,
   hasActiveJob: t.hasActiveJob,
@@ -118,6 +130,10 @@ const toCompany = (c: ApiCompany): TowCompany => ({
   contactName: c.contactName,
   phone: c.phone,
   city: c.city,
+  address: c.address ?? null,
+  description: c.description ?? null,
+  serviceCities: c.serviceCities ?? [],
+  workingHours: c.workingHours ?? null,
   verification: c.verificationStatus,
   rejectionReason: c.rejectionReason,
   documents: c.documents,
@@ -135,6 +151,7 @@ async function toVehicleBody(i: TruckInput) {
     make: i.make,
     model: i.model,
     year: i.year,
+    maxWeightKg: i.maxWeightKg,
   };
   if (i.photoUri && !isServerFile(i.photoUri) && !i.photoUri.startsWith("http")) {
     body.photo = { name: fileNameOf(i.photoUri, "truck-photo.jpg"), dataBase64: await localFileToBase64(i.photoUri) };
@@ -158,6 +175,11 @@ export const towFleetService = {
       api<{ trucks: ApiTruck[] }>("GET", "/tow/me/trucks"),
     ]);
     return { company: toCompany(c.company), trucks: t.trucks.map(toTruck) };
+  },
+  /** Public profile text. Not a verification field: the approval status stays as it is. */
+  async updateMyCompany(_actor: Actor, input: CompanyProfileInput) {
+    const r = await api<{ company: ApiCompany }>("PATCH", "/tow/me/company", input);
+    return toCompany(r.company);
   },
   async getMyTruck(_actor: Actor, id: string) {
     const r = await api<{ truck: ApiTruck }>("GET", `/tow/me/trucks/${id}`);

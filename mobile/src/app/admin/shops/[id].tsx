@@ -4,6 +4,8 @@ import { Text, View } from "react-native";
 import { StockBadge, fitmentSummary } from "../../../features/parts/partsBits";
 import { Product, partsAdminService } from "../../../features/parts/partsService";
 import { HistoryList, KV, PrivateDocs, VerificationBadge } from "../../../features/shared/blocks";
+import { findCategory, labelOf } from "../../../features/shared/categories";
+import { formatPrice } from "../../../features/shared/money";
 import { C } from "../../../features/shared/palette";
 import { asActor, useSessionUser } from "../../../features/shared/session";
 import {
@@ -13,7 +15,7 @@ import {
 /** One product with the only product action an admin has: hide it (reason required) or show it again. */
 function ProductModeration({ product: p, onDone }: { product: Product; onDone: () => void }) {
   const user = useSessionUser();
-  const { t, row, align } = useL();
+  const { t, row, align, isArabic } = useL();
   const [hiding, setHiding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -40,10 +42,13 @@ function ProductModeration({ product: p, onDone }: { product: Product; onDone: (
           <Text numberOfLines={2} style={[{ color: C.text, fontSize: 15, fontWeight: "800" }, align]}>{p.name}</Text>
           <Text numberOfLines={1} style={[{ color: C.textMuted, fontSize: 12, marginTop: 3 }, align]}>{p.brand} · {p.partNumber}</Text>
           <Text numberOfLines={1} style={[{ color: C.textDim, fontSize: 12, marginTop: 2 }, align]}>{fitmentSummary(p, t)}</Text>
+          <Text numberOfLines={1} style={[{ color: C.textMuted, fontSize: 12, marginTop: 2 }, align]}>
+            {p.category ? labelOf(findCategory(p.category), isArabic) : t("No category", "بدون فئة")}
+          </Text>
         </View>
       </View>
       <View style={[row, { flexWrap: "wrap", alignItems: "center", gap: 6, marginTop: 12 }]}>
-        <Text style={{ color: C.accent, fontSize: 15, fontWeight: "800", marginHorizontal: 4 }}>{p.price.toFixed(2)}</Text>
+        <Text style={{ color: C.accent, fontSize: 15, fontWeight: "800", marginHorizontal: 4 }}>{formatPrice(p.price)}</Text>
         <Badge tone="neutral" label={`${t("Qty", "الكمية")} ${p.stock}`} />
         <StockBadge stock={p.stock} />
         {p.hidden && <Badge tone="danger" icon="eye-off-outline" label={t("Hidden", "مخفية")} />}

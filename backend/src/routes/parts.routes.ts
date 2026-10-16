@@ -2,6 +2,8 @@ import { Router } from "express";
 import express from "express";
 import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
+import { isCategory } from "../catalogCategories.js";
+import { CONDITIONS, PART_TYPES } from "../partAttributes.js";
 import { requireAuth, requirePartsAdmin, requirePartsProvider } from "../middleware/auth.middleware.js";
 import { type ParsedUpload, filePath, parseUpload, removeStoredFiles, storeFile } from "../uploads/providerFiles.js";
 
@@ -95,6 +97,9 @@ const shapeProduct = (p: ProductRow) => ({
   description: p.description,
   price: p.price.toString(), // Decimal -> exact string; the mobile service converts to a number
   stock: p.stock,
+  category: p.category,
+  condition: p.condition,
+  partType: p.partType,
   isHidden: p.isHidden,
   hiddenReason: p.hiddenReason,
   imageUri: (() => {
@@ -106,7 +111,7 @@ const shapeProduct = (p: ProductRow) => ({
 
 // ---- product input ----
 
-type ProductFields = { name: string; brand: string; partNumber: string; description: string | null; price: number; stock: number };
+type ProductFields = { name: string; brand: string; partNumber: string; description: string | null; price: number; stock: number; category: string; condition: (typeof CONDITIONS)[number]; partType: (typeof PART_TYPES)[number] | null };
 
 function parseProduct(body: any, full: boolean, allowEmpty = false): { data: Partial<ProductFields> } | { error: string } {
   const data: Partial<ProductFields> = {};
@@ -134,9 +139,23 @@ function parseProduct(body: any, full: boolean, allowEmpty = false): { data: Par
     if (!Number.isInteger(s) || s < 0 || s > 1_000_000) return { error: "Stock must be a whole number of 0 or more." };
     data.stock = s;
   }
+  if (has("category")) {
+    if (!isCategory(body.category)) return { error: "Choose a valid category." };
+    data.category = body.category;
+  }
+  if (has("condition")) {
+    if (!CONDITIONS.includes(body.condition)) return { error: `Condition must be one of: ${CONDITIONS.join(", ")}.` };
+    data.condition = body.condition;
+  }
+  if (has("partType")) {
+    // null = "not specified"
+    if (body.partType !== null && !PART_TYPES.includes(body.partType)) return { error: `Type must be one of: ${PART_TYPES.join(", ")}, or null.` };
+    data.partType = body.partType;
+  }
   if (full) {
     for (const k of ["name", "brand", "partNumber", "price", "stock"] as const) if (data[k] === undefined) return { error: `${k} is required.` };
     if (data.description === undefined) data.description = null;
+    if (data.category === undefined) return { error: "Choose a category." };
   } else if (!Object.keys(data).length && !allowEmpty) {
     return { error: "No product fields to update." };
   }
@@ -333,6 +352,8 @@ router.patch("/parts/me/products/:id", ...provider, async (req, res) => {
     if ("error" in parsed) return bad(res, 400, parsed.error);
     const data = parsed.data;
     const p = own.product;
+    // A product made before categories existed must get one the next time it is edited.
+    if (!p.category && !data.category) return bad(res, 400, "Choose a category for this product.");
 
     const changed: string[] = (Object.keys(data) as (keyof ProductFields)[]).filter((k) => (k === "price" ? Number(p.price) !== data.price : data[k] !== p[k]));
     if (img.image) changed.push("image");

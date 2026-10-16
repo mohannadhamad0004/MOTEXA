@@ -7,13 +7,14 @@ import { TowCompanyRow, catalogService } from "../../../features/catalog/catalog
 import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
 import { C } from "../../../features/shared/palette";
 import { Badge, Button, Card, Empty, Header, Notice, SearchBar, Section, useL } from "../../../features/shared/ui";
+import { cityLabel } from "../../../features/shared/cities";
 import { useTruckLabels } from "../../../features/tow/truckBits";
 import type { TruckType } from "../../../features/tow/towService";
 
 const TRUCK_TYPES: TruckType[] = ["FLATBED", "HOOK_CHAIN", "WHEEL_LIFT", "HEAVY_DUTY"];
 
 export default function CustomerTow() {
-  const { t, row, align } = useL();
+  const { t, row, align, isArabic } = useL();
   const { type } = useTruckLabels();
   const [city, setCity] = useState("");
   const [name, setName] = useState("");
@@ -40,7 +41,7 @@ export default function CustomerTow() {
       else setLoading(true);
       setError(null);
       try {
-        const r = await catalogService.listTowCompanies({ city, q: name, truckType: truckType ?? undefined, availableOnly, sort });
+        const r = await catalogService.listTowCompanies({ serviceCity: city, q: name, truckType: truckType ?? undefined, availableOnly, sort });
         if (mine === seq.current) setItems(r);
       } catch (e: any) {
         if (mine === seq.current) setError(e.message);
@@ -63,7 +64,7 @@ export default function CustomerTow() {
     <CustomerScreen tabs refreshing={refreshing} onRefresh={() => run("refresh")}>
       <Header brand="MOTEXA" title={t("Tow companies", "شركات السحب")} subtitle={t("Approved companies and their trucks", "الشركات المعتمدة وشاحناتها")} />
       <SearchBar value={name} onChange={setName} placeholder={t("Company name", "اسم الشركة")} />
-      <SearchBar value={city} onChange={setCity} placeholder={t("Filter by city", "تصفية حسب المدينة")} />
+      <SearchBar value={city} onChange={setCity} placeholder={t("City or service area", "المدينة أو منطقة الخدمة")} />
       <ChipRow>
         <Chip label={t("All types", "كل الأنواع")} on={truckType === null} onPress={() => setTruckType(null)} />
         {TRUCK_TYPES.map((k) => (
@@ -98,6 +99,12 @@ export default function CustomerTow() {
               </View>
               <Ionicons name={row.flexDirection === "row-reverse" ? "chevron-back" : "chevron-forward"} size={19} color={C.accent} />
             </View>
+            {c.serviceCities.length ? (
+              <Text numberOfLines={2} style={[{ color: C.textMuted, fontSize: 12, marginTop: 10 }, align]}>
+                {t("Serves", "تخدم")}: {c.serviceCities.slice(0, 2).map((x) => cityLabel(x, isArabic)).join(isArabic ? "، " : ", ")}
+                {c.serviceCities.length > 2 ? ` +${c.serviceCities.length - 2}` : ""}
+              </Text>
+            ) : null}
             <View style={[row, { flexWrap: "wrap", gap: 6, marginTop: 12 }]}>
               <Badge tone="neutral" icon="car-sport-outline" label={`${c.approvedTrucks} ${c.approvedTrucks === 1 ? t("truck", "شاحنة") : t("trucks", "شاحنات")}`} />
               <Badge tone={c.availableTrucks > 0 ? "success" : "neutral"} icon="radio-button-on" label={`${c.availableTrucks} ${t("available", "متاحة")}`} />

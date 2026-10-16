@@ -1,10 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Text, View } from "react-native";
-import { FitBadge, ProductCard } from "../../../features/catalog/catalogBits";
+import { Chip, FitBadge, ProductCard } from "../../../features/catalog/catalogBits";
+import { ConditionBadge, usePartLabels } from "../../../features/catalog/partAttrs";
 import { catalogService, currentCar, fitsCar } from "../../../features/catalog/catalogService";
 import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
 import { StockStateBadge } from "../../../features/parts/partsBits";
+import { formatPrice } from "../../../features/shared/money";
+import { findCategory, labelOf } from "../../../features/shared/categories";
 import { C } from "../../../features/shared/palette";
 import { Async, Button, Card, Header, Notice, Section, Thumb, useL, useLoad } from "../../../features/shared/ui";
 
@@ -27,9 +30,10 @@ function OtherFromShop({ shopId, currentId }: { shopId: string; currentId: strin
 
 export default function CustomerPartDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { t, row, align } = useL();
+  const { t, row, align, isArabic } = useL();
   const state = useLoad(() => catalogService.getPart(id), [id]);
   const car = currentCar();
+  const labels = usePartLabels();
 
   return (
     <CustomerScreen>
@@ -44,11 +48,23 @@ export default function CustomerPartDetail() {
             <Text style={[{ color: C.textMuted, fontSize: 13, marginTop: 4 }, align]}>
               {p.brand} · {p.partNumber}
             </Text>
+            {findCategory(p.category) ? (
+              <View style={[row, { marginTop: 12 }]}>
+                <Chip icon={findCategory(p.category)!.icon} label={labelOf(findCategory(p.category), isArabic)} on={false} onPress={() => router.push(`/customer/category/${p.category}`)} />
+              </View>
+            ) : null}
             <View style={[row, { flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 14 }]}>
-              <Text style={{ color: C.accent, fontSize: 22, fontWeight: "800", marginHorizontal: 4 }}>{p.price.toFixed(2)}</Text>
+              <Text style={{ color: C.accent, fontSize: 22, fontWeight: "800", marginHorizontal: 4 }}>{formatPrice(p.price)}</Text>
               <StockStateBadge state={p.stock} />
+              <ConditionBadge value={p.condition} />
               <FitBadge p={p} car={car} />
             </View>
+
+            {p.partType ? (
+              <Text style={[{ color: C.textMuted, fontSize: 13, marginTop: 10 }, align]}>
+                {t("Type", "النوع")}: {labels.type[p.partType]}
+              </Text>
+            ) : null}
 
             {p.description ? (
               <>
