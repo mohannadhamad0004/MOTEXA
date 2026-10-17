@@ -1,18 +1,14 @@
+import TouchableOpacity from "../../components/InteractiveButton";
+import { useAppearanceStyles, useAppearance } from "../../components/Appearance";
+import { Text } from "../../components/MotexaVisual";
+import LanguageSwitch from "../../components/LanguageSwitch";
 
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from "react-native";
 import { useLanguage } from "../../i18n/LanguageContext";
 
 type AdminUser = {
@@ -24,15 +20,17 @@ type AdminUser = {
 };
 
 const COLORS = {
-  background: "#120D0A",
-  card: "#2D1F18",
-  bronze: "#E0A36F",
-  white: "#FFF5EA",
-  muted: "#A99181",
-  border: "#49352A",
+  background: "#E9DECE",
+  card: "#F7EDDD",
+  bronze: "#865329",
+  white: "#30241D",
+  muted: "#695542",
+  border: "#D5BFA1",
 };
 
 export default function MechanicsAdminScreen() {
+  const styles = useAppearanceStyles(baseStyles);
+  const { dark } = useAppearance();
   const { isArabic, language, toggleLanguage } = useLanguage();
 
   const [loading, setLoading] = useState(true);
@@ -55,8 +53,7 @@ export default function MechanicsAdminScreen() {
         }
 
         const response = await fetch(
-          `${apiUrl.replace(/\/$/, "")}/auth/me`,
-          {
+`${apiUrl.replace(/\/$/, "")}/api/auth/me`,          {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -90,8 +87,9 @@ export default function MechanicsAdminScreen() {
         if (active) {
           setUser(currentUser);
         }
-      } catch {
-        Alert.alert(
+
+} catch (err) {
+  console.error("MECHANICS ADMIN ERROR:", err);        Alert.alert(
           isArabic ? "خطأ في الاتصال" : "Connection error",
           isArabic
             ? "تعذر التحقق من الحساب. تأكدي من تشغيل الخادم."
@@ -99,7 +97,8 @@ export default function MechanicsAdminScreen() {
         );
 
         router.replace("/auth/login");
-      } finally {
+      } 
+      finally {
         if (active) {
           setLoading(false);
         }
@@ -137,7 +136,7 @@ export default function MechanicsAdminScreen() {
 
   return (
     <LinearGradient
-      colors={["#120D0A", "#1C120D", "#2B1B13"]}
+      colors={dark ? ["#211B17", "#30251D", "#241D18"] : ["#E4D5C1", "#CEB797", "#DDCAB1"]}
       style={styles.container}
     >
       <ScrollView
@@ -145,19 +144,7 @@ export default function MechanicsAdminScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.topRow}>
-          <TouchableOpacity
-            style={styles.languageButton}
-            onPress={toggleLanguage}
-          >
-            <Ionicons
-              name="language-outline"
-              size={18}
-              color={COLORS.bronze}
-            />
-            <Text style={styles.languageText}>
-              {language === "en" ? "العربية" : "EN"}
-            </Text>
-          </TouchableOpacity>
+          <LanguageSwitch light />
 
           <TouchableOpacity
             style={styles.signOutButton}
@@ -166,7 +153,7 @@ export default function MechanicsAdminScreen() {
             <Ionicons
               name="log-out-outline"
               size={19}
-              color="#F0A28E"
+              color="#A27140"
             />
             <Text style={styles.signOutText}>
               {isArabic ? "خروج" : "Sign Out"}
@@ -174,12 +161,12 @@ export default function MechanicsAdminScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.brandRow}>
+        <View style={[styles.brandRow, isArabic && styles.reverse]}>
           <View style={styles.brandIcon}>
             <Ionicons
               name="car-sport-outline"
               size={29}
-              color="#1B100B"
+              color="#FFFFFF"
             />
           </View>
 
@@ -224,7 +211,7 @@ export default function MechanicsAdminScreen() {
           {isArabic ? "إدارة القسم" : "Department Management"}
         </Text>
 
-        <View style={styles.featureCard}>
+        <View style={[styles.featureCard, isArabic && styles.reverse]}>
           <View style={styles.featureIcon}>
             <Ionicons
               name="document-text-outline"
@@ -245,13 +232,13 @@ export default function MechanicsAdminScreen() {
             </Text>
           </View>
           <Ionicons
-            name="chevron-forward"
+            name={isArabic ? "chevron-back" : "chevron-forward"}
             size={20}
             color={COLORS.muted}
           />
         </View>
 
-        <View style={styles.featureCard}>
+        <View style={[styles.featureCard, isArabic && styles.reverse]}>
           <View style={styles.featureIcon}>
             <Ionicons
               name="people-outline"
@@ -272,13 +259,13 @@ export default function MechanicsAdminScreen() {
             </Text>
           </View>
           <Ionicons
-            name="chevron-forward"
+            name={isArabic ? "chevron-back" : "chevron-forward"}
             size={20}
             color={COLORS.muted}
           />
         </View>
 
-        <View style={styles.featureCard}>
+        <View style={[styles.featureCard, isArabic && styles.reverse]}>
           <View style={styles.featureIcon}>
             <Ionicons
               name="construct-outline"
@@ -299,7 +286,7 @@ export default function MechanicsAdminScreen() {
             </Text>
           </View>
           <Ionicons
-            name="chevron-forward"
+            name={isArabic ? "chevron-back" : "chevron-forward"}
             size={20}
             color={COLORS.muted}
           />
@@ -322,171 +309,31 @@ export default function MechanicsAdminScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1 },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 15,
-  },
-  loadingText: {
-    color: COLORS.muted,
-    fontSize: 14,
-  },
-  content: {
-    paddingHorizontal: 22,
-    paddingTop: 55,
-    paddingBottom: 55,
-  },
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  languageButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    padding: 11,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  languageText: {
-    color: COLORS.bronze,
-    fontWeight: "700",
-  },
-  signOutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    padding: 11,
-  },
-  signOutText: {
-    color: "#F0A28E",
-    fontWeight: "700",
-  },
-  brandRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 15,
-    marginTop: 36,
-    marginBottom: 30,
-  },
-  brandIcon: {
-    width: 62,
-    height: 62,
-    borderRadius: 19,
-    backgroundColor: COLORS.bronze,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  brand: {
-    color: COLORS.white,
-    fontSize: 27,
-    fontWeight: "800",
-    letterSpacing: 5,
-  },
-  brandSubtitle: {
-    color: COLORS.muted,
-    fontSize: 12,
-    marginTop: 4,
-  },
-  welcomeCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 23,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 23,
-    marginBottom: 34,
-  },
-  welcomeLabel: {
-    color: COLORS.bronze,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1,
-  },
-  welcomeName: {
-    color: COLORS.white,
-    fontSize: 26,
-    fontWeight: "800",
-    marginTop: 9,
-  },
-  welcomeDescription: {
-    color: COLORS.muted,
-    fontSize: 13,
-    lineHeight: 22,
-    marginTop: 11,
-  },
-  verifiedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    marginTop: 20,
-    alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "rgba(224,163,111,0.12)",
-  },
-  verifiedText: {
-    color: COLORS.bronze,
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  sectionTitle: {
-    color: COLORS.white,
-    fontSize: 19,
-    fontWeight: "800",
-    marginBottom: 17,
-  },
-  featureCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.card,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 17,
-    marginBottom: 13,
-    gap: 14,
-  },
-  featureIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: "rgba(224,163,111,0.10)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  featureText: { flex: 1 },
-  featureTitle: {
-    color: COLORS.white,
-    fontSize: 14,
-    fontWeight: "800",
-    marginBottom: 6,
-  },
-  featureDescription: {
-    color: COLORS.muted,
-    fontSize: 12,
-    lineHeight: 19,
-  },
-  infoBox: {
-    flexDirection: "row",
-    gap: 12,
-    padding: 16,
-    marginTop: 24,
-    borderRadius: 15,
-    backgroundColor: "rgba(224,163,111,0.07)",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  infoText: {
-    flex: 1,
-    color: COLORS.muted,
-    fontSize: 12,
-    lineHeight: 20,
-  },
+  reverse: { flexDirection: "row-reverse" },
+  loadingContainer: { flex: 1, backgroundColor: "#F2E8D9", alignItems: "center", justifyContent: "center", gap: 16 },
+  loadingText: { color: "#493727", fontSize: 16 },
+  content: { paddingHorizontal: 22, paddingTop: 52, paddingBottom: 48, width: "100%", maxWidth: 760, alignSelf: "center" },
+  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  signOutButton: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 24, backgroundColor: "#FFF9F0", borderWidth: 1, borderColor: "#CEB798", minHeight: 48 },
+  signOutText: { color: "#493321", fontWeight: "700", fontSize: 14 },
+  brandRow: { flexDirection: "row", alignItems: "center", gap: 14, marginTop: 30, marginBottom: 25 },
+  brandIcon: { width: 56, height: 56, borderRadius: 18, backgroundColor: "#754623", alignItems: "center", justifyContent: "center" },
+  brand: { color: "#30241D", fontSize: 26, fontWeight: "800", letterSpacing: 3 },
+  brandSubtitle: { color: "#574737", fontSize: 14, marginTop: 4, lineHeight: 22 },
+  welcomeCard: { backgroundColor: "#FFF9F0", borderRadius: 24, borderWidth: 1, borderColor: "#CEB798", padding: 24, marginBottom: 28, borderTopWidth: 4, borderTopColor: "#976132" },
+  welcomeLabel: { color: "#754623", fontSize: 12, fontWeight: "800", letterSpacing: 1, lineHeight: 20 },
+  welcomeName: { color: "#30241D", fontSize: 25, fontWeight: "800", marginTop: 10, lineHeight: 36 },
+  welcomeDescription: { color: "#574737", fontSize: 15, lineHeight: 25, marginTop: 12 },
+  verifiedBadge: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 20, alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, backgroundColor: "#EEDCC2", flexWrap: "wrap" },
+  verifiedText: { color: "#633B1C", fontSize: 12, fontWeight: "800", lineHeight: 20 },
+  sectionTitle: { color: "#30241D", fontSize: 21, fontWeight: "800", marginBottom: 16, lineHeight: 32 },
+  featureCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFFDF8", borderRadius: 20, borderWidth: 1, borderColor: "#CEB798", padding: 18, marginBottom: 14, gap: 13 },
+  featureIcon: { width: 46, height: 50, borderRadius: 14, backgroundColor: "#EEDCC2", alignItems: "center", justifyContent: "center" },
+  featureText: { flex: 1, minWidth: 0 },
+  featureTitle: { color: "#30241D", fontSize: 16, fontWeight: "800", marginBottom: 7, lineHeight: 25 },
+  featureDescription: { color: "#574737", fontSize: 14, lineHeight: 23 },
+  infoBox: { flexDirection: "row", gap: 10, padding: 18, marginTop: 12, borderRadius: 16, backgroundColor: "#EFE0C9", borderWidth: 1, borderColor: "#CEB798" },
+  infoText: { flex: 1, color: "#493727", fontSize: 14, lineHeight: 24 },
 });

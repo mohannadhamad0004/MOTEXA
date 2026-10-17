@@ -1,18 +1,11 @@
+import { PanelFill, CanvasFill } from "../../components/BrandSurfaces";
+import { Text } from "../../components/MotexaVisual";
+import LanguageSwitch from "../../components/LanguageSwitch";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import {
-  Animated,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 
 import { useLanguage } from "../../i18n/LanguageContext";
 
@@ -51,7 +44,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <LinearGradient
-      colors={["#120D0A", "#1C120D", "#2B1B13"]}
+      colors={["#F1E9DD", "#DFCFB9", "#EDE2D3"]}
       style={styles.background}
     >
       {/* Background */}
@@ -90,25 +83,11 @@ export default function ForgotPasswordScreen() {
                       : "arrow-back"
                   }
                   size={21}
-                  color="#E5B081"
+                  color="#A27140"
                 />
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.languageButton}
-                onPress={toggleLanguage}
-                activeOpacity={0.75}
-              >
-                <Ionicons
-                  name="language-outline"
-                  size={17}
-                  color="#E0A36F"
-                />
-
-                <Text style={styles.languageText}>
-                  {language === "en" ? "العربية" : "EN"}
-                </Text>
-              </TouchableOpacity>
+              <LanguageSwitch light />
             </View>
 
             {/* Icon */}
@@ -190,7 +169,7 @@ export default function ForgotPasswordScreen() {
                   <Ionicons
                     name="mail-outline"
                     size={20}
-                    color="#C98B5B"
+                    color="#A27140"
                   />
                 </View>
 
@@ -200,7 +179,7 @@ export default function ForgotPasswordScreen() {
                     isArabic && styles.arabicInput,
                   ]}
                   placeholder={t.common.emailPlaceholder}
-                  placeholderTextColor="#806F64"
+                  placeholderTextColor="#9C836B"
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -237,7 +216,7 @@ export default function ForgotPasswordScreen() {
                           : "arrow-forward"
                       }
                       size={18}
-                      color="#FBE9D8"
+                      color="#A27140"
                     />
                   </View>
                 </LinearGradient>
@@ -260,7 +239,7 @@ export default function ForgotPasswordScreen() {
                 <Ionicons
                   name="shield-checkmark-outline"
                   size={20}
-                  color="#C98B5B"
+                  color="#A27140"
                 />
               </View>
 
@@ -292,7 +271,7 @@ export default function ForgotPasswordScreen() {
                     : "arrow-back"
                 }
                 size={16}
-                color="#D99B69"
+                color="#A27140"
               />
 
               <Text
@@ -369,7 +348,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "rgba(201,139,91,0.10)",
     borderWidth: 1,
-    borderColor: "rgba(201,139,91,0.22)",
+    borderColor: "#D5BFA1",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -382,11 +361,11 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     backgroundColor: "rgba(201,139,91,0.09)",
     borderWidth: 1,
-    borderColor: "rgba(201,139,91,0.20)",
+    borderColor: "#D5BFA1",
   },
 
   languageText: {
-    color: "#DCA578",
+    color: "#A27140",
     fontSize: 12,
     fontWeight: "700",
     marginLeft: 7,
@@ -416,7 +395,7 @@ const styles = StyleSheet.create({
   },
 
   brandName: {
-    color: "#FFF5EA",
+    color: "#A27140",
     fontSize: 31,
     fontWeight: "800",
     letterSpacing: 7,
@@ -426,7 +405,7 @@ const styles = StyleSheet.create({
   },
 
   brandSubtitle: {
-    color: "#A99181",
+    color: "#A27140",
     fontSize: 8,
     fontWeight: "600",
     letterSpacing: 2,
@@ -447,14 +426,15 @@ const styles = StyleSheet.create({
   },
 
   heading: {
-    color: "#FFF5EA",
-    fontSize: 27,
-    fontWeight: "700",
+    color: "#493321",
+    fontSize: 30,
+    fontWeight: "600",
     marginBottom: 9,
+    lineHeight: 42,
   },
 
   description: {
-    color: "#9C8A7E",
+    color: "#92765B",
     fontSize: 14,
     lineHeight: 21,
   },
@@ -467,12 +447,11 @@ const styles = StyleSheet.create({
   /* Card */
 
   card: {
-    backgroundColor: "rgba(45, 31, 24, 0.78)",
+    backgroundColor: "#F7EDDD",
     borderWidth: 1,
-    borderColor: "rgba(205, 150, 108, 0.15)",
+    borderColor: "#D5BFA1",
     borderRadius: 24,
-    padding: 21,
-
+    padding: 22,
     shadowColor: "#000000",
     shadowOffset: {
       width: 0,
@@ -484,7 +463,7 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    color: "#BDAA9C",
+    color: "#92765B",
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.3,
@@ -505,9 +484,9 @@ const styles = StyleSheet.create({
     height: 56,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(20, 14, 11, 0.65)",
+    backgroundColor: "#F7EDDD",
     borderWidth: 1,
-    borderColor: "#49352A",
+    borderColor: "#D5BFA1",
     borderRadius: 15,
     marginBottom: 21,
   },
@@ -525,8 +504,8 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: "100%",
-    color: "#FFF5EA",
-    fontSize: 14,
+    color: "#493321",
+    fontSize: 16,
     paddingRight: 15,
   },
 
@@ -589,7 +568,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(201, 139, 91, 0.06)",
     borderWidth: 1,
-    borderColor: "rgba(201, 139, 91, 0.12)",
+    borderColor: "#D5BFA1",
     borderRadius: 17,
     padding: 15,
     marginTop: 20,
@@ -616,7 +595,7 @@ const styles = StyleSheet.create({
 
   securityText: {
     flex: 1,
-    color: "#8F7E73",
+    color: "#493321",
     fontSize: 11,
     lineHeight: 17,
   },
@@ -642,7 +621,7 @@ const styles = StyleSheet.create({
   },
 
   loginLinkText: {
-    color: "#D99B69",
+    color: "#493321",
     fontSize: 13,
     fontWeight: "700",
     marginLeft: 7,

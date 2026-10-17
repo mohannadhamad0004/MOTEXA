@@ -90,6 +90,7 @@ model AdminInvitation {
   acceptedAt DateTime?
 
   @@index([email, status])
+  otps AdminInvitationOtp[]
 }
 
 
@@ -136,3 +137,26 @@ model MechanicProfile {
 
   @@index([verificationStatus])
 }
+
+
+model AdminInvitationOtp {
+  id String @id @default(uuid())
+
+  invitationId String
+  invitation AdminInvitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+
+  codeHash String
+
+  expiresAt DateTime
+  verifiedAt DateTime?
+  consumedAt DateTime?
+
+  attempts Int @default(0)
+  maxAttempts Int @default(5)
+
+  createdAt DateTime @default(now())
+
+  @@index([invitationId, createdAt])
+}
+
+
