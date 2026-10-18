@@ -2,7 +2,10 @@ import { useState } from "react";
 import { Text, View } from "react-native";
 import { Chip, ChipRow } from "../../../features/catalog/catalogBits";
 import { KV, VerificationBadge } from "../../../features/shared/blocks";
-import { CITIES, MAX_SERVICE_CITIES, cityLabel } from "../../../features/shared/cities";
+import { CITIES, MAX_SERVICE_CITIES, cityCentre, cityLabel } from "../../../features/shared/cities";
+import { Point } from "../../../features/shared/geo";
+import { MAPS_AVAILABLE, PinMap } from "../../../features/shared/maps";
+import { LocationProblem, useCurrentLocation } from "../../../features/shared/useCurrentLocation";
 import { C } from "../../../features/shared/palette";
 import { asActor, useSessionUser } from "../../../features/shared/session";
 import { Async, Button, Card, Field, Header, Notice, Screen, Section, useL, useLoad } from "../../../features/shared/ui";
@@ -18,6 +21,13 @@ function ProfileForm({ company }: { company: TowCompany }) {
   const [address, setAddress] = useState(company.address ?? "");
   const [hours, setHours] = useState(company.workingHours ?? "");
   const [cities, setCities] = useState<string[]>(company.serviceCities);
+  // The business location customers see on the map (rounded to about 100 m for them). Read from the phone only when you tap.
+  const [base, setBase] = useState<Point | null>(company.baseLat !== null && company.baseLng !== null ? { lat: company.baseLat, lng: company.baseLng } : null);
+  const loc = useCurrentLocation();
+  const moveBase = (p: Point | null) => {
+    setBase(p);
+    setSaved(false);
+  };
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -36,7 +46,7 @@ function ProfileForm({ company }: { company: TowCompany }) {
     setBusy(true);
     setErr(null);
     try {
-      await towFleetService.updateMyCompany(asActor(user), { description, address, workingHours: hours, serviceCities: cities });
+      await towFleetService.updateMyCompany(asActor(user), { description, address, workingHours: hours, serviceCities: cities, baseLat: base?.lat ?? null, baseLng: base?.lng ?? null });
       setSaved(true);
     } catch (e: any) {
       setErr(e.message);
@@ -77,6 +87,35 @@ function ProfileForm({ company }: { company: TowCompany }) {
           editable={!rejected}
           onChangeText={edit(setHours)}
         />
+      </Card>
+
+      <Section title={t("Base location", "موقع القاعدة")} />
+      <Card>
+        {loc.dialog}
+        <Text style={[{ color: C.textMuted, fontSize: 12, lineHeight: 18, marginBottom: 10 }, align]}>
+          {base
+            ? t("Customers see this point on the map, rounded to about 100 m, and use it to sort companies by distance.", "يرى العملاء هذه النقطة على الخريطة بدقة تقريبية نحو 100 م، ويستخدمونها لترتيب الشركات حسب المسافة.")
+            : t(`No base location yet. Customers will see ${company.city} city centre instead.`, `لا يوجد موقع قاعدة بعد. سيرى العملاء مركز مدينة ${company.city} بدلًا منه.`)}
+        </Text>
+        {MAPS_AVAILABLE && base ? <PinMap point={base} onChange={rejected ? undefined : moveBase} height={190} /> : null}
+        <LocationProblem loc={loc} />
+        {!rejected ? (
+          <View style={{ gap: 8 }}>
+            <Button
+              variant="ghost"
+              icon="locate-outline"
+              label={loc.locating ? t("Finding your location…", "جارٍ تحديد موقعك…") : t("Use my current location", "استخدم موقعي الحالي")}
+              disabled={loc.locating}
+              onPress={async () => {
+                const p = await loc.locate();
+                if (p) moveBase(p);
+              }}
+            />
+            {MAPS_AVAILABLE && !base ? <Button variant="ghost" icon="map-outline" label={t("Choose on the map", "اختر على الخريطة")} onPress={() => moveBase(cityCentre(company.city) ?? { lat: 32.2211, lng: 35.2544 })} /> : null}
+            {base ? <Button variant="ghost" icon="trash-outline" label={t("Clear base location", "مسح موقع القاعدة")} onPress={() => moveBase(null)} /> : null}
+            {base ? <Text style={{ color: C.textDim, fontSize: 11 }}>{t("Tap the map or drag the pin to adjust, then press Save profile.", "اضغط على الخريطة أو اسحب الدبوس للتعديل، ثم اضغط حفظ الملف.")}</Text> : null}
+          </View>
+        ) : null}
       </Card>
 
       <Section title={`${t("Service area", "منطقة الخدمة")} (${cities.length}/${MAX_SERVICE_CITIES})`} />

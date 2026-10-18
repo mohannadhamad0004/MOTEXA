@@ -181,16 +181,17 @@ type TruckSeed = {
 
 const towFleets: {
   email: string;
-  company: { companyName: string; phone: string; city: string; verificationStatus: "PENDING" | "APPROVED"; address?: string; description?: string; serviceCities?: string[]; workingHours?: string };
+  company: { companyName: string; phone: string; city: string; verificationStatus: "PENDING" | "APPROVED"; address?: string; description?: string; serviceCities?: string[]; workingHours?: string; baseLat?: number; baseLng?: number };
   trucks: TruckSeed[];
 }[] = [
   {
     email: "tow@motexa.test",
-    company: { companyName: "Al-Noor Recovery & Towing Services Company", phone: "+962 79 000 0001", city: "Nablus", verificationStatus: "APPROVED",
+    company: { companyName: "Al-Noor Recovery & Towing Services Company", phone: "+970 59 000 0001", city: "Nablus", verificationStatus: "APPROVED",
       address: "Industrial Zone, Nablus",
       description: "Recovery and towing day and night. Flatbed and wheel-lift trucks for cars, vans and light commercial vehicles.",
       serviceCities: ["Ramallah", "Al-Bireh", "Jenin"],
       workingHours: "24/7",
+      baseLat: 32.225, baseLng: 35.27, // approximate business location in Nablus
     },
     trucks: [
       { plateNumber: "10-12345", maxWeightKg: 3500, make: "Isuzu", model: "NPR", year: 2021, truckType: "FLATBED", verificationStatus: "APPROVED", operationalStatus: "AVAILABLE" },
@@ -204,7 +205,7 @@ const towFleets: {
   },
   {
     email: "tow.pending@motexa.test",
-    company: { companyName: "Desert Hook Towing", phone: "+962 79 000 0002", city: "Tulkarm", verificationStatus: "PENDING" },
+    company: { companyName: "Desert Hook Towing", phone: "+970 59 000 0002", city: "Tulkarm", verificationStatus: "PENDING" },
     trucks: [
       { plateNumber: "11-22233", maxWeightKg: 3500, make: "Isuzu", model: "NQR", year: 2020, truckType: "FLATBED", verificationStatus: "PENDING", operationalStatus: "OUT_OF_SERVICE" },
     ],
@@ -270,7 +271,7 @@ const partsShops: {
   {
     email: "shop@motexa.test",
     shop: {
-      shopName: "Al-Mahaba Genuine & Aftermarket Auto Parts Trading Est.", phone: "+962 79 100 0001", city: "Ramallah",
+      shopName: "Al-Mahaba Genuine & Aftermarket Auto Parts Trading Est.", phone: "+970 59 100 0001", city: "Ramallah",
       address: "Main St., Building 14", verificationStatus: "APPROVED",
     },
     products: [
@@ -326,7 +327,7 @@ const partsShops: {
   },
   {
     email: "shop.pending@motexa.test",
-    shop: { shopName: "Speedy Spares", phone: "+962 79 100 0002", city: "Hebron", address: "Industrial Area, Block 3", verificationStatus: "PENDING" },
+    shop: { shopName: "Speedy Spares", phone: "+970 59 100 0002", city: "Hebron", address: "Industrial Area, Block 3", verificationStatus: "PENDING" },
     products: [
       { name: "Spark Plug Set", category: "ENGINE", partType: "OEM", brand: "NGK", partNumber: "04465-02220", description: "Iridium spark plugs, set of 4.", price: 24, stock: 15, fitments: [["Toyota", "Corolla", 2014, 2019]] },
       { name: "Cabin Air Filter", category: "FILTERS", brand: "Bosch", partNumber: "CF-2210", description: "Activated carbon cabin filter.", price: 11.25, stock: 8 },
@@ -421,19 +422,25 @@ async function seedRequests() {
 
   const towUser = await prisma.user.findUniqueOrThrow({ where: { email: "tow@motexa.test" } });
   const company = await prisma.towCompanyProfile.findUniqueOrThrow({ where: { userId: towUser.id } });
-  const marker = "Abdali Boulevard, Amman";
+  const oldMarker = "Abdali Boulevard, Amman"; // earlier seed text: the same row is moved in place, never duplicated
+  const marker = "Rafidia Street, Nablus";
   const reset = {
     status: "REQUESTED" as const, problemType: "WONT_START" as const, assignedTruckId: null, assignedTruckType: null, assignedTruckMake: null, assignedTruckModel: null, assignedTruckYear: null,
     declineReason: null, cancelReason: null, cancelledBy: null,
     acceptedAt: null, declinedAt: null, enRouteAt: null, inProgressAt: null, completedAt: null, cancelledAt: null,
   };
-  const req = await prisma.towRequest.findFirst({ where: { customerId: customer.id, companyId: company.id, pickupAddress: marker } });
-  if (req) await prisma.towRequest.update({ where: { id: req.id }, data: reset });
+  const where = { customerId: customer.id, companyId: company.id };
+  const req = (await prisma.towRequest.findFirst({ where: { ...where, pickupAddress: marker } })) ?? (await prisma.towRequest.findFirst({ where: { ...where, pickupAddress: oldMarker } }));
+  const place = {
+    pickupAddress: marker, dropoffAddress: "Old City, Nablus", contactPhone: "+970 59 555 0100",
+    pickupLat: 32.2263, pickupLng: 35.2276, dropoffLat: 32.2218, dropoffLng: 35.2594,
+  };
+  if (req) await prisma.towRequest.update({ where: { id: req.id }, data: { ...reset, ...place } });
   else {
     await prisma.towRequest.create({
       data: {
-        customerId: customer.id, companyId: company.id, pickupAddress: marker, dropoffAddress: "Sweileh, near the main roundabout",
-        contactPhone: "+962 79 555 0100", vehicleMake: "Toyota", vehicleModel: "Corolla", vehicleYear: 2016,
+        customerId: customer.id, companyId: company.id, ...place,
+        vehicleMake: "Toyota", vehicleModel: "Corolla", vehicleYear: 2016,
         problemType: "WONT_START",
         notes: "Car will not start. Parked at the entrance of the building.",
       },

@@ -1,11 +1,17 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
+import { Text } from "react-native";
 import { Chip, ChipRow } from "../../../features/catalog/catalogBits";
 import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
 import { useProblemLabels } from "../../../features/requests/requestBits";
 import { TOW_PROBLEMS, TowProblem, customerTowRequests, existingIdOf } from "../../../features/requests/requestsService";
 import { catalogService } from "../../../features/catalog/catalogService";
 import { Async, Button, Card, Field, Header, Notice, Section, useL, useLoad } from "../../../features/shared/ui";
+import { cityCentre } from "../../../features/shared/cities";
+import { Point, locationMemory } from "../../../features/shared/geo";
+import { MAPS_AVAILABLE, PinMap } from "../../../features/shared/maps";
+import { C } from "../../../features/shared/palette";
+import { LocationProblem, reverseGeocode, useCurrentLocation } from "../../../features/shared/useCurrentLocation";
 
 // Addresses are plain text in this version (no GPS, no distance, no price: the company answers the request).
 export default function NewTowRequest() {
@@ -21,7 +27,29 @@ export default function NewTowRequest() {
   const problemLabel = useProblemLabels();
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  // Where the car is: read only when you tap "Use my current location" (or place the pin yourself). Sent with the request, nowhere else.
+  const [spot, setSpot] = useState<Point | null>(null);
+  const [auto, setAuto] = useState(false); // the pickup text was filled in from the map, so moving the pin may refresh it
+  const [finding, setFinding] = useState(false);
+  const loc = useCurrentLocation();
   const [busy, setBusy] = useState(false);
+
+  const place = async (p: Point, replaceText: boolean) => {
+    setSpot(p);
+    if (replaceText || !pickup.trim() || auto) {
+      setFinding(true);
+      const text = await reverseGeocode(p);
+      setFinding(false);
+      if (text) {
+        setPickup(text);
+        setAuto(true);
+      }
+    }
+  };
+  const useHere = async () => {
+    const p = await loc.locate();
+    if (p) await place(p, true);
+  };
   const [err, setErr] = useState<string | null>(null);
 
   const submit = async () => {
@@ -44,6 +72,7 @@ export default function NewTowRequest() {
         vehicleMake: make.trim(),
         vehicleModel: model.trim(),
         vehicleYear: y,
+        ...(spot ? { pickupLat: spot.lat, pickupLng: spot.lng } : {}),
         problemType: problem,
         notes: notes.trim(),
       });
@@ -71,7 +100,28 @@ export default function NewTowRequest() {
               <Notice icon="car-outline">{t(`Request to ${company.name} · ${company.city}`, `طلب إلى ${company.name} · ${company.city}`)}</Notice>
               <Section title={t("Where", "أين")} />
               <Card>
-                <Field label={t("Pickup address", "عنوان الاستلام")} value={pickup} onChangeText={setPickup} multiline maxLength={300} />
+                {loc.dialog}
+                <Button variant="ghost" icon="locate-outline" label={finding || loc.locating ? t("Finding your location…", "جارٍ تحديد موقعك…") : t("Use my current location", "استخدم موقعي الحالي")} disabled={finding || loc.locating} onPress={useHere} />
+                <LocationProblem loc={loc} />
+                <Field label={t("Pickup address", "عنوان الاستلام")} value={pickup} onChangeText={(v) => { setPickup(v); setAuto(false); }} multiline maxLength={300} />
+                {MAPS_AVAILABLE ? (
+                  spot ? (
+                    <>
+                      <PinMap point={spot} onChange={(p) => place(p, false)} />
+                      <Text style={{ color: C.textDim, fontSize: 11, marginBottom: 10 }}>
+                        {t("Tap the map or drag the pin to adjust the pickup point. Add a street or landmark above if the address is empty.", "اضغط على الخريطة أو اسحب الدبوس لتعديل نقطة الاستلام. أضف شارعًا أو معلمًا أعلاه إن كان العنوان فارغًا.")}
+                      </Text>
+                      <Button variant="ghost" icon="trash-outline" label={t("Remove the pin", "إزالة الدبوس")} onPress={() => setSpot(null)} />
+                    </>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      icon="map-outline"
+                      label={t("Choose on the map", "اختر على الخريطة")}
+                      onPress={() => setSpot(locationMemory.current ?? cityCentre(company.city) ?? { lat: 32.2211, lng: 35.2544 })}
+                    />
+                  )
+                ) : null}
                 <Field label={t("Destination", "الوجهة")} value={dropoff} onChangeText={setDropoff} multiline maxLength={300} />
               </Card>
               <Section title={t("Your car", "سيارتك")} />

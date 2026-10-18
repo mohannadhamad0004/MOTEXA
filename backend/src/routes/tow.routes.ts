@@ -1,4 +1,5 @@
 import { canonicalCity } from "../cities.js";
+import { readPair } from "../geo.js";
 import { Router } from "express";
 import express from "express";
 import type { Prisma } from "../generated/prisma/client.js";
@@ -64,6 +65,8 @@ const shapeCompany = (c: CompanyRow) => ({
   description: c.description,
   serviceCities: c.serviceCities,
   workingHours: c.workingHours,
+  baseLat: c.baseLat, // exact: only the company itself and admins get this shape
+  baseLng: c.baseLng,
   licenceNumber: c.licenceNumber,
   verificationStatus: c.verificationStatus,
   rejectionReason: c.rejectionReason,
@@ -332,7 +335,14 @@ router.patch("/tow/me/company", ...provider, async (req, res) => {
       if (cities.length > 10) return bad(res, 400, "Choose at most 10 service cities.");
       data.serviceCities = cities;
     }
-    const fields = Object.keys(data);
+    if (has("baseLat") || has("baseLng")) {
+      const pair = readPair(b, "baseLat", "baseLng", "Base location");
+      if ("error" in pair) return bad(res, 400, pair.error);
+      data.baseLat = pair.lat; // both null = cleared
+      data.baseLng = pair.lng;
+    }
+    // The audit entry names the field, never the coordinates.
+    const fields = [...new Set(Object.keys(data).map((k) => (k === "baseLat" || k === "baseLng" ? "baseLocation" : k)))];
     if (!fields.length) return bad(res, 400, "Nothing to update.");
     await prisma.$transaction(async (tx) => {
       await tx.towCompanyProfile.update({ where: { id: c.id }, data });

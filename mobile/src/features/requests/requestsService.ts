@@ -77,6 +77,9 @@ type TowBase = {
   contactPhone: string;
   vehicle: { make: string; model: string; year: number | null };
   problemType: TowProblem;
+  /** map points of the trip; only the customer and the receiving company ever get them */
+  pickup: { lat: number; lng: number } | null;
+  dropoff: { lat: number; lng: number } | null;
   notes: string | null;
   declineReason: string | null;
   cancelReason: string | null;
@@ -107,6 +110,10 @@ export type TowRequestInput = {
   vehicleYear: number | null;
   problemType: TowProblem;
   notes: string;
+  pickupLat?: number | null;
+  pickupLng?: number | null;
+  dropoffLat?: number | null;
+  dropoffLng?: number | null;
 };
 
 export const customerTowRequests = {

@@ -3,6 +3,8 @@ import { Text, View } from "react-native";
 import { catalogService } from "../../../features/catalog/catalogService";
 import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
 import { cityLabel } from "../../../features/shared/cities";
+import { distanceLabel, locationMemory } from "../../../features/shared/geo";
+import { MAPS_AVAILABLE, PinMap } from "../../../features/shared/maps";
 import { C } from "../../../features/shared/palette";
 import { Async, Badge, Button, Card, Empty, Header, KV, Notice, Section, Thumb, useL, useLoad } from "../../../features/shared/ui";
 import { OperationalBadge, useTruckLabels } from "../../../features/tow/truckBits";
@@ -12,7 +14,7 @@ export default function CustomerTowCompany() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, row, align, isArabic } = useL();
   const { type } = useTruckLabels();
-  const state = useLoad(() => catalogService.getTowCompany(id), [id]);
+  const state = useLoad(() => catalogService.getTowCompany(id, locationMemory.current), [id]);
 
   return (
     <CustomerScreen>
@@ -24,6 +26,13 @@ export default function CustomerTowCompany() {
               {t("Based in", "المقر في")} {company.city}
               {company.address ? ` · ${company.address}` : ""}
             </Text>
+            {company.distanceKm != null ? (
+              <Text style={[{ color: C.accent, fontSize: 13, fontWeight: "800", marginBottom: 12 }, align]}>
+                {distanceLabel(company.distanceKm, isArabic)}
+                {company.distanceSource === "city" ? ` · ${t("from the city centre", "من مركز المدينة")}` : ""}
+              </Text>
+            ) : null}
+            {MAPS_AVAILABLE && company.baseLat !== null && company.baseLng !== null ? <PinMap point={{ lat: company.baseLat, lng: company.baseLng }} height={160} /> : null}
             {company.description ? (
               <Card>
                 <Text style={[{ color: C.text, fontSize: 13, lineHeight: 20 }, align]}>{company.description}</Text>

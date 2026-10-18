@@ -1,6 +1,8 @@
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Text, View } from "react-native";
+import { Linking, Text, View } from "react-native";
+import { MAPS_AVAILABLE, TripMap } from "../../../../features/shared/maps";
+import { mapsDirectionsUrl } from "../../../../features/shared/geo";
 import { Timeline, TowStatusBadge, useProblemLabels } from "../../../../features/requests/requestBits";
 import { CompanyTowRequest, companyTowRequests } from "../../../../features/requests/requestsService";
 import { C } from "../../../../features/shared/palette";
@@ -70,6 +72,17 @@ export default function CompanyRequestDetail() {
                   {r.cancelledBy === "COMPANY" ? t("Cancelled by your company", "ألغتها شركتك") : t("Cancelled by the customer", "ألغاها العميل")}
                   {r.cancelReason ? `\n${r.cancelReason}` : ""}
                 </Notice>
+              ) : null}
+
+              {r.pickup ? (
+                <>
+                  <Section title={t("Map", "الخريطة")} />
+                  {MAPS_AVAILABLE ? <TripMap pickup={r.pickup} dropoff={r.dropoff} height={190} /> : null}
+                  <View style={{ gap: 8, marginBottom: 6 }}>
+                    <Button variant="ghost" icon="navigate-outline" label={t("Open pickup in Google Maps", "افتح نقطة الاستلام في خرائط جوجل")} onPress={() => Linking.openURL(mapsDirectionsUrl(r.pickup!))} />
+                    {r.dropoff ? <Button variant="ghost" icon="flag-outline" label={t("Open destination in Google Maps", "افتح الوجهة في خرائط جوجل")} onPress={() => Linking.openURL(mapsDirectionsUrl(r.dropoff!))} /> : null}
+                  </View>
+                </>
               ) : null}
 
               <Section title={t("Trip", "الرحلة")} />

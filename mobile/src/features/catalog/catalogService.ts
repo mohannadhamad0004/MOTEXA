@@ -46,6 +46,12 @@ export type TowCompanyRow = {
   city: string;
   serviceCities: string[];
   workingHours: string | null;
+  /** business location, rounded to about 110 m by the server; null when the company has not set one */
+  baseLat: number | null;
+  baseLng: number | null;
+  /** only with a position: straight-line km from the company's base point ("base") or from its city centre ("city") */
+  distanceKm?: number | null;
+  distanceSource?: "base" | "city" | null;
   approvedTrucks: number;
   availableTrucks: number;
   truckTypes: TruckType[];
@@ -54,7 +60,7 @@ export type TowCompanyRow = {
 /** The company page adds the fields the list leaves out. */
 export type TowCompanyDetail = Omit<TowCompanyRow, "truckTypes"> & { address: string | null; description: string | null };
 
-export type TowFilters = { city?: string; serviceCity?: string; q?: string; truckType?: TruckType; sort?: "available" | "name"; availableOnly?: boolean };
+export type TowFilters = { city?: string; serviceCity?: string; q?: string; truckType?: TruckType; sort?: "nearest" | "available" | "name"; availableOnly?: boolean; lat?: number; lng?: number };
 
 export type TowTruck = {
   id: string;
@@ -105,8 +111,8 @@ export const catalogService = {
     const r = await api<{ companies: TowCompanyRow[] }>("GET", `/catalog/tow/companies${qs({ ...f, availableOnly: f.availableOnly ? "1" : undefined })}`);
     return r.companies;
   },
-  async getTowCompany(id: string) {
-    const r = await api<{ company: TowCompanyDetail; trucks: TowTruck[] }>("GET", `/catalog/tow/companies/${id}`);
+  async getTowCompany(id: string, from?: { lat: number; lng: number } | null) {
+    const r = await api<{ company: TowCompanyDetail; trucks: TowTruck[] }>("GET", `/catalog/tow/companies/${id}${qs({ lat: from?.lat, lng: from?.lng })}`);
     return { company: r.company, trucks: r.trucks.map((t) => ({ ...t, photoUri: publicImageUrl(t.photoUri) })) };
   },
 };
