@@ -1,13 +1,21 @@
+import { Async, Notice } from "../../../components/ui/Feedback";
+import { Button } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
+import { Header } from "../../../components/layout/DashboardLayout";
+import { KV } from "../../../components/ui/Rows";
+import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
+import { Screen } from "../../../components/layout/Screen";
+import { Text } from "../../../components/ui/Text";
+import { useTheme } from "../../../theme/useTheme";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Text, View } from "react-native";
-import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
+import { View } from "react-native";
 import { InquiryStatusBadge, Thread } from "../../../features/requests/requestBits";
 import { customerInquiries } from "../../../features/requests/requestsService";
-import { C } from "../../../features/shared/palette";
-import { Async, Button, Card, Header, KV, Notice, useL, useLoad } from "../../../features/shared/ui";
 
 export default function InquiryThread() {
+  const { c: col } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, row, align } = useL();
   const state = useLoad(() => customerInquiries.get(id), [id]);
@@ -31,7 +39,7 @@ export default function InquiryThread() {
   };
 
   return (
-    <CustomerScreen onRefresh={state.reload} refreshing={state.loading && !!state.data}>
+    <Screen onRefresh={state.reload} refreshing={state.loading && !!state.data}>
       <Header brand="MOTEXA" title={t("Your question", "سؤالك")} back />
       <Async state={state}>
         {(q) => (
@@ -39,8 +47,8 @@ export default function InquiryThread() {
             <Card>
               <View style={[row, { justifyContent: "space-between", alignItems: "flex-start", gap: 10 }]}>
                 <View style={{ flex: 1 }}>
-                  <Text numberOfLines={2} style={[{ color: C.text, fontSize: 15, fontWeight: "800" }, align]}>{q.product.name}</Text>
-                  <Text numberOfLines={1} style={[{ color: C.textMuted, fontSize: 12, marginTop: 3 }, align]}>{q.product.partNumber}</Text>
+                  <Text numberOfLines={2} style={[{ color: col.text, fontSize: 15, fontWeight: "800" }, align]}>{q.product.name}</Text>
+                  <Text numberOfLines={1} style={[{ color: col.textMuted, fontSize: 12, marginTop: 3 }, align]}>{q.product.partNumber}</Text>
                 </View>
                 <InquiryStatusBadge value={q.status} />
               </View>
@@ -76,6 +84,6 @@ export default function InquiryThread() {
           </>
         )}
       </Async>
-    </CustomerScreen>
+    </Screen>
   );
 }

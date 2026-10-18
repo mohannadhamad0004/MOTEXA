@@ -1,19 +1,29 @@
+import { Async, EmptyState, Notice } from "../../../components/ui/Feedback";
+import { Badge } from "../../../components/ui/Badge";
+import { Button } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
+import { Header } from "../../../components/layout/DashboardLayout";
+import { Screen } from "../../../components/layout/Screen";
+import { SearchBar } from "../../../components/ui/Input";
+import { Segmented } from "../../../components/ui/Chip";
+import { ImageTile } from "../../../components/ui/Rows";
+import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
+import { Text } from "../../../components/ui/Text";
+import { useTheme } from "../../../theme/useTheme";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { StockBadge, fitmentSummary } from "../../../features/parts/partsBits";
 import { Product, partsShopService, stockState } from "../../../features/parts/partsService";
 import { VerificationBadge } from "../../../features/shared/blocks";
-import { formatPrice } from "../../../features/shared/money";
-import { C } from "../../../features/shared/palette";
+import { formatPrice } from "../../../core/constants/money";
 import { asActor, useSessionUser } from "../../../features/shared/session";
-import {
-  Async, Badge, Button, Card, Empty, Header, Notice, Screen, SearchBar, Segmented, Thumb, useL, useLoad,
-} from "../../../features/shared/ui";
 
 type Filter = "ALL" | "IN" | "LOW" | "OUT";
 
 export default function MyParts() {
+  const { c: col } = useTheme();
   const user = useSessionUser();
   const { t, row, align } = useL();
   const [filter, setFilter] = useState<Filter>("ALL");
@@ -59,22 +69,22 @@ export default function MyParts() {
                 ]}
               />
               {!rows.length ? (
-                <Empty icon="cube-outline" text={products.length ? t("No parts match.", "لا توجد قطع مطابقة.") : t("You have no parts yet. Add your first part.", "لا توجد قطع بعد. أضف أول قطعة.")} />
+                <EmptyState icon="cube-outline" text={products.length ? t("No parts match.", "لا توجد قطع مطابقة.") : t("You have no parts yet. Add your first part.", "لا توجد قطع بعد. أضف أول قطعة.")} />
               ) : (
                 rows.map((p) => (
                   <Card key={p.id} label={p.name} onPress={() => router.push(`/provider/parts/${p.id}`)}>
                     <View style={[row, { gap: 14 }]}>
-                      <Thumb uri={p.imageUri} icon="cube-outline" size={64} />
+                      <ImageTile uri={p.imageUri} icon="cube-outline" size={64} />
                       <View style={{ flex: 1 }}>
-                        <Text numberOfLines={2} style={[{ color: C.text, fontSize: 15, fontWeight: "800" }, align]}>{p.name}</Text>
-                        <Text numberOfLines={1} style={[{ color: C.textMuted, fontSize: 12, marginTop: 3 }, align]}>
+                        <Text numberOfLines={2} style={[{ color: col.text, fontSize: 15, fontWeight: "800" }, align]}>{p.name}</Text>
+                        <Text numberOfLines={1} style={[{ color: col.textMuted, fontSize: 12, marginTop: 3 }, align]}>
                           {p.brand} · {p.partNumber}
                         </Text>
-                        <Text numberOfLines={1} style={[{ color: C.textDim, fontSize: 12, marginTop: 2 }, align]}>{fitmentSummary(p, t)}</Text>
+                        <Text numberOfLines={1} style={[{ color: col.textDim, fontSize: 12, marginTop: 2 }, align]}>{fitmentSummary(p, t)}</Text>
                       </View>
                     </View>
                     <View style={[row, { flexWrap: "wrap", alignItems: "center", gap: 6, marginTop: 12 }]}>
-                      <Text style={{ color: C.accent, fontSize: 15, fontWeight: "800", marginHorizontal: 4 }}>
+                      <Text style={{ color: col.accent, fontSize: 15, fontWeight: "800", marginHorizontal: 4 }}>
                         {formatPrice(p.price)}
                       </Text>
                       <Badge tone="neutral" label={`${t("Qty", "الكمية")} ${p.stock}`} />

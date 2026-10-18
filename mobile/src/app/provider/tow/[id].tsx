@@ -1,19 +1,29 @@
+import { Async, Notice } from "../../../components/ui/Feedback";
+import { Button } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
+import { Input } from "../../../components/ui/Input";
+import { Header } from "../../../components/layout/DashboardLayout";
+import { Screen } from "../../../components/layout/Screen";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { ImageTile } from "../../../components/ui/Rows";
+import { goBack, pickImage } from "../../../core/hooks/nav";
+import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
+import { Text } from "../../../components/ui/Text";
+import { useTheme } from "../../../theme/useTheme";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { HistoryList, KV, PrivateDocs, VerificationBadge } from "../../../features/shared/blocks";
-import { C } from "../../../features/shared/palette";
 import { asActor, useSessionUser } from "../../../features/shared/session";
-import {
-  Async, Button, Card, Field, Header, Notice, Screen, Section, Thumb, goBack, pickImage, useL, useLoad,
-} from "../../../features/shared/ui";
 import { DocKind, TRUCK_TYPES, Truck, TruckInput, TruckType, towFleetService } from "../../../features/tow/towService";
 import { OperationalBadge, TruckSummary, docLabel, useTruckLabels } from "../../../features/tow/truckBits";
-import { isRealDate } from "../../../features/shared/files";
+import { isRealDate } from "../../../core/constants/files";
 
 const KINDS: DocKind[] = ["REGISTRATION", "INSURANCE"];
 
 function TruckForm({ truck, onSaved, onCancel }: { truck?: Truck; onSaved: () => void; onCancel?: () => void }) {
+  const { c: col } = useTheme();
   const user = useSessionUser();
   const { t, row } = useL();
   const { type } = useTruckLabels();
@@ -74,7 +84,7 @@ function TruckForm({ truck, onSaved, onCancel }: { truck?: Truck; onSaved: () =>
       )}
       <Card>
         <View style={[row, { alignItems: "center", gap: 14, marginBottom: 14 }]}>
-          <Thumb uri={f.photoUri} icon="camera-outline" size={72} />
+          <ImageTile uri={f.photoUri} icon="camera-outline" size={72} />
           <View style={{ flex: 1 }}>
             <Button
               variant="ghost"
@@ -87,7 +97,7 @@ function TruckForm({ truck, onSaved, onCancel }: { truck?: Truck; onSaved: () =>
             />
           </View>
         </View>
-        <Text style={{ color: "#E8D8CC", fontSize: 11, fontWeight: "800", letterSpacing: 1, marginBottom: 7 }}>
+        <Text style={{ color: col.text, fontSize: 11, fontWeight: "800", letterSpacing: 1, marginBottom: 7 }}>
           {t("TRUCK TYPE", "نوع الشاحنة")}
         </Text>
         <View style={[row, { flexWrap: "wrap", gap: 8, marginBottom: 14 }]}>
@@ -101,14 +111,14 @@ function TruckForm({ truck, onSaved, onCancel }: { truck?: Truck; onSaved: () =>
             </View>
           ))}
         </View>
-        <Field label={t("Plate number", "رقم اللوحة")} value={f.plate} autoCapitalize="characters" onChangeText={(v) => setF({ ...f, plate: v })} />
-        <Field label={t("Make", "الشركة المصنعة")} value={f.make} onChangeText={(v) => setF({ ...f, make: v })} />
-        <Field label={t("Model", "الطراز")} value={f.model} onChangeText={(v) => setF({ ...f, model: v })} />
-        <Field label={t("Year", "السنة")} value={year} keyboardType="number-pad" onChangeText={setYear} />
-        <Field label={t("Max load (kg, optional)", "الحمل الأقصى (كغ، اختياري)")} value={weight} keyboardType="number-pad" maxLength={5} onChangeText={setWeight} />
+        <Input label={t("Plate number", "رقم اللوحة")} value={f.plate} autoCapitalize="characters" onChangeText={(v) => setF({ ...f, plate: v })} />
+        <Input label={t("Make", "الشركة المصنعة")} value={f.make} onChangeText={(v) => setF({ ...f, make: v })} />
+        <Input label={t("Model", "الطراز")} value={f.model} onChangeText={(v) => setF({ ...f, model: v })} />
+        <Input label={t("Year", "السنة")} value={year} keyboardType="number-pad" onChangeText={setYear} />
+        <Input label={t("Max load (kg, optional)", "الحمل الأقصى (كغ، اختياري)")} value={weight} keyboardType="number-pad" maxLength={5} onChangeText={setWeight} />
       </Card>
 
-      <Section title={t("Required documents", "المستندات المطلوبة")} />
+      <SectionHeader title={t("Required documents", "المستندات المطلوبة")} />
       <Card>
         {KINDS.map((k) => (
           <View key={k} style={{ marginBottom: 10 }}>
@@ -119,7 +129,7 @@ function TruckForm({ truck, onSaved, onCancel }: { truck?: Truck; onSaved: () =>
               onPress={() => attach(k)}
             />
             {hasDoc(k) && (
-              <Field
+              <Input
                 label={t("Expiry date (YYYY-MM-DD, optional)", "تاريخ الانتهاء (YYYY-MM-DD، اختياري)")}
                 value={expiryOf(k)}
                 placeholder="2027-12-31"
@@ -129,7 +139,7 @@ function TruckForm({ truck, onSaved, onCancel }: { truck?: Truck; onSaved: () =>
             )}
           </View>
         ))}
-        <Text style={{ color: C.textDim, fontSize: 11 }}>
+        <Text style={{ color: col.textDim, fontSize: 11 }}>
           {t("Private: visible only to MOTEXA admins and you.", "خاصة: تظهر فقط لمسؤولي MOTEXA ولك.")}
         </Text>
       </Card>
@@ -183,7 +193,7 @@ function TruckView({ truck, onChange }: { truck: Truck; onChange: () => void }) 
         <TruckSummary truck={truck} />
       </Card>
 
-      <Section title={t("Vehicle", "المركبة")} />
+      <SectionHeader title={t("Vehicle", "المركبة")} />
       <Card>
         <KV k={t("Type", "النوع")} v={type[truck.type]} />
         <KV k={t("Plate", "اللوحة")} v={truck.plate} />
@@ -192,7 +202,7 @@ function TruckView({ truck, onChange }: { truck: Truck; onChange: () => void }) 
         {truck.maxWeightKg ? <KV k={t("Max load", "الحمل الأقصى")} v={`${truck.maxWeightKg} ${t("kg", "كغ")}`} /> : null}
       </Card>
 
-      <Section title={t("Status", "الحالة")} />
+      <SectionHeader title={t("Status", "الحالة")} />
       <Card>
         <View style={{ gap: 10, alignItems: "flex-start" }}>
           <VerificationBadge value={truck.verification} prefix={t("Approval", "الاعتماد")} />
@@ -225,7 +235,7 @@ function TruckView({ truck, onChange }: { truck: Truck; onChange: () => void }) 
         title={t("Documents", "المستندات")}
         docs={truck.documents.map((d) => ({ label: docLabel(t, d.kind), fileName: d.fileName, expiresAt: d.expiresAt, uri: d.uri }))}
       />
-      <Section title={t("History", "السجل")} />
+      <SectionHeader title={t("History", "السجل")} />
       <HistoryList items={truck.history} />
 
       <View style={{ height: 20 }} />

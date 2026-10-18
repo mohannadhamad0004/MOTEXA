@@ -3,7 +3,7 @@
 // documents or contact data) and stock as a state, never an exact number.
 
 import { api } from "../shared/api";
-import { publicImageUrl } from "../shared/files";
+import { publicImageUrl } from "../../core/constants/files";
 import type { Fitment } from "../parts/partsService";
 import type { Operational, TruckType } from "../tow/towService";
 import type { PartCondition, PartType } from "./partAttrs";

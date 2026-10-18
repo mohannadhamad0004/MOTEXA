@@ -1,10 +1,16 @@
-import { Text } from "react-native";
-import { C } from "../features/shared/palette";
+
+import { Card } from "../components/ui/Card";
+import { Header } from "../components/layout/DashboardLayout";
+import { RoleGate } from "../components/layout/RoleGate";
+import { Screen } from "../components/layout/Screen";
+import { useL } from "../core/hooks/useL";
+import { Text } from "../components/ui/Text";
+import { useTheme } from "../theme/useTheme";
 import { SessionUser, useSessionUser } from "../features/shared/session";
-import { Card, Header, RoleGate, Screen, useL } from "../features/shared/ui";
 
 // Temporary home for CUSTOMER and MECHANIC accounts until their real home screens exist.
 function Home() {
+  const { c: col } = useTheme();
   const user = useSessionUser();
   const { t, align } = useL();
 
@@ -12,8 +18,8 @@ function Home() {
     <Screen>
       <Header brand="MOTEXA" title={`${t("Welcome", "مرحبًا")}, ${user.fullName}`} signOutButton />
       <Card>
-        <Text style={[{ color: C.text, fontSize: 18, fontWeight: "800" }, align]}>{t("Coming soon", "قريبًا")}</Text>
-        <Text style={[{ color: C.textMuted, fontSize: 13, marginTop: 6, lineHeight: 20 }, align]}>
+        <Text style={[{ color: col.text, fontSize: 18, fontWeight: "800" }, align]}>{t("Coming soon", "قريبًا")}</Text>
+        <Text style={[{ color: col.textMuted, fontSize: 13, marginTop: 6, lineHeight: 20 }, align]}>
           {t("Your home screen is on its way.", "شاشتك الرئيسية قيد الإعداد.")}
         </Text>
       </Card>

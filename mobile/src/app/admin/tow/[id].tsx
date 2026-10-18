@@ -1,13 +1,20 @@
+import { Async, Notice } from "../../../components/ui/Feedback";
+import { Button } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
+import { Header } from "../../../components/layout/DashboardLayout";
+import { ReasonPanel } from "../../../components/ui/ReasonPanel";
+import { Screen } from "../../../components/layout/Screen";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
+import { Text } from "../../../components/ui/Text";
+import { useTheme } from "../../../theme/useTheme";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { HistoryList, KV, PrivateDocs, VerificationBadge } from "../../../features/shared/blocks";
-import { C } from "../../../features/shared/palette";
 import { asActor, useSessionUser } from "../../../features/shared/session";
-import {
-  Async, Button, Card, Header, Notice, ReasonPanel, Screen, Section, useL, useLoad,
-} from "../../../features/shared/ui";
-import { cityLabel } from "../../../features/shared/cities";
+import { cityLabel } from "../../../core/constants/cities";
 import { TowCompany, Truck, towAdminService } from "../../../features/tow/towService";
 import { TruckSummary, docLabel, useTruckLabels } from "../../../features/tow/truckBits";
 
@@ -100,7 +107,7 @@ function CompanyDecision({ company, onDone }: { company: TowCompany; onDone: () 
 
   return (
     <>
-      <Section title={t("Company decision", "قرار الشركة")} />
+      <SectionHeader title={t("Company decision", "قرار الشركة")} />
       <Card>
         <Notice icon="information-circle-outline">
           {t(
@@ -134,6 +141,7 @@ function CompanyDecision({ company, onDone }: { company: TowCompany; onDone: () 
 }
 
 export default function AdminTowDetail() {
+  const { c: col } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useSessionUser();
   const { t, isArabic } = useL();
@@ -152,7 +160,7 @@ export default function AdminTowDetail() {
           return (
             <>
               <VerificationBadge value={company.verification} />
-              <Section title={t("Company", "الشركة")} />
+              <SectionHeader title={t("Company", "الشركة")} />
               <Card>
                 <KV k={t("Contact", "المسؤول")} v={company.contactName} />
                 <KV k={t("Phone", "الهاتف")} v={company.phone} />
@@ -167,12 +175,12 @@ export default function AdminTowDetail() {
                 docs={company.documents.map((d) => ({ label: d.kind, fileName: d.fileName, uri: d.uri }))}
               />
               <CompanyDecision company={company} onDone={state.reload} />
-              <Section title={`${t("Trucks", "الشاحنات")} (${trucks.length})`} />
-              <Text style={{ color: C.textDim, fontSize: 11, marginBottom: 10 }}>
+              <SectionHeader title={`${t("Trucks", "الشاحنات")} (${trucks.length})`} />
+              <Text style={{ color: col.textDim, fontSize: 11, marginBottom: 10 }}>
                 {t("Each truck is approved individually. Admins review and decide; truck details are owned by the company.", "تُعتمد كل شاحنة على حدة. يراجع المسؤول ويقرر فقط؛ بيانات الشاحنة يملكها المزود.")}
               </Text>
               {trucks.map((tr) => <TruckReview key={tr.id} truck={tr} onDone={state.reload} />)}
-              <Section title={t("Verification history", "سجل الاعتماد")} />
+              <SectionHeader title={t("Verification history", "سجل الاعتماد")} />
               <HistoryList items={history} />
             </>
           );

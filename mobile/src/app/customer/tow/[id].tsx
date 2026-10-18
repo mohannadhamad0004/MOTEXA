@@ -1,33 +1,43 @@
+import { Async, EmptyState, Notice } from "../../../components/ui/Feedback";
+import { Badge } from "../../../components/ui/Badge";
+import { Button } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
+import { Header } from "../../../components/layout/DashboardLayout";
+import { KV, ImageTile } from "../../../components/ui/Rows";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
+import { Screen } from "../../../components/layout/Screen";
+import { Text } from "../../../components/ui/Text";
+import { useTheme } from "../../../theme/useTheme";
 import { router, useLocalSearchParams } from "expo-router";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { catalogService } from "../../../features/catalog/catalogService";
-import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
-import { cityLabel } from "../../../features/shared/cities";
-import { distanceLabel, locationMemory } from "../../../features/shared/geo";
+import { cityLabel } from "../../../core/constants/cities";
+import { distanceLabel, locationMemory } from "../../../core/constants/geo";
 import { MAPS_AVAILABLE, PinMap } from "../../../features/shared/maps";
-import { C } from "../../../features/shared/palette";
-import { Async, Badge, Button, Card, Empty, Header, KV, Notice, Section, Thumb, useL, useLoad } from "../../../features/shared/ui";
 import { OperationalBadge, useTruckLabels } from "../../../features/tow/truckBits";
 
 // Customers see approved trucks only, never plate numbers, documents or contact data.
 export default function CustomerTowCompany() {
+  const { c: col } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, row, align, isArabic } = useL();
   const { type } = useTruckLabels();
   const state = useLoad(() => catalogService.getTowCompany(id, locationMemory.current), [id]);
 
   return (
-    <CustomerScreen>
+    <Screen>
       <Header brand="MOTEXA" title={state.data?.company.name ?? t("Tow company", "شركة سحب")} back />
       <Async state={state}>
         {({ company, trucks }) => (
           <>
-            <Text style={[{ color: C.textMuted, fontSize: 13, marginBottom: 12 }, align]}>
+            <Text style={[{ color: col.textMuted, fontSize: 13, marginBottom: 12 }, align]}>
               {t("Based in", "المقر في")} {company.city}
               {company.address ? ` · ${company.address}` : ""}
             </Text>
             {company.distanceKm != null ? (
-              <Text style={[{ color: C.accent, fontSize: 13, fontWeight: "800", marginBottom: 12 }, align]}>
+              <Text style={[{ color: col.accent, fontSize: 13, fontWeight: "800", marginBottom: 12 }, align]}>
                 {distanceLabel(company.distanceKm, isArabic)}
                 {company.distanceSource === "city" ? ` · ${t("from the city centre", "من مركز المدينة")}` : ""}
               </Text>
@@ -35,7 +45,7 @@ export default function CustomerTowCompany() {
             {MAPS_AVAILABLE && company.baseLat !== null && company.baseLng !== null ? <PinMap point={{ lat: company.baseLat, lng: company.baseLng }} height={160} /> : null}
             {company.description ? (
               <Card>
-                <Text style={[{ color: C.text, fontSize: 13, lineHeight: 20 }, align]}>{company.description}</Text>
+                <Text style={[{ color: col.text, fontSize: 13, lineHeight: 20 }, align]}>{company.description}</Text>
               </Card>
             ) : null}
             <Card>
@@ -46,7 +56,7 @@ export default function CustomerTowCompany() {
 
             {company.serviceCities.length ? (
               <>
-                <Section title={t("Service area", "منطقة الخدمة")} />
+                <SectionHeader title={t("Service area", "منطقة الخدمة")} />
                 <View style={[row, { flexWrap: "wrap", gap: 6, marginBottom: 12 }]}>
                   {company.serviceCities.map((x) => (
                     <Badge key={x} tone="neutral" icon="location-outline" label={cityLabel(x, isArabic)} />
@@ -55,19 +65,19 @@ export default function CustomerTowCompany() {
               </>
             ) : null}
 
-            <Section title={`${t("Trucks", "الشاحنات")} (${trucks.length})`} />
+            <SectionHeader title={`${t("Trucks", "الشاحنات")} (${trucks.length})`} />
             {trucks.length ? (
               trucks.map((tr) => (
                 <Card key={tr.id}>
                   <View style={[row, { gap: 14, alignItems: "center" }]}>
-                    <Thumb uri={tr.photoUri} icon="car-sport-outline" size={64} />
+                    <ImageTile uri={tr.photoUri} icon="car-sport-outline" size={64} />
                     <View style={{ flex: 1 }}>
-                      <Text numberOfLines={1} style={[{ color: C.text, fontSize: 15, fontWeight: "800" }, align]}>{type[tr.type]}</Text>
-                      <Text numberOfLines={1} style={[{ color: C.textMuted, fontSize: 12, marginTop: 3 }, align]}>
+                      <Text numberOfLines={1} style={[{ color: col.text, fontSize: 15, fontWeight: "800" }, align]}>{type[tr.type]}</Text>
+                      <Text numberOfLines={1} style={[{ color: col.textMuted, fontSize: 12, marginTop: 3 }, align]}>
                         {[tr.make, tr.model, tr.year].filter(Boolean).join(" ")}
                       </Text>
                       {tr.maxWeightKg ? (
-                        <Text style={[{ color: C.textMuted, fontSize: 12, marginTop: 3 }, align]}>
+                        <Text style={[{ color: col.textMuted, fontSize: 12, marginTop: 3 }, align]}>
                           {t("Carries vehicles up to", "تحمل مركبات حتى")} {tr.maxWeightKg} {t("kg", "كغ")}
                         </Text>
                       ) : null}
@@ -79,7 +89,7 @@ export default function CustomerTowCompany() {
                 </Card>
               ))
             ) : (
-              <Empty icon="car-outline" text={t("This company has no approved trucks yet.", "لا توجد شاحنات معتمدة لهذه الشركة بعد.")} />
+              <EmptyState icon="car-outline" text={t("This company has no approved trucks yet.", "لا توجد شاحنات معتمدة لهذه الشركة بعد.")} />
             )}
 
             <View style={{ height: 8 }} />
@@ -97,6 +107,6 @@ export default function CustomerTowCompany() {
           </>
         )}
       </Async>
-    </CustomerScreen>
+    </Screen>
   );
 }

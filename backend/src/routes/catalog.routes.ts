@@ -272,7 +272,7 @@ const TOW_SORTS = ["available", "name", "nearest"] as const;
 function readPoint(query: any): { lat: number; lng: number } | null | string {
   const { lat, lng } = query;
   if (lat === undefined && lng === undefined) return null;
-  const isNum = (v: unknown) => typeof v === "string" && /^-?\d{1,3}(\.\d{1,10})?$/.test(v.trim());
+  const isNum = (v: unknown) => typeof v === "string" && /^-?\d{1,3}(\.\d{1,15})?$/.test(v.trim());
   if (!isNum(lat) || !isNum(lng)) return "lat and lng must both be given, as plain numbers.";
   const p = { lat: Number(lat), lng: Number(lng) };
   return inBox(p.lat, p.lng) ? p : GEO_BOX_MESSAGE;

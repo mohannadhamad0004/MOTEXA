@@ -1,15 +1,23 @@
+import { Async, Notice } from "../../../components/ui/Feedback";
+import { Button } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
+import { Input } from "../../../components/ui/Input";
+import { Header } from "../../../components/layout/DashboardLayout";
+import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
+import { Screen } from "../../../components/layout/Screen";
+import { Text } from "../../../components/ui/Text";
+import { useTheme } from "../../../theme/useTheme";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Text } from "react-native";
+
 import { catalogService } from "../../../features/catalog/catalogService";
-import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
 import { customerInquiries, existingIdOf } from "../../../features/requests/requestsService";
-import { C } from "../../../features/shared/palette";
-import { Async, Button, Card, Field, Header, Notice, useL, useLoad } from "../../../features/shared/ui";
 
 // "Ask the shop": one product, a quantity and a question. If the customer already has this question open,
 // the server answers with that thread and we open it instead.
 export default function NewInquiry() {
+  const { c: col } = useTheme();
   const { productId } = useLocalSearchParams<{ productId: string }>();
   const { t, align } = useL();
   const state = useLoad(() => catalogService.getPart(productId), [productId]);
@@ -37,23 +45,23 @@ export default function NewInquiry() {
   };
 
   return (
-    <CustomerScreen>
+    <Screen>
       <Header brand="MOTEXA" title={t("Ask the shop", "اسأل المتجر")} back />
       <Async state={state}>
         {(p) => (
           <>
             <Card>
-              <Text numberOfLines={2} style={[{ color: C.text, fontSize: 15, fontWeight: "800" }, align]}>{p.name}</Text>
-              <Text numberOfLines={1} style={[{ color: C.textMuted, fontSize: 12, marginTop: 3 }, align]}>
+              <Text numberOfLines={2} style={[{ color: col.text, fontSize: 15, fontWeight: "800" }, align]}>{p.name}</Text>
+              <Text numberOfLines={1} style={[{ color: col.textMuted, fontSize: 12, marginTop: 3 }, align]}>
                 {p.brand} · {p.partNumber}
               </Text>
-              <Text numberOfLines={1} style={[{ color: C.textDim, fontSize: 12, marginTop: 3 }, align]}>
+              <Text numberOfLines={1} style={[{ color: col.textDim, fontSize: 12, marginTop: 3 }, align]}>
                 {p.shop.name} · {p.shop.city}
               </Text>
             </Card>
             <Card>
-              <Field label={t("Quantity", "الكمية")} value={quantity} onChangeText={setQuantity} keyboardType="number-pad" maxLength={3} />
-              <Field
+              <Input label={t("Quantity", "الكمية")} value={quantity} onChangeText={setQuantity} keyboardType="number-pad" maxLength={3} />
+              <Input
                 label={t("Your question", "سؤالك")}
                 value={question}
                 onChangeText={setQuestion}
@@ -70,6 +78,6 @@ export default function NewInquiry() {
           </>
         )}
       </Async>
-    </CustomerScreen>
+    </Screen>
   );
 }

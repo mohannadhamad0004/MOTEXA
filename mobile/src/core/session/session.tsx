@@ -1,4 +1,4 @@
-import { apiUrl } from "./api";
+import { apiUrl } from "../config/api";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";

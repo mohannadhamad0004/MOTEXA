@@ -1,9 +1,11 @@
 import * as Location from "expo-location";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Linking } from "react-native";
 import MotexaDialog from "../../components/MotexaDialog";
-import { Point, locationMemory } from "./geo";
-import { Button, Notice, useL } from "./ui";
+import { Point, locationMemory, roundPoint } from "../../core/constants/geo";
+import { Button } from "../../components/ui/Button";
+import { Notice } from "../../components/ui/Feedback";
+import { useL } from "../../core/hooks/useL";
 
 const TIMEOUT_MS = 15000;
 
@@ -46,7 +48,9 @@ export function useCurrentLocation() {
     return null;
   };
 
-  const locate = useCallback(async (): Promise<Point | null> => {
+  const inflight = useRef<Promise<Point | null> | null>(null);
+  const doLocate = useCallback(async (): Promise<Point | null> => {
+    setStatus("locating");
     setMessage(null);
     setBlocked(false);
     try {
@@ -82,7 +86,7 @@ export function useCurrentLocation() {
         new Promise<null>((resolve) => setTimeout(() => resolve(null), TIMEOUT_MS)),
       ]);
       if (!pos) return problem(t("Finding your location took too long. Try again, or choose the place yourself.", "استغرق تحديد موقعك وقتًا طويلًا. حاول مرة أخرى، أو اختر المكان بنفسك."));
-      const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      const p = roundPoint({ lat: pos.coords.latitude, lng: pos.coords.longitude });
       locationMemory.current = p;
       setStatus("ready");
       return p;
@@ -90,6 +94,19 @@ export function useCurrentLocation() {
       return problem(t("We could not get your location. Check that location is on, or choose the place yourself.", "تعذّر الحصول على موقعك. تأكد من تشغيل الموقع، أو اختر المكان بنفسك."));
     }
   }, [t]);
+
+  // One request at a time: a second tap while one is running gets the same answer. The whole operation counts as busy.
+  const locate = useCallback((): Promise<Point | null> => {
+    if (!inflight.current) {
+      inflight.current = doLocate().finally(() => {
+        inflight.current = null;
+      });
+    }
+    return inflight.current;
+  }, [doLocate]);
+
+  // Leaving the screen while the explanation is open settles the pending promise.
+  useEffect(() => () => { answer.current?.(false); answer.current = null; }, []);
 
   const reply = (ok: boolean) => {
     setExplain(false);

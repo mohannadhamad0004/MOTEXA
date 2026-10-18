@@ -2,6 +2,10 @@
 
 export type Point = { lat: number; lng: number };
 
+/** Coordinates are kept to 6 decimals (about 11 cm): enough for a pin, and short enough for every validator. */
+export const roundCoord = (n: number) => Math.round(n * 1e6) / 1e6;
+export const roundPoint = (p: Point): Point => ({ lat: roundCoord(p.lat), lng: roundCoord(p.lng) });
+
 /** The customer's position, kept in memory for this app session only (never saved on the phone, never tracked). */
 export const locationMemory: { current: Point | null } = { current: null };
 

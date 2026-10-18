@@ -1,15 +1,25 @@
+import { Async, Notice } from "../../../components/ui/Feedback";
+import { Button } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
+import { Header } from "../../../components/layout/DashboardLayout";
+import { KV } from "../../../components/ui/Rows";
+import { ReasonPanel } from "../../../components/ui/ReasonPanel";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
+import { Screen } from "../../../components/layout/Screen";
+import { Text } from "../../../components/ui/Text";
+import { useTheme } from "../../../theme/useTheme";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Text, View } from "react-native";
-import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
+import { View } from "react-native";
 import { TowStatusBadge, Timeline, useProblemLabels } from "../../../features/requests/requestBits";
 import { customerTowRequests } from "../../../features/requests/requestsService";
 import { MAPS_AVAILABLE, TripMap } from "../../../features/shared/maps";
-import { C } from "../../../features/shared/palette";
-import { Async, Button, Card, Header, KV, Notice, ReasonPanel, Section, useL, useLoad } from "../../../features/shared/ui";
 import { useTruckLabels } from "../../../features/tow/truckBits";
 
 export default function TowRequestStatus() {
+  const { c: col } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, row, align } = useL();
   const { type } = useTruckLabels();
@@ -34,7 +44,7 @@ export default function TowRequestStatus() {
   };
 
   return (
-    <CustomerScreen onRefresh={state.reload} refreshing={state.loading && !!state.data}>
+    <Screen onRefresh={state.reload} refreshing={state.loading && !!state.data}>
       <Header brand="MOTEXA" title={t("Tow request", "طلب السحب")} back />
       <Async state={state}>
         {(r) => (
@@ -42,8 +52,8 @@ export default function TowRequestStatus() {
             <Card>
               <View style={[row, { justifyContent: "space-between", alignItems: "flex-start", gap: 10 }]}>
                 <View style={{ flex: 1 }}>
-                  <Text numberOfLines={2} style={[{ color: C.text, fontSize: 16, fontWeight: "800" }, align]}>{r.company.name}</Text>
-                  <Text numberOfLines={1} style={[{ color: C.textMuted, fontSize: 12, marginTop: 3 }, align]}>{r.company.city}</Text>
+                  <Text numberOfLines={2} style={[{ color: col.text, fontSize: 16, fontWeight: "800" }, align]}>{r.company.name}</Text>
+                  <Text numberOfLines={1} style={[{ color: col.textMuted, fontSize: 12, marginTop: 3 }, align]}>{r.company.city}</Text>
                 </View>
                 <TowStatusBadge value={r.status} />
               </View>
@@ -57,12 +67,12 @@ export default function TowRequestStatus() {
               </Notice>
             ) : null}
 
-            <Section title={t("Status", "الحالة")} />
+            <SectionHeader title={t("Status", "الحالة")} />
             <Timeline items={r.timeline} />
 
             {r.truck && (
               <>
-                <Section title={t("Assigned truck", "الشاحنة المعيّنة")} />
+                <SectionHeader title={t("Assigned truck", "الشاحنة المعيّنة")} />
                 <Card>
                   <KV k={t("Type", "النوع")} v={type[r.truck.type]} />
                   <KV k={t("Vehicle", "المركبة")} v={[r.truck.make, r.truck.model, r.truck.year].filter(Boolean).join(" ")} />
@@ -72,12 +82,12 @@ export default function TowRequestStatus() {
 
             {MAPS_AVAILABLE && r.pickup ? (
               <>
-                <Section title={t("Pickup point", "نقطة الاستلام")} />
+                <SectionHeader title={t("Pickup point", "نقطة الاستلام")} />
                 <TripMap pickup={r.pickup} dropoff={r.dropoff} height={170} />
               </>
             ) : null}
 
-            <Section title={t("Your request", "طلبك")} />
+            <SectionHeader title={t("Your request", "طلبك")} />
             <Card>
               <KV k={t("Pickup", "الاستلام")} v={r.pickupAddress} />
               <KV k={t("Destination", "الوجهة")} v={r.dropoffAddress} />
@@ -103,6 +113,6 @@ export default function TowRequestStatus() {
           </>
         )}
       </Async>
-    </CustomerScreen>
+    </Screen>
   );
 }

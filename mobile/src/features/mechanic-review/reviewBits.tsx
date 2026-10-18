@@ -1,4 +1,5 @@
-import { Badge, useL } from "../shared/ui";
+import { Badge } from "../../components/ui/Badge";
+import { useL } from "../../core/hooks/useL";
 import type { Observation, ReviewStatus } from "./mechanicReviewService";
 
 export function useReviewLabels() {

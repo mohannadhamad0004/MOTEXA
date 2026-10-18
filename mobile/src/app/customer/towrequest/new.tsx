@@ -1,20 +1,29 @@
+import { Async, Notice } from "../../../components/ui/Feedback";
+import { Button } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
+import { Input } from "../../../components/ui/Input";
+import { Header } from "../../../components/layout/DashboardLayout";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
+import { Screen } from "../../../components/layout/Screen";
+import { Text } from "../../../components/ui/Text";
+import { useTheme } from "../../../theme/useTheme";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
-import { Text } from "react-native";
+import { useEffect, useRef, useState } from "react";
+
 import { Chip, ChipRow } from "../../../features/catalog/catalogBits";
-import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
 import { useProblemLabels } from "../../../features/requests/requestBits";
 import { TOW_PROBLEMS, TowProblem, customerTowRequests, existingIdOf } from "../../../features/requests/requestsService";
 import { catalogService } from "../../../features/catalog/catalogService";
-import { Async, Button, Card, Field, Header, Notice, Section, useL, useLoad } from "../../../features/shared/ui";
-import { cityCentre } from "../../../features/shared/cities";
-import { Point, locationMemory } from "../../../features/shared/geo";
+import { cityCentre } from "../../../core/constants/cities";
+import { Point, locationMemory } from "../../../core/constants/geo";
 import { MAPS_AVAILABLE, PinMap } from "../../../features/shared/maps";
-import { C } from "../../../features/shared/palette";
 import { LocationProblem, reverseGeocode, useCurrentLocation } from "../../../features/shared/useCurrentLocation";
 
 // Addresses are plain text in this version (no GPS, no distance, no price: the company answers the request).
 export default function NewTowRequest() {
+  const { c: col } = useTheme();
   const { companyId } = useLocalSearchParams<{ companyId: string }>();
   const { t } = useL();
   const state = useLoad(() => catalogService.getTowCompany(companyId), [companyId]);
@@ -34,21 +43,34 @@ export default function NewTowRequest() {
   const loc = useCurrentLocation();
   const [busy, setBusy] = useState(false);
 
-  const place = async (p: Point, replaceText: boolean) => {
+  // Address lookups: only the newest one may write (a manual edit or removing the pin cancels it), and map moves are debounced.
+  const lookup = useRef(0);
+  const lookupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelLookup = () => {
+    lookup.current++;
+    if (lookupTimer.current) clearTimeout(lookupTimer.current);
+    setFinding(false);
+  };
+  useEffect(() => () => { lookup.current++; if (lookupTimer.current) clearTimeout(lookupTimer.current); }, []);
+  const place = (p: Point, replaceText: boolean) => {
     setSpot(p);
-    if (replaceText || !pickup.trim() || auto) {
-      setFinding(true);
+    if (!(replaceText || !pickup.trim() || auto)) return;
+    cancelLookup();
+    const mine = lookup.current;
+    setFinding(true);
+    lookupTimer.current = setTimeout(async () => {
       const text = await reverseGeocode(p);
+      if (mine !== lookup.current) return;
       setFinding(false);
       if (text) {
         setPickup(text);
         setAuto(true);
       }
-    }
+    }, replaceText ? 0 : 400);
   };
   const useHere = async () => {
     const p = await loc.locate();
-    if (p) await place(p, true);
+    if (p) place(p, true);
   };
   const [err, setErr] = useState<string | null>(null);
 
@@ -87,7 +109,7 @@ export default function NewTowRequest() {
   };
 
   return (
-    <CustomerScreen>
+    <Screen>
       <Header brand="MOTEXA" title={t("Request a tow", "اطلب سحبًا")} back />
       <Async state={state}>
         {({ company }) =>
@@ -98,20 +120,20 @@ export default function NewTowRequest() {
           ) : (
             <>
               <Notice icon="car-outline">{t(`Request to ${company.name} · ${company.city}`, `طلب إلى ${company.name} · ${company.city}`)}</Notice>
-              <Section title={t("Where", "أين")} />
+              <SectionHeader title={t("Where", "أين")} />
               <Card>
                 {loc.dialog}
                 <Button variant="ghost" icon="locate-outline" label={finding || loc.locating ? t("Finding your location…", "جارٍ تحديد موقعك…") : t("Use my current location", "استخدم موقعي الحالي")} disabled={finding || loc.locating} onPress={useHere} />
                 <LocationProblem loc={loc} />
-                <Field label={t("Pickup address", "عنوان الاستلام")} value={pickup} onChangeText={(v) => { setPickup(v); setAuto(false); }} multiline maxLength={300} />
+                <Input label={t("Pickup address", "عنوان الاستلام")} value={pickup} onChangeText={(v) => { cancelLookup(); setPickup(v); setAuto(false); }} multiline maxLength={300} />
                 {MAPS_AVAILABLE ? (
                   spot ? (
                     <>
                       <PinMap point={spot} onChange={(p) => place(p, false)} />
-                      <Text style={{ color: C.textDim, fontSize: 11, marginBottom: 10 }}>
+                      <Text style={{ color: col.textDim, fontSize: 11, marginBottom: 10 }}>
                         {t("Tap the map or drag the pin to adjust the pickup point. Add a street or landmark above if the address is empty.", "اضغط على الخريطة أو اسحب الدبوس لتعديل نقطة الاستلام. أضف شارعًا أو معلمًا أعلاه إن كان العنوان فارغًا.")}
                       </Text>
-                      <Button variant="ghost" icon="trash-outline" label={t("Remove the pin", "إزالة الدبوس")} onPress={() => setSpot(null)} />
+                      <Button variant="ghost" icon="trash-outline" label={t("Remove the pin", "إزالة الدبوس")} onPress={() => { cancelLookup(); setSpot(null); }} />
                     </>
                   ) : (
                     <Button
@@ -122,24 +144,24 @@ export default function NewTowRequest() {
                     />
                   )
                 ) : null}
-                <Field label={t("Destination", "الوجهة")} value={dropoff} onChangeText={setDropoff} multiline maxLength={300} />
+                <Input label={t("Destination", "الوجهة")} value={dropoff} onChangeText={setDropoff} multiline maxLength={300} />
               </Card>
-              <Section title={t("Your car", "سيارتك")} />
+              <SectionHeader title={t("Your car", "سيارتك")} />
               <Card>
-                <Field label={t("Make", "الشركة المصنعة")} value={make} onChangeText={setMake} maxLength={60} />
-                <Field label={t("Model", "الطراز")} value={model} onChangeText={setModel} maxLength={60} />
-                <Field label={t("Year (optional)", "السنة (اختياري)")} value={year} onChangeText={setYear} keyboardType="number-pad" maxLength={4} />
+                <Input label={t("Make", "الشركة المصنعة")} value={make} onChangeText={setMake} maxLength={60} />
+                <Input label={t("Model", "الطراز")} value={model} onChangeText={setModel} maxLength={60} />
+                <Input label={t("Year (optional)", "السنة (اختياري)")} value={year} onChangeText={setYear} keyboardType="number-pad" maxLength={4} />
               </Card>
-              <Section title={t("What is wrong?", "ما المشكلة؟")} />
+              <SectionHeader title={t("What is wrong?", "ما المشكلة؟")} />
               <ChipRow>
                 {TOW_PROBLEMS.map((k) => (
                   <Chip key={k} label={problemLabel[k]} on={problem === k} onPress={() => setProblem(k)} />
                 ))}
               </ChipRow>
-              <Section title={t("Contact", "التواصل")} />
+              <SectionHeader title={t("Contact", "التواصل")} />
               <Card>
-                <Field label={t("Contact phone", "هاتف التواصل")} value={phone} onChangeText={setPhone} keyboardType="phone-pad" maxLength={20} />
-                <Field label={t("Notes (optional)", "ملاحظات (اختياري)")} value={notes} onChangeText={setNotes} multiline maxLength={500} />
+                <Input label={t("Contact phone", "هاتف التواصل")} value={phone} onChangeText={setPhone} keyboardType="phone-pad" maxLength={20} />
+                <Input label={t("Notes (optional)", "ملاحظات (اختياري)")} value={notes} onChangeText={setNotes} multiline maxLength={500} />
               </Card>
               {err ? <Notice tone="danger" icon="alert-circle-outline">{err}</Notice> : null}
               <Button icon="send-outline" label={t("Send request", "إرسال الطلب")} disabled={busy} onPress={submit} />
@@ -150,6 +172,6 @@ export default function NewTowRequest() {
           )
         }
       </Async>
-    </CustomerScreen>
+    </Screen>
   );
 }
