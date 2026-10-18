@@ -1,17 +1,11 @@
+import { PanelFill, CanvasFill } from "../../../components/BrandSurfaces";
+import { Text } from "../../../components/MotexaVisual";
+import LanguageSwitch from "../../../components/LanguageSwitch";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import {
-  Animated,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
-} from "react-native";
+import { Animated, ScrollView, StatusBar, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLanguage } from "../../../i18n/LanguageContext";
 import { canManageMechanics, useSession } from "../../../features/shared/session";
@@ -223,10 +217,10 @@ export default function MechanicsScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="light-content" backgroundColor="#120D0A" />
+      <StatusBar barStyle="dark-content" backgroundColor="#E9DECE" />
 
       <LinearGradient
-        colors={["#120D0A", "#1C120D", "#17100C"]}
+        colors={["#F1E9DD", "#DFCFB9", "#EDE2D3"]}
         style={StyleSheet.absoluteFill}
       />
 
@@ -258,7 +252,7 @@ export default function MechanicsScreen() {
               <Ionicons
                 name={isArabic ? "arrow-forward" : "arrow-back"}
                 size={21}
-                color="#E0A06D"
+                color="#A27140"
               />
             </TouchableOpacity>
 
@@ -285,15 +279,7 @@ export default function MechanicsScreen() {
             </View>
 
             {/* LANGUAGE BUTTON */}
-            <TouchableOpacity
-              activeOpacity={0.8}
-              style={styles.languageButton}
-              onPress={toggleLanguage}
-            >
-              <Ionicons name="language-outline" size={17} color="#E1A16F" />
-
-              <Text style={styles.languageText}>{isArabic ? "EN" : "AR"}</Text>
-            </TouchableOpacity>
+            <LanguageSwitch light />
           </View>
 
           {/* NETWORK STATUS */}
@@ -318,7 +304,7 @@ export default function MechanicsScreen() {
                 </View>
 
                 <View style={styles.shield}>
-                  <Ionicons name="shield-checkmark" size={27} color="#D99B69" />
+                  <Ionicons name="shield-checkmark" size={27} color="#A27140" />
                 </View>
               </View>
 
@@ -342,19 +328,19 @@ export default function MechanicsScreen() {
 
           {/* SEARCH */}
           <View style={[styles.search, isArabic && styles.rowReverse]}>
-            <Ionicons name="search-outline" size={19} color="#9A877A" />
+            <Ionicons name="search-outline" size={19} color="#A27140" />
 
             <TextInput
               value={search}
               onChangeText={setSearch}
               placeholder={t.search}
-              placeholderTextColor="#74645A"
+              placeholderTextColor="#9C836B"
               style={[styles.searchInput, isArabic && styles.searchInputArabic]}
             />
 
             {!!search && (
               <TouchableOpacity onPress={() => setSearch("")}>
-                <Ionicons name="close-circle" size={19} color="#8C796D" />
+                <Ionicons name="close-circle" size={19} color="#A27140" />
               </TouchableOpacity>
             )}
           </View>
@@ -528,7 +514,7 @@ export default function MechanicsScreen() {
                         <Ionicons
                           name="briefcase-outline"
                           size={14}
-                          color="#8F7C70"
+                          color="#A27140"
                         />
 
                         <Text style={styles.detailText}>
@@ -545,7 +531,7 @@ export default function MechanicsScreen() {
                         <Ionicons
                           name="time-outline"
                           size={14}
-                          color="#8F7C70"
+                          color="#A27140"
                         />
 
                         <Text style={styles.detailText}>
@@ -675,7 +661,7 @@ export default function MechanicsScreen() {
 
                     <View style={styles.verifiedStats}>
                       <View style={styles.verifiedStat}>
-                        <Ionicons name="star" size={14} color="#D99B69" />
+                        <Ionicons name="star" size={14} color="#A27140" />
 
                         <Text style={styles.verifiedValue}>
                           {mechanic.rating}
@@ -710,7 +696,7 @@ export default function MechanicsScreen() {
                       <Ionicons
                         name={isArabic ? "chevron-back" : "chevron-forward"}
                         size={15}
-                        color="#D99B69"
+                        color="#A27140"
                       />
                     </TouchableOpacity>
                   </View>
@@ -754,7 +740,7 @@ function MiniMetric({
 }) {
   return (
     <View style={styles.metric}>
-      <Ionicons name={icon} size={16} color="#B67A51" />
+      <Ionicons name={icon} size={16} color="#A27140" />
 
       <Text style={styles.metricValue}>{value}</Text>
 
@@ -790,7 +776,7 @@ function SectionTitle({
 function EmptyState({ text }: { text: string }) {
   return (
     <View style={styles.empty}>
-      <Ionicons name="search-outline" size={28} color="#79685E" />
+      <Ionicons name="search-outline" size={28} color="#A27140" />
 
       <Text style={styles.emptyText}>{text}</Text>
     </View>
@@ -800,7 +786,7 @@ function EmptyState({ text }: { text: string }) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#120D0A",
+    backgroundColor: "#E9DECE",
   },
 
   content: {
@@ -834,7 +820,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 22,
+    marginBottom: 28,
   },
 
   backButton: {
@@ -842,7 +828,7 @@ const styles = StyleSheet.create({
     height: 43,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(217,155,105,0.17)",
+    borderColor: "#D5BFA1",
     backgroundColor: "rgba(217,155,105,0.07)",
     alignItems: "center",
     justifyContent: "center",
@@ -875,17 +861,17 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: "#FFF5EA",
-    fontSize: 25,
-    lineHeight: 31,
-    fontWeight: "900",
+    color: "#493321",
+    fontSize: 30,
+    lineHeight: 42,
+    fontWeight: "600",
     letterSpacing: -0.7,
   },
 
   subtitle: {
-    color: "#9A877A",
-    fontSize: 10,
-    lineHeight: 15,
+    color: "#92765B",
+    fontSize: 13,
+    lineHeight: 23,
     marginTop: 3,
   },
 
@@ -897,7 +883,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     borderRadius: 13,
     borderWidth: 1,
-    borderColor: "rgba(217,155,105,0.18)",
+    borderColor: "#D5BFA1",
     backgroundColor: "rgba(217,155,105,0.07)",
     flexDirection: "row",
     alignItems: "center",
@@ -907,7 +893,7 @@ const styles = StyleSheet.create({
   },
 
   languageText: {
-    color: "#E1A16F",
+    color: "#A27140",
     fontSize: 10,
     fontWeight: "900",
   },
@@ -918,7 +904,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(217,155,105,0.15)",
+    borderColor: "#D5BFA1",
     marginBottom: 15,
   },
 
@@ -940,7 +926,7 @@ const styles = StyleSheet.create({
   },
 
   networkBig: {
-    color: "#FFF5EA",
+    color: "#493321",
     fontSize: 35,
     lineHeight: 40,
     fontWeight: "900",
@@ -948,7 +934,7 @@ const styles = StyleSheet.create({
   },
 
   networkCaption: {
-    color: "#9D897B",
+    color: "#92765B",
     fontSize: 10,
     fontWeight: "600",
   },
@@ -959,7 +945,7 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     backgroundColor: "rgba(217,155,105,0.08)",
     borderWidth: 1,
-    borderColor: "rgba(217,155,105,0.13)",
+    borderColor: "#D5BFA1",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -980,14 +966,14 @@ const styles = StyleSheet.create({
   },
 
   metricValue: {
-    color: "#F2E4DA",
+    color: "#493321",
     fontSize: 17,
     fontWeight: "900",
     marginTop: 5,
   },
 
   metricLabel: {
-    color: "#837267",
+    color: "#92765B",
     fontSize: 8,
     marginTop: 2,
   },
@@ -998,7 +984,7 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(217,155,105,0.13)",
+    borderColor: "#D5BFA1",
     backgroundColor: "rgba(255,245,234,0.04)",
     flexDirection: "row",
     alignItems: "center",
@@ -1009,7 +995,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     height: "100%",
-    color: "#FFF5EA",
+    color: "#493321",
     fontSize: 12,
     marginLeft: 9,
   },
@@ -1027,7 +1013,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "#1C130E",
     borderWidth: 1,
-    borderColor: "rgba(217,155,105,0.1)",
+    borderColor: "#D5BFA1",
     padding: 4,
     flexDirection: "row",
     gap: 4,
@@ -1050,7 +1036,7 @@ const styles = StyleSheet.create({
   },
 
   tabText: {
-    color: "#8F7D71",
+    color: "#493321",
     fontSize: 10,
     fontWeight: "800",
   },
@@ -1090,14 +1076,15 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: "#EADBD0",
-    fontSize: 11,
-    fontWeight: "900",
+    color: "#493321",
+    fontSize: 18,
+    fontWeight: "600",
     letterSpacing: 1.2,
+    lineHeight: 28,
   },
 
   sectionSubtitle: {
-    color: "#76665D",
+    color: "#92765B",
     fontSize: 9,
     marginTop: 4,
   },
@@ -1112,8 +1099,8 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 19,
     borderWidth: 1,
-    borderColor: "rgba(217,155,105,0.11)",
-    backgroundColor: "rgba(35,22,16,0.9)",
+    borderColor: "#D5BFA1",
+    backgroundColor: "#F7EDDD",
   },
 
   personTop: {
@@ -1132,9 +1119,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: "#352116",
+    backgroundColor: "#E8D4B8",
     borderWidth: 1,
-    borderColor: "rgba(217,155,105,0.16)",
+    borderColor: "#D5BFA1",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1144,7 +1131,7 @@ const styles = StyleSheet.create({
   },
 
   avatarText: {
-    color: "#D99B69",
+    color: "#493321",
     fontSize: 12,
     fontWeight: "900",
   },
@@ -1169,13 +1156,13 @@ const styles = StyleSheet.create({
   },
 
   personName: {
-    color: "#F6EADF",
+    color: "#493321",
     fontSize: 14,
     fontWeight: "900",
   },
 
   personId: {
-    color: "#76655A",
+    color: "#493321",
     fontSize: 9,
     marginTop: 4,
   },
@@ -1187,7 +1174,7 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     backgroundColor: "rgba(217,155,105,0.08)",
     borderWidth: 1,
-    borderColor: "rgba(217,155,105,0.13)",
+    borderColor: "#D5BFA1",
     flexDirection: "row",
     alignItems: "center",
   },
@@ -1202,7 +1189,7 @@ const styles = StyleSheet.create({
 
   stageText: {
     flexShrink: 1,
-    color: "#D99B69",
+    color: "#493321",
     fontSize: 7.5,
     lineHeight: 10,
     fontWeight: "900",
@@ -1210,12 +1197,12 @@ const styles = StyleSheet.create({
 
   cardDivider: {
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: "#F7EDDD",
     marginVertical: 13,
   },
 
   specialization: {
-    color: "#C4AEA0",
+    color: "#493321",
     fontSize: 11,
     fontWeight: "700",
   },
@@ -1234,7 +1221,7 @@ const styles = StyleSheet.create({
   },
 
   detailText: {
-    color: "#817066",
+    color: "#493321",
     fontSize: 9,
   },
 
@@ -1263,14 +1250,14 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     backgroundColor: "rgba(140,170,132,0.08)",
     borderWidth: 1,
-    borderColor: "rgba(140,170,132,0.15)",
+    borderColor: "#D5BFA1",
     flexDirection: "row",
     alignItems: "center",
   },
 
   busyBadge: {
     backgroundColor: "rgba(217,155,105,0.07)",
-    borderColor: "rgba(217,155,105,0.13)",
+    borderColor: "#D5BFA1",
   },
 
   availabilityDot: {
@@ -1286,7 +1273,7 @@ const styles = StyleSheet.create({
   },
 
   availabilityText: {
-    color: "#B6C8AF",
+    color: "#493321",
     fontSize: 8,
     fontWeight: "800",
   },
@@ -1315,13 +1302,13 @@ const styles = StyleSheet.create({
   },
 
   verifiedValue: {
-    color: "#E9DBD0",
+    color: "#493321",
     fontSize: 11,
     fontWeight: "900",
   },
 
   verifiedLabel: {
-    color: "#79685E",
+    color: "#92765B",
     fontSize: 8,
   },
 
@@ -1330,7 +1317,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     borderRadius: 11,
     borderWidth: 1,
-    borderColor: "rgba(217,155,105,0.15)",
+    borderColor: "#D5BFA1",
     backgroundColor: "rgba(217,155,105,0.05)",
     flexDirection: "row",
     justifyContent: "center",
@@ -1339,7 +1326,7 @@ const styles = StyleSheet.create({
   },
 
   profileText: {
-    color: "#D99B69",
+    color: "#493321",
     fontSize: 10,
     fontWeight: "900",
   },
@@ -1350,14 +1337,14 @@ const styles = StyleSheet.create({
     minHeight: 150,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(217,155,105,0.1)",
+    borderColor: "#D5BFA1",
     backgroundColor: "rgba(35,22,16,0.6)",
     alignItems: "center",
     justifyContent: "center",
   },
 
   emptyText: {
-    color: "#827066",
+    color: "#493321",
     fontSize: 11,
     marginTop: 8,
   },
@@ -1379,7 +1366,7 @@ const styles = StyleSheet.create({
   },
 
   footerText: {
-    color: "#6F5140",
+    color: "#92765B",
     fontSize: 7,
     letterSpacing: 0.8,
     fontWeight: "800",

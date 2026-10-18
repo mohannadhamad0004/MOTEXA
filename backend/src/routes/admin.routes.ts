@@ -80,4 +80,19 @@ router.get("/dashboard", async (_req, res) => {
   }
 });
 
+// Read-only provider directory; existing Super Admin guards apply.
+router.get("/providers", async (_req, res) => {
+  try {
+    const providers = await prisma.user.findMany({
+      where: {role: {in: ["MECHANIC", "PARTS_PROVIDER", "TOW_PROVIDER"]}},
+      select: {id:true, fullName:true, email:true, role:true, status:true,
+        mechanicProfile: {select: {verificationStatus:true}}},
+      orderBy: {createdAt:"desc"},
+    });
+    return res.json({success:true,providers});
+  } catch {
+    return res.status(500).json({success:false,message:"Failed to load providers."});
+  }
+});
+
 export default router;

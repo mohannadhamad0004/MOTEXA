@@ -1,0 +1,3 @@
+import React, {useState} from 'react';
+import {Pressable, TouchableOpacityProps} from 'react-native';
+export default function InteractiveButton({style,activeOpacity=0.82,onFocus,onBlur,disabled,children,...props}:TouchableOpacityProps){const [focused,setFocused]=useState(false);return <Pressable {...props} disabled={disabled} onFocus={event=>{setFocused(true);onFocus?.(event)}} onBlur={event=>{setFocused(false);onBlur?.(event)}} style={({pressed,hovered})=>[style,hovered&&!disabled&&{opacity:.9},pressed&&!disabled&&{opacity:activeOpacity},focused&&{outlineColor:'#AB713D',outlineWidth:3,outlineOffset:3,outlineStyle:'solid'}]}>{children}</Pressable>}

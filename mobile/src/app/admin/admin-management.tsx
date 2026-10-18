@@ -1,3 +1,10 @@
+import { apiUrl } from "../../features/shared/api";
+import TouchableOpacity from "../../components/InteractiveButton";
+import { useAppearanceStyles, useAppearance } from "../../components/Appearance";
+import { PanelFill, CanvasFill } from "../../components/BrandSurfaces";
+import { LinearGradient } from "expo-linear-gradient";
+import LanguageSwitch from "../../components/LanguageSwitch";
+import { Text, VisualProvider, HeroReveal, DecorativeHalo } from "../../components/MotexaVisual";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
@@ -5,17 +12,7 @@ import { useCallback, useEffect } from "react";
 import * as Clipboard from "expo-clipboard";
 import { useMemo, useState } from "react";
 import MotexaDialog from "../../components/MotexaDialog";
-import {
-    Alert,
-    FlatList,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from "react-native";
+import { Alert, FlatList, Modal, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLanguage } from "../../i18n/LanguageContext";
 
@@ -29,8 +26,7 @@ type AdminAccount = {
   role: AdminRole;
   status: AdminStatus;
 };
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
-
+const API_URL = apiUrl();
 type ApiAdmin = {
   id: string;
   fullName: string;
@@ -51,15 +47,15 @@ type ApiInvitation = {
 };
 
 const COLORS = {
-  background: "#120D0A",
-  surface: "#211711",
-  surfaceLight: "#302117",
-  bronze: "#E0A36F",
-  text: "#F6E8DC",
-  muted: "#A99181",
-  border: "rgba(224,163,111,0.18)",
-  green: "#8BC8A1",
-  red: "#E59B91",
+  background: "#E9DECE",
+  surface: "#F7EDDD",
+  surfaceLight: "#E8D4B8",
+  bronze: "#A26F43",
+  text: "#342418",
+  muted: "#92765B",
+  border: "#D5BFA1",
+  green: "#377250",
+  red: "#A84437",
 };
 
 const INITIAL_ADMINS: AdminAccount[] = [
@@ -87,6 +83,8 @@ const INITIAL_ADMINS: AdminAccount[] = [
 ];
 
 export default function AdminManagementScreen() {
+  const styles = useAppearanceStyles(baseStyles);
+  const { dark } = useAppearance();
   const { isArabic } = useLanguage();
   const insets = useSafeAreaInsets();
 
@@ -307,8 +305,8 @@ if (typeof result.activationLink === "string" && result.activationLink) {
   Alert.alert(
     isArabic ? "تم إنشاء الدعوة" : "Invitation Created",
     isArabic
-      ? "تم حفظ الدعوة، لكن لم يُرجع الخادم رابط التفعيل."
-      : "Invitation saved, but the server did not return an activation link."
+      ? "تم إرسال الدعوة إلى البريد الإلكتروني. يكمل المستلم التفعيل من رابط الدعوة، ثم يتحقق برمز OTP وينشئ كلمة المرور."
+      : "Invitation sent by email. The recipient can open the invitation, verify the OTP, and set a password."
   );
 }
   } catch (error) {
@@ -372,7 +370,7 @@ const confirmRevoke = async () => {
     setRevoking(false);
   }
 };
-const confirmStatusChange = async () => {
+ const confirmStatusChange = async () => {
   if (!statusTarget || updatingStatus || statusTarget.status === "invited") {
     return;
   }
@@ -422,73 +420,27 @@ const confirmStatusChange = async () => {
 };
 
   const renderAdmin = ({ item }: { item: AdminAccount }) => {
-    const statusColor =
-      item.status === "active"
-        ? COLORS.green
-        : item.status === "suspended"
-          ? COLORS.red
-          : COLORS.bronze;
-
-    return (
-      <View style={styles.adminCard}>
-        <View style={styles.adminTop}>
-          <View style={styles.avatar}>
-            <Ionicons name="person-outline" size={23} color={COLORS.bronze} />
-          </View>
-
-          <View style={styles.adminInfo}>
-            <Text style={styles.adminName}>{item.name}</Text>
-            <Text style={styles.adminEmail}>{item.email}</Text>
-          </View>
-        </View>
-
-        <View style={styles.detailsRow}>
-          <View style={styles.roleBadge}>
-            <Ionicons name="shield-outline" size={14} color={COLORS.bronze} />
-            <Text style={styles.roleText}>{roleLabel(item.role)}</Text>
-          </View>
-
-          <View style={styles.statusBadge}>
-            <View
-              style={[styles.statusDot, { backgroundColor: statusColor }]}
-            />
-            <Text style={[styles.statusText, { color: statusColor }]}>
-              {statusLabel(item.status)}
-            </Text>
-          </View>
-        </View>
-
-       
-          {(
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => toggleSuspension(item)}
-          >
-    <Ionicons
-  name={
-    item.status === "invited"
-      ? "close-circle-outline"
-      : item.status === "active"
-        ? "pause-circle-outline"
-        : "checkmark-circle-outline"
-  }
-  size={18}
-  color={COLORS.bronze}
-/><Text style={styles.actionText}>
-  {item.status === "invited"
-    ? isArabic ? "إلغاء الدعوة" : "Revoke Invitation"
-    : item.status === "active"
-      ? isArabic ? "تعليق المسؤول" : "Suspend Admin"
-      : isArabic ? "إعادة تفعيل المسؤول" : "Reactivate Admin"}
-</Text>
-          </TouchableOpacity>
-        )}
+    const statusColor=item.status==='active'?COLORS.green:item.status==='suspended'?COLORS.red:COLORS.bronze;
+    const initials=item.name.trim().split(/\s+/).slice(0,2).map(part=>part[0]).join('').toUpperCase();
+    return <View style={[styles.adminCard,{backgroundColor:dark?"#372B22":"#FFF8EC",borderColor:dark?"#66513C":"#E6D5BC"}]}>
+      <View style={{flexDirection:isArabic?'row-reverse':'row',alignItems:'center',gap:12}}>
+        <View style={[styles.avatar,{backgroundColor:dark?'#63482F':'#DFC19A'}]}><Text style={{fontSize:18,fontWeight:'700',color:dark?'#FFE5C0':'#4B3020'}}>{initials}</Text></View>
+        <View style={{flex:1,gap:3}}><Text style={[styles.adminName,{textAlign:isArabic?'right':'left'}]}>{item.name}</Text><Text style={[styles.roleText,{textAlign:isArabic?'right':'left'}]}>{roleLabel(item.role)}</Text></View>
+        <View style={{width:10,height:10,borderRadius:5,backgroundColor:statusColor}}/>
       </View>
-    );
+      <Text selectable style={[styles.adminEmail,{marginTop:8,marginBottom:10,writingDirection:'ltr',textAlign:isArabic?'right':'left'}]}>{item.email}</Text>
+      <View style={{borderTopWidth:1,borderTopColor:dark?'#68513C':'#DDC9AD',paddingTop:8,flexDirection:isArabic?'row-reverse':'row',justifyContent:'space-between',alignItems:'center',gap:8}}>
+        <Text style={{color:statusColor,fontSize:12,fontWeight:'600'}}>{statusLabel(item.status)}</Text>
+        <TouchableOpacity accessibilityRole="button" onPress={()=>toggleSuspension(item)} style={{minHeight:40,paddingHorizontal:12,borderRadius:12,backgroundColor:dark?'#513E2C':'#EAD6B9',flexDirection:isArabic?'row-reverse':'row',alignItems:'center',gap:6}}>
+          <Ionicons name={item.status==='invited'?'close-outline':item.status==='active'?'pause-outline':'play-outline'} size={16} color={dark?'#E7C294':'#704A2D'}/>
+          <Text style={{color:dark?'#E7C294':'#704A2D',fontSize:12,fontWeight:'600'}}>{item.status==='invited'?(isArabic?'إلغاء الدعوة':'Revoke invitation'):item.status==='active'?(isArabic?'تعليق':'Suspend'):(isArabic?'إعادة التفعيل':'Reactivate')}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>;
   };
 
   return (
-    <View style={styles.container}>
+    <VisualProvider><View style={styles.container}><LinearGradient pointerEvents="none" colors={dark?["#211B17","#30251D","#241D18"]:["#D9C4A8","#BDA07C","#CDB595"]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
       <FlatList
         data={admins}
         keyExtractor={(item) => item.id}
@@ -496,7 +448,7 @@ const confirmStatusChange = async () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.listContent,
-          { paddingTop: insets.top + 18 },
+          { paddingTop: insets.top + 8 },
         ]}
         ListHeaderComponent={
           <>
@@ -512,36 +464,23 @@ const confirmStatusChange = async () => {
               <Text style={styles.backText}>{isArabic ? "رجوع" : "Back"}</Text>
             </TouchableOpacity>
 
-            <View style={styles.brandRow}>
+            <View style={{flexDirection:isArabic?"row-reverse":"row",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:10}}><View style={styles.brandRow}>
               <Ionicons name="car-sport" size={21} color={COLORS.bronze} />
               <Text style={styles.brand}>MOTEXA</Text>
-            </View>
-
-            <Text style={styles.heading}>{labels.title}</Text>
-            <Text style={styles.subtitle}>{labels.subtitle}</Text>
+            </View><LanguageSwitch light compact /></View>
 
             
-
-            <View style={styles.statsRow}>
-              {[
-                { label: labels.total, value: stats.total },
-                { label: labels.active, value: stats.active },
-                { label: labels.invited, value: stats.invited },
-              ].map((stat) => (
-                <View style={styles.statCard} key={stat.label}>
-                  <Text style={styles.statValue}>{stat.value}</Text>
-                  <Text style={styles.statLabel}>{stat.label}</Text>
-                </View>
-              ))}
+          <HeroReveal style={{marginBottom:24}}>
+            <Text style={{color:dark?'#CBA575':'#785334',fontSize:11,letterSpacing:2,marginBottom:10}}>{isArabic?'مساحة الإدارة':'TEAM WORKSPACE'}</Text>
+            <View style={{flexDirection:isArabic?'row-reverse':'row',alignItems:'center',gap:12}}>
+              <Text style={[styles.heading,{flex:1,fontSize:24,lineHeight:32,textAlign:isArabic?'right':'left'}]}>{isArabic?'إدارة الأدمن':'Administrators'}</Text>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={labels.add} onPress={()=>setModalVisible(true)} style={{minHeight:44,paddingHorizontal:12,borderRadius:14,flexDirection:isArabic?'row-reverse':'row',gap:5,backgroundColor:dark?'#DDB47D':'#493020',alignItems:'center',justifyContent:'center'}}><Ionicons name="add" size={18} color={dark?'#352216':'#F7E9D6'}/><Text style={{fontSize:12,fontWeight:"600",color:dark?"#352216":"#F7E9D6"}}>{isArabic?"إضافة":"Add admin"}</Text></TouchableOpacity>
             </View>
-
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => setModalVisible(true)}
-            >
-              <Ionicons name="add-circle-outline" size={22} color="#21130C" />
-              <Text style={styles.addButtonText}>{labels.add}</Text>
-            </TouchableOpacity>
+            <Text style={[styles.subtitle,{marginBottom:18,textAlign:isArabic?'right':'left'}]}>{labels.subtitle}</Text>
+            <View style={{borderRadius:22,overflow:'hidden',padding:18,flexDirection:isArabic?'row-reverse':'row'}}><PanelFill kind="hero" radius={22}/>
+              {[{label:labels.total,value:stats.total},{label:labels.active,value:stats.active},{label:labels.invited,value:stats.invited}].map((stat,index)=><View key={stat.label} style={{flex:1,alignItems:'center',gap:5,borderLeftWidth:index?1:0,borderLeftColor:'#8C70564D'}}><Text style={{fontSize:27,color:'#FFF5E5',fontWeight:'600'}}>{stat.value}</Text><Text style={{fontSize:12,color:'#E4C7A4'}}>{stat.label}</Text></View>)}
+            </View>
+          </HeroReveal>
 
             <Text style={styles.sectionTitle}>
 {isArabic ? "المسؤولون والدعوات" : "ADMINISTRATORS & INVITATIONS"}            </Text>
@@ -559,7 +498,7 @@ const confirmStatusChange = async () => {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
+          <View style={[styles.modalCard,{overflow:"hidden"}]}><CanvasFill/>
             <ScrollView
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
@@ -573,7 +512,7 @@ const confirmStatusChange = async () => {
                 value={name}
                 onChangeText={setName}
                 placeholder={labels.name}
-                placeholderTextColor="#7F6C60"
+                placeholderTextColor="#9C836B"
                 autoCapitalize="words"
               />
 
@@ -582,8 +521,8 @@ const confirmStatusChange = async () => {
                 style={styles.input}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="admin@example.com"
-                placeholderTextColor="#7F6C60"
+                placeholder={isArabic?"أدخل البريد الإلكتروني":"Enter email address"}
+                placeholderTextColor="#9C836B"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -738,7 +677,10 @@ const confirmStatusChange = async () => {
         </Text>
       </TouchableOpacity>
     </View>
-    <MotexaDialog
+    
+  </View>
+</Modal>
+<MotexaDialog
   visible={statusTarget !== null}
   type="warning"
   title={
@@ -765,8 +707,6 @@ const confirmStatusChange = async () => {
   onConfirm={confirmStatusChange}
   onCancel={() => setStatusTarget(null)}
 />
-  </View>
-</Modal>
       <MotexaDialog
   visible={revokeTarget !== null}
   type="warning"
@@ -782,52 +722,65 @@ const confirmStatusChange = async () => {
   onConfirm={confirmRevoke}
   onCancel={() => setRevokeTarget(null)}
 />
-    </View>
+    </View></VisualProvider>
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
+  managementHero: {
+    padding:22,
+    marginHorizontal:-6,
+    borderRadius:24,
+    overflow:"hidden",
+    marginBottom:20,
+  },
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: "#E9DECE",
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 55,
+    paddingBottom: 42,
+    maxWidth: 720,
+    width: "100%",
+    alignSelf: "center",
   },
   backButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: 9,
-    marginBottom: 26,
+    marginBottom: 8,
   },
   backText: {
     color: COLORS.bronze,
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 12,
+    fontWeight: "600",
   },
   brandRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 9,
-    marginBottom: 20,
+    marginBottom: 0,
   },
   brand: {
-    color: COLORS.bronze,
-    fontSize: 16,
+    color: "#98623B",
+    fontSize: 11,
     fontWeight: "900",
-    letterSpacing: 3,
+    letterSpacing: 3.2,
+    marginBottom: 0,
   },
   heading: {
     color: COLORS.text,
     fontSize: 30,
-    fontWeight: "900",
+    fontWeight: "600",
     marginBottom: 8,
+    lineHeight: 40,
   },
   subtitle: {
-    color: COLORS.muted,
-    fontSize: 13,
-    marginBottom: 20,
+    color: "#8C735D",
+    fontSize: 14,
+    marginBottom: 26,
+    lineHeight: 22,
   },
   demoNotice: {
     flexDirection: "row",
@@ -848,86 +801,90 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: "row",
-    gap: 9,
+    gap: 10,
     marginBottom: 22,
   },
   statCard: {
     flex: 1,
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    paddingVertical: 18,
+    backgroundColor: "#F3E4CE",
+    borderRadius: 20,
+    paddingVertical: 16,
     paddingHorizontal: 8,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: "#D1B28B",
   },
   statValue: {
-    color: COLORS.bronze,
-    fontSize: 25,
-    fontWeight: "900",
-    marginBottom: 7,
+    color: "#493122",
+    fontSize: 28,
+    fontWeight: "600",
+    marginBottom: 6,
   },
   statLabel: {
-    color: COLORS.muted,
-    fontSize: 10,
+    color: "#8C735D",
+    fontSize: 12,
     textAlign: "center",
+    lineHeight: 17,
   },
   addButton: {
-    backgroundColor: COLORS.bronze,
+    backgroundColor: "#D2A46C",
     minHeight: 54,
-    borderRadius: 15,
+    borderRadius: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    marginBottom: 30,
+    marginBottom: 29,
   },
   addButtonText: {
-    color: "#21130C",
+    color: "#3B2817",
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   sectionTitle: {
-    color: "#BD987D",
+    color: "#654C38",
     fontSize: 12,
     fontWeight: "800",
-    letterSpacing: 1.2,
+    letterSpacing: 0.4,
     marginBottom: 16,
   },
   adminCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 19,
-    padding: 17,
-    marginBottom: 13,
+    backgroundColor: "#FCFAF5",
+    borderRadius: 24,
+    padding: 16,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: "#BE9C75",
+    overflow: "hidden",
   },
   adminTop: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 17,
+    gap: 12,
   },
   avatar: {
-    width: 49,
-    height: 49,
-    borderRadius: 15,
-    backgroundColor: COLORS.surfaceLight,
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: "#E4CAA5",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 13,
+    marginRight: 0,
   },
   adminInfo: {
     flex: 1,
   },
   adminName: {
-    color: COLORS.text,
-    fontSize: 15,
-    fontWeight: "800",
+    color: "#342418",
+    fontSize: 18,
+    fontWeight: "600",
     marginBottom: 5,
   },
   adminEmail: {
-    color: COLORS.muted,
-    fontSize: 11,
+    color: "#715A46",
+    fontSize: 13,
+    lineHeight: 20,
   },
   detailsRow: {
     flexDirection: "row",
@@ -940,20 +897,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: COLORS.surfaceLight,
+    backgroundColor: "#F0E7D9",
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
   roleText: {
-    color: COLORS.bronze,
-    fontSize: 11,
-    fontWeight: "700",
+    color: "#98623B",
+    fontSize: 12,
+    fontWeight: "500",
   },
   statusBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    backgroundColor: "#EFE3D1",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 20,
   },
   statusDot: {
     width: 7,
@@ -961,21 +922,26 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   statusText: {
-    fontSize: 11,
-    fontWeight: "700",
+    fontSize: 12,
+    fontWeight: "600",
   },
   actionButton: {
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingTop: 13,
+    borderTopWidth: 0,
+    borderTopColor: "#E6D9C8",
+    paddingTop: 0,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    minHeight: 48,
+    backgroundColor: "#EAD9C0",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    justifyContent: "center",
   },
   actionText: {
-    color: COLORS.bronze,
-    fontSize: 12,
-    fontWeight: "700",
+    color: "#98623B",
+    fontSize: 13,
+    fontWeight: "600",
   },
   emptyText: {
     color: COLORS.muted,
@@ -988,67 +954,68 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalCard: {
-    backgroundColor: "#241912",
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 24,
+    backgroundColor: "#F3F0E8",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    padding: 28,
     maxHeight: "88%",
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: "#DCCBB6",
   },
   modalTitle: {
-    color: COLORS.text,
-    fontSize: 23,
-    fontWeight: "900",
+    color: "#342418",
+    fontSize: 24,
+    fontWeight: "600",
     marginBottom: 24,
   },
   inputLabel: {
-    color: "#C8AA94",
-    fontSize: 12,
+    color: "#6E5039",
+    fontSize: 13,
     fontWeight: "700",
     marginBottom: 9,
   },
   input: {
-    backgroundColor: "#150F0B",
+    backgroundColor: "#FCFAF5",
     borderWidth: 1,
-    borderColor: "#49352A",
-    borderRadius: 13,
-    height: 52,
+    borderColor: "#DCD1BF",
+    borderRadius: 14,
+    height: 58,
     paddingHorizontal: 14,
-    color: COLORS.text,
+    color: "#342418",
     marginBottom: 19,
+    fontSize: 15,
   },
   roleOption: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "#1A120D",
-    borderRadius: 12,
+    backgroundColor: "#FCFAF5",
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#3B2A20",
-    padding: 15,
+    borderColor: "#DCCBB6",
+    padding: 16,
     marginBottom: 9,
   },
   roleOptionSelected: {
-    borderColor: COLORS.bronze,
-    backgroundColor: "#35251B",
+    borderColor: "#A26F43",
+    backgroundColor: "#EEDCC6",
   },
   roleOptionText: {
-    color: COLORS.text,
-    fontSize: 13,
-    fontWeight: "700",
+    color: "#493122",
+    fontSize: 14,
+    fontWeight: "600",
   },
   modalSubmit: {
-    backgroundColor: COLORS.bronze,
-    padding: 17,
+    backgroundColor: "#D2A46C",
+    padding: 18,
     borderRadius: 14,
     alignItems: "center",
     marginTop: 19,
   },
   modalSubmitText: {
-    color: "#21130C",
-    fontSize: 15,
-    fontWeight: "900",
+    color: "#3B2817",
+    fontSize: 14,
+    fontWeight: "700",
   },
   cancelButton: {
     padding: 17,
@@ -1056,7 +1023,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   cancelText: {
-    color: COLORS.muted,
+    color: "#8C735D",
     fontSize: 14,
     fontWeight: "700",
   },
