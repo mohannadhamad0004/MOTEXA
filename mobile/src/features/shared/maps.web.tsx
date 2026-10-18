@@ -1,4 +1,4 @@
-import { Point } from "./geo";
+import { Point } from "../../core/constants/geo";
 
 // react-native-maps does not run on the web build, so maps are simply left out there (the screens still show the text).
 

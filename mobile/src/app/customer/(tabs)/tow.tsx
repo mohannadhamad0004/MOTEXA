@@ -1,25 +1,37 @@
+import { Badge } from "../../../components/ui/Badge";
+import { Button } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
+import { EmptyState, Notice } from "../../../components/ui/Feedback";
+import { Header } from "../../../components/layout/DashboardLayout";
+import { SearchBar } from "../../../components/ui/Input";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { Segmented } from "../../../components/ui/Chip";
+import { useL } from "../../../core/hooks/useL";
+import { Screen } from "../../../components/layout/Screen";
+import { Text } from "../../../components/ui/Text";
+import { useTheme } from "../../../theme/useTheme";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { View } from "react-native";
+import { SkeletonList } from "../../../components/ui/Skeleton";
 import { Chip, ChipRow } from "../../../features/catalog/catalogBits";
 import { TowCompanyRow, catalogService } from "../../../features/catalog/catalogService";
-import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
-import { C } from "../../../features/shared/palette";
-import { Badge, Button, Card, Empty, Header, Notice, SearchBar, Section, Segmented, useL } from "../../../features/shared/ui";
-import { Point, distanceLabel, locationMemory } from "../../../features/shared/geo";
+import { Point, distanceLabel, locationMemory } from "../../../core/constants/geo";
 import { CompaniesMap, MAPS_AVAILABLE } from "../../../features/shared/maps";
 import { LocationProblem, useCurrentLocation } from "../../../features/shared/useCurrentLocation";
-import { cityCentre, cityLabel } from "../../../features/shared/cities";
+import { cityCentre, cityLabel, cityToEnglish } from "../../../core/constants/cities";
 import { useTruckLabels } from "../../../features/tow/truckBits";
 import type { TruckType } from "../../../features/tow/towService";
 
 const TRUCK_TYPES: TruckType[] = ["FLATBED", "HOOK_CHAIN", "WHEEL_LIFT", "HEAVY_DUTY"];
 
 export default function CustomerTow() {
+  const { c: col } = useTheme();
   const { t, row, align, isArabic } = useL();
   const { type } = useTruckLabels();
   const [city, setCity] = useState("");
+  const [mapFailed, setMapFailed] = useState(false); // the map could not load: the company list is shown instead
   const [name, setName] = useState("");
   const [truckType, setTruckType] = useState<TruckType | null>(null);
   const [availableOnly, setAvailableOnly] = useState(false);
@@ -72,7 +84,7 @@ export default function CustomerTow() {
       else setLoading(true);
       setError(null);
       try {
-        const r = await catalogService.listTowCompanies({ serviceCity: city, q: name, truckType: truckType ?? undefined, availableOnly, sort, ...(me ? { lat: me.lat, lng: me.lng } : {}) });
+        const r = await catalogService.listTowCompanies({ serviceCity: cityToEnglish(city), q: name, truckType: truckType ?? undefined, availableOnly, sort, ...(me ? { lat: me.lat, lng: me.lng } : {}) });
         if (mine === seq.current) setItems(r);
       } catch (e: any) {
         if (mine === seq.current) setError(e.message);
@@ -92,7 +104,7 @@ export default function CustomerTow() {
   }, [run]);
 
   return (
-    <CustomerScreen tabs refreshing={refreshing} onRefresh={() => run("refresh")}>
+    <Screen tabs refreshing={refreshing} onRefresh={() => run("refresh")}>
       <Header brand="MOTEXA" title={t("Tow companies", "شركات السحب")} subtitle={t("Approved companies and their trucks", "الشركات المعتمدة وشاحناتها")} />
       {loc.dialog}
       <View style={{ gap: 10, marginBottom: 12 }}>
@@ -145,6 +157,7 @@ export default function CustomerTow() {
             me={me}
             selectedId={selectedId}
             onSelect={setSelectedId}
+            onFailedChange={setMapFailed}
           />
           {(() => {
             const c = items.find((x) => x.id === selectedId);
@@ -152,24 +165,31 @@ export default function CustomerTow() {
               <Card label={c.name} onPress={() => router.push(`/customer/tow/${c.id}`)}>
                 <View style={[row, { alignItems: "center", gap: 10 }]}>
                   <View style={{ flex: 1 }}>
-                    <Text numberOfLines={2} style={[{ color: C.text, fontSize: 15, fontWeight: "800" }, align]}>{c.name}</Text>
-                    <Text numberOfLines={1} style={[{ color: C.textMuted, fontSize: 12, marginTop: 3 }, align]}>
+                    <Text numberOfLines={2} style={[{ color: col.text, fontSize: 15, fontWeight: "800" }, align]}>{c.name}</Text>
+                    <Text numberOfLines={1} style={[{ color: col.textMuted, fontSize: 12, marginTop: 3 }, align]}>
                       {c.city} · {c.availableTrucks} {t("available", "متاحة")}
                       {c.distanceKm != null ? ` · ${distanceLabel(c.distanceKm, isArabic)}` : ""}
                     </Text>
                   </View>
-                  <Ionicons name={isArabic ? "chevron-back" : "chevron-forward"} size={19} color={C.accent} />
+                  <Ionicons name={isArabic ? "chevron-back" : "chevron-forward"} size={19} color={col.accent} />
                 </View>
               </Card>
             ) : (
-              <Text style={[{ color: C.textMuted, fontSize: 12, marginBottom: 12 }, align]}>{t("Tap a pin to see the company. Pins show the company's base, or its city centre when it has not set one.", "اضغط على دبوس لعرض الشركة. تظهر الدبابيس قاعدة الشركة، أو مركز مدينتها إن لم تحدد قاعدة.")}</Text>
+              <Text style={[{ color: col.textMuted, fontSize: 12, marginBottom: 12 }, align]}>{t("Tap a pin to see the company. Pins show the company's base, or its city centre when it has not set one.", "اضغط على دبوس لعرض الشركة. تظهر الدبابيس قاعدة الشركة، أو مركز مدينتها إن لم تحدد قاعدة.")}</Text>
             );
           })()}
         </>
       ) : null}
 
+      {error && items.length ? (
+        <View style={{ gap: 8, marginBottom: 12 }}>
+          <Notice tone="danger" icon="alert-circle-outline">{t("Could not refresh. The results below may be out of date.", "تعذّر التحديث. قد تكون النتائج أدناه قديمة.")}</Notice>
+          <Button variant="ghost" icon="refresh-outline" label={t("Retry", "إعادة المحاولة")} onPress={() => run("replace")} />
+        </View>
+      ) : null}
+
       {loading && !items.length ? (
-        <ActivityIndicator style={{ marginTop: 40 }} size="large" color={C.accent} />
+        <SkeletonList />
       ) : error && !items.length ? (
         <View style={{ alignItems: "center", paddingVertical: 30, gap: 14 }}>
           <Notice tone="danger" icon="alert-circle-outline">{error}</Notice>
@@ -177,22 +197,22 @@ export default function CustomerTow() {
         </View>
       ) : !items.length ? (
         <>
-          <Empty icon="car-outline" text={filtered ? t("No tow companies cover this area yet.", "لا توجد شركات سحب تغطي هذه المنطقة بعد.") : t("No tow companies are available yet.", "لا توجد شركات سحب متاحة بعد.")} />
+          <EmptyState icon="car-outline" text={filtered ? t("No tow companies cover this area yet.", "لا توجد شركات سحب تغطي هذه المنطقة بعد.") : t("No tow companies are available yet.", "لا توجد شركات سحب متاحة بعد.")} />
           {filtered ? <Button variant="ghost" icon="close-circle-outline" label={t("Show all", "عرض الكل")} onPress={showAll} /> : null}
         </>
-      ) : view === "map" && MAPS_AVAILABLE ? null : (
+      ) : view === "map" && MAPS_AVAILABLE && !mapFailed ? null : (
         items.map((c) => (
           <Card key={c.id} label={c.name} onPress={() => router.push(`/customer/tow/${c.id}`)}>
             <View style={[row, { alignItems: "flex-start", gap: 10 }]}>
               <View style={{ flex: 1 }}>
-                <Text numberOfLines={2} style={[{ color: C.text, fontSize: 16, fontWeight: "800" }, align]}>{c.name}</Text>
-                <Text numberOfLines={1} style={[{ color: C.textMuted, fontSize: 12, marginTop: 4 }, align]}>{c.city}</Text>
-                {c.distanceKm != null ? <Text numberOfLines={1} style={[{ color: C.accent, fontSize: 12, fontWeight: "800", marginTop: 4 }, align]}>{distanceLabel(c.distanceKm, isArabic)}{c.distanceSource === "city" ? ` · ${t("from the city centre", "من مركز المدينة")}` : ""}</Text> : null}
+                <Text numberOfLines={2} style={[{ color: col.text, fontSize: 16, fontWeight: "800" }, align]}>{c.name}</Text>
+                <Text numberOfLines={1} style={[{ color: col.textMuted, fontSize: 12, marginTop: 4 }, align]}>{c.city}</Text>
+                {c.distanceKm != null ? <Text numberOfLines={1} style={[{ color: col.accent, fontSize: 12, fontWeight: "800", marginTop: 4 }, align]}>{distanceLabel(c.distanceKm, isArabic)}{c.distanceSource === "city" ? ` · ${t("from the city centre", "من مركز المدينة")}` : ""}</Text> : null}
               </View>
-              <Ionicons name={row.flexDirection === "row-reverse" ? "chevron-back" : "chevron-forward"} size={19} color={C.accent} />
+              <Ionicons name={row.flexDirection === "row-reverse" ? "chevron-back" : "chevron-forward"} size={19} color={col.accent} />
             </View>
             {c.serviceCities.length ? (
-              <Text numberOfLines={2} style={[{ color: C.textMuted, fontSize: 12, marginTop: 10 }, align]}>
+              <Text numberOfLines={2} style={[{ color: col.textMuted, fontSize: 12, marginTop: 10 }, align]}>
                 {t("Serves", "تخدم")}: {c.serviceCities.slice(0, 2).map((x) => cityLabel(x, isArabic)).join(isArabic ? "، " : ", ")}
                 {c.serviceCities.length > 2 ? ` +${c.serviceCities.length - 2}` : ""}
               </Text>
@@ -208,7 +228,7 @@ export default function CustomerTow() {
         ))
       )}
 
-      <Section title={t("While you wait", "أثناء الانتظار")} />
+      <SectionHeader title={t("While you wait", "أثناء الانتظار")} />
       <Card>
         {[
           t("Turn on your hazard lights.", "شغّل أضواء التحذير."),
@@ -216,11 +236,11 @@ export default function CustomerTow() {
           t("Keep your phone charged, and keep it with you.", "أبقِ هاتفك مشحونًا واحتفظ به معك."),
         ].map((tip, i) => (
           <View key={i} style={[row, { alignItems: "flex-start", gap: 10, paddingVertical: 6 }]}>
-            <Ionicons name="shield-checkmark-outline" size={16} color={C.accent} style={{ marginTop: 2 }} />
-            <Text style={[{ color: C.text, fontSize: 13, lineHeight: 19, flex: 1 }, align]}>{tip}</Text>
+            <Ionicons name="shield-checkmark-outline" size={16} color={col.accent} style={{ marginTop: 2 }} />
+            <Text style={[{ color: col.text, fontSize: 13, lineHeight: 19, flex: 1 }, align]}>{tip}</Text>
           </View>
         ))}
       </Card>
-    </CustomerScreen>
+    </Screen>
   );
 }

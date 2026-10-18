@@ -1,7 +1,8 @@
+import { Header } from "../../../components/layout/DashboardLayout";
+import { useL } from "../../../core/hooks/useL";
 import { useLocalSearchParams } from "expo-router";
 import { ProductBrowser } from "../../../features/catalog/ProductBrowser";
-import { CATALOG_GROUPS, findCategory, labelOf } from "../../../features/shared/categories";
-import { Header, useL } from "../../../features/shared/ui";
+import { CATALOG_GROUPS, findCategory, labelOf } from "../../../core/constants/categories";
 
 /** One category (or, from "All <group>" on the categories screen, a whole group): the product list limited to it. */
 export default function CustomerCategory() {

@@ -1,11 +1,16 @@
+import { Button } from "../../components/ui/Button";
+import { Input } from "../../components/ui/Input";
+import { Notice } from "../../components/ui/Feedback";
+import { SectionHeader } from "../../components/ui/SectionHeader";
+import { useL } from "../../core/hooks/useL";
+import { Text } from "../../components/ui/Text";
+import { useTheme } from "../../theme/useTheme";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { CITIES, cityLabel } from "../shared/cities";
-import { CURRENCY, priceTag } from "../shared/money";
-import { C } from "../shared/palette";
-import { Button, Field, Notice, Section, useL } from "../shared/ui";
+import { CITIES, cityLabel } from "../../core/constants/cities";
+import { CURRENCY, priceTag } from "../../core/constants/money";
 import { Chip, ChipRow } from "./catalogBits";
 import { catalogService } from "./catalogService";
 import { EMPTY_FILTERS, PartFilters, priceOk, priceProblem } from "./filters";
@@ -29,6 +34,7 @@ export function FilterSheet({
   onApply: (f: PartFilters) => void;
   onClose: () => void;
 }) {
+  const { c: col } = useTheme();
   const { t, isArabic, row, align } = useL();
   const insets = useSafeAreaInsets();
   const labels = usePartLabels();
@@ -59,24 +65,24 @@ export function FilterSheet({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: insets.top + 8 }}>
+      <View style={{ flex: 1, backgroundColor: col.bg, paddingTop: insets.top + 8 }}>
         <View style={[row, { alignItems: "center", justifyContent: "space-between", paddingHorizontal: 18, paddingBottom: 10 }]}>
-          <Text style={{ color: C.text, fontSize: 20, fontWeight: "800" }}>{t("Filters", "التصفية")}</Text>
+          <Text style={{ color: col.text, fontSize: 20, fontWeight: "800" }}>{t("Filters", "التصفية")}</Text>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("Close", "إغلاق")} onPress={onClose} hitSlop={12}>
-            <Ionicons name="close" size={26} color={C.text} />
+            <Ionicons name="close" size={26} color={col.text} />
           </TouchableOpacity>
         </View>
 
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 24 }}>
-            <Section title={t("Condition", "الحالة")} />
+            <SectionHeader title={t("Condition", "الحالة")} />
             <ChipRow>
               {CONDITIONS.map((c) => (
                 <Chip key={c} label={labels.condition[c]} on={draft.conditions.includes(c)} onPress={() => setDraft({ ...draft, conditions: toggle(draft.conditions, c) })} />
               ))}
             </ChipRow>
 
-            <Section title={t("Type", "النوع")} />
+            <SectionHeader title={t("Type", "النوع")} />
             <ChipRow>
               <Chip label={t("Any", "أي نوع")} on={draft.partType === null} onPress={() => setDraft({ ...draft, partType: null })} />
               {PART_TYPES.map((p) => (
@@ -84,13 +90,13 @@ export function FilterSheet({
               ))}
             </ChipRow>
 
-            <Section title={t("Brand", "الماركة")} />
+            <SectionHeader title={t("Brand", "الماركة")} />
             {brands === null && !brandsError ? (
-              <Text style={[{ color: C.textMuted, fontSize: 12, marginBottom: 12 }, align]}>{t("Loading brands…", "جارٍ تحميل الماركات…")}</Text>
+              <Text style={[{ color: col.textMuted, fontSize: 12, marginBottom: 12 }, align]}>{t("Loading brands…", "جارٍ تحميل الماركات…")}</Text>
             ) : brandsError && !brandList.length ? (
-              <Text style={[{ color: C.textMuted, fontSize: 12, marginBottom: 12 }, align]}>{t("Brands could not be loaded.", "تعذّر تحميل الماركات.")}</Text>
+              <Text style={[{ color: col.textMuted, fontSize: 12, marginBottom: 12 }, align]}>{t("Brands could not be loaded.", "تعذّر تحميل الماركات.")}</Text>
             ) : !brandList.length ? (
-              <Text style={[{ color: C.textMuted, fontSize: 12, marginBottom: 12 }, align]}>{t("No brands yet.", "لا توجد ماركات بعد.")}</Text>
+              <Text style={[{ color: col.textMuted, fontSize: 12, marginBottom: 12 }, align]}>{t("No brands yet.", "لا توجد ماركات بعد.")}</Text>
             ) : (
               <ChipRow>
                 {brandList.map((b) => (
@@ -99,23 +105,23 @@ export function FilterSheet({
               </ChipRow>
             )}
 
-            <Section title={`${t("Price", "السعر")} (${CURRENCY.symbol})`} />
+            <SectionHeader title={`${t("Price", "السعر")} (${CURRENCY.symbol})`} />
             <View style={[row, { gap: 12 }]}>
               <View style={{ flex: 1 }}>
-                <Field label={t("Min", "الأدنى")} value={draft.minPrice} keyboardType="decimal-pad" maxLength={12} error={priceOk(draft.minPrice) ? undefined : t("Numbers only", "أرقام فقط")} onChangeText={(v) => setDraft({ ...draft, minPrice: v })} />
+                <Input label={t("Min", "الأدنى")} value={draft.minPrice} keyboardType="decimal-pad" maxLength={12} error={priceOk(draft.minPrice) ? undefined : t("Numbers only", "أرقام فقط")} onChangeText={(v) => setDraft({ ...draft, minPrice: v })} />
               </View>
               <View style={{ flex: 1 }}>
-                <Field label={t("Max", "الأعلى")} value={draft.maxPrice} keyboardType="decimal-pad" maxLength={12} error={priceOk(draft.maxPrice) ? undefined : t("Numbers only", "أرقام فقط")} onChangeText={(v) => setDraft({ ...draft, maxPrice: v })} />
+                <Input label={t("Max", "الأعلى")} value={draft.maxPrice} keyboardType="decimal-pad" maxLength={12} error={priceOk(draft.maxPrice) ? undefined : t("Numbers only", "أرقام فقط")} onChangeText={(v) => setDraft({ ...draft, maxPrice: v })} />
               </View>
             </View>
             {problem === "order" ? <Notice tone="danger" icon="alert-circle-outline">{t("The minimum price is higher than the maximum.", "السعر الأدنى أعلى من السعر الأعلى.")}</Notice> : null}
 
-            <Section title={t("Availability", "التوفر")} />
+            <SectionHeader title={t("Availability", "التوفر")} />
             <ChipRow>
               <Chip icon="checkmark-circle-outline" label={t("In stock only", "المتوفر فقط")} on={draft.inStock} onPress={() => setDraft({ ...draft, inStock: !draft.inStock })} />
             </ChipRow>
 
-            <Section title={t("Shop city", "مدينة المتجر")} />
+            <SectionHeader title={t("Shop city", "مدينة المتجر")} />
             <ChipRow>
               {CITIES.map((c) => (
                 <Chip key={c.name} label={cityLabel(c.name, isArabic)} on={draft.city === c.name} onPress={() => setDraft({ ...draft, city: draft.city === c.name ? "" : c.name })} />
@@ -124,7 +130,7 @@ export function FilterSheet({
           </ScrollView>
         </KeyboardAvoidingView>
 
-        <View style={[row, { gap: 12, paddingHorizontal: 18, paddingTop: 12, paddingBottom: insets.bottom + 12, borderTopWidth: 1, borderTopColor: C.cardBorder }]}>
+        <View style={[row, { gap: 12, paddingHorizontal: 18, paddingTop: 12, paddingBottom: insets.bottom + 12, borderTopWidth: 1, borderTopColor: col.border }]}>
           <View style={{ flex: 1 }}>
             <Button variant="ghost" icon="refresh-outline" label={t("Reset", "إعادة ضبط")} onPress={() => setDraft(EMPTY_FILTERS)} />
           </View>

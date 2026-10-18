@@ -38,3 +38,10 @@ export const cityCentre = (name: string) => {
   const c = CITIES.find((x) => x.name.toLowerCase() === k);
   return c ? { lat: c.lat, lng: c.lng } : null;
 };
+
+/** The stored (English) name for an Arabic city the user typed or part of it; anything else passes through unchanged. */
+export const cityToEnglish = (text: string) => {
+  const k = text.trim();
+  if (!/[؀-ۿ]/.test(k)) return text;
+  return CITIES.find((c) => c.ar.includes(k) || k.includes(c.ar))?.name ?? text;
+};

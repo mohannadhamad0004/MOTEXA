@@ -1,4 +1,5 @@
-import { Badge, useL } from "../shared/ui";
+import { Badge } from "../../components/ui/Badge";
+import { useL } from "../../core/hooks/useL";
 import { Fitment, stockState } from "./partsService";
 
 /** One-line fitment summary for a product ("Toyota Corolla 2014–2019 +1"). */

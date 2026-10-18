@@ -1,21 +1,31 @@
+import { Async, Notice } from "../../../components/ui/Feedback";
+import { Button } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
+import { Input } from "../../../components/ui/Input";
+import { Header } from "../../../components/layout/DashboardLayout";
+import { Screen } from "../../../components/layout/Screen";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { ImageTile } from "../../../components/ui/Rows";
+import { goBack, pickImage } from "../../../core/hooks/nav";
+import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
+import { Text } from "../../../components/ui/Text";
+import { useTheme } from "../../../theme/useTheme";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Text, View } from "react-native";
-import { C } from "../../../features/shared/palette";
+import { View } from "react-native";
 import { Fitment, Product, ProductInput, partsShopService } from "../../../features/parts/partsService";
 import { Chip } from "../../../features/catalog/catalogBits";
 import { CONDITIONS, PART_TYPES, usePartLabels } from "../../../features/catalog/partAttrs";
-import { CATALOG_GROUPS, labelOf } from "../../../features/shared/categories";
+import { CATALOG_GROUPS, labelOf } from "../../../core/constants/categories";
 import { asActor, useSessionUser } from "../../../features/shared/session";
-import {
-  Async, Button, Card, Field, Header, Notice, Screen, Section, Thumb, goBack, pickImage, useL, useLoad,
-} from "../../../features/shared/ui";
 
 const blank: ProductInput = {
   name: "", brand: "", partNumber: "", description: "", price: 0, stock: 0, category: null, condition: "NEW", partType: null, imageUri: null, fitments: [],
 };
 
 function Form({ initial, product, id }: { initial: ProductInput; product?: Product; id: string }) {
+  const { c: col } = useTheme();
   const user = useSessionUser();
   const { t, row, isArabic, align } = useL();
   const labels = usePartLabels();
@@ -74,7 +84,7 @@ function Form({ initial, product, id }: { initial: ProductInput; product?: Produ
       )}
       <Card>
         <View style={[row, { alignItems: "center", gap: 14, marginBottom: 14 }]}>
-          <Thumb uri={f.imageUri} icon="image-outline" size={72} />
+          <ImageTile uri={f.imageUri} icon="image-outline" size={72} />
           <View style={{ flex: 1 }}>
             <Button
               variant="ghost"
@@ -87,22 +97,22 @@ function Form({ initial, product, id }: { initial: ProductInput; product?: Produ
             />
           </View>
         </View>
-        <Field label={t("Part name", "اسم القطعة")} value={f.name} onChangeText={(v) => setF({ ...f, name: v })} />
-        <Field label={t("Brand", "العلامة التجارية")} value={f.brand} onChangeText={(v) => setF({ ...f, brand: v })} />
-        <Field label={t("Part number", "رقم القطعة")} value={f.partNumber} autoCapitalize="characters" onChangeText={(v) => setF({ ...f, partNumber: v })} />
-        <Field label={t("Description", "الوصف")} value={f.description} multiline onChangeText={(v) => setF({ ...f, description: v })} />
-        <Field label={t("Price (₪)", "السعر (₪)")} value={price} keyboardType="decimal-pad" onChangeText={setPrice} />
-        <Field label={t("Stock quantity", "الكمية المتوفرة")} value={stock} keyboardType="number-pad" onChangeText={setStock} />
+        <Input label={t("Part name", "اسم القطعة")} value={f.name} onChangeText={(v) => setF({ ...f, name: v })} />
+        <Input label={t("Brand", "العلامة التجارية")} value={f.brand} onChangeText={(v) => setF({ ...f, brand: v })} />
+        <Input label={t("Part number", "رقم القطعة")} value={f.partNumber} autoCapitalize="characters" onChangeText={(v) => setF({ ...f, partNumber: v })} />
+        <Input label={t("Description", "الوصف")} value={f.description} multiline onChangeText={(v) => setF({ ...f, description: v })} />
+        <Input label={t("Price (₪)", "السعر (₪)")} value={price} keyboardType="decimal-pad" onChangeText={setPrice} />
+        <Input label={t("Stock quantity", "الكمية المتوفرة")} value={stock} keyboardType="number-pad" onChangeText={setStock} />
       </Card>
 
-      <Section title={t("Condition", "الحالة")} />
+      <SectionHeader title={t("Condition", "الحالة")} />
       <Card>
         <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
           {CONDITIONS.map((c) => (
             <Chip key={c} label={labels.condition[c]} on={f.condition === c} onPress={() => setF({ ...f, condition: c })} />
           ))}
         </View>
-        <Text style={[{ color: C.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 1, marginTop: 14, marginBottom: 7 }, align]}>{t("TYPE", "النوع")}</Text>
+        <Text style={[{ color: col.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 1, marginTop: 14, marginBottom: 7 }, align]}>{t("TYPE", "النوع")}</Text>
         <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
           {PART_TYPES.map((p) => (
             <Chip key={p} label={labels.type[p]} on={f.partType === p} onPress={() => setF({ ...f, partType: p })} />
@@ -111,14 +121,14 @@ function Form({ initial, product, id }: { initial: ProductInput; product?: Produ
         </View>
       </Card>
 
-      <Section title={t("Category", "الفئة")} />
+      <SectionHeader title={t("Category", "الفئة")} />
       {!f.category && !isNew ? (
         <Notice tone="accent" icon="information-circle-outline">{t("This part has no category yet. Choose one to save changes.", "ليس لهذه القطعة فئة بعد. اختر فئة لحفظ التغييرات.")}</Notice>
       ) : null}
       <Card>
         {CATALOG_GROUPS.map((g) => (
           <View key={g.key} style={{ marginBottom: 12 }}>
-            <Text style={[{ color: C.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 1, marginBottom: 7 }, align]}>{labelOf(g, isArabic)}</Text>
+            <Text style={[{ color: col.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 1, marginBottom: 7 }, align]}>{labelOf(g, isArabic)}</Text>
             <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
               {g.categories.map((c) => (
                 <Chip key={c.key} icon={c.icon} label={labelOf(c, isArabic)} on={f.category === c.key} onPress={() => setF({ ...f, category: c.key })} />
@@ -128,20 +138,20 @@ function Form({ initial, product, id }: { initial: ProductInput; product?: Produ
         ))}
       </Card>
 
-      <Section title={t("Vehicle fitment", "توافق المركبات")} />
+      <SectionHeader title={t("Vehicle fitment", "توافق المركبات")} />
       {f.fitments.map((x, i) => (
         <Card key={i}>
-          <Field label={t("Make", "الشركة المصنعة")} value={x.make} onChangeText={(v) => setFit(i, { make: v })} />
-          <Field label={t("Model", "الطراز")} value={x.model} onChangeText={(v) => setFit(i, { model: v })} />
+          <Input label={t("Make", "الشركة المصنعة")} value={x.make} onChangeText={(v) => setFit(i, { make: v })} />
+          <Input label={t("Model", "الطراز")} value={x.model} onChangeText={(v) => setFit(i, { model: v })} />
           <View style={[row, { gap: 10 }]}>
             <View style={{ flex: 1 }}>
-              <Field label={t("Year from", "من سنة")} value={String(x.yearFrom || "")} keyboardType="number-pad" onChangeText={(v) => setFit(i, { yearFrom: parseInt(v || "0", 10) })} />
+              <Input label={t("Year from", "من سنة")} value={String(x.yearFrom || "")} keyboardType="number-pad" onChangeText={(v) => setFit(i, { yearFrom: parseInt(v || "0", 10) })} />
             </View>
             <View style={{ flex: 1 }}>
-              <Field label={t("Year to", "إلى سنة")} value={String(x.yearTo || "")} keyboardType="number-pad" onChangeText={(v) => setFit(i, { yearTo: parseInt(v || "0", 10) })} />
+              <Input label={t("Year to", "إلى سنة")} value={String(x.yearTo || "")} keyboardType="number-pad" onChangeText={(v) => setFit(i, { yearTo: parseInt(v || "0", 10) })} />
             </View>
           </View>
-          <Field label={t("Engine / trim (optional)", "المحرك / الفئة (اختياري)")} value={x.trim ?? ""} onChangeText={(v) => setFit(i, { trim: v })} />
+          <Input label={t("Engine / trim (optional)", "المحرك / الفئة (اختياري)")} value={x.trim ?? ""} onChangeText={(v) => setFit(i, { trim: v })} />
           <Button variant="danger" label={t("Remove fitment", "إزالة التوافق")} onPress={() => setF({ ...f, fitments: f.fitments.filter((_, j) => j !== i) })} />
         </Card>
       ))}

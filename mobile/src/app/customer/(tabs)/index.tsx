@@ -1,15 +1,24 @@
+import { Badge } from "../../../components/ui/Badge";
+import { Button } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
+import { Header } from "../../../components/layout/DashboardLayout";
+import { Notice } from "../../../components/ui/Feedback";
+import { SearchBar } from "../../../components/ui/Input";
+import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
+import { Screen } from "../../../components/layout/Screen";
+import { Text } from "../../../components/ui/Text";
+import { useTheme } from "../../../theme/useTheme";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { View } from "react-native";
+import { SkeletonList } from "../../../components/ui/Skeleton";
 import { carName } from "../../../features/catalog/catalogBits";
 import { catalogService, currentCar } from "../../../features/catalog/catalogService";
-import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
 import { HRow, MiniProductCard, RowHeader, ShopTile } from "../../../features/catalog/homeBits";
-import { CATALOG_GROUPS, labelOf } from "../../../features/shared/categories";
-import { C } from "../../../features/shared/palette";
+import { CATALOG_GROUPS, labelOf } from "../../../core/constants/categories";
 import { useSessionUser } from "../../../features/shared/session";
-import { Badge, Button, Card, Header, Notice, SearchBar, useL, useLoad } from "../../../features/shared/ui";
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -24,10 +33,11 @@ function RowState({ loading, error, onRetry }: { loading: boolean; error: string
       </View>
     );
   }
-  return loading ? <ActivityIndicator style={{ marginVertical: 24 }} color={C.accent} /> : null;
+  return loading ? <SkeletonList count={1} /> : null;
 }
 
 export default function CustomerHome() {
+  const { c: col } = useTheme();
   const user = useSessionUser();
   const { t, row, align, isArabic } = useL();
   const [q, setQ] = useState("");
@@ -48,7 +58,7 @@ export default function CustomerHome() {
 
   const refresh = async () => {
     setRefreshing(true);
-    await Promise.allSettled([Promise.resolve(fit.reload()), Promise.resolve(recent.reload()), Promise.resolve(shops.reload())]);
+    await Promise.allSettled([fit.reload(), recent.reload(), shops.reload()]);
     setRefreshing(false);
   };
 
@@ -60,20 +70,20 @@ export default function CustomerHome() {
   const action = (icon: IconName, title: string, text: string, onPress: () => void) => (
     <Card label={title} onPress={onPress}>
       <View style={[row, { alignItems: "center", gap: 14 }]}>
-        <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: C.accentSoft, alignItems: "center", justifyContent: "center" }}>
-          <Ionicons name={icon} size={26} color={C.accent} />
+        <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: col.accentSoft, alignItems: "center", justifyContent: "center" }}>
+          <Ionicons name={icon} size={26} color={col.accent} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text numberOfLines={1} style={[{ color: C.text, fontSize: 17, fontWeight: "800" }, align]}>{title}</Text>
-          <Text numberOfLines={2} style={[{ color: C.textMuted, fontSize: 12, marginTop: 3, lineHeight: 18 }, align]}>{text}</Text>
+          <Text numberOfLines={1} style={[{ color: col.text, fontSize: 17, fontWeight: "800" }, align]}>{title}</Text>
+          <Text numberOfLines={2} style={[{ color: col.textMuted, fontSize: 12, marginTop: 3, lineHeight: 18 }, align]}>{text}</Text>
         </View>
-        <Ionicons name={isArabic ? "chevron-back" : "chevron-forward"} size={19} color={C.accent} />
+        <Ionicons name={isArabic ? "chevron-back" : "chevron-forward"} size={19} color={col.accent} />
       </View>
     </Card>
   );
 
   return (
-    <CustomerScreen tabs refreshing={refreshing} onRefresh={refresh}>
+    <Screen tabs refreshing={refreshing} onRefresh={refresh}>
       <Header brand="MOTEXA" title={`${t("Hello", "مرحبًا")}, ${user.fullName}`} subtitle={t("What do you need today?", "ماذا تحتاج اليوم؟")} />
       <SearchBar value={q} onChange={setQ} placeholder={t("Search parts by name or part number", "ابحث عن قطعة بالاسم أو رقم القطعة")} />
       <Button
@@ -113,15 +123,15 @@ export default function CustomerHome() {
         {CATALOG_GROUPS.map((g) => (
           <View key={g.key} style={{ width: "48.5%" }}>
             <Card label={labelOf(g, isArabic)} onPress={() => router.push(`/customer/category/${g.key}`)}>
-              <Ionicons name={g.icon} size={26} color={C.accent} />
-              <Text numberOfLines={2} style={[{ color: C.text, fontSize: 13, fontWeight: "800", marginTop: 8, minHeight: 34 }, align]}>{labelOf(g, isArabic)}</Text>
+              <Ionicons name={g.icon} size={26} color={col.accent} />
+              <Text numberOfLines={2} style={[{ color: col.text, fontSize: 13, fontWeight: "800", marginTop: 8, minHeight: 34 }, align]}>{labelOf(g, isArabic)}</Text>
             </Card>
           </View>
         ))}
         <View style={{ width: "48.5%" }}>
           <Card label={t("Browse all categories", "تصفح كل الفئات")} onPress={() => router.push("/customer/categories")}>
-            <Ionicons name="grid-outline" size={26} color={C.accent} />
-            <Text numberOfLines={2} style={[{ color: C.text, fontSize: 13, fontWeight: "800", marginTop: 8, minHeight: 34 }, align]}>{t("All categories", "كل الفئات")}</Text>
+            <Ionicons name="grid-outline" size={26} color={col.accent} />
+            <Text numberOfLines={2} style={[{ color: col.text, fontSize: 13, fontWeight: "800", marginTop: 8, minHeight: 34 }, align]}>{t("All categories", "كل الفئات")}</Text>
           </Card>
         </View>
       </View>
@@ -160,12 +170,12 @@ export default function CustomerHome() {
 
       <Card>
         <View style={[row, { alignItems: "center", gap: 14 }]}>
-          <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: C.accentSoft, alignItems: "center", justifyContent: "center" }}>
-            <Ionicons name="sparkles-outline" size={26} color={C.textMuted} />
+          <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: col.accentSoft, alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name="sparkles-outline" size={26} color={col.textMuted} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text numberOfLines={1} style={[{ color: C.text, fontSize: 17, fontWeight: "800" }, align]}>{t("AI car diagnosis", "تشخيص السيارة بالذكاء الاصطناعي")}</Text>
-            <Text numberOfLines={2} style={[{ color: C.textMuted, fontSize: 12, marginTop: 3, lineHeight: 18 }, align]}>
+            <Text numberOfLines={1} style={[{ color: col.text, fontSize: 17, fontWeight: "800" }, align]}>{t("AI car diagnosis", "تشخيص السيارة بالذكاء الاصطناعي")}</Text>
+            <Text numberOfLines={2} style={[{ color: col.textMuted, fontSize: 12, marginTop: 3, lineHeight: 18 }, align]}>
               {t("Describe a problem and get help. Not available yet.", "صف المشكلة واحصل على المساعدة. غير متاح بعد.")}
             </Text>
           </View>
@@ -177,6 +187,6 @@ export default function CustomerHome() {
 
       {/* 7. My requests */}
       {action("receipt-outline", t("My requests", "طلباتي"), t("Your questions to shops and your tow requests.", "أسئلتك للمتاجر وطلبات السحب."), () => router.push("/customer/requests"))}
-    </CustomerScreen>
+    </Screen>
   );
 }

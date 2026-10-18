@@ -1,4 +1,4 @@
-import { API_URL } from "./api";
+import { API_URL } from "../config/api";
 
 // File helpers shared by the tow and parts services.
 // Server files are referenced by relative paths such as "/files/public/<id>" or "/files/private/<id>".

@@ -6,7 +6,7 @@
 // and are opened with the bearer token by the PrivateDocs viewer.
 
 import { api } from "../shared/api";
-import { fileNameOf, isServerFile, localFileToBase64, publicImageUrl } from "../shared/files";
+import { fileNameOf, isServerFile, localFileToBase64, publicImageUrl } from "../../core/constants/files";
 
 export type Verification = "PENDING" | "APPROVED" | "REJECTED";
 export type Operational = "AVAILABLE" | "BUSY" | "OUT_OF_SERVICE";

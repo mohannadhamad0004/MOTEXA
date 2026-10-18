@@ -1,7 +1,15 @@
+import { Badge } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
+import { Input } from "../../components/ui/Input";
+import { Notice } from "../../components/ui/Feedback";
+import { SectionHeader } from "../../components/ui/SectionHeader";
+import { useL } from "../../core/hooks/useL";
+import { Text } from "../../components/ui/Text";
+import { StatusTimeline } from "../../components/ui/StatusTimeline";
+import { useTheme } from "../../theme/useTheme";
 import { useState } from "react";
-import { Text, View } from "react-native";
-import { C } from "../shared/palette";
-import { Badge, Button, Card, Field, Notice, Section, useL } from "../shared/ui";
+import { View } from "react-native";
 import type { InquiryStatus, ThreadMessage, TowProblem, TowStatus } from "./requestsService";
 
 /** Local date and time, "2026-10-15 18:30". */
@@ -60,18 +68,7 @@ export function TowStatusBadge({ value }: { value: TowStatus }) {
 /** Status timeline: one line per step that happened, with its time. */
 export function Timeline({ items }: { items: { status: TowStatus; at: string }[] }) {
   const label = useTowStatusLabels();
-  const { row, align } = useL();
-  return (
-    <Card>
-      {items.map((it, i) => (
-        <View key={it.status} style={[row, { alignItems: "center", gap: 12, paddingVertical: 8, borderTopWidth: i ? 1 : 0, borderTopColor: "rgba(217,155,105,0.10)" }]}>
-          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: i === items.length - 1 ? C.accent : C.textDim }} />
-          <Text style={[{ color: C.text, fontSize: 13, fontWeight: "800", flex: 1 }, align]}>{label[it.status]}</Text>
-          <Text style={{ color: C.textDim, fontSize: 11 }}>{fmtDateTime(it.at)}</Text>
-        </View>
-      ))}
-    </Card>
-  );
+  return <StatusTimeline items={items.map((it) => ({ key: it.status, label: label[it.status], at: fmtDateTime(it.at) }))} />;
 }
 
 /** Message bubbles + reply box. Used by the customer's and the shop's inquiry screens. */
@@ -88,33 +85,34 @@ export function Thread({
   error: string | null;
   onSend: (body: string) => Promise<boolean>;
 }) {
+  const { c: col } = useTheme();
   const { t, row, align } = useL();
   const [text, setText] = useState("");
 
   return (
     <>
-      <Section title={t("Messages", "الرسائل")} />
+      <SectionHeader title={t("Messages", "الرسائل")} />
       {messages.map((m) => (
         <View key={m.id} style={{ alignSelf: m.mine ? "flex-end" : "flex-start", maxWidth: "86%", marginBottom: 10 }}>
           <View
             style={{
-              backgroundColor: m.mine ? C.accentSoft : C.card,
-              borderColor: m.mine ? C.accentBorder : C.cardBorder,
+              backgroundColor: m.mine ? col.accentSoft : col.surface,
+              borderColor: m.mine ? col.accentBorder : col.border,
               borderWidth: 1,
               borderRadius: 16,
               padding: 12,
             }}
           >
-            <Text style={[{ color: C.text, fontSize: 13, lineHeight: 20 }, align]}>{m.body}</Text>
+            <Text style={[{ color: col.text, fontSize: 13, lineHeight: 20 }, align]}>{m.body}</Text>
           </View>
-          <Text style={{ color: C.textDim, fontSize: 10, marginTop: 4, textAlign: m.mine ? "right" : "left" }}>
+          <Text style={{ color: col.textDim, fontSize: 10, marginTop: 4, textAlign: m.mine ? "right" : "left" }}>
             {m.mine ? t("You", "أنت") : m.from === "SHOP" ? t("Shop", "المتجر") : t("Customer", "العميل")} · {fmtDateTime(m.createdAt)}
           </Text>
         </View>
       ))}
       {canReply ? (
         <View style={{ marginTop: 6 }}>
-          <Field label={t("Your reply", "ردك")} value={text} onChangeText={setText} multiline maxLength={1000} />
+          <Input label={t("Your reply", "ردك")} value={text} onChangeText={setText} multiline maxLength={1000} />
           {error ? <Notice tone="danger" icon="alert-circle-outline">{error}</Notice> : null}
           <View style={[row]}>
             <View style={{ flex: 1 }}>

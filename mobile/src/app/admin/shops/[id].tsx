@@ -1,19 +1,29 @@
+import { Async, EmptyState, Notice } from "../../../components/ui/Feedback";
+import { Badge } from "../../../components/ui/Badge";
+import { Button } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
+import { Header } from "../../../components/layout/DashboardLayout";
+import { ReasonPanel } from "../../../components/ui/ReasonPanel";
+import { Screen } from "../../../components/layout/Screen";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { ImageTile } from "../../../components/ui/Rows";
+import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
+import { Text } from "../../../components/ui/Text";
+import { useTheme } from "../../../theme/useTheme";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { StockBadge, fitmentSummary } from "../../../features/parts/partsBits";
 import { Product, partsAdminService } from "../../../features/parts/partsService";
 import { HistoryList, KV, PrivateDocs, VerificationBadge } from "../../../features/shared/blocks";
-import { findCategory, labelOf } from "../../../features/shared/categories";
-import { formatPrice } from "../../../features/shared/money";
-import { C } from "../../../features/shared/palette";
+import { findCategory, labelOf } from "../../../core/constants/categories";
+import { formatPrice } from "../../../core/constants/money";
 import { asActor, useSessionUser } from "../../../features/shared/session";
-import {
-  Async, Badge, Button, Card, Empty, Header, Notice, ReasonPanel, Screen, Section, Thumb, useL, useLoad,
-} from "../../../features/shared/ui";
 
 /** One product with the only product action an admin has: hide it (reason required) or show it again. */
 function ProductModeration({ product: p, onDone }: { product: Product; onDone: () => void }) {
+  const { c: col } = useTheme();
   const user = useSessionUser();
   const { t, row, align, isArabic } = useL();
   const [hiding, setHiding] = useState(false);
@@ -37,18 +47,18 @@ function ProductModeration({ product: p, onDone }: { product: Product; onDone: (
   return (
     <Card>
       <View style={[row, { gap: 14 }]}>
-        <Thumb uri={p.imageUri} icon="cube-outline" size={64} />
+        <ImageTile uri={p.imageUri} icon="cube-outline" size={64} />
         <View style={{ flex: 1 }}>
-          <Text numberOfLines={2} style={[{ color: C.text, fontSize: 15, fontWeight: "800" }, align]}>{p.name}</Text>
-          <Text numberOfLines={1} style={[{ color: C.textMuted, fontSize: 12, marginTop: 3 }, align]}>{p.brand} · {p.partNumber}</Text>
-          <Text numberOfLines={1} style={[{ color: C.textDim, fontSize: 12, marginTop: 2 }, align]}>{fitmentSummary(p, t)}</Text>
-          <Text numberOfLines={1} style={[{ color: C.textMuted, fontSize: 12, marginTop: 2 }, align]}>
+          <Text numberOfLines={2} style={[{ color: col.text, fontSize: 15, fontWeight: "800" }, align]}>{p.name}</Text>
+          <Text numberOfLines={1} style={[{ color: col.textMuted, fontSize: 12, marginTop: 3 }, align]}>{p.brand} · {p.partNumber}</Text>
+          <Text numberOfLines={1} style={[{ color: col.textDim, fontSize: 12, marginTop: 2 }, align]}>{fitmentSummary(p, t)}</Text>
+          <Text numberOfLines={1} style={[{ color: col.textMuted, fontSize: 12, marginTop: 2 }, align]}>
             {p.category ? labelOf(findCategory(p.category), isArabic) : t("No category", "بدون فئة")}
           </Text>
         </View>
       </View>
       <View style={[row, { flexWrap: "wrap", alignItems: "center", gap: 6, marginTop: 12 }]}>
-        <Text style={{ color: C.accent, fontSize: 15, fontWeight: "800", marginHorizontal: 4 }}>{formatPrice(p.price)}</Text>
+        <Text style={{ color: col.accent, fontSize: 15, fontWeight: "800", marginHorizontal: 4 }}>{formatPrice(p.price)}</Text>
         <Badge tone="neutral" label={`${t("Qty", "الكمية")} ${p.stock}`} />
         <StockBadge stock={p.stock} />
         {p.hidden && <Badge tone="danger" icon="eye-off-outline" label={t("Hidden", "مخفية")} />}
@@ -109,13 +119,13 @@ export default function AdminShopDetail() {
         {(s) => (
           <>
             <VerificationBadge value={s.verification} />
-            <Section title={t("Business", "النشاط التجاري")} />
+            <SectionHeader title={t("Business", "النشاط التجاري")} />
             <Card>
               <KV k={t("Shop name", "اسم المتجر")} v={s.name} />
               <KV k={t("Address", "العنوان")} v={s.address} />
               <KV k={t("City", "المدينة")} v={s.city} />
             </Card>
-            <Section title={t("Owner / contact", "المالك / جهة الاتصال")} />
+            <SectionHeader title={t("Owner / contact", "المالك / جهة الاتصال")} />
             <Card>
               <KV k={t("Name", "الاسم")} v={s.ownerName} />
               <KV k={t("Phone", "الهاتف")} v={s.phone} />
@@ -125,7 +135,7 @@ export default function AdminShopDetail() {
               title={t("Verification documents", "مستندات التحقق")}
               docs={s.documents.map((d) => ({ label: d.kind, fileName: d.fileName, uri: d.uri }))}
             />
-            <Section title={t("Decision", "القرار")} />
+            <SectionHeader title={t("Decision", "القرار")} />
             <Card>
               <Notice icon="information-circle-outline">
                 {t(
@@ -154,13 +164,13 @@ export default function AdminShopDetail() {
                 />
               )}
             </Card>
-            <Section title={`${t("Products", "المنتجات")} (${s.products.length})`} />
+            <SectionHeader title={`${t("Products", "المنتجات")} (${s.products.length})`} />
             {s.products.length ? (
               s.products.map((p) => <ProductModeration key={p.id} product={p} onDone={state.reload} />)
             ) : (
-              <Empty icon="cube-outline" text={t("This shop has no products yet.", "لا توجد منتجات لهذا المتجر بعد.")} />
+              <EmptyState icon="cube-outline" text={t("This shop has no products yet.", "لا توجد منتجات لهذا المتجر بعد.")} />
             )}
-            <Section title={t("Verification history", "سجل الاعتماد")} />
+            <SectionHeader title={t("Verification history", "سجل الاعتماد")} />
             <HistoryList items={s.history} />
           </>
         )}

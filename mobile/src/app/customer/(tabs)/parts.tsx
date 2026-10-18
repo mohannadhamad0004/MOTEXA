@@ -1,11 +1,13 @@
+import { Button } from "../../../components/ui/Button";
+import { Header } from "../../../components/layout/DashboardLayout";
+import { useL } from "../../../core/hooks/useL";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { Chip } from "../../../features/catalog/catalogBits";
 import type { PartSort } from "../../../features/catalog/catalogService";
 import { ProductBrowser } from "../../../features/catalog/ProductBrowser";
-import { ALL_CATEGORIES, labelOf } from "../../../features/shared/categories";
-import { Button, Header, useL } from "../../../features/shared/ui";
+import { ALL_CATEGORIES, labelOf } from "../../../core/constants/categories";
 
 export default function CustomerParts() {
   const { t, row, isArabic } = useL();

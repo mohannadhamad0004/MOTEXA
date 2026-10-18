@@ -1,13 +1,23 @@
+import { Async, Notice } from "../../../../components/ui/Feedback";
+import { Button } from "../../../../components/ui/Button";
+import { Card } from "../../../../components/ui/Card";
+import { Header } from "../../../../components/layout/DashboardLayout";
+import { KV } from "../../../../components/ui/Rows";
+import { ReasonPanel } from "../../../../components/ui/ReasonPanel";
+import { Screen } from "../../../../components/layout/Screen";
+import { SectionHeader } from "../../../../components/ui/SectionHeader";
+import { useL } from "../../../../core/hooks/useL";
+import { useLoad } from "../../../../core/hooks/useLoad";
+import { Text } from "../../../../components/ui/Text";
+import { useTheme } from "../../../../theme/useTheme";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Linking, Text, View } from "react-native";
+import { Linking, View } from "react-native";
 import { MAPS_AVAILABLE, TripMap } from "../../../../features/shared/maps";
-import { mapsDirectionsUrl } from "../../../../features/shared/geo";
+import { mapsDirectionsUrl } from "../../../../core/constants/geo";
 import { Timeline, TowStatusBadge, useProblemLabels } from "../../../../features/requests/requestBits";
 import { CompanyTowRequest, companyTowRequests } from "../../../../features/requests/requestsService";
-import { C } from "../../../../features/shared/palette";
 import { asActor, useSessionUser } from "../../../../features/shared/session";
-import { Async, Button, Card, Header, KV, Notice, ReasonPanel, Screen, Section, useL, useLoad } from "../../../../features/shared/ui";
 import { towFleetService } from "../../../../features/tow/towService";
 import { useTruckLabels } from "../../../../features/tow/truckBits";
 
@@ -20,6 +30,7 @@ const NEXT = {
 type Mode = "none" | "pick" | "decline" | "cancel";
 
 export default function CompanyRequestDetail() {
+  const { c: col } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useSessionUser();
   const { t, row, align } = useL();
@@ -60,7 +71,7 @@ export default function CompanyRequestDetail() {
               <Card>
                 <View style={[row, { justifyContent: "space-between", alignItems: "flex-start", gap: 10 }]}>
                   <View style={{ flex: 1 }}>
-                    <Text numberOfLines={2} style={[{ color: C.text, fontSize: 16, fontWeight: "800" }, align]}>{r.customerName}</Text>
+                    <Text numberOfLines={2} style={[{ color: col.text, fontSize: 16, fontWeight: "800" }, align]}>{r.customerName}</Text>
                   </View>
                   <TowStatusBadge value={r.status} />
                 </View>
@@ -76,7 +87,7 @@ export default function CompanyRequestDetail() {
 
               {r.pickup ? (
                 <>
-                  <Section title={t("Map", "الخريطة")} />
+                  <SectionHeader title={t("Map", "الخريطة")} />
                   {MAPS_AVAILABLE ? <TripMap pickup={r.pickup} dropoff={r.dropoff} height={190} /> : null}
                   <View style={{ gap: 8, marginBottom: 6 }}>
                     <Button variant="ghost" icon="navigate-outline" label={t("Open pickup in Google Maps", "افتح نقطة الاستلام في خرائط جوجل")} onPress={() => Linking.openURL(mapsDirectionsUrl(r.pickup!))} />
@@ -85,7 +96,7 @@ export default function CompanyRequestDetail() {
                 </>
               ) : null}
 
-              <Section title={t("Trip", "الرحلة")} />
+              <SectionHeader title={t("Trip", "الرحلة")} />
               <Card>
                 <KV k={t("Pickup", "الاستلام")} v={r.pickupAddress} />
                 <KV k={t("Destination", "الوجهة")} v={r.dropoffAddress} />
@@ -97,7 +108,7 @@ export default function CompanyRequestDetail() {
 
               {r.truck && (
                 <>
-                  <Section title={t("Assigned truck", "الشاحنة المعيّنة")} />
+                  <SectionHeader title={t("Assigned truck", "الشاحنة المعيّنة")} />
                   <Card>
                     <KV k={t("Type", "النوع")} v={type[r.truck.type]} />
                     <KV k={t("Vehicle", "المركبة")} v={[r.truck.make, r.truck.model, r.truck.year].filter(Boolean).join(" ")} />
@@ -106,7 +117,7 @@ export default function CompanyRequestDetail() {
                 </>
               )}
 
-              <Section title={t("Status", "الحالة")} />
+              <SectionHeader title={t("Status", "الحالة")} />
               <Timeline items={r.timeline} />
 
               {err ? <Notice tone="danger" icon="alert-circle-outline">{err}</Notice> : null}
@@ -119,7 +130,7 @@ export default function CompanyRequestDetail() {
               )}
               {r.status === "REQUESTED" && mode === "pick" && (
                 <Card>
-                  <Text style={[{ color: C.text, fontSize: 14, fontWeight: "800", marginBottom: 10 }, align]}>{t("Choose a truck", "اختر شاحنة")}</Text>
+                  <Text style={[{ color: col.text, fontSize: 14, fontWeight: "800", marginBottom: 10 }, align]}>{t("Choose a truck", "اختر شاحنة")}</Text>
                   {!available.length ? (
                     <Notice icon="alert-circle-outline">{t("You have no approved, available truck. Set one available first.", "لا توجد لديك شاحنة معتمدة ومتاحة. اجعل إحداها متاحة أولًا.")}</Notice>
                   ) : (

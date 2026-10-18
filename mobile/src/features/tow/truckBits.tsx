@@ -1,7 +1,10 @@
-import { Text, View } from "react-native";
+import { Badge } from "../../components/ui/Badge";
+import { ImageTile } from "../../components/ui/Rows";
+import { useL } from "../../core/hooks/useL";
+import { Text } from "../../components/ui/Text";
+import { useTheme } from "../../theme/useTheme";
+import { View } from "react-native";
 import { VerificationBadge } from "../shared/blocks";
-import { C } from "../shared/palette";
-import { Badge, Thumb, useL } from "../shared/ui";
 import type { Operational, Truck, TruckType } from "./towService";
 
 export function useTruckLabels() {
@@ -28,16 +31,17 @@ export function OperationalBadge({ value }: { value: Operational }) {
 }
 
 export function TruckSummary({ truck }: { truck: Truck }) {
+  const { c: col } = useTheme();
   const { type } = useTruckLabels();
   const { t, row, align } = useL();
   return (
     <View style={[row, { gap: 14, alignItems: "center" }]}>
-      <Thumb uri={truck.photoUri} icon="car-sport-outline" size={64} />
+      <ImageTile uri={truck.photoUri} icon="car-sport-outline" size={64} />
       <View style={{ flex: 1 }}>
-        <Text numberOfLines={1} style={[{ color: C.text, fontSize: 16, fontWeight: "800" }, align]}>
+        <Text numberOfLines={1} style={[{ color: col.text, fontSize: 16, fontWeight: "800" }, align]}>
           {type[truck.type]} · {"⁦" + truck.plate + "⁩"}
         </Text>
-        <Text numberOfLines={1} style={[{ color: C.textMuted, fontSize: 12, marginTop: 3 }, align]}>
+        <Text numberOfLines={1} style={[{ color: col.textMuted, fontSize: 12, marginTop: 3 }, align]}>
           {[truck.make, truck.model, truck.year].filter(Boolean).join(" ")}
         </Text>
         <View style={[row, { flexWrap: "wrap", gap: 6, marginTop: 8 }]}>

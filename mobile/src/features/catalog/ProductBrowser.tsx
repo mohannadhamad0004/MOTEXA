@@ -1,11 +1,15 @@
+import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
+import { EmptyState, Notice } from "../../components/ui/Feedback";
+import { Input, SearchBar } from "../../components/ui/Input";
+import { useL } from "../../core/hooks/useL";
+import { Screen } from "../../components/layout/Screen";
 import { router } from "expo-router";
 import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
-import { C } from "../shared/palette";
-import { Button, Card, Empty, Field, Notice, SearchBar, useL } from "../shared/ui";
+import { View } from "react-native";
+import { SkeletonList } from "../../components/ui/Skeleton";
 import { Chip, ChipRow, ProductCard } from "./catalogBits";
 import { CatalogProduct, PartSort, catalogService, fitMemory } from "./catalogService";
-import { CustomerScreen } from "./CustomerScreen";
 import { ActiveFilters, FilterSheet } from "./FilterSheet";
 import { PartFilters, countFilters, filterMemory, filterParams } from "./filters";
 
@@ -139,7 +143,7 @@ export function ProductBrowser({
   };
 
   return (
-    <CustomerScreen tabs={tabs} refreshing={refreshing} onRefresh={() => run(1, "refresh")}>
+    <Screen tabs={tabs} refreshing={refreshing} onRefresh={() => run(1, "refresh")}>
       {header}
       <SearchBar value={q} onChange={setQ} placeholder={t("Name, brand or part number", "الاسم أو الماركة أو رقم القطعة")} />
       {afterSearch}
@@ -160,9 +164,9 @@ export function ProductBrowser({
       </View>
       {showFit && (
         <Card>
-          <Field label={t("Make", "الشركة المصنعة")} value={make} onChangeText={setMake} placeholder="Toyota" autoCapitalize="words" />
-          <Field label={t("Model", "الطراز")} value={model} onChangeText={setModel} placeholder="Corolla" autoCapitalize="words" />
-          <Field label={t("Year", "السنة")} value={year} onChangeText={setYear} placeholder="2016" keyboardType="number-pad" maxLength={4} />
+          <Input label={t("Make", "الشركة المصنعة")} value={make} onChangeText={setMake} placeholder="Toyota" autoCapitalize="words" />
+          <Input label={t("Model", "الطراز")} value={model} onChangeText={setModel} placeholder="Corolla" autoCapitalize="words" />
+          <Input label={t("Year", "السنة")} value={year} onChangeText={setYear} placeholder="2016" keyboardType="number-pad" maxLength={4} />
           {fitHint ? <Notice tone="accent" icon="information-circle-outline">{fitHint}</Notice> : null}
           <Button variant="ghost" icon="close-circle-outline" label={t("Clear", "مسح")} onPress={clearFit} disabled={!make && !model && !year} />
         </Card>
@@ -178,14 +182,14 @@ export function ProductBrowser({
       </ChipRow>
 
       {loading && !items.length ? (
-        <ActivityIndicator style={{ marginTop: 40 }} size="large" color={C.accent} />
+        <SkeletonList />
       ) : error && !items.length ? (
         <View style={{ alignItems: "center", paddingVertical: 30, gap: 14 }}>
           <Notice tone="danger" icon="alert-circle-outline">{error}</Notice>
           <Button label={t("Retry", "إعادة المحاولة")} variant="ghost" icon="refresh-outline" onPress={() => run(1, "replace")} />
         </View>
       ) : !items.length ? (
-        <Empty
+        <EmptyState
           icon="cube-outline"
           text={fitOn || q.trim() || activeCount ? t("No parts match your search.", "لا توجد قطع مطابقة لبحثك.") : (emptyText ?? t("No parts are available yet.", "لا توجد قطع متاحة بعد."))}
         />
@@ -204,6 +208,6 @@ export function ProductBrowser({
         </>
       )}
       <FilterSheet visible={sheetOpen} value={filters} category={category} group={group} onApply={applyFilters} onClose={() => setSheetOpen(false)} />
-    </CustomerScreen>
+    </Screen>
   );
 }

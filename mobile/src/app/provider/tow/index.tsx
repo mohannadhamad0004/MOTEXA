@@ -1,7 +1,13 @@
+import { Async, EmptyState, Notice } from "../../../components/ui/Feedback";
+import { Button } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
+import { Header } from "../../../components/layout/DashboardLayout";
+import { Screen } from "../../../components/layout/Screen";
+import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
 import { router } from "expo-router";
 import { VerificationBadge } from "../../../features/shared/blocks";
 import { asActor, useSessionUser } from "../../../features/shared/session";
-import { Async, Button, Card, Empty, Header, Notice, Screen, useL, useLoad } from "../../../features/shared/ui";
 import { towFleetService } from "../../../features/tow/towService";
 import { TruckSummary } from "../../../features/tow/truckBits";
 import { View } from "react-native";
@@ -34,7 +40,7 @@ export default function MyFleet() {
             <Button label={t("Add truck", "إضافة شاحنة")} icon="add-circle-outline" onPress={() => router.push("/provider/tow/new")} />
             <View style={{ height: 16 }} />
             {!trucks.length ? (
-              <Empty icon="car-sport-outline" text={t("No trucks yet. Add your first truck.", "لا توجد شاحنات بعد. أضف أول شاحنة.")} />
+              <EmptyState icon="car-sport-outline" text={t("No trucks yet. Add your first truck.", "لا توجد شاحنات بعد. أضف أول شاحنة.")} />
             ) : (
               trucks.map((tr) => (
                 <Card key={tr.id} label={tr.plate} onPress={() => router.push(`/provider/tow/${tr.id}`)}>

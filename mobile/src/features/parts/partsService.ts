@@ -6,7 +6,7 @@
 
 import type { PartCondition, PartType } from "../catalog/partAttrs";
 import { api } from "../shared/api";
-import { fileNameOf, isServerFile, localFileToBase64, publicImageUrl } from "../shared/files";
+import { fileNameOf, isServerFile, localFileToBase64, publicImageUrl } from "../../core/constants/files";
 
 export type Verification = "PENDING" | "APPROVED" | "REJECTED";
 
