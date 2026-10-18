@@ -276,6 +276,9 @@ model TowCompanyProfile {
   description   String?
   serviceCities String[] @default([]) // cities served besides `city`; values come from the fixed city list
   workingHours  String?
+  // Business location the company sets itself (exact here; customers only get it rounded to 3 decimals).
+  baseLat       Float?
+  baseLng       Float?
 
   verificationStatus ProviderVerificationStatus @default(PENDING)
   rejectionReason    String?
@@ -551,6 +554,11 @@ model TowRequest {
   vehicleMake    String
   vehicleModel   String
   vehicleYear    Int?
+  // Optional map points of the trip. Only the customer and the receiving company ever see them.
+  pickupLat      Float?
+  pickupLng      Float?
+  dropoffLat     Float?
+  dropoffLng     Float?
   // Required by the API for new requests; the column default only gives rows that existed before it OTHER.
   problemType    TowProblemType @default(OTHER)
   notes          String?

@@ -3,6 +3,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
 import { CATALOG_GROUPS, categoriesOfGroup, isCategory, isGroup } from "../catalogCategories.js";
 import { SERVICE_CITIES, canonicalCity } from "../cities.js";
+import { GEO_BOX_MESSAGE, cityCentre, haversineKm, inBox, round3 } from "../geo.js";
 import { CONDITIONS, PART_TYPES } from "../partAttributes.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 
@@ -265,10 +266,29 @@ router.get("/shops/:id", async (req, res) => {
 // ---- tow ----
 
 const TRUCK_TYPES = ["FLATBED", "HOOK_CHAIN", "WHEEL_LIFT", "HEAVY_DUTY"] as const;
-const TOW_SORTS = ["available", "name"] as const;
+const TOW_SORTS = ["available", "name", "nearest"] as const;
+
+/** ?lat=&lng= (both or none), plain numbers inside the accepted area. null = not given, string = error message. */
+function readPoint(query: any): { lat: number; lng: number } | null | string {
+  const { lat, lng } = query;
+  if (lat === undefined && lng === undefined) return null;
+  const isNum = (v: unknown) => typeof v === "string" && /^-?\d{1,3}(\.\d{1,10})?$/.test(v.trim());
+  if (!isNum(lat) || !isNum(lng)) return "lat and lng must both be given, as plain numbers.";
+  const p = { lat: Number(lat), lng: Number(lng) };
+  return inBox(p.lat, p.lng) ? p : GEO_BOX_MESSAGE;
+}
+
+/** Straight-line distance from `from` to a company: from its base point, else from the centre of its city. */
+function distanceTo(from: { lat: number; lng: number }, c: { city: string; baseLat: number | null; baseLng: number | null }) {
+  if (c.baseLat !== null && c.baseLng !== null) return { distanceKm: Math.round(haversineKm(from, { lat: c.baseLat, lng: c.baseLng }) * 10) / 10, distanceSource: "base" as const };
+  const centre = cityCentre(c.city);
+  if (centre) return { distanceKm: Math.round(haversineKm(from, centre) * 10) / 10, distanceSource: "city" as const };
+  return { distanceKm: null, distanceSource: null };
+}
 
 // ?city= &q= (company name) contains, case-insensitive. ?serviceCity= company city OR a service city contains it. ?truckType= at least one APPROVED truck of that type.
 // ?availableOnly=1 at least one AVAILABLE truck. ?sort=available (default: most available trucks, then name) | name.
+// ?lat=&lng= (your position, both or none) adds distanceKm + distanceSource ("base" | "city") and makes sort=nearest the default.
 // Only APPROVED companies; counts only APPROVED trucks.
 router.get("/tow/companies", async (req, res) => {
   try {
@@ -279,8 +299,11 @@ router.get("/tow/companies", async (req, res) => {
     const serviceMatches = serviceCity ? SERVICE_CITIES.filter((c) => c.toLowerCase().includes(serviceCity.toLowerCase())) : [];
     const truckTypeRaw = typeof req.query.truckType === "string" ? req.query.truckType : "";
     if (truckTypeRaw && !TRUCK_TYPES.includes(truckTypeRaw as never)) return bad(res, 400, `truckType must be one of: ${TRUCK_TYPES.join(", ")}.`);
-    const sortRaw = typeof req.query.sort === "string" ? req.query.sort : "available";
+    const point = readPoint(req.query);
+    if (typeof point === "string") return bad(res, 400, point);
+    const sortRaw = typeof req.query.sort === "string" ? req.query.sort : point ? "nearest" : "available";
     if (!TOW_SORTS.includes(sortRaw as never)) return bad(res, 400, `sort must be one of: ${TOW_SORTS.join(", ")}.`);
+    if (sortRaw === "nearest" && !point) return bad(res, 400, "sort=nearest needs lat and lng.");
     const availableOnly = req.query.availableOnly === "1" || req.query.availableOnly === "true";
 
     const companies = await prisma.towCompanyProfile.findMany({
@@ -298,6 +321,8 @@ router.get("/tow/companies", async (req, res) => {
         city: true,
         serviceCities: true,
         workingHours: true,
+        baseLat: true,
+        baseLng: true,
         trucks: { where: { verificationStatus: "APPROVED" }, select: { truckType: true, operationalStatus: true } },
       },
     });
@@ -311,12 +336,20 @@ router.get("/tow/companies", async (req, res) => {
         city: c.city,
         serviceCities: c.serviceCities,
         workingHours: c.workingHours,
+        // the business location, rounded to about 110 m; distances are worked out from the exact point
+        baseLat: round3(c.baseLat),
+        baseLng: round3(c.baseLng),
+        ...(point ? distanceTo(point, c) : {}),
         approvedTrucks: c.trucks.length,
         availableTrucks: c.trucks.filter((t) => t.operationalStatus === "AVAILABLE").length,
         truckTypes: [...new Set(c.trucks.map((t) => t.truckType))],
       }))
       .filter((c) => !availableOnly || c.availableTrucks > 0)
-      .sort((a, b) => (sortRaw === "available" ? b.availableTrucks - a.availableTrucks : 0) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+      .sort((a, b) => {
+        const km = (x: object) => (x as { distanceKm?: number | null }).distanceKm ?? Infinity;
+        const byDistance = sortRaw === "nearest" ? km(a) - km(b) : 0;
+        return (Number.isNaN(byDistance) ? 0 : byDistance) || (sortRaw === "available" ? b.availableTrucks - a.availableTrucks : 0) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+      });
     return res.json({ success: true, companies: rows });
   } catch (e) {
     return fail(res, "Catalog tow list error", e);
@@ -325,6 +358,8 @@ router.get("/tow/companies", async (req, res) => {
 
 router.get("/tow/companies/:id", async (req, res) => {
   try {
+    const point = readPoint(req.query);
+    if (typeof point === "string") return bad(res, 400, point);
     const c = await prisma.towCompanyProfile.findFirst({
       where: { id: idParam(req.params.id), verificationStatus: "APPROVED" },
       select: {
@@ -335,6 +370,8 @@ router.get("/tow/companies/:id", async (req, res) => {
         description: true,
         serviceCities: true,
         workingHours: true,
+        baseLat: true,
+        baseLng: true,
         trucks: {
           where: { verificationStatus: "APPROVED" },
           select: {
@@ -364,6 +401,9 @@ router.get("/tow/companies/:id", async (req, res) => {
         description: c.description,
         serviceCities: c.serviceCities,
         workingHours: c.workingHours,
+        baseLat: round3(c.baseLat),
+        baseLng: round3(c.baseLng),
+        ...(point ? distanceTo(point, c) : {}),
         approvedTrucks: trucks.length,
         availableTrucks: trucks.filter((t) => t.operationalStatus === "AVAILABLE").length,
       },

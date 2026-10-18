@@ -4,6 +4,7 @@ import { Text, View } from "react-native";
 import { CustomerScreen } from "../../../features/catalog/CustomerScreen";
 import { TowStatusBadge, Timeline, useProblemLabels } from "../../../features/requests/requestBits";
 import { customerTowRequests } from "../../../features/requests/requestsService";
+import { MAPS_AVAILABLE, TripMap } from "../../../features/shared/maps";
 import { C } from "../../../features/shared/palette";
 import { Async, Button, Card, Header, KV, Notice, ReasonPanel, Section, useL, useLoad } from "../../../features/shared/ui";
 import { useTruckLabels } from "../../../features/tow/truckBits";
@@ -68,6 +69,13 @@ export default function TowRequestStatus() {
                 </Card>
               </>
             )}
+
+            {MAPS_AVAILABLE && r.pickup ? (
+              <>
+                <Section title={t("Pickup point", "نقطة الاستلام")} />
+                <TripMap pickup={r.pickup} dropoff={r.dropoff} height={170} />
+              </>
+            ) : null}
 
             <Section title={t("Your request", "طلبك")} />
             <Card>

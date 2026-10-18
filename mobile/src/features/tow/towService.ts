@@ -57,6 +57,8 @@ export type TowCompany = {
   description: string | null;
   serviceCities: string[];
   workingHours: string | null;
+  baseLat: number | null; // exact; only the company itself and admins get this
+  baseLng: number | null;
   verification: Verification;
   rejectionReason?: string | null;
   documents: { kind: string; fileName: string; uri?: string | null }[]; // private to admin + owner
@@ -64,7 +66,7 @@ export type TowCompany = {
 
 export type Actor = { id: string; email: string; fullName: string };
 export type TruckInput = Pick<Truck, "type" | "plate" | "make" | "model" | "year" | "maxWeightKg" | "photoUri" | "documents">;
-export type CompanyProfileInput = { description: string; address: string; workingHours: string; serviceCities: string[] };
+export type CompanyProfileInput = { description: string; address: string; workingHours: string; serviceCities: string[]; baseLat: number | null; baseLng: number | null };
 
 export type CompanyRow = TowCompany & { truckCount: number; pendingTruckCount: number };
 
@@ -100,6 +102,8 @@ type ApiCompany = {
   description: string | null;
   serviceCities: string[];
   workingHours: string | null;
+  baseLat: number | null;
+  baseLng: number | null;
   verificationStatus: Verification;
   rejectionReason: string | null;
   documents: { kind: string; fileName: string; uri?: string | null }[];
@@ -134,6 +138,8 @@ const toCompany = (c: ApiCompany): TowCompany => ({
   description: c.description ?? null,
   serviceCities: c.serviceCities ?? [],
   workingHours: c.workingHours ?? null,
+  baseLat: c.baseLat ?? null,
+  baseLng: c.baseLng ?? null,
   verification: c.verificationStatus,
   rejectionReason: c.rejectionReason,
   documents: c.documents,

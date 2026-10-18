@@ -2,6 +2,7 @@ import { Router } from "express";
 import express from "express";
 import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
+import { readPair } from "../geo.js";
 import { requireAuth, requireCustomer, requireTowProvider } from "../middleware/auth.middleware.js";
 
 // Tow requests: a customer asks one approved tow company for a tow; the company accepts with one of its trucks.
@@ -82,6 +83,9 @@ const common = (r: Row) => ({
   dropoffAddress: r.dropoffAddress,
   contactPhone: r.contactPhone,
   vehicle: { make: r.vehicleMake, model: r.vehicleModel, year: r.vehicleYear },
+  // map points, only ever in the customer's and the receiving company's view
+  pickup: r.pickupLat !== null && r.pickupLng !== null ? { lat: r.pickupLat, lng: r.pickupLng } : null,
+  dropoff: r.dropoffLat !== null && r.dropoffLng !== null ? { lat: r.dropoffLat, lng: r.dropoffLng } : null,
   problemType: r.problemType,
   notes: r.notes,
   declineReason: r.declineReason,
@@ -148,6 +152,10 @@ router.post("/requests/tow", ...customerSide, async (req, res) => {
     if (!vehicleMake || !vehicleModel) throw new HttpError(400, "Car make and model are required.");
     if (typeof b.problemType !== "string" || !PROBLEMS.includes(b.problemType as never)) throw new HttpError(400, `problemType is required: ${PROBLEMS.join(", ")}.`);
     const problemType = b.problemType as (typeof PROBLEMS)[number];
+    const pickup = readPair(b, "pickupLat", "pickupLng", "Pickup location");
+    if ("error" in pickup) throw new HttpError(400, pickup.error);
+    const dropoff = readPair(b, "dropoffLat", "dropoffLng", "Destination location");
+    if ("error" in dropoff) throw new HttpError(400, dropoff.error);
     const y = b.vehicleYear;
     if (y !== undefined && y !== null && !(Number.isInteger(y) && y >= 1950 && y <= new Date().getFullYear() + 1)) throw new HttpError(400, "Car year is invalid.");
 
@@ -159,7 +167,7 @@ router.post("/requests/tow", ...customerSide, async (req, res) => {
       const active = await tx.towRequest.findFirst({ where: { customerId: me.id, companyId: company.id, status: { in: [...ACTIVE] } }, select: { id: true } });
       if (active) throw new HttpError(409, "You already have an active request with this company.", { existingRequestId: active.id });
       const created = await tx.towRequest.create({
-        data: { customerId: me.id, companyId: company.id, pickupAddress, dropoffAddress, contactPhone, vehicleMake, vehicleModel, vehicleYear: y ?? null, problemType, notes },
+        data: { customerId: me.id, companyId: company.id, pickupAddress, dropoffAddress, contactPhone, vehicleMake, vehicleModel, vehicleYear: y ?? null, problemType, notes, pickupLat: pickup.lat, pickupLng: pickup.lng, dropoffLat: dropoff.lat, dropoffLng: dropoff.lng },
       });
       await log(tx, me.id, "TOW_REQUEST_CREATED", created.id, { companyId: company.id });
       return created.id;
