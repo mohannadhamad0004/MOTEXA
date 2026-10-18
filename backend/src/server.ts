@@ -12,6 +12,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import adminRoutes from "./routes/admin.routes.js";
+import adminOtpRoutes from "./routes/admin-otp.routes.js";
 dotenv.config();
 
 const app = express();
@@ -40,6 +41,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin-management", adminRoutes);
 app.use("/api/admin-invitations", adminInvitationRoutes);
 app.use("/api/mechanic-review", mechanicReviewRoutes);
+app.use("/api/auth/admin", adminOtpRoutes);
 app.listen(PORT, () => {
   console.log(`MOTEXA Server running on http://localhost:${PORT}`);
 });

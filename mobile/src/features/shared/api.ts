@@ -1,6 +1,14 @@
 import * as SecureStore from "expo-secure-store";
 
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+const API_ROOT = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/+$/, "").replace(/\/api$/, "");
+
+/** Full backend URL for a path. Works whether EXPO_PUBLIC_API_URL ends with /api or not, and whether `path` starts with /api or not. */
+export const apiUrl = (path = "") => {
+  const rest = path.replace(/^\/?api(?=\/|$)/, "").replace(/^\/+/, "");
+  return API_ROOT ? `${API_ROOT}/api${rest ? "/" + rest : ""}` : "";
+};
+
+export const API_URL = apiUrl();
 
 /** Authenticated JSON request to the real backend. Throws Error(message) on non-2xx. */
 export async function api<T = any>(method: string, path: string, body?: unknown): Promise<T> {

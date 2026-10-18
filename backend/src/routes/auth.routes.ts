@@ -234,6 +234,7 @@ router.post("/admin/verify-invitation", async (req, res) => {
     });
   }
 });
+
 router.post("/admin/activate", async (req, res) => {
   try {
     const { token, password } = req.body ?? {};
@@ -266,34 +267,94 @@ router.post("/admin/activate", async (req, res) => {
       .update(token)
       .digest("hex");
 
-    const invitation = await prisma.adminInvitation.findUnique({
-      where: { tokenHash },
-    });
-
-    if (
-      !invitation ||
-      invitation.status !== "PENDING" ||
-      invitation.expiresAt <= new Date()
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Invitation is invalid or expired.",
-      });
-    }
-
     const passwordHash = await argon2.hash(password);
 
     const result = await prisma.$transaction(async (tx) => {
-      // حجز الدعوة ذريًا لمنع تفعيلها مرتين
+      // Lock the invitation to prevent concurrent activation.
+      const rows = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id
+        FROM "AdminInvitation"
+        WHERE "tokenHash" = ${tokenHash}
+        FOR UPDATE
+      `;
+
+      if (rows.length === 0) {
+        return { status: "INVALID_INVITATION" as const };
+      }
+
+      const invitation = await tx.adminInvitation.findUnique({
+        where: { id: rows[0].id },
+      });
+
+      if (
+        !invitation ||
+        invitation.status !== "PENDING" ||
+        invitation.expiresAt <= new Date()
+      ) {
+        return { status: "INVALID_INVITATION" as const };
+      }
+
+      // Only the most recently requested OTP is accepted.
+      const latestOtp = await tx.adminInvitationOtp.findFirst({
+        where: {
+          invitationId: invitation.id,
+        },
+        orderBy: [
+          { createdAt: "desc" },
+          { id: "desc" },
+        ],
+      });
+
+      if (
+        !latestOtp ||
+        latestOtp.verifiedAt === null ||
+        latestOtp.consumedAt !== null ||
+        latestOtp.expiresAt <= new Date() ||
+        latestOtp.attempts >= latestOtp.maxAttempts
+      ) {
+        return { status: "OTP_REQUIRED" as const };
+      }
+
+      // Check for an account already using this email.
+      const existingUser = await tx.user.findUnique({
+        where: { email: invitation.email },
+        select: { id: true },
+      });
+
+      if (existingUser) {
+        return { status: "ACCOUNT_EXISTS" as const };
+      }
+
+      const now = new Date();
+
+      // Consume the verified OTP inside the transaction.
+      const consumed = await tx.adminInvitationOtp.updateMany({
+        where: {
+          id: latestOtp.id,
+          verifiedAt: { not: null },
+          consumedAt: null,
+          expiresAt: { gt: now },
+          attempts: { lt: latestOtp.maxAttempts },
+        },
+        data: {
+          consumedAt: now,
+        },
+      });
+
+      if (consumed.count !== 1) {
+        return { status: "OTP_REQUIRED" as const };
+      }
+
+      // Claim the invitation exactly once.
       const claimed = await tx.adminInvitation.updateMany({
         where: {
           id: invitation.id,
           status: "PENDING",
-          expiresAt: { gt: new Date() },
+          expiresAt: { gt: now },
         },
         data: {
           status: "ACCEPTED",
-          acceptedAt: new Date(),
+          acceptedAt: now,
         },
       });
 
@@ -318,7 +379,9 @@ router.post("/admin/activate", async (req, res) => {
 
       await tx.adminInvitation.update({
         where: { id: invitation.id },
-        data: { acceptedById: user.id },
+        data: {
+          acceptedById: user.id,
+        },
       });
 
       await tx.auditLog.create({
@@ -329,22 +392,48 @@ router.post("/admin/activate", async (req, res) => {
           details: {
             invitationId: invitation.id,
             permission: invitation.permission,
+            otpVerified: true,
           },
         },
       });
 
-      return user;
+      return {
+        status: "ACTIVATED" as const,
+        user: {
+          id: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          role: user.role,
+        },
+      };
     });
+
+    if (result.status === "INVALID_INVITATION") {
+      return res.status(400).json({
+        success: false,
+        message: "Invitation is invalid or expired.",
+      });
+    }
+
+    if (result.status === "OTP_REQUIRED") {
+      return res.status(403).json({
+        success: false,
+        message:
+          "A valid, verified OTP is required before activation.",
+      });
+    }
+
+    if (result.status === "ACCOUNT_EXISTS") {
+      return res.status(409).json({
+        success: false,
+        message: "An account with this email already exists.",
+      });
+    }
 
     return res.status(201).json({
       success: true,
       message: "Administrator account activated successfully.",
-      user: {
-        id: result.id,
-        fullName: result.fullName,
-        email: result.email,
-        role: result.role,
-      },
+      user: result.user,
     });
   } catch (error) {
     if (
@@ -365,4 +454,7 @@ router.post("/admin/activate", async (req, res) => {
     });
   }
 });
+
+
 export default router;
+

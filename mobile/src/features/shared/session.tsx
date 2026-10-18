@@ -1,3 +1,4 @@
+import { apiUrl } from "./api";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
@@ -33,7 +34,7 @@ type State = { status: "loading" } | { status: "none" } | { status: "ready"; use
 async function fetchSession(): Promise<State> {
   try {
     const token = await SecureStore.getItemAsync(TOKEN_KEY);
-    const api = process.env.EXPO_PUBLIC_API_URL;
+    const api = apiUrl();
     if (!token || !api) return { status: "none" };
     const res = await fetch(`${api.replace(/\/$/, "")}/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },

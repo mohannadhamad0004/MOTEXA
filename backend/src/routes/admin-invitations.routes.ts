@@ -2,6 +2,9 @@
 import { Router } from "express";
 import { randomBytes, createHash } from "node:crypto";
 import { prisma } from "../prisma.js";
+
+import { sendAdminInvitationEmail } from "../services/email.service.js";
+
 import {
   requireAuth,
   requireSuperAdmin,
@@ -101,21 +104,59 @@ const invitation = await prisma.adminInvitation.create({
   invitedById: res.locals.authUser.id,
 },
 });
+
+const activationBaseUrl = process.env.ADMIN_ACTIVATION_URL;
+
+if (!activationBaseUrl) {
+  await prisma.adminInvitation.delete({
+    where: { id: invitation.id },
+  });
+
+  return res.status(500).json({
+    success: false,
+    message: "Admin activation URL is not configured.",
+  });
+}
+
 const activationLink =
-  `motexa://auth/admin-activation?token=${encodeURIComponent(token)}`;
+  `${activationBaseUrl}?token=${encodeURIComponent(token)}`;
+
+const expoGoEmailBase = process.env.NODE_ENV !== "production" ? process.env.EXPO_GO_ACTIVATION_URL : undefined;
+
+try {
+  await sendAdminInvitationEmail({
+    to: invitation.email,
+    fullName: invitation.fullName,
+    permission: invitation.permission,
+    activationLink,
+    expoGoActivationLink: expoGoEmailBase ? `${expoGoEmailBase}?token=${encodeURIComponent(token)}` : undefined,
+  });
+} catch (emailError) {
+  console.error("Invitation email error:", emailError);
+
+  await prisma.adminInvitation.delete({
+    where: { id: invitation.id },
+  });
+
+  return res.status(502).json({
+    success: false,
+    message: "Invitation email could not be sent. Please try again.",
+  });
+}
 
 return res.status(201).json({
   success: true,
-  message: "Administrator invitation created.",
+  message: "Administrator invitation created and email sent.",
   invitation: {
     id: invitation.id,
     email: invitation.email,
+    fullName: invitation.fullName,
     status: invitation.status,
     permission: invitation.permission,
     expiresAt: invitation.expiresAt,
   },
-  activationLink,
 });
+
   } catch (error) {
     console.error("Create invitation error:", error);
 

@@ -1,3 +1,4 @@
+import { apiUrl } from "../../features/shared/api";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
@@ -130,7 +131,7 @@ export default function MechanicSignUpScreen() {
         return;
       }
     }
-    const api = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "");
+    const api = apiUrl();
     if (!api) return setError(m.errNetwork);
     setBusy(true);
     setError(null);

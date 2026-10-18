@@ -1,35 +1,36 @@
+import { apiUrl } from "../../../features/shared/api";
+import TouchableOpacity from "../../../components/InteractiveButton";
+import { useAppearanceStyles, useAppearance } from "../../../components/Appearance";
+import { PanelFill, CanvasFill } from "../../../components/BrandSurfaces";
+import { MetricSurface } from "../../../components/EditorialUI";
+import LanguageSwitch from "../../../components/LanguageSwitch";
+import { Text, VisualProvider, HeroReveal, DecorativeHalo } from "../../../components/MotexaVisual";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import {
-  Alert,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, ScrollView, StatusBar, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLanguage } from "../../../i18n/LanguageContext";
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
 const C = {
-  background: "#120D0A",
-  surface: "#261A13",
-  surfaceLight: "#35241A",
+  background: "#E9DECE",
+  surface: "#F7EDDD",
+  surfaceLight: "#E8D4B8",
   bronze: "#E0A36F",
   bronzeDark: "#B66E40",
   white: "#FFF5EA",
-  muted: "#A99181",
-  border: "rgba(224,163,111,0.17)",
+  muted: "#92765B",
+  border: "#D5BFA1",
 };
 
 export default function SuperAdminDashboardScreen() {
+  const styles = useAppearanceStyles(baseStyles);
+  const { dark } = useAppearance();
   const { isArabic, toggleLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
 const [dashboardStats, setDashboardStats] = useState<{
@@ -55,20 +56,20 @@ useFocusEffect(
           "motexa_access_token"
         );
 
-        const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+        const apiBase = apiUrl("");
 
-        if (!token || !apiUrl) {
+        if (!token || !apiBase) {
           throw new Error("Missing authentication or API URL");
         }
 
-        const response = await fetch(
-          `${apiUrl.replace(/\/$/, "")}/admin-management/dashboard`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+       const response = await fetch(
+  apiUrl("/admin-management/dashboard"),
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
 
         if (!response.ok) {
           throw new Error(`Dashboard API error: ${response.status}`);
@@ -262,21 +263,36 @@ useFocusEffect(
   ];
 
   return (
-    <LinearGradient
-      colors={["#120D0A", "#1A110D", "#24160F"]}
+    <VisualProvider><LinearGradient
+      colors={dark ? ["#211B17", "#30251D", "#241D18"] : ["#E4D5C1", "#CEB797", "#DDCAB1"]}
       style={styles.container}
     >
-      <StatusBar barStyle="light-content" backgroundColor="#120D0A" />
+      <StatusBar barStyle={dark ? "light-content" : "dark-content"} backgroundColor="#E9DECE" />
 
-      <View style={styles.glow} />
+
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + 20 },
+          { paddingTop: 0 },
         ]}
       >
+        <View style={[styles.masthead, {paddingTop: insets.top + 20}]}><DecorativeHalo />
+          <View style={[styles.headerActions, isArabic && styles.rowReverse]}>
+            <LanguageSwitch light />
+
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={() => showInfo(t.notification, t.notificationText)}
+            >
+              <Ionicons
+                name="notifications-outline"
+                size={21}
+                color={C.bronze}
+              />
+            </TouchableOpacity>
+          </View>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerText}>
@@ -293,65 +309,45 @@ useFocusEffect(
             </Text>
           </View>
 
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={toggleLanguage}
-              accessibilityLabel={
-                isArabic ? "Switch to English" : "التبديل للعربية"
-              }
-            >
-              <Ionicons name="language-outline" size={19} color={C.bronze} />
-              <Text style={styles.languageText}>{isArabic ? "EN" : "AR"}</Text>
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => showInfo(t.notification, t.notificationText)}
-            >
-              <Ionicons
-                name="notifications-outline"
-                size={21}
-                color={C.bronze}
-              />
-            </TouchableOpacity>
-          </View>
         </View>
 
         {/* Branding */}
-        <LinearGradient colors={["#4B3020", "#2B1D15"]} style={styles.hero}>
-          <View style={styles.heroTop}>
+        <HeroReveal><LinearGradient colors={["#775138", "#493327", "#2D2521"]} style={styles.hero}>
+          <View pointerEvents="none" style={styles.heroMonogram}><Text style={styles.monogramLetter}>M</Text></View><View style={styles.heroTop}>
             <View style={styles.logoBox}>
               <Ionicons name="car-sport" size={25} color={C.bronze} />
             </View>
 
             <View style={styles.heroText}>
               <Text style={styles.brand}>MOTEXA</Text>
-              <Text style={styles.heroSubtitle}>SUPER ADMIN CONSOLE</Text>
+              <Text style={styles.heroSubtitle}>SUPER ADMIN WORKSPACE</Text>
             </View>
 
             <Ionicons name="shield-checkmark" size={26} color={C.bronze} />
           </View>
 
           
-        </LinearGradient>
+          <Text style={[styles.heroHeadline, isArabic && styles.textRight]}>{isArabic ? "رؤية أوضح.\nإدارة بثقة." : "Clarity to lead.\nConfidence to grow."}</Text>
+          <View style={styles.heroFooter}><View style={styles.heroRule}/><Text style={[styles.heroCaption, isArabic && styles.textRight]}>{isArabic ? "كل التفاصيل، في مساحة واحدة." : "Every detail. One considered workspace."}</Text></View>
+        </LinearGradient></HeroReveal></View>
 
         {/* Overview */}
         <SectionTitle title={t.overview} isArabic={isArabic} />
 
         <View style={styles.statsGrid}>
-          {stats.map((stat) => (
-            <View key={stat.label} style={styles.statCard}>
-              <View style={styles.statIcon}>
-                <Ionicons name={stat.icon} size={22} color={C.bronze} />
+          {stats.map((stat, index) => (
+            <MetricSurface key={stat.label} style={[styles.statCard, index === 0 && styles.featuredStat]}><PanelFill kind={index === 0 ? "accent" : "light"} radius={20}/>
+              <View style={[styles.statIcon, index === 0 && styles.featuredStatIcon]}>
+                <Ionicons name={stat.icon} size={22} color={index === 0 ? "#6B4828" : "#9A623C"} />
               </View>
 
-              <Text style={styles.statValue}>{stat.value}</Text>
+              <Text style={[styles.statValue, index === 0 && styles.featuredStatValue]}>{stat.value}</Text>
 
-              <Text style={[styles.statLabel, isArabic && styles.textRight]}>
+              <Text style={[styles.statLabel, index === 0 && styles.featuredStatLabel, isArabic && styles.textRight]}>
                 {stat.label}
               </Text>
-            </View>
+            </MetricSurface>
           ))}
         </View>
 
@@ -361,18 +357,18 @@ useFocusEffect(
         <SectionTitle title={t.quick} isArabic={isArabic} />
 
         <View style={styles.actionsGrid}>
-          {actions.map((action) => (
+          {actions.map((action, index) => (
             <TouchableOpacity
               key={action.label}
-              style={styles.actionCard}
+              style={[styles.actionCard, index === 0 && styles.primaryAction, isArabic && styles.rowReverse]}
               activeOpacity={0.78}
               onPress={action.onPress}
-            >
-              <View style={styles.actionIcon}>
-                <Ionicons name={action.icon} size={23} color={C.bronze} />
+            ><PanelFill kind={index === 0 ? "hero" : "light"} radius={20}/>
+              <View style={[styles.actionIcon, index === 0 && styles.primaryActionIcon]}>
+                <Ionicons name={action.icon} size={23} color={index === 0 ? C.bronze : "#9A623C"} />
               </View>
 
-              <Text style={styles.actionLabel}>{action.label}</Text>
+              <Text style={[styles.actionLabel, index === 0 && styles.primaryActionLabel]}>{action.label}</Text>
 
               <Ionicons
                 name={
@@ -388,16 +384,16 @@ useFocusEffect(
 
         <TouchableOpacity
           style={styles.profileShortcut}
-          onPress={() => showInfo(t.profile, t.profileText)}
+          onPress={() => router.push("/admin/profile")}
         >
-          <Ionicons name="person-circle-outline" size={19} color={C.bronze} />
+          <Ionicons name="person-circle-outline" size={21} color="#9A623C" />
           <Text style={styles.profileShortcutText}>{t.profile}</Text>
           <Ionicons name="chevron-forward" size={16} color={C.muted} />
         </TouchableOpacity>
 
         <Text style={styles.footer}>{t.footer}</Text>
       </ScrollView>
-    </LinearGradient>
+    </LinearGradient></VisualProvider>
   );
 }
 
@@ -408,6 +404,7 @@ function SectionTitle({
   title: string;
   isArabic: boolean;
 }) {
+ const styles = useAppearanceStyles(baseStyles);
   return (
     <View style={styles.sectionHeader}>
       <Text style={[styles.sectionTitle, isArabic && styles.textRight]}>
@@ -431,6 +428,7 @@ function ActivityRow({
   time: string;
   isArabic: boolean;
 }) {
+ const styles = useAppearanceStyles(baseStyles);
   return (
     <View style={[styles.activityRow, isArabic && styles.rowReverse]}>
       <View style={styles.activityIcon}>
@@ -456,13 +454,17 @@ function ActivityRow({
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#E9DECE",
   },
   content: {
-    paddingHorizontal: 20,
-    paddingBottom: 48,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    width: "100%",
+    maxWidth: 1180,
+    alignSelf: "center",
   },
   glow: {
     position: "absolute",
@@ -481,48 +483,58 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
   },
   header: {
-    flexDirection: "row",
+    flexDirection: "column",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     marginBottom: 25,
-    gap: 8,
+    gap: 10,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#DDD0BD",
   },
   headerText: {
-    flex: 1,
+    width: "100%",
   },
   greeting: {
-    color: C.muted,
-    fontSize: 12,
-    marginBottom: 5,
+    color: "#9E8160",
+    fontSize: 10,
+    marginBottom: 3,
+    letterSpacing: 0.4,
   },
   mainTitle: {
-    color: C.white,
+    color: "#3A2B1C",
     fontSize: 27,
-    fontWeight: "900",
+    fontWeight: "600",
     marginBottom: 6,
+    lineHeight: 38,
   },
   subtitle: {
-    color: "#8F7969",
+    color: "#8E765C",
     fontSize: 11,
-    lineHeight: 18,
+    lineHeight: 20,
   },
   headerActions: {
+    width: "100%",
+    marginBottom: 24,
+    flexWrap: "wrap",
+    justifyContent: "space-between",
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
   },
   headerButton: {
     minWidth: 42,
-    height: 42,
-    borderRadius: 13,
+    height: 44,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: C.surface,
+    borderColor: "#D9C7AF",
+    backgroundColor: "#E8DDCC",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 8,
     gap: 3,
+    width: 42,
   },
   languageText: {
     color: C.bronze,
@@ -530,11 +542,12 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   hero: {
-    borderRadius: 22,
-    padding: 20,
+    borderRadius: 26,
+    padding: 25,
     borderWidth: 1,
-    borderColor: "rgba(224,163,111,0.22)",
-    marginBottom: 30,
+    borderColor: "#A67E50",
+    marginBottom: 0,
+    overflow: "hidden",
   },
   heroTop: {
     flexDirection: "row",
@@ -542,10 +555,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   logoBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 15,
-    backgroundColor: "rgba(224,163,111,0.12)",
+    width: 39,
+    height: 39,
+    borderRadius: 13,
+    backgroundColor: "#4B3321",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -554,15 +567,15 @@ const styles = StyleSheet.create({
   },
   brand: {
     color: C.white,
-    fontSize: 20,
-    fontWeight: "900",
-    letterSpacing: 2,
+    fontSize: 17,
+    fontWeight: "700",
+    letterSpacing: 3.5,
   },
   heroSubtitle: {
-    color: C.bronze,
-    fontSize: 9,
+    color: "#D5AE88",
+    fontSize: 8,
     fontWeight: "700",
-    letterSpacing: 1.3,
+    letterSpacing: 1.4,
     marginTop: 4,
   },
   demoTag: {
@@ -582,57 +595,61 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 14,
     marginBottom: 16,
   },
   sectionTitle: {
-    color: "#EAD8C8",
-    fontSize: 15,
-    fontWeight: "800",
+    color: "#3A2B1C",
+    fontSize: 18,
+    fontWeight: "600",
+    lineHeight: 28,
   },
   sectionLine: {
     flex: 1,
     height: 1,
-    backgroundColor: C.border,
+    backgroundColor: "#DACEBA",
   },
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: 19,
   },
   statCard: {
-    width: "48.3%",
-    minHeight: 142,
-    backgroundColor: "rgba(43,29,22,0.86)",
-    borderRadius: 19,
+    width: "48.2%",
+    minHeight: 162,
+    backgroundColor: "#FCFAF5",
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: C.border,
-    padding: 16,
-    marginBottom: 12,
+    borderColor: "#D4B998",
+    padding: 21,
+    marginBottom: 14,
+    overflow: "hidden",
   },
   statIcon: {
-    width: 39,
-    height: 39,
-    borderRadius: 12,
-    backgroundColor: "rgba(224,163,111,0.10)",
+    width: 35,
+    height: 35,
+    borderRadius: 11,
+    backgroundColor: "#EFE5D6",
     alignItems: "center",
     justifyContent: "center",
   },
   statValue: {
-    color: C.white,
-    fontSize: 27,
-    fontWeight: "900",
-    marginTop: 12,
+    color: "#3A2B1C",
+    fontSize: 39,
+    fontWeight: "600",
+    marginTop: 13,
+    lineHeight: 49,
   },
   statLabel: {
-    color: C.muted,
-    fontSize: 11,
-    marginTop: 4,
+    color: "#8E765C",
+    fontSize: 10,
+    marginTop: 3,
+    lineHeight: 18,
   },
   noticeCard: {
-    padding: 19,
-    borderRadius: 21,
+    padding: 22,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: "rgba(224,163,111,0.25)",
     marginBottom: 30,
@@ -666,8 +683,8 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: C.bronze,
-    height: 47,
-    borderRadius: 13,
+    height: 52,
+    borderRadius: 26,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -683,41 +700,49 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginBottom: 24,
+    marginBottom: 14,
+    gap: 0,
   },
   actionCard: {
-    width: "48.3%",
-    minHeight: 105,
-    borderRadius: 18,
-    backgroundColor: C.surface,
+    width: "48.2%",
+    minHeight: 148,
+    borderRadius: 20,
+    backgroundColor: "#FCFAF5",
     borderWidth: 1,
-    borderColor: C.border,
-    padding: 14,
+    borderColor: "#D4B998",
+    padding: 19,
     marginBottom: 12,
     justifyContent: "space-between",
     alignItems: "flex-start",
+    paddingHorizontal: 17,
+    paddingVertical: 17,
+    flexDirection: "column",
+    gap: 10,
+    overflow: "hidden",
   },
   actionIcon: {
-    width: 37,
-    height: 37,
-    borderRadius: 11,
-    backgroundColor: "rgba(224,163,111,0.10)",
+    width: 39,
+    height: 39,
+    borderRadius: 12,
+    backgroundColor: "#EFE5D6",
     alignItems: "center",
     justifyContent: "center",
   },
   actionLabel: {
-    color: "#E7D5C6",
+    color: "#3A2B1C",
     fontSize: 12,
-    fontWeight: "700",
-    marginTop: 10,
-    marginBottom: 5,
+    fontWeight: "600",
+    marginTop: 7,
+    marginBottom: 0,
+    lineHeight: 21,
+    flex: 0,
   },
   activityCard: {
-    borderRadius: 20,
-    backgroundColor: C.surface,
+    borderRadius: 22,
+    backgroundColor: "#30231C",
     borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 16,
+    borderColor: "#513D30",
+    paddingHorizontal: 18,
   },
   activityRow: {
     flexDirection: "row",
@@ -738,14 +763,14 @@ const styles = StyleSheet.create({
   },
   activityTitle: {
     color: C.white,
-    fontSize: 12,
-    fontWeight: "800",
+    fontSize: 14,
+    fontWeight: "600",
   },
   activityDescription: {
     color: C.muted,
-    fontSize: 11,
+    fontSize: 12,
     marginTop: 5,
-    lineHeight: 17,
+    lineHeight: 20,
   },
   activityTime: {
     color: C.bronzeDark,
@@ -760,24 +785,95 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginTop: 20,
-    padding: 15,
-    backgroundColor: C.surface,
-    borderRadius: 15,
+    marginTop: 12,
+    padding: 18,
+    backgroundColor: "#E5D1B5",
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: "#C8A77B",
   },
   profileShortcutText: {
     flex: 1,
-    color: C.white,
+    color: "#735334",
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   footer: {
-    color: "#806B5D",
-    fontSize: 9,
+    color: "#AB8E69",
+    fontSize: 8,
     textAlign: "center",
-    letterSpacing: 1,
+    letterSpacing: 1.6,
     marginTop: 28,
   },
+
+masthead: {
+    backgroundColor: "transparent",
+    marginHorizontal: 0,
+    paddingHorizontal: 0,
+    paddingBottom: 0,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    marginBottom: 30,
+    overflow: "hidden",
+  },
+heroHeadline: {
+    fontSize: 33,
+    lineHeight: 44,
+    color: "#FAF3E7",
+    fontWeight: "600",
+    marginTop: 27,
+  },
+heroFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 19,
+  },
+heroRule: {
+    height: 1,
+    width: 25,
+    backgroundColor: "#BA8658",
+  },
+heroCaption: {
+    flex: 1,
+    color: "#CFA97C",
+    fontSize: 10,
+    lineHeight: 18,
+  },
+featuredStat: {
+    backgroundColor: "#E8D6BA",
+    borderColor: "#D1B58D",
+  },
+featuredStatIcon: {
+    backgroundColor: "#D7BC94",
+  },
+featuredStatValue: {
+    color: "#51351F",
+  },
+featuredStatLabel: {
+    color: "#85623E",
+  },
+primaryAction: {
+    backgroundColor: "#2B2117",
+    borderColor: "#2B2117",
+  },
+primaryActionIcon: {
+    backgroundColor: "#503A23",
+  },
+primaryActionLabel: {
+    color: "#FAF3E7",
+  },
+
+heroMonogram: {
+    position: "absolute",
+    right: -10,
+    bottom: -75,
+  },
+monogramLetter: {
+    fontSize: 250,
+    lineHeight: 290,
+    color: "#D8AA6F0E",
+    fontWeight: "700",
+  },
 });
+

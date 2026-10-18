@@ -1,16 +1,9 @@
+import { PanelFill, CanvasFill } from "../../components/BrandSurfaces";
+import { Text } from "../../components/MotexaVisual";
+import LanguageSwitch from "../../components/LanguageSwitch";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import {
-  Animated,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -51,7 +44,7 @@ export default function SignUpScreen() {
 
   return (
     <LinearGradient
-      colors={["#120D0A", "#1C120D", "#2B1B13"]}
+      colors={["#F1E9DD", "#DFCFB9", "#EDE2D3"]}
       style={styles.background}
     >
       <View style={styles.glowTop} />
@@ -89,25 +82,11 @@ export default function SignUpScreen() {
                       : "arrow-back"
                   }
                   size={21}
-                  color="#E5B081"
+                  color="#A27140"
                 />
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.languageButton}
-                onPress={toggleLanguage}
-                activeOpacity={0.75}
-              >
-                <Ionicons
-                  name="language-outline"
-                  size={17}
-                  color="#E0A36F"
-                />
-
-                <Text style={styles.languageText}>
-                  {language === "en" ? "العربية" : "EN"}
-                </Text>
-              </TouchableOpacity>
+              <LanguageSwitch light />
             </View>
 
             {/* Logo */}
@@ -182,7 +161,7 @@ export default function SignUpScreen() {
                   <Ionicons
                     name="person-outline"
                     size={20}
-                    color="#C98B5B"
+                    color="#A27140"
                   />
                 </View>
 
@@ -194,7 +173,7 @@ export default function SignUpScreen() {
                   placeholder={
                     t.signup.fullNamePlaceholder
                   }
-                  placeholderTextColor="#806F64"
+                  placeholderTextColor="#9C836B"
                   value={fullName}
                   onChangeText={setFullName}
                 />
@@ -220,7 +199,7 @@ export default function SignUpScreen() {
                   <Ionicons
                     name="mail-outline"
                     size={20}
-                    color="#C98B5B"
+                    color="#A27140"
                   />
                 </View>
 
@@ -230,7 +209,7 @@ export default function SignUpScreen() {
                     isArabic && styles.arabicInput,
                   ]}
                   placeholder={t.common.emailPlaceholder}
-                  placeholderTextColor="#806F64"
+                  placeholderTextColor="#9C836B"
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -259,7 +238,7 @@ export default function SignUpScreen() {
                   <Ionicons
                     name="lock-closed-outline"
                     size={20}
-                    color="#C98B5B"
+                    color="#A27140"
                   />
                 </View>
 
@@ -271,7 +250,7 @@ export default function SignUpScreen() {
                   placeholder={
                     t.signup.passwordPlaceholder
                   }
-                  placeholderTextColor="#806F64"
+                  placeholderTextColor="#9C836B"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
@@ -290,7 +269,7 @@ export default function SignUpScreen() {
                         : "eye-off-outline"
                     }
                     size={21}
-                    color="#A99181"
+                    color="#A27140"
                   />
                 </TouchableOpacity>
               </View>
@@ -315,7 +294,7 @@ export default function SignUpScreen() {
                   <Ionicons
                     name="shield-checkmark-outline"
                     size={20}
-                    color="#C98B5B"
+                    color="#A27140"
                   />
                 </View>
 
@@ -327,7 +306,7 @@ export default function SignUpScreen() {
                   placeholder={
                     t.signup.confirmPasswordPlaceholder
                   }
-                  placeholderTextColor="#806F64"
+                  placeholderTextColor="#9C836B"
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showConfirmPassword}
@@ -348,7 +327,7 @@ export default function SignUpScreen() {
                         : "eye-off-outline"
                     }
                     size={21}
-                    color="#A99181"
+                    color="#A27140"
                   />
                 </TouchableOpacity>
               </View>
@@ -382,7 +361,7 @@ export default function SignUpScreen() {
                           : "arrow-forward"
                       }
                       size={18}
-                      color="#FBE9D8"
+                      color="#A27140"
                     />
                   </View>
                 </LinearGradient>
@@ -421,7 +400,7 @@ export default function SignUpScreen() {
               <Ionicons
                 name="shield-checkmark-outline"
                 size={14}
-                color="#78675C"
+                color="#A27140"
               />
 
               <Text
@@ -498,7 +477,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "rgba(201,139,91,0.10)",
     borderWidth: 1,
-    borderColor: "rgba(201,139,91,0.22)",
+    borderColor: "#D5BFA1",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -511,11 +490,11 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     backgroundColor: "rgba(201,139,91,0.09)",
     borderWidth: 1,
-    borderColor: "rgba(201,139,91,0.20)",
+    borderColor: "#D5BFA1",
   },
 
   languageText: {
-    color: "#DCA578",
+    color: "#A27140",
     fontSize: 12,
     fontWeight: "700",
     marginLeft: 7,
@@ -546,7 +525,7 @@ const styles = StyleSheet.create({
   },
 
   brandName: {
-    color: "#FFF5EA",
+    color: "#A27140",
     fontSize: 30,
     fontWeight: "800",
     letterSpacing: 7,
@@ -555,7 +534,7 @@ const styles = StyleSheet.create({
   },
 
   tagline: {
-    color: "#A99181",
+    color: "#493321",
     fontSize: 9,
     fontWeight: "600",
     letterSpacing: 2,
@@ -576,14 +555,15 @@ const styles = StyleSheet.create({
   },
 
   heading: {
-    color: "#FFF5EA",
-    fontSize: 25,
-    fontWeight: "700",
+    color: "#493321",
+    fontSize: 30,
+    fontWeight: "600",
     marginBottom: 6,
+    lineHeight: 42,
   },
 
   description: {
-    color: "#9C8A7E",
+    color: "#92765B",
     fontSize: 13,
     lineHeight: 20,
   },
@@ -596,12 +576,11 @@ const styles = StyleSheet.create({
   /* Card */
 
   card: {
-    backgroundColor: "rgba(45, 31, 24, 0.78)",
+    backgroundColor: "#F7EDDD",
     borderWidth: 1,
-    borderColor: "rgba(205, 150, 108, 0.15)",
+    borderColor: "#D5BFA1",
     borderRadius: 24,
-    padding: 21,
-
+    padding: 22,
     shadowColor: "#000000",
     shadowOffset: {
       width: 0,
@@ -613,7 +592,7 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    color: "#BDAA9C",
+    color: "#92765B",
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.3,
@@ -634,9 +613,9 @@ const styles = StyleSheet.create({
     height: 54,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(20, 14, 11, 0.65)",
+    backgroundColor: "#F7EDDD",
     borderWidth: 1,
-    borderColor: "#49352A",
+    borderColor: "#D5BFA1",
     borderRadius: 15,
     marginBottom: 17,
   },
@@ -654,15 +633,15 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: "100%",
-    color: "#FFF5EA",
-    fontSize: 14,
+    color: "#493321",
+    fontSize: 16,
     paddingRight: 15,
   },
 
   passwordInput: {
     flex: 1,
     height: "100%",
-    color: "#FFF5EA",
+    color: "#493321",
     fontSize: 14,
   },
 
@@ -740,13 +719,13 @@ const styles = StyleSheet.create({
   },
 
   loginQuestion: {
-    color: "#8F7E73",
+    color: "#493321",
     fontSize: 13,
     marginHorizontal: 3,
   },
 
   loginText: {
-    color: "#D99B69",
+    color: "#493321",
     fontSize: 13,
     fontWeight: "700",
     marginHorizontal: 3,
@@ -761,7 +740,7 @@ const styles = StyleSheet.create({
   },
 
   footerText: {
-    color: "#78675C",
+    color: "#92765B",
     fontSize: 8,
     fontWeight: "600",
     letterSpacing: 1.4,

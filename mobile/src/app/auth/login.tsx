@@ -1,754 +1,227 @@
+import { MobilityArtwork } from "../../components/EditorialUI";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAppearanceStyles, useAppearance } from "../../components/Appearance";
+
+
+import { useLanguage } from "../../i18n/LanguageContext";
+import LanguageSwitch from "../../components/LanguageSwitch";
+import { Text, VisualProvider, HeroReveal, DecorativeHalo } from "../../components/MotexaVisual";
+
+import React, { useEffect, useState } from "react";
+import { View, TextInput, Pressable, ScrollView, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, StatusBar } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import { useEffect, useRef, useState } from "react";
-import {
-  Alert,
-  Animated,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { useLanguage } from "../../i18n/LanguageContext";
+import MotexaDialog from "../../components/MotexaDialog";
+import { apiUrl } from "../../features/shared/api";
 import { landingFor } from "../../features/shared/landing";
 
-const COLORS = {
-  background: "#120D0A",
-  bronze: "#C98B5B",
-  lightBronze: "#E3AD7A",
-  white: "#FFF5EA",
-  muted: "#A99181",
-  border: "#49352A",
+const AUTH_URL = apiUrl("/auth/login");
+const BG = "#17100C";
+const BRONZE = "#E0A36F";
+const WHITE = "#FFF5EA";
+
+const roles: Record<string, [string, string]> = {
+  "super-admin": ["Super Admin", "المشرف العام"],
+  "mechanics-admin": ["Mechanics Admin", "مسؤول الميكانيكيين"],
+  "parts-admin": ["Spare Parts Admin", "مسؤول قطع الغيار"],
+  "towing-admin": ["Towing Admin", "مسؤول خدمات السحب"],
+  mechanic: ["Mechanic", "ميكانيكي"],
+  customer: ["Car Owner", "مالك المركبة"],
+  parts: ["Spare Parts Provider", "مزود قطع غيار"],
+  towing: ["Towing Provider", "مزود خدمة سحب"],
 };
 
 export default function LoginScreen() {
+  const s = useAppearanceStyles(baseStyles);
+  const insets=useSafeAreaInsets();
+  const [focusedField,setFocusedField]=useState<"email"|"password"|null>(null);
+  const { dark } = useAppearance();
+  const { selectedRole } = useLocalSearchParams<{
+    selectedRole?: string;
+  }>();
+
+  const { isArabic: ar } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-const [isLoading, setIsLoading] = useState(false);
-  const { language, toggleLanguage, t, isArabic } = useLanguage();
+  const [loading, setLoading] = useState(false);
+  const [dialog, setDialog] = useState({
+    visible: false,
+    title: "",
+    message: "",
+  });
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const logoScale = useRef(new Animated.Value(0.85)).current;
+  const t = (en: string, arabic: string) => ar ? arabic : en;
+  const role = typeof selectedRole === "string"
+    ? selectedRole
+    : "";
+  const [displayReady, setDisplayReady] = useState(false);
+  useEffect(() => { setDisplayReady(true); }, []);
+  const roleTitle = roles[displayReady ? role : ""] || ["Welcome Back", "مرحبًا بعودتك"];
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 900,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.spring(logoScale, {
-        toValue: 1,
-        friction: 5,
-        tension: 60,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [fadeAnim, slideAnim, logoScale]);
+  const error = (message: string) => {
+    setDialog({
+      visible: true,
+      title: t("Sign In Failed", "تعذر تسجيل الدخول"),
+      message,
+    });
+  };
 
- 
-const handleLogin = async () => {
-  if (isLoading) return;
+  const signIn = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
 
-  setError("");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      error(t("Enter a valid email address.", "أدخل بريدًا إلكترونيًا صحيحًا."));
+      return;
+    }
 
-  const normalizedEmail = email.trim().toLowerCase();
+    if (!password) {
+      error(t("Password is required.", "كلمة المرور مطلوبة."));
+      return;
+    }
 
-  if (!normalizedEmail || !password) {
-    setError(
-      isArabic
-        ? "يرجى إدخال البريد الإلكتروني وكلمة المرور."
-        : "Please enter your email and password."
-    );
-    return;
+    if (!AUTH_URL) {
+      error(t("API URL is not configured.", "رابط الخادم غير مُعدّ."));
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+const response = await fetch(
+  AUTH_URL,
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: normalizedEmail,
+      password,
+    }),
   }
+);
+      const data = await response.json();
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  if (!emailRegex.test(normalizedEmail)) {
-    setError(
-      isArabic
-        ? "يرجى إدخال بريد إلكتروني صحيح."
-        : "Please enter a valid email address."
-    );
-    return;
-  }
-
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL;
-
-  if (!apiUrl) {
-    setError(
-      isArabic
-        ? "عنوان الخادم غير مُعدّ."
-        : "Server URL is not configured."
-    );
-    return;
-  }
-
-  setIsLoading(true);
-
-  try {
-    const response = await fetch(
-      `${apiUrl.replace(/\/$/, "")}/auth/login`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: normalizedEmail,
-          password,
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      // A pending MECHANIC account goes to the pending screen instead of a bare error.
-      if (response.status === 403 && data.role === "MECHANIC" && data.status === "PENDING") {
-        router.replace("/auth/mechanic-pending");
+      if (!response.ok) {
+        // A pending MECHANIC account goes to the pending screen instead of a bare error.
+        if (response.status === 403 && data.role === "MECHANIC" && data.status === "PENDING") {
+          router.replace("/auth/mechanic-pending");
+          return;
+        }
+        error(data.message || data.error ||
+          t("Invalid credentials.", "بيانات الدخول غير صحيحة."));
         return;
       }
-      setError(
-        response.status === 401
-          ? isArabic
-            ? "البريد الإلكتروني أو كلمة المرور غير صحيحة."
-            : "Invalid email or password."
-          : response.status === 403
-          ? isArabic
-            ? "الحساب غير مفعّل حاليًا."
-            : "This account is not active."
-          : isArabic
-          ? "تعذّر تسجيل الدخول. حاولي مرة أخرى."
-          : "Login failed. Please try again."
-      );
-      return;
-    }
 
-    const status = data.user?.status;
+      const token = data.token || data.accessToken;
+      const user = data.user;
 
-    if (
-      status !== "ACTIVE" ||
-      typeof data.accessToken !== "string" ||
-      !data.accessToken
-    ) {
-      setError(
-        isArabic
-          ? "استجابة تسجيل الدخول غير صالحة."
-          : "Invalid login response."
-      );
-      return;
-    }
-
-    // Verify permissions from the backend before navigation.
-    const meResponse = await fetch(
-      `${apiUrl.replace(/\/$/, "")}/auth/me`,
-      {
-        headers: {
-          Authorization: `Bearer ${data.accessToken}`,
-        },
+      if (!token || !user) {
+        error(t("Unexpected server response.", "استجابة غير متوقعة من الخادم."));
+        return;
       }
-    );
 
-    const meData = await meResponse.json();
-    const currentUser = meData.user;
+      if (user.status !== "ACTIVE") {
+        error(t("Your account is not active.", "حسابك غير مفعّل."));
+        return;
+      }
 
-    if (
-      !meResponse.ok ||
-      !meData.success ||
-      currentUser?.status !== "ACTIVE"
-    ) {
-      setError(
-        isArabic
-          ? "تعذّر التحقق من صلاحيات الحساب."
-          : "Could not verify account permissions."
-      );
-      return;
-    }
-
-    const permissions: string[] = Array.isArray(
-      currentUser.adminPermissions
+      const permissions: string[] = Array.isArray(user.adminPermissions)
+  ? user.adminPermissions.map((item: string | { permission: string }) =>
+      typeof item === "string" ? item : item.permission
     )
-      ? currentUser.adminPermissions.map(
-          (item: { permission: string }) => item.permission
-        )
-      : [];
+  : [];
 
-    const target = landingFor(currentUser.role, permissions);
-
-    if (!target) {
-      setError(
-        isArabic
-          ? "هذه الواجهة غير مخصصة لقسمك الإداري."
-          : "This portal is not assigned to your department."
-      );
-      return;
-    }
-
-    await SecureStore.setItemAsync(
-      "motexa_access_token",
-      data.accessToken
-    );
-
-    setPassword("");
-
-    router.replace(target);
-  } catch (error) {
-    console.error("Login error:", error);
-
-    setError(
-      isArabic
-        ? "تعذّر الاتصال بالخادم. تأكدي من تشغيل Backend والاتصال بالشبكة."
-        : "Cannot connect to the server. Check your backend and network connection."
-    );
-  } finally {
-    setIsLoading(false);
-  }
+const expectedPermission: Record<string, string> = {
+  "mechanics-admin": "MANAGE_MECHANICS",
+  "parts-admin": "MANAGE_SPARE_PARTS",
+  "towing-admin": "MANAGE_TOWING",
 };
 
-
-  return (
-    <LinearGradient
-      colors={["#120D0A", "#1C120D", "#2B1B13"]}
-      style={styles.background}
-    >
-      <View style={styles.glowTop} />
-      <View style={styles.glowBottom} />
-
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <Animated.View
-            style={[
-              styles.content,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
-          >
-            <View style={styles.languageRow}>
-              <TouchableOpacity
-                style={styles.languageButton}
-                onPress={toggleLanguage}
-                activeOpacity={0.75}
-              >
-                <Ionicons name="language-outline" size={17} color="#E0A36F" />
-                <Text style={styles.languageText}>
-                  {language === "en" ? "العربية" : "EN"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <Animated.View
-              style={[
-                styles.logoContainer,
-                { transform: [{ scale: logoScale }] },
-              ]}
-            >
-              <LinearGradient
-                colors={["#F0C49A", "#B87345", "#7C4528"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.logoCircle}
-              >
-                <Ionicons name="car-sport-outline" size={37} color="#1B100B" />
-              </LinearGradient>
-            </Animated.View>
-
-            <Text style={styles.brandName}>{t.common.appName}</Text>
-
-            <Text style={[styles.tagline, isArabic && styles.arabicTagline]}>
-              {t.common.tagline}
-            </Text>
-
-            <View style={styles.adminBadge}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={14}
-                color={COLORS.bronze}
-              />
-              <Text style={styles.adminBadgeText}>
-                {isArabic ? "بوابة الإدارة الآمنة" : "SECURE ADMIN PORTAL"}
-              </Text>
-            </View>
-
-            <View style={styles.welcomeSection}>
-              <Text
-                style={[styles.welcomeTitle, isArabic && styles.arabicText]}
-              >
-                {t.login.welcome}
-              </Text>
-
-              <Text style={[styles.welcomeText, isArabic && styles.arabicText]}>
-                {t.login.description}
-              </Text>
-            </View>
-
-            <View style={styles.card}>
-              <Text style={[styles.label, isArabic && styles.arabicText]}>
-                {t.common.email}
-              </Text>
-
-              <View
-                style={[styles.inputContainer, isArabic && styles.rowReverse]}
-              >
-                <View style={styles.inputIcon}>
-                  <Ionicons
-                    name="mail-outline"
-                    size={20}
-                    color={COLORS.bronze}
-                  />
-                </View>
-
-                <TextInput
-                  style={[styles.input, isArabic && styles.arabicInput]}
-                  placeholder={t.common.emailPlaceholder}
-                  placeholderTextColor="#806F64"
-                  value={email}
-                  onChangeText={(value) => {
-                    setEmail(value);
-                    setError("");
-                  }}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="email"
-                />
-              </View>
-
-              <Text style={[styles.label, isArabic && styles.arabicText]}>
-                {t.common.password}
-              </Text>
-
-              <View
-                style={[styles.inputContainer, isArabic && styles.rowReverse]}
-              >
-                <View style={styles.inputIcon}>
-                  <Ionicons
-                    name="lock-closed-outline"
-                    size={20}
-                    color={COLORS.bronze}
-                  />
-                </View>
-
-                <TextInput
-                  style={[styles.input, isArabic && styles.arabicInput]}
-                  placeholder={t.login.passwordPlaceholder}
-                  placeholderTextColor="#806F64"
-                  value={password}
-                  onChangeText={(value) => {
-                    setPassword(value);
-                    setError("");
-                  }}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="current-password"
-                />
-
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                  accessibilityLabel={
-                    showPassword ? "Hide password" : "Show password"
-                  }
-                >
-                  <Ionicons
-                    name={showPassword ? "eye-outline" : "eye-off-outline"}
-                    size={21}
-                    color="#A99181"
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <TouchableOpacity
-                onPress={() => router.push("/auth/forgot-password")}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.forgotPassword,
-                    isArabic && styles.forgotPasswordArabic,
-                  ]}
-                >
-                  {t.login.forgotPassword}
-                </Text>
-              </TouchableOpacity>
-
-              {error ? (
-                <View style={styles.errorBox}>
-                  <Ionicons
-                    name="alert-circle-outline"
-                    size={18}
-                    color="#F0A28E"
-                  />
-                  <Text
-                    style={[styles.errorText, isArabic && styles.arabicText]}
-                  >
-                    {error}
-                  </Text>
-                </View>
-              ) : null}
-
-              <TouchableOpacity
-                activeOpacity={0.85}
-                style={styles.loginButtonWrapper}
-               onPress={handleLogin}
-disabled={isLoading}
-              >
-                <LinearGradient
-                  colors={["#E3AD7A", "#C47A48", "#A95F34"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.loginButton}
-                >
-                <Text style={styles.loginButtonText}>
-  {isLoading
-    ? isArabic
-      ? "جارٍ تسجيل الدخول..."
-      : "Signing in..."
-    : t.login.signIn}
-</Text>
-
-                  <View
-                    style={[
-                      styles.arrowCircle,
-                      isArabic && styles.arrowCircleArabic,
-                    ]}
-                  >
-                    <Ionicons
-                      name={isArabic ? "arrow-back" : "arrow-forward"}
-                      size={18}
-                      color="#FBE9D8"
-                    />
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.invitationBox}>
-              <Ionicons name="mail-unread-outline" size={19} color="#D99B69" />
-              <Text
-                style={[styles.invitationText, isArabic && styles.arabicText]}
-              >
-                {isArabic
-                  ? "حسابات المسؤولين تُنشأ بدعوة معتمدة من المسؤول الأعلى فقط."
-                  : "Administrator accounts are activated through authorized Super Admin invitations only."}
-              </Text>
-            </View>
-
-            <View style={[styles.footer, isArabic && styles.rowReverse]}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={14}
-                color="#78675C"
-              />
-              <Text style={styles.footerText}>{t.login.secureAccess}</Text>
-            </View>
-          </Animated.View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </LinearGradient>
-  );
+if (
+  (role === "super-admin" && user.role !== "SUPER_ADMIN") ||
+  (expectedPermission[role] &&
+    (user.role !== "ADMIN" ||
+      !permissions.includes(expectedPermission[role])))
+) {
+  error(t(
+    "This account does not have access to the selected department.",
+    "هذا الحساب لا يملك صلاحية الدخول للقسم المحدد."
+  ));
+  return;
 }
 
-const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: "center",
-    paddingHorizontal: 25,
-    paddingTop: 30,
-    paddingBottom: 55,
-  },
-  content: {
-    width: "100%",
-    maxWidth: 430,
-    alignSelf: "center",
-  },
-  glowTop: {
-    position: "absolute",
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: "rgba(198,123,72,0.09)",
-    top: -90,
-    right: -90,
-  },
-  glowBottom: {
-    position: "absolute",
-    width: 230,
-    height: 230,
-    borderRadius: 115,
-    backgroundColor: "rgba(139,79,43,0.08)",
-    bottom: -80,
-    left: -90,
-  },
-  languageRow: {
-    alignItems: "flex-end",
-    marginBottom: 5,
-  },
-  languageButton: {
-    height: 38,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 13,
-    borderRadius: 13,
-    backgroundColor: "rgba(201,139,91,0.09)",
-    borderWidth: 1,
-    borderColor: "rgba(201,139,91,0.20)",
-  },
-  languageText: {
-    color: "#DCA578",
-    fontSize: 12,
-    fontWeight: "700",
-    marginLeft: 7,
-  },
-  logoContainer: {
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  logoCircle: {
-    width: 76,
-    height: 76,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#D28B57",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
-    shadowRadius: 15,
-    elevation: 10,
-  },
-  brandName: {
-    color: "#FFF5EA",
-    fontSize: 36,
-    fontWeight: "800",
-    letterSpacing: 8,
-    textAlign: "center",
-    marginLeft: 8,
-  },
-  tagline: {
-    color: "#A99181",
-    fontSize: 9,
-    fontWeight: "600",
-    letterSpacing: 2.2,
-    textAlign: "center",
-    marginTop: 7,
-  },
-  arabicTagline: {
-    letterSpacing: 0,
-    fontSize: 12,
-  },
-  adminBadge: {
-    alignSelf: "center",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    backgroundColor: "rgba(201,139,91,0.10)",
-    borderWidth: 1,
-    borderColor: "rgba(201,139,91,0.22)",
-    borderRadius: 20,
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-    marginTop: 15,
-  },
-  adminBadgeText: {
-    color: "#DCA578",
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  welcomeSection: {
-    marginTop: 33,
-    marginBottom: 20,
-  },
-  welcomeTitle: {
-    color: "#FFF5EA",
-    fontSize: 27,
-    fontWeight: "700",
-    marginBottom: 6,
-  },
-  welcomeText: {
-    color: "#9C8A7E",
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  arabicText: {
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  card: {
-    backgroundColor: "rgba(45,31,24,0.78)",
-    borderWidth: 1,
-    borderColor: "rgba(205,150,108,0.15)",
-    borderRadius: 24,
-    padding: 21,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  label: {
-    color: "#BDAA9C",
-    fontSize: 12,
-    fontWeight: "700",
-    marginBottom: 9,
-    marginLeft: 2,
-  },
-  inputContainer: {
-    height: 56,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(20,14,11,0.65)",
-    borderWidth: 1,
-    borderColor: "#49352A",
-    borderRadius: 15,
-    marginBottom: 19,
-  },
-  rowReverse: {
-    flexDirection: "row-reverse",
-  },
-  inputIcon: {
-    width: 49,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  input: {
-    flex: 1,
-    height: "100%",
-    color: "#FFF5EA",
-    fontSize: 14,
-    paddingHorizontal: 8,
-  },
-  arabicInput: {
-    textAlign: "right",
-  },
-  eyeButton: {
-    width: 48,
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  forgotPassword: {
-    color: "#D99B69",
-    fontSize: 13,
-    fontWeight: "600",
-    textAlign: "right",
-    marginTop: -5,
-    marginBottom: 22,
-  },
-  forgotPasswordArabic: {
-    textAlign: "left",
-    writingDirection: "rtl",
-  },
-  errorBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 9,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: "rgba(190,75,65,0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(240,162,142,0.25)",
-    marginBottom: 17,
-  },
-  errorText: {
-    color: "#F0A28E",
-    fontSize: 12,
-    lineHeight: 19,
-    flex: 1,
-  },
-  loginButtonWrapper: {
-    borderRadius: 15,
-    overflow: "hidden",
-    shadowColor: "#C47A48",
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 7,
-  },
-  loginButton: {
-    height: 56,
-    borderRadius: 15,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loginButtonText: {
-    color: "#20120B",
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  arrowCircle: {
-    position: "absolute",
-    right: 12,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "rgba(71,36,18,0.28)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  arrowCircleArabic: {
-    right: undefined,
-    left: 12,
-  },
-  invitationBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 11,
-    backgroundColor: "rgba(201,139,91,0.07)",
-    borderWidth: 1,
-    borderColor: "rgba(201,139,91,0.15)",
-    borderRadius: 14,
-    padding: 15,
-    marginTop: 24,
-  },
-  invitationText: {
-    color: "#BDAA9C",
-    fontSize: 12,
-    lineHeight: 20,
-    flex: 1,
-  },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 30,
-    gap: 6,
-  },
-  footerText: {
-    color: "#78675C",
-    fontSize: 10,
-    fontWeight: "600",
-  },
+    
+
+const destination = landingFor(user.role, permissions);
+
+      if (!destination) {
+        error(t(
+          "This account is not assigned to your department.",
+          "هذا الحساب غير مخصص لقسمك الإداري."
+        ));
+        return;
+      }
+
+          console.log("LOGIN SUCCESS:", user.role, destination);
+
+      await SecureStore.setItemAsync("motexa_access_token", token);
+
+      console.log("TOKEN SAVED - NAVIGATING TO:", destination);
+
+      router.replace(destination);
+    } catch (err) {
+      console.error("MOTEXA LOGIN ERROR:", err);
+
+      error(t(
+        "Login failed. Check the Expo terminal for details.",
+        "فشل تسجيل الدخول. راجع الخطأ في شاشة Expo."
+      ));
+    } finally {
+      setLoading(false);
+    }
+  
+  };
+
+  return <VisualProvider><View style={s.root}>
+   <StatusBar barStyle={dark?'light-content':'dark-content'}/>
+   <LinearGradient colors={dark?['#211B16','#30251D','#211B16']:['#EDE1CE','#D8C5A9','#E4D3B9']} style={StyleSheet.absoluteFill}/>
+   <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==='ios'?'padding':undefined}>
+    <ScrollView style={{flex:1}} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={true} contentContainerStyle={[s.content,{paddingTop:insets.top+2,paddingBottom:Math.max(insets.bottom,20)}]}>
+     <View style={[s.navigation,{flexDirection:ar?'row-reverse':'row'}]}>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('Back to roles','العودة إلى الأدوار')} onPress={()=>router.replace('/choose-role')} style={({pressed})=>[s.back,{opacity:pressed?.7:1}]}><Ionicons name={ar?'arrow-forward':'arrow-back'} size={20} color={dark?'#E2BD8F':'#725134'}/></Pressable>
+      <View style={[s.wordmarkRow,{flexDirection:ar?'row-reverse':'row'}]}><Ionicons name="car-sport-outline" size={22} color={dark?'#E2BD8F':'#725134'}/><Text style={s.wordmark}>MOTEXA</Text></View>
+     </View>
+     <View style={[s.preferences,{alignItems:ar?'flex-start':'flex-end'}]}><LanguageSwitch light compact/></View>
+     <View style={s.surface}>
+      <HeroReveal style={{height:188,width:'100%',borderRadius:26,overflow:'hidden',paddingHorizontal:22,paddingTop:19,backgroundColor:'#332418'}}><LinearGradient colors={['#493123','#332419','#241B14']} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/><DecorativeHalo/><View style={{flexDirection:ar?'row-reverse':'row',alignItems:'center',gap:8}}><View style={s.brandDot}/><Text style={s.eyebrow}>{t('YOUR MOTEXA WORKSPACE','مساحتك في MOTEXA')}</Text></View><MobilityArtwork compact/></HeroReveal>
+      <View style={s.form}>
+       <View style={{alignItems:ar?'flex-end':'flex-start',marginBottom:12}}><View style={[s.roleBadge,{flexDirection:ar?'row-reverse':'row'}]}><Ionicons name="shield-checkmark-outline" size={13} color={dark?'#E2BD8F':'#80532D'}/><Text style={s.roleBadgeText}>{t(roleTitle[0],roleTitle[1])}</Text></View></View>
+       <Text accessibilityRole="header" style={[s.formTitle,{fontSize:28,lineHeight:36,fontWeight:'600',textAlign:ar?'right':'left'}]}>{t('Good to have you back.','مرحبًا بعودتك.')}</Text>
+       <Text style={[s.formSubtitle,{textAlign:ar?'right':'left',marginTop:9}]}>{t('One account. A connected experience.','حساب واحد. تجربة متكاملة.')}</Text>
+       <Text style={[s.label,{textAlign:ar?'right':'left',marginTop:25}]}>{t('Email address','البريد الإلكتروني')}</Text>
+       <View style={[s.inputRow,focusedField==='email'&&{borderColor:dark?'#E2BA80':'#9D6530',backgroundColor:dark?'#3C2E22':'#FFFEFB'}]}><Ionicons name="mail-outline" size={20} color={dark?'#D1AD80':'#966B43'}/><TextInput accessibilityLabel={t('Email address','البريد الإلكتروني')} style={s.input} placeholder={t('Enter your email address','أدخل بريدك الإلكتروني')} placeholderTextColor={dark?'#BBA68C':'#95806A'} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoFocus={false} autoComplete="off" importantForAutofill="no" returnKeyType="done" blurOnSubmit={false} onSubmitEditing={()=>{}} value={email} onChangeText={setEmail} onFocus={()=>setFocusedField('email')} onBlur={()=>setFocusedField(null)}/></View>
+       <View style={[s.passwordHeading,{flexDirection:ar?'row-reverse':'row'}]}><Text style={[s.label,{marginBottom:0}]}>{t('Password','كلمة المرور')}</Text><Pressable accessibilityRole="button" onPress={()=>router.push('/auth/forgot-password')} style={({pressed})=>({minHeight:32,justifyContent:'center',opacity:pressed?.7:1})}><Text style={s.forgot}>{t('Forgot password?','نسيت كلمة المرور؟')}</Text></Pressable></View>
+       <View style={[s.inputRow,focusedField==='password'&&{borderColor:dark?'#DFB77E':'#A56E3B',backgroundColor:dark?'#3C2E22':'#FFFEFB'}]}><Ionicons name="lock-closed-outline" size={20} color={dark?'#D1AD80':'#966B43'}/><TextInput accessibilityLabel={t('Password','كلمة المرور')} style={s.input} placeholder={t('Enter your password','أدخل كلمة المرور')} placeholderTextColor={dark?'#BBA68C':'#95806A'} secureTextEntry={!showPassword} autoFocus={false} autoComplete="off" importantForAutofill="no" value={password} onChangeText={setPassword} onFocus={()=>setFocusedField('password')} onBlur={()=>setFocusedField(null)}/><Pressable accessibilityRole="button" accessibilityLabel={showPassword?t('Hide password','إخفاء كلمة المرور'):t('Show password','إظهار كلمة المرور')} onPress={()=>setShowPassword(!showPassword)} style={s.eye}><Ionicons name={showPassword?'eye-off-outline':'eye-outline'} size={21} color={dark?'#D1AD80':'#966B43'}/></Pressable></View>
+       <Pressable accessibilityRole="button" disabled={loading} onPress={signIn} style={({pressed,hovered})=>[s.submit,{flexDirection:ar?'row-reverse':'row',opacity:loading?.65:pressed?.82:hovered?.94:1}]}>{loading?<ActivityIndicator color={dark?'#302319':'#FFF8EE'}/>:<><Text style={s.submitText}>{t('Enter workspace','إلى مساحة عملك')}</Text><View style={s.submitArrow}><Ionicons name={ar?'arrow-back':'arrow-forward'} size={22} color="#3B281B"/></View></>}</Pressable>
+       <View style={s.security}><View style={s.securityLine}/><Ionicons name="shield-checkmark-outline" size={14} color={dark?'#D1AD80':'#966B43'}/><Text style={s.securityText}>{t('SECURE BY DESIGN','الأمان أساس تجربتك')}</Text><View style={s.securityLine}/></View>
+      </View>
+     </View>
+    </ScrollView>
+   </KeyboardAvoidingView>
+      <MotexaDialog
+        visible={dialog.visible}
+        type="error"
+        title={dialog.title}
+        message={dialog.message}
+        confirmText={t("OK", "حسنًا")}
+        cancelText={t("Close", "إغلاق")}
+        onConfirm={() => setDialog({ ...dialog, visible: false })}
+        onCancel={() => setDialog({ ...dialog, visible: false })}
+      />
+  </View></VisualProvider>;
+}
+const baseStyles=StyleSheet.create({
+ root:{flex:1,backgroundColor:'#E4D3B9'},content:{width:'100%',maxWidth:500,alignSelf:'center',paddingHorizontal:18,flexGrow:1},navigation:{minHeight:44,alignItems:'center',gap:12,marginBottom:0},back:{width:42,height:42,borderRadius:14,alignItems:'center',justifyContent:'center',backgroundColor:'#F5EADA',borderWidth:1,borderColor:'#D1B795'},wordmarkRow:{flex:1,alignItems:'center',gap:8},wordmark:{color:'#59402B',fontSize:16,fontWeight:'800',letterSpacing:3},preferences:{marginTop:0,marginBottom:6,position:'relative',top:-4},surface:{backgroundColor:'transparent'},hero:{paddingHorizontal:25,paddingTop:21,paddingBottom:30,minHeight:210,overflow:'hidden',borderRadius:27,borderWidth:1,borderColor:'#A27B52'},eyebrowRow:{alignItems:'center',gap:8,marginBottom:17},brandDot:{width:4,height:4,borderRadius:2,backgroundColor:'#E2B681'},eyebrow:{color:'#DEC19B',fontSize:8,letterSpacing:1.6},heading:{color:'#FFF8EF',fontSize:34,lineHeight:43,fontWeight:'600',letterSpacing:-.8},heroSubtitle:{color:'#E0C7A7',fontSize:12,lineHeight:21,marginTop:17},form:{alignSelf:'center',width:'100%',backgroundColor:'#FFF9F0',marginTop:-28,zIndex:2,borderRadius:26,borderWidth:1,borderColor:'#CDB796',paddingHorizontal:23,paddingTop:25,paddingBottom:24,shadowColor:'#5B3820',shadowOffset:{width:0,height:5},shadowOpacity:.12,shadowRadius:16,elevation:4},formHeader:{alignItems:'center',justifyContent:'space-between',gap:10,flexWrap:'wrap'},formTitle:{color:'#34261C',fontSize:26,lineHeight:36,fontWeight:'800'},roleBadge:{alignItems:'center',gap:5,paddingHorizontal:10,paddingVertical:7,borderRadius:12,backgroundColor:'#EEE0CD',maxWidth:'70%'},roleBadgeText:{color:'#704A29',fontSize:10,lineHeight:17,fontWeight:'600',flexShrink:1},formSubtitle:{color:'#7A6550',fontSize:12,lineHeight:21,marginTop:7},label:{color:'#533E2A',fontSize:12,lineHeight:20,fontWeight:'700',marginBottom:9},inputRow:{height:58,paddingHorizontal:14,borderWidth:1,borderColor:'#DDCDB7',borderRadius:16,backgroundColor:'#FFFDFA',flexDirection:'row',alignItems:'center',gap:10},input:{flex:1,minWidth:0,fontSize:14,color:'#3A2A1E',paddingVertical:10},passwordHeading:{alignItems:'center',justifyContent:'space-between',gap:10,marginTop:17,marginBottom:4},forgot:{color:'#8B5F35',fontSize:11,fontWeight:'600'},eye:{width:36,minHeight:44,alignItems:'center',justifyContent:'center'},submit:{marginTop:25,minHeight:60,paddingLeft:19,paddingRight:10,paddingVertical:9,borderRadius:18,backgroundColor:'#302219',alignItems:'center',justifyContent:'space-between',gap:12},submitText:{color:'#FFF9EF',fontSize:14,lineHeight:23,fontWeight:'800',flexShrink:1},submitArrow:{width:40,height:40,borderRadius:12,backgroundColor:'#DFA76F',alignItems:'center',justifyContent:'center'},security:{marginTop:24,flexDirection:'row',alignItems:'center',gap:8},securityLine:{height:1,backgroundColor:'#D8C6AE',flex:1},securityText:{color:'#8C6B48',fontSize:7,letterSpacing:1.2}
 });

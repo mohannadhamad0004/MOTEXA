@@ -1,22 +1,28 @@
+import TouchableOpacity from "../../../components/InteractiveButton";
+import { useAppearanceStyles, useAppearance } from "../../../components/Appearance";
+import { PanelFill, CanvasFill } from "../../../components/BrandSurfaces";
+import { Text } from "../../../components/MotexaVisual";
+import LanguageSwitch from "../../../components/LanguageSwitch";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import MotexaDialog from "../../../components/MotexaDialog";
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useLanguage } from "../../../i18n/LanguageContext";
 import * as SecureStore from "expo-secure-store";
 import { Alert } from "react-native";
+import { canManageMechanics, canManageParts, canManageTow, useSession } from "../../../features/shared/session";
 export default function MoreScreen() {
+  const styles = useAppearanceStyles(baseStyles);
+  const { dark } = useAppearance();
   const { isArabic, toggleLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
+  const session = useSession();
+  const user = session.status === "ready" ? session.user : null;
+  const tow = !!user && canManageTow(user);
+  const parts = !!user && canManageParts(user);
  const [logoutVisible, setLogoutVisible] = useState(false);
 const [loggingOut, setLoggingOut] = useState(false);
 
@@ -43,7 +49,31 @@ const confirmLogout = async () => {
   }
 };
 
+  // Tow / parts review screens: shown only to admins allowed to manage them (UX gate; the routes re-check).
+  const departmentItems = [
+    ...(tow ? [{
+      title: isArabic ? "شركات السحب" : "Tow companies",
+      subtitle: isArabic ? "مراجعة شركات السحب وشاحناتها" : "Review tow companies and their trucks",
+      icon: "car-outline" as const,
+      action: () => router.push("/admin/tow"),
+    }] : []),
+    ...(parts ? [{
+      title: isArabic ? "متاجر القطع" : "Parts shops",
+      subtitle: isArabic ? "مراجعة متاجر قطع الغيار ومنتجاتها" : "Review parts shops and their products",
+      icon: "cube-outline" as const,
+      action: () => router.push("/admin/shops"),
+    }] : []),
+    ...([tow, parts, !!user && canManageMechanics(user)].filter(Boolean).length > 1 ? [{
+      title: isArabic ? "الأقسام" : "Departments",
+      subtitle: isArabic ? "كل أقسامك الإدارية" : "All your administration departments",
+      icon: "grid-outline" as const,
+      action: () => router.push("/admin/departments"),
+    }] : []),
+  ];
+
   const menuItems = [
+    {title:isArabic ? "الملف الشخصي" : "My Profile",subtitle:isArabic ? "بيانات حسابك وصلاحياتك" : "Your account details and access",icon:"person-outline" as const,action:()=>router.push("/admin/profile")},
+    ...departmentItems,
     {
       title: isArabic ? "إدارة المسؤولين" : "Admin Management",
       subtitle: isArabic
@@ -79,7 +109,7 @@ const confirmLogout = async () => {
   ];
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container}><CanvasFill/>
       <ScrollView
         contentContainerStyle={[
           styles.content,
@@ -87,30 +117,9 @@ const confirmLogout = async () => {
         ]}
       >
         <View style={styles.header}>
-          <TouchableOpacity
-            onPress={toggleLanguage}
-            activeOpacity={0.8}
-            style={{
-              alignSelf: "flex-end",
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 8,
-              backgroundColor: "#35251B",
-              borderWidth: 1,
-              borderColor: "#C98B5B",
-              borderRadius: 12,
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-              marginBottom: 20,
-            }}
-          >
-            <Ionicons name="language-outline" size={19} color="#E0A36F" />
-            <Text style={{ color: "#E0A36F", fontWeight: "700" }}>
-              {isArabic ? "EN" : "العربية"}
-            </Text>
-          </TouchableOpacity>
+          <LanguageSwitch light />
           <View style={styles.brand}>
-            <Ionicons name="car-sport" size={21} color="#E0A36F" />
+            <Ionicons name="car-sport" size={21} color="#A27140" />
             <Text style={styles.brandText}>MOTEXA</Text>
           </View>
 
@@ -123,9 +132,9 @@ const confirmLogout = async () => {
           </Text>
         </View>
 
-        <View style={styles.profileCard}>
+        <View style={[styles.profileCard,{flexDirection:isArabic?"row-reverse":"row",gap:15}]}><PanelFill kind="hero" radius={25}/>
           <View style={styles.avatar}>
-            <Ionicons name="shield-checkmark" size={29} color="#E0A36F" />
+            <Ionicons name="shield-checkmark" size={29} color="#E7C18D" />
           </View>
 
           <View style={styles.profileInfo}>
@@ -146,13 +155,13 @@ const confirmLogout = async () => {
               key={index}
               style={[
                 styles.menuItem,
-                index !== menuItems.length - 1 && styles.menuDivider,
+                {flexDirection:isArabic?"row-reverse":"row"},
               ]}
               activeOpacity={0.75}
               onPress={item.action}
             >
               <View style={styles.iconBox}>
-                <Ionicons name={item.icon} size={23} color="#E0A36F" />
+                <Ionicons name={item.icon} size={23} color="#A27140" />
               </View>
 
               <View style={styles.menuText}>
@@ -163,7 +172,7 @@ const confirmLogout = async () => {
               <Ionicons
                 name={isArabic ? "chevron-back" : "chevron-forward"}
                 size={19}
-                color="#8E7363"
+                color="#A27140"
               />
             </TouchableOpacity>
           ))}
@@ -197,14 +206,17 @@ const confirmLogout = async () => {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#120D0A",
+    backgroundColor: "#E9DECE",
   },
   content: {
     paddingHorizontal: 22,
     paddingBottom: 45,
+    maxWidth: 900,
+    width: "100%",
+    alignSelf: "center",
   },
   header: {
     marginBottom: 28,
@@ -216,119 +228,87 @@ const styles = StyleSheet.create({
     gap: 9,
   },
   brandText: {
-    color: "#E0A36F",
+    color: "#A27140",
     fontSize: 17,
     fontWeight: "900",
     letterSpacing: 3,
   },
   heading: {
     fontSize: 34,
-    fontWeight: "900",
-    color: "#F6E8DC",
+    fontWeight: "600",
+    color: "#51351F",
     marginBottom: 8,
+    lineHeight: 47,
   },
   description: {
-    color: "#9D8779",
+    color: "#92765B",
     fontSize: 14,
   },
   profileCard: {
-    backgroundColor: "#211711",
-    borderRadius: 20,
+    backgroundColor: "#F7EDDD",
+    borderRadius: 25,
     borderWidth: 1,
-    borderColor: "rgba(224,163,111,0.18)",
-    padding: 18,
+    borderColor: "#A67E50",
+    padding: 23,
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 35,
+    overflow: "hidden",
   },
-  avatar: {
-    width: 57,
-    height: 57,
-    borderRadius: 17,
-    backgroundColor: "#35251B",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 15,
-  },
+  avatar: { width: 54, height: 54, borderRadius: 18, backgroundColor: "#775333", alignItems: "center", justifyContent: "center" },
   profileInfo: {
     flex: 1,
   },
   profileName: {
-    color: "#F6E8DC",
-    fontSize: 17,
-    fontWeight: "800",
+    color: "#FFF6EA",
+    fontSize: 18,
+    fontWeight: "600",
     marginBottom: 5,
   },
   profileRole: {
-    color: "#BA967E",
-    fontSize: 12,
+    color: "#D7B995",
+    fontSize: 11,
   },
   sectionTitle: {
-    color: "#AC866D",
-    fontSize: 11,
-    fontWeight: "800",
+    color: "#493321",
+    fontSize: 18,
+    fontWeight: "600",
     letterSpacing: 2,
     marginBottom: 14,
     marginLeft: 4,
+    lineHeight: 28,
   },
-  menuContainer: {
-    backgroundColor: "#211711",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(224,163,111,0.13)",
-    overflow: "hidden",
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 17,
-    minHeight: 83,
-  },
+  menuContainer: { backgroundColor: "transparent", gap: 12 },
+  menuItem: { flexDirection: "row", alignItems: "center", minHeight: 88, paddingVertical: 18, paddingHorizontal: 18, gap: 13, backgroundColor: "#FFF9EF", borderRadius: 23, borderWidth: 1, borderColor: "#D3BB98" },
   menuDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(224,163,111,0.10)",
+    borderBottomColor: "#DECAAF",
   },
-  iconBox: {
-    width: 45,
-    height: 45,
-    borderRadius: 13,
-    backgroundColor: "#35251B",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 14,
-  },
+  iconBox: { width: 45, height: 45, borderRadius: 16, backgroundColor: "#EEDDC4", alignItems: "center", justifyContent: "center" },
   menuText: {
     flex: 1,
   },
-  menuTitle: {
-    color: "#F4E5D9",
-    fontSize: 15,
-    fontWeight: "800",
-    marginBottom: 5,
-  },
-  menuSubtitle: {
-    color: "#978073",
-    fontSize: 11,
-    lineHeight: 17,
-  },
+  menuTitle: { color: "#3D2A1C", fontSize: 16, fontWeight: "700", lineHeight: 26, marginBottom: 4 },
+  menuSubtitle: { color: "#705B43", fontSize: 13, lineHeight: 22 },
   footer: {
     alignItems: "center",
     marginTop: 48,
   },
   footerBrand: {
-    color: "#A77A5B",
+    color: "#A27140",
     fontWeight: "900",
     fontSize: 15,
     letterSpacing: 4,
   },
   footerText: {
-    color: "#746258",
+    color: "#92765B",
     fontSize: 11,
     marginTop: 8,
   },
   version: {
-    color: "#625047",
+    color: "#493321",
     fontSize: 10,
     marginTop: 7,
   },
 });
+
