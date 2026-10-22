@@ -2,10 +2,9 @@ import { Async, Notice } from "../../../components/ui/Feedback";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
 import { Input } from "../../../components/ui/Input";
-import { Header } from "../../../components/layout/DashboardLayout";
+import { SimplePage } from "../../../components/blueprint";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
-import { Screen } from "../../../components/layout/Screen";
 import { Text } from "../../../components/ui/Text";
 import { useTheme } from "../../../theme/useTheme";
 import { router, useLocalSearchParams } from "expo-router";
@@ -45,8 +44,7 @@ export default function NewInquiry() {
   };
 
   return (
-    <Screen>
-      <Header brand="MOTEXA" title={t("Ask the shop", "اسأل المتجر")} back />
+    <SimplePage kind="shop" tl={t("Ask the shop", "اسأل المتجر")} title={t("Ask the shop", "اسأل المتجر")} back="/customer/parts">
       <Async state={state}>
         {(p) => (
           <>
@@ -78,6 +76,6 @@ export default function NewInquiry() {
           </>
         )}
       </Async>
-    </Screen>
+    </SimplePage>
   );
 }

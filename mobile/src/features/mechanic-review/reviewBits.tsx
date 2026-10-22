@@ -37,8 +37,8 @@ export function useReviewLabels() {
 export function ReviewStatusBadge({ value }: { value: ReviewStatus }) {
   const l = useReviewLabels().status;
   const m = {
-    PENDING_REVIEW: { tone: "accent", icon: "time-outline" },
-    NEEDS_CORRECTION: { tone: "accent", icon: "create-outline" },
+    PENDING_REVIEW: { tone: "warning", icon: "time-outline" },
+    NEEDS_CORRECTION: { tone: "warning", icon: "create-outline" },
     MANUAL_REVIEW: { tone: "neutral", icon: "eye-outline" },
     READY_FOR_AUTHORITY: { tone: "success", icon: "paper-plane-outline" },
     REJECTED: { tone: "danger", icon: "close-circle-outline" },
@@ -50,5 +50,5 @@ export function SkillStatusBadge({ value }: { value: "PENDING" | "APPROVED" | "R
   const { t } = useL();
   if (value === "APPROVED") return <Badge tone="success" icon="checkmark-circle-outline" label={t("Approved", "معتمدة")} />;
   if (value === "REJECTED") return <Badge tone="danger" icon="close-circle-outline" label={t("Rejected", "مرفوضة")} />;
-  return <Badge tone="accent" icon="time-outline" label={t("Pending", "قيد المراجعة")} />;
+  return <Badge tone="warning" icon="time-outline" label={t("Pending", "قيد المراجعة")} />;
 }

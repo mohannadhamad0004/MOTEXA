@@ -1,13 +1,12 @@
 import { Async, Notice } from "../../../components/ui/Feedback";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
-import { Header } from "../../../components/layout/DashboardLayout";
+import { DashboardLayout } from "../../../components/layout/DashboardLayout";
 import { KV } from "../../../components/ui/Rows";
 import { ReasonPanel } from "../../../components/ui/ReasonPanel";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
-import { Screen } from "../../../components/layout/Screen";
 import { Text } from "../../../components/ui/Text";
 import { useTheme } from "../../../theme/useTheme";
 import { useLocalSearchParams } from "expo-router";
@@ -54,14 +53,14 @@ export default function MechanicRequestDetail() {
   };
 
   return (
-    <Screen
+    <DashboardLayout tag="SERVICE / M2" kind="wrench"
       onRefresh={() => {
         setPulling(true);
         state.reload().finally(() => setPulling(false));
       }}
       refreshing={pulling}
+      brand="MOTEXA" title={t("Service request", "طلب الخدمة")} back
     >
-      <Header brand="MOTEXA" title={t("Service request", "طلب الخدمة")} back />
       <Async state={state}>
         {(r) => (
           <>
@@ -140,6 +139,6 @@ export default function MechanicRequestDetail() {
           </>
         )}
       </Async>
-    </Screen>
+    </DashboardLayout>
   );
 }

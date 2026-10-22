@@ -2,8 +2,7 @@ import { Async, Notice } from "../../../components/ui/Feedback";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
 import { Input } from "../../../components/ui/Input";
-import { Header } from "../../../components/layout/DashboardLayout";
-import { Screen } from "../../../components/layout/Screen";
+import { DashboardLayout } from "../../../components/layout/DashboardLayout";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { ImageTile } from "../../../components/ui/Rows";
 import { goBack, pickImage } from "../../../core/hooks/nav";
@@ -180,8 +179,7 @@ export default function PartDetail() {
   );
 
   return (
-    <Screen>
-      <Header brand="MOTEXA PARTS" title={isNew ? t("Add part", "إضافة قطعة") : t("Edit part", "تعديل القطعة")} back />
+    <DashboardLayout tag="PART / P2" brand="MOTEXA PARTS" title={isNew ? t("Add part", "إضافة قطعة") : t("Edit part", "تعديل القطعة")} back>
       {isNew ? (
         <Form initial={blank} id="new" />
       ) : (
@@ -198,6 +196,6 @@ export default function PartDetail() {
           )}
         </Async>
       )}
-    </Screen>
+    </DashboardLayout>
   );
 }

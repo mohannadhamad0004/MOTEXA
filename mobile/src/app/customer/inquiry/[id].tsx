@@ -1,11 +1,11 @@
 import { Async, Notice } from "../../../components/ui/Feedback";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
-import { Header } from "../../../components/layout/DashboardLayout";
+import { SimplePage } from "../../../components/blueprint";
+import { shortId } from "../../../features/requests/activeRequest";
 import { KV } from "../../../components/ui/Rows";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
-import { Screen } from "../../../components/layout/Screen";
 import { Text } from "../../../components/ui/Text";
 import { useTheme } from "../../../theme/useTheme";
 import { router, useLocalSearchParams } from "expo-router";
@@ -39,8 +39,7 @@ export default function InquiryThread() {
   };
 
   return (
-    <Screen onRefresh={state.reload} refreshing={state.loading && !!state.data}>
-      <Header brand="MOTEXA" title={t("Your question", "سؤالك")} back />
+    <SimplePage kind="shop" tl={t("Your question", "سؤالك")} tr={shortId(id)} title={t("Your question", "سؤالك")} back="/customer/requests" onRefresh={state.reload} refreshing={state.loading && !!state.data}>
       <Async state={state}>
         {(q) => (
           <>
@@ -84,6 +83,6 @@ export default function InquiryThread() {
           </>
         )}
       </Async>
-    </Screen>
+    </SimplePage>
   );
 }

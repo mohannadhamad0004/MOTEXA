@@ -23,7 +23,7 @@ export function OperationalBadge({ value }: { value: Operational }) {
   const { t } = useL();
   const m = {
     AVAILABLE: { tone: "success", icon: "radio-button-on", label: t("Available", "متاح") },
-    BUSY: { tone: "accent", icon: "navigate-outline", label: t("Busy", "مشغولة") },
+    BUSY: { tone: "warning", icon: "navigate-outline", label: t("Busy", "مشغولة") },
     OUT_OF_SERVICE: { tone: "neutral", icon: "construct-outline", label: t("Out of service", "خارج الخدمة") },
   } as const;
   const k = m[value];

@@ -23,7 +23,7 @@ export function usePartLabels() {
 export function ConditionBadge({ value }: { value: PartCondition }) {
   const { condition } = usePartLabels();
   if (value === "NEW") return null;
-  return <Badge tone={value === "USED" ? "neutral" : "accent"} icon={value === "USED" ? "time-outline" : "refresh-outline"} label={condition[value]} />;
+  return <Badge tone={"neutral"} icon={value === "USED" ? "time-outline" : "refresh-outline"} label={condition[value]} />;
 }import { Badge } from "../../components/ui/Badge";
 import { useL } from "../../core/hooks/useL";
 

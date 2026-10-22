@@ -18,6 +18,6 @@ export function StockBadge({ stock }: { stock: number }) {
 export function StockStateBadge({ state: s }: { state: "IN" | "LOW" | "OUT" }) {
   const { t } = useL();
   if (s === "OUT") return <Badge tone="danger" icon="close-circle-outline" label={t("Out of stock", "نفد المخزون")} />;
-  if (s === "LOW") return <Badge tone="accent" icon="alert-circle-outline" label={t("Low stock", "مخزون منخفض")} />;
+  if (s === "LOW") return <Badge tone="warning" icon="alert-circle-outline" label={t("Low stock", "مخزون منخفض")} />;
   return <Badge tone="success" icon="checkmark-circle-outline" label={t("In stock", "متوفر")} />;
 }

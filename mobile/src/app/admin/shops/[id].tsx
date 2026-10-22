@@ -2,9 +2,8 @@ import { Async, EmptyState, Notice } from "../../../components/ui/Feedback";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
-import { Header } from "../../../components/layout/DashboardLayout";
+import { DashboardLayout } from "../../../components/layout/DashboardLayout";
 import { ReasonPanel } from "../../../components/ui/ReasonPanel";
-import { Screen } from "../../../components/layout/Screen";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { ImageTile } from "../../../components/ui/Rows";
 import { useL } from "../../../core/hooks/useL";
@@ -113,8 +112,7 @@ export default function AdminShopDetail() {
   };
 
   return (
-    <Screen>
-      <Header brand="MOTEXA ADMIN" title={state.data?.name ?? t("Parts shop", "متجر قطع غيار")} back />
+    <DashboardLayout kind="shop" tag="SHOP / A3" brand="MOTEXA ADMIN" title={state.data?.name ?? t("Parts shop", "متجر قطع غيار")} back>
       <Async state={state}>
         {(s) => (
           <>
@@ -175,6 +173,6 @@ export default function AdminShopDetail() {
           </>
         )}
       </Async>
-    </Screen>
+    </DashboardLayout>
   );
 }

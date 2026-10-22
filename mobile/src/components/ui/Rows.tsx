@@ -4,6 +4,7 @@ import { Pressable, TextStyle, View, ViewStyle } from "react-native";
 import { Text } from "./Text";
 import { formatPrice } from "../../core/constants/money";
 import { useTheme } from "../../theme/useTheme";
+import { Row } from "../blueprint/Primitives";
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -13,15 +14,7 @@ export function Divider() {
 }
 
 export function KV({ k, v }: { k: string; v?: string | number | null }) {
-  const { c, row, isArabic } = useTheme();
-  return (
-    <View style={[row, { justifyContent: "space-between", paddingVertical: 8, gap: 12 }]}>
-      <Text style={{ color: c.textDim, fontSize: 12, fontWeight: "700" }}>{k}</Text>
-      <Text style={{ color: c.text, fontSize: 13, flex: 1, textAlign: isArabic ? "left" : "right" }}>
-        {v === undefined || v === null || v === "" ? "—" : String(v)}
-      </Text>
-    </View>
-  );
+  return <Row label={k} value={v === undefined || v === null || v === "" ? undefined : String(v)} />;
 }
 
 /** Square image, or an icon when there is none. */
@@ -32,7 +25,7 @@ export function ImageTile({ uri, icon, size = 56 }: { uri?: string | null; icon:
       style={{
         width: size,
         height: size,
-        borderRadius: 15,
+        borderRadius: 16,
         backgroundColor: c.accentSoft,
         alignItems: "center",
         justifyContent: "center",

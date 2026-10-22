@@ -1,8 +1,8 @@
 import { Async, EmptyState, Notice } from "../../../components/ui/Feedback";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
-import { Header } from "../../../components/layout/DashboardLayout";
-import { Screen } from "../../../components/layout/Screen";
+import { StatTiles } from "../../../components/blueprint";
+import { DashboardLayout } from "../../../components/layout/DashboardLayout";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { router } from "expo-router";
@@ -18,13 +18,10 @@ export default function MyFleet() {
   const state = useLoad(() => towFleetService.getMyFleet(asActor(user)), [user.id]);
 
   return (
-    <Screen>
-      <Header
-        brand="MOTEXA TOW"
+    <DashboardLayout brand="MOTEXA TOW"
         title={t("My Trucks", "شاحناتي")}
         subtitle={state.data ? state.data.company.name : undefined}
-        signOutButton
-      />
+        signOutButton>
       <Async state={state}>
         {({ company, trucks }) => (
           <>
@@ -33,6 +30,13 @@ export default function MyFleet() {
                 <VerificationBadge value={company.verification} prefix={t("Company", "الشركة")} />
               </View>
             )}
+            <StatTiles
+              items={[
+                { label: t("Trucks", "الشاحنات"), value: trucks.length },
+                { label: t("Available now", "متاحة الآن"), value: trucks.filter((x) => x.operational === "AVAILABLE").length, tone: "success" },
+                { label: t("Approved", "معتمدة"), value: trucks.filter((x) => x.verification === "APPROVED").length },
+              ]}
+            />
             <Button variant="ghost" label={t("Company profile", "ملف الشركة")} icon="business-outline" onPress={() => router.push("/provider/tow/company")} />
             <View style={{ height: 10 }} />
             <Button variant="ghost" label={t("Tow requests", "طلبات السحب")} icon="navigate-outline" onPress={() => router.push("/provider/tow/requests")} />
@@ -56,6 +60,6 @@ export default function MyFleet() {
           </>
         )}
       </Async>
-    </Screen>
+    </DashboardLayout>
   );
 }

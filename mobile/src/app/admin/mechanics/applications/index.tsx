@@ -1,7 +1,6 @@
 import { Async, EmptyState } from "../../../../components/ui/Feedback";
 import { Card } from "../../../../components/ui/Card";
-import { Header } from "../../../../components/layout/DashboardLayout";
-import { Screen } from "../../../../components/layout/Screen";
+import { DashboardLayout } from "../../../../components/layout/DashboardLayout";
 import { SearchBar } from "../../../../components/ui/Input";
 import { useL } from "../../../../core/hooks/useL";
 import { useLoad } from "../../../../core/hooks/useLoad";
@@ -34,13 +33,10 @@ export default function MechanicApplicationsList() {
   const state = useLoad(() => mechanicReviewService.list(filter, query), [filter, query]);
 
   return (
-    <Screen>
-      <Header
-        brand="MOTEXA ADMIN"
+    <DashboardLayout tag="REVIEW / A4" kind="wrench" brand="MOTEXA ADMIN"
         title={t("Mechanic Applications", "طلبات الميكانيكيين")}
         subtitle={t("Review submitted mechanic applications", "مراجعة طلبات الميكانيكيين المقدّمة")}
-        back
-      />
+        back>
       <SearchBar value={q} onChange={setQ} placeholder={t("Name, email, ID or licence number", "الاسم أو البريد أو الرقم أو رقم الرخصة")} />
 
       {/* Five labels do not fit one row at phone width, so the filters scroll horizontally. */}
@@ -94,6 +90,6 @@ export default function MechanicApplicationsList() {
           )
         }
       </Async>
-    </Screen>
+    </DashboardLayout>
   );
 }

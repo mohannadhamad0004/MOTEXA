@@ -1,45 +1,45 @@
-import { Badge } from "../../../components/ui/Badge";
-import { Button } from "../../../components/ui/Button";
-import { Card } from "../../../components/ui/Card";
-import { Header } from "../../../components/layout/DashboardLayout";
-import { Notice } from "../../../components/ui/Feedback";
-import { SearchBar } from "../../../components/ui/Input";
-import { useL } from "../../../core/hooks/useL";
-import { useLoad } from "../../../core/hooks/useLoad";
-import { Screen } from "../../../components/layout/Screen";
-import { Text } from "../../../components/ui/Text";
-import { useTheme } from "../../../theme/useTheme";
-import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
+import { BlueprintPage, BlueprintSurface, CarTop, Chip, H1, HScroll, Icon, IconName, Mono, Press, Rise, SearchField, Section, Sub, Tag, TowTruck } from "../../../components/blueprint";
+import { Button } from "../../../components/ui/Button";
+import { Notice } from "../../../components/ui/Feedback";
 import { SkeletonList } from "../../../components/ui/Skeleton";
+import { Text } from "../../../components/ui/Text";
+import { CATALOG_GROUPS, labelOf } from "../../../core/constants/categories";
+import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
 import { carName } from "../../../features/catalog/catalogBits";
 import { catalogService, currentCar } from "../../../features/catalog/catalogService";
-import { HRow, MiniProductCard, RowHeader, ShopTile } from "../../../features/catalog/homeBits";
-import { CATALOG_GROUPS, labelOf } from "../../../core/constants/categories";
+import { HRow, MiniProductCard, ShopRow } from "../../../features/catalog/homeBits";
+import { ActiveRequestCard, useActiveRequest } from "../../../features/requests/activeRequest";
 import { useSessionUser } from "../../../features/shared/session";
+import { alpha } from "../../../theme/tokens";
+import { useTheme } from "../../../theme/useTheme";
 
-type IconName = keyof typeof Ionicons.glyphMap;
-
-/** Loading, error and empty states shared by the Home rows. `empty` = nothing to show (the section is then hidden or says so). */
+/** Loading / error state of one Home row. */
 function RowState({ loading, error, onRetry }: { loading: boolean; error: string | null; onRetry: () => void }) {
   const { t } = useL();
-  if (error) {
+  if (error)
     return (
       <View style={{ gap: 8, alignItems: "flex-start" }}>
         <Notice tone="danger" icon="alert-circle-outline">{error}</Notice>
         <Button variant="ghost" icon="refresh-outline" label={t("Retry", "إعادة المحاولة")} onPress={onRetry} />
       </View>
     );
-  }
   return loading ? <SkeletonList count={1} /> : null;
 }
 
+const greeting = (t: (en: string, ar: string) => string, name: string) => {
+  const h = new Date().getHours();
+  const hello = h < 12 ? t("Good morning", "صباح الخير") : h < 18 ? t("Good afternoon", "طاب يومك") : t("Good evening", "مساء الخير");
+  return `${hello}, ${name}`;
+};
+
 export default function CustomerHome() {
-  const { c: col } = useTheme();
+  const { c, row, align } = useTheme();
   const user = useSessionUser();
-  const { t, row, align, isArabic } = useL();
+  const { t, isArabic } = useL();
   const [q, setQ] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
@@ -49,16 +49,14 @@ export default function CustomerHome() {
   const car = currentCar();
   const carKey = car ? `${car.make}|${car.model}|${car.year}` : "";
 
-  const fit = useLoad(
-    () => (car ? catalogService.searchParts({ make: car.make, model: car.model, year: car.year }) : Promise.resolve(null)),
-    [carKey]
-  );
+  const fit = useLoad(() => (car ? catalogService.searchParts({ make: car.make, model: car.model, year: car.year }) : Promise.resolve(null)), [carKey]);
   const recent = useLoad(() => catalogService.searchParts({ sort: "newest" }), []);
   const shops = useLoad(() => catalogService.getShops(), []);
+  const { active, reload: reloadActive } = useActiveRequest();
 
   const refresh = async () => {
     setRefreshing(true);
-    await Promise.allSettled([fit.reload(), recent.reload(), shops.reload()]);
+    await Promise.allSettled([fit.reload(), recent.reload(), shops.reload(), reloadActive()]);
     setRefreshing(false);
   };
 
@@ -66,43 +64,97 @@ export default function CustomerHome() {
   const fitItems = fit.data?.products.slice(0, 10) ?? [];
   const recentItems = recent.data?.products.slice(0, 10) ?? [];
   const shopItems = (shops.data ?? []).filter((s) => s.productCount > 0);
+  const firstName = user.fullName.trim().split(/\s+/)[0] || user.fullName;
+  const carChip = car ? [carName({ make: car.make, model: car.model, year: "" }), car.year].filter(Boolean).join(" · ") : t("Set your car", "حدّد سيارتك");
 
-  const action = (icon: IconName, title: string, text: string, onPress: () => void) => (
-    <Card label={title} onPress={onPress}>
-      <View style={[row, { alignItems: "center", gap: 14 }]}>
-        <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: col.accentSoft, alignItems: "center", justifyContent: "center" }}>
-          <Ionicons name={icon} size={26} color={col.accent} />
+  let n = 0;
+  const num = () => String(++n).padStart(2, "0");
+
+  const tile = (icon: IconName, no: string, title: string, sub: string, onPress: () => void) => (
+    <Rise style={{ flex: 1 }}>
+      <Press
+        accessibilityLabel={title}
+        onPress={onPress}
+        style={{ minHeight: 144, justifyContent: "space-between", borderRadius: 20, borderWidth: 1, borderColor: c.line, backgroundColor: c.field, padding: 16 }}
+      >
+        <View style={[row, { justifyContent: "space-between", alignItems: "flex-start" }]}>
+          <Icon name={icon} size={24} color={c.bronze} />
+          <Mono>{no}</Mono>
         </View>
-        <View style={{ flex: 1 }}>
-          <Text numberOfLines={1} style={[{ color: col.text, fontSize: 17, fontWeight: "800" }, align]}>{title}</Text>
-          <Text numberOfLines={2} style={[{ color: col.textMuted, fontSize: 12, marginTop: 3, lineHeight: 18 }, align]}>{text}</Text>
+        <View>
+          <Text style={[{ color: c.ink, fontSize: 16, fontWeight: "700" }, align]}>{title}</Text>
+          <Text style={[{ color: c.soft, fontSize: 12, marginTop: 2 }, align]}>{sub}</Text>
         </View>
-        <Ionicons name={isArabic ? "chevron-back" : "chevron-forward"} size={19} color={col.accent} />
-      </View>
-    </Card>
+      </Press>
+    </Rise>
   );
 
   return (
-    <Screen tabs refreshing={refreshing} onRefresh={refresh}>
-      <Header brand="MOTEXA" title={`${t("Hello", "مرحبًا")}, ${user.fullName}`} subtitle={t("What do you need today?", "ماذا تحتاج اليوم؟")} />
-      <SearchBar value={q} onChange={setQ} placeholder={t("Search parts by name or part number", "ابحث عن قطعة بالاسم أو رقم القطعة")} />
-      <Button
-        icon="search-outline"
-        label={t("Search parts", "ابحث عن القطع")}
-        onPress={() => router.navigate({ pathname: "/customer/parts", params: q.trim() ? { q: q.trim() } : {} })}
+    <BlueprintPage
+      tabs
+      refreshing={refreshing}
+      onRefresh={refresh}
+      hero={{
+        height: 240,
+        tl: greeting(t, firstName),
+        tr: "M / 01",
+        bl: carChip,
+        art: (
+          <View style={{ width: "100%", maxWidth: 300, height: "100%" }}>
+            <CarTop animate />
+          </View>
+        ),
+      }}
+    >
+      {active ? <ActiveRequestCard a={active} /> : null}
+
+      <H1>{t("What does your car need today?", "ماذا تحتاج سيارتك اليوم؟")}</H1>
+      <Sub>{t("Parts, towing and mechanics — verified, in one place.", "قطع وسحب وميكانيكيون موثّقون، في مكان واحد.")}</Sub>
+      <SearchField
+        style={{ marginTop: 24 }}
+        value={q}
+        onChangeText={setQ}
+        placeholder={t("Search parts, brands or part numbers", "ابحث عن قطع أو ماركات أو أرقام قطع")}
+        onSubmit={() => router.navigate({ pathname: "/customer/parts", params: q.trim() ? { q: q.trim() } : {} })}
       />
 
-      {/* 2. Parts that fit the customer's car (only with a car set) */}
+      <Rise style={{ marginTop: 24 }}>
+        <Press accessibilityLabel={t("Request a tow", "اطلب سحب")} onPress={() => router.navigate("/customer/tow")}>
+          <BlueprintSurface style={{ borderRadius: 24, padding: 20 }}>
+            <View style={[row, { justifyContent: "space-between", alignItems: "flex-start" }]}>
+              <Tag color={c.bronzeLight}>TOW / 02</Tag>
+              <Icon name="arrow" size={20} color={c.bronzeLight} />
+            </View>
+            <View style={{ height: 96, marginVertical: 8 }}>
+              <TowTruck />
+            </View>
+            <Text style={[{ color: c.cream, fontSize: 22, fontWeight: "700" }, align]}>{t("Request a tow", "اطلب سحب")}</Text>
+            <Text style={[{ color: alpha(c.cream, 0.7), fontSize: 13 }, align]}>{t("Nearest available truck by GPS", "أقرب شاحنة متاحة عبر GPS")}</Text>
+          </BlueprintSurface>
+        </Press>
+      </Rise>
+
+      <View style={[row, { gap: 12, marginTop: 12 }]}>
+        {tile("parts", "03", t("Buy parts", "شراء قطع"), t("From verified shops", "من محلات موثّقة"), () => router.navigate("/customer/parts"))}
+        {tile("mech", "04", t("Find a mechanic", "ابحث عن ميكانيكي"), t("Verified by MOTEXA", "موثّق من موتكسا"), () => router.navigate("/customer/mechanics"))}
+      </View>
+
+      <View
+        style={[row, { height: 56, marginTop: 12, alignItems: "center", justifyContent: "space-between", borderRadius: 18, borderWidth: 1, borderStyle: "dashed", borderColor: c.line, paddingHorizontal: 16 }]}
+      >
+        <View style={[row, { alignItems: "center", gap: 8 }]}>
+          <Icon name="spark" size={16} color={c.soft} />
+          <Text style={{ color: c.soft, fontSize: 14, fontWeight: "600" }}>{t("AI diagnosis", "تشخيص بالذكاء الاصطناعي")}</Text>
+        </View>
+        <Text style={{ color: c.soft, fontSize: 12 }}>{t("Coming soon", "قريباً")}</Text>
+      </View>
+
       {car ? (
-        <>
-          <RowHeader
-            title={`${t("Parts that fit your", "قطع تناسب")} ${carName(car)}`}
-            onSeeAll={() => router.navigate({ pathname: "/customer/parts", params: { fit: "1" } })}
-          />
+        <Section n={num()} title={`${t("Parts that fit your", "قطع تناسب")} ${carName(car)}`}>
           {fitItems.length ? (
             <HRow>
               {fitItems.map((p) => (
-                <MiniProductCard key={p.id} p={p} car={car} onPress={() => openPart(p.id)} />
+                <MiniProductCard key={p.id} p={p} onPress={() => openPart(p.id)} />
               ))}
             </HRow>
           ) : fit.loading || fit.error ? (
@@ -110,84 +162,55 @@ export default function CustomerHome() {
           ) : (
             <Notice icon="information-circle-outline">{t("No parts match this car yet.", "لا توجد قطع مطابقة لهذه السيارة بعد.")}</Notice>
           )}
-        </>
+        </Section>
       ) : (
-        <View style={{ marginTop: 14 }}>
+        <View style={{ marginTop: 24 }}>
           <Button variant="ghost" icon="car-outline" label={t("Set your car to see parts that fit it", "حدّد سيارتك لعرض القطع المناسبة لها")} onPress={() => router.navigate({ pathname: "/customer/parts", params: { fit: "1" } })} />
         </View>
       )}
 
-      {/* 3. Category tiles */}
-      <RowHeader title={t("Shop by category", "تسوق حسب الفئة")} onSeeAll={() => router.push("/customer/categories")} extra={t("Browse all categories", "تصفح كل الفئات")} />
-      <View style={[row, { flexWrap: "wrap", justifyContent: "space-between" }]}>
-        {CATALOG_GROUPS.map((g) => (
-          <View key={g.key} style={{ width: "48.5%" }}>
-            <Card label={labelOf(g, isArabic)} onPress={() => router.push(`/customer/category/${g.key}`)}>
-              <Ionicons name={g.icon} size={26} color={col.accent} />
-              <Text numberOfLines={2} style={[{ color: col.text, fontSize: 13, fontWeight: "800", marginTop: 8, minHeight: 34 }, align]}>{labelOf(g, isArabic)}</Text>
-            </Card>
-          </View>
-        ))}
-        <View style={{ width: "48.5%" }}>
-          <Card label={t("Browse all categories", "تصفح كل الفئات")} onPress={() => router.push("/customer/categories")}>
-            <Ionicons name="grid-outline" size={26} color={col.accent} />
-            <Text numberOfLines={2} style={[{ color: col.text, fontSize: 13, fontWeight: "800", marginTop: 8, minHeight: 34 }, align]}>{t("All categories", "كل الفئات")}</Text>
-          </Card>
-        </View>
-      </View>
+      <Section n={num()} title={t("Recently added", "أضيف مؤخراً")}>
+        {recentItems.length ? (
+          <HRow>
+            {recentItems.map((p) => (
+              <MiniProductCard key={p.id} p={p} onPress={() => openPart(p.id)} />
+            ))}
+          </HRow>
+        ) : recent.loading || recent.error ? (
+          <RowState loading={recent.loading} error={recent.error} onRetry={recent.reload} />
+        ) : (
+          <Notice icon="cube-outline">{t("No parts are available yet.", "لا توجد قطع متاحة بعد.")}</Notice>
+        )}
+      </Section>
 
-      {/* 4. Recently added (newest first) */}
-      <RowHeader title={t("Recently added", "أُضيفت حديثًا")} onSeeAll={() => router.navigate({ pathname: "/customer/parts", params: { sort: "newest" } })} />
-      {recentItems.length ? (
-        <HRow>
-          {recentItems.map((p) => (
-            <MiniProductCard key={p.id} p={p} car={car} onPress={() => openPart(p.id)} />
+      <Section n={num()} title={t("Shop by category", "تسوق حسب الفئة")}>
+        <HScroll>
+          {CATALOG_GROUPS.map((g) => (
+            <Chip key={g.key} label={labelOf(g, isArabic)} onPress={() => router.push(`/customer/category/${g.key}`)} />
           ))}
-        </HRow>
-      ) : recent.loading || recent.error ? (
-        <RowState loading={recent.loading} error={recent.error} onRetry={recent.reload} />
-      ) : (
-        <Notice icon="cube-outline">{t("No parts are available yet.", "لا توجد قطع متاحة بعد.")}</Notice>
-      )}
+          <Chip label={t("All categories", "كل الفئات")} on onPress={() => router.push("/customer/categories")} />
+        </HScroll>
+      </Section>
 
-      {/* 5. Shops */}
-      <RowHeader title={t("Shops on MOTEXA", "المتاجر على MOTEXA")} />
-      {shopItems.length ? (
-        <HRow>
-          {shopItems.map((s) => (
-            <ShopTile key={s.id} s={s} onPress={() => router.push(`/customer/shops/${s.id}`)} />
-          ))}
-        </HRow>
-      ) : shops.loading || shops.error ? (
-        <RowState loading={shops.loading} error={shops.error} onRetry={shops.reload} />
-      ) : (
-        <Notice icon="storefront-outline">{t("No shops yet.", "لا توجد متاجر بعد.")}</Notice>
-      )}
+      <Section n={num()} title={t("Shops on MOTEXA", "محلات على موتكسا")}>
+        {shopItems.length ? (
+          shopItems.map((s) => <ShopRow key={s.id} s={s} onPress={() => router.push(`/customer/shops/${s.id}`)} />)
+        ) : shops.loading || shops.error ? (
+          <RowState loading={shops.loading} error={shops.error} onRetry={shops.reload} />
+        ) : (
+          <Notice icon="storefront-outline">{t("No shops yet.", "لا توجد متاجر بعد.")}</Notice>
+        )}
+      </Section>
 
-      {/* 6. Tow shortcut and AI diagnosis */}
-      <View style={{ height: 22 }} />
-      {action("build-outline", t("Need a mechanic?", "تحتاج إلى ميكانيكي؟"), t("Browse verified mechanics and request service.", "تصفح الميكانيكيين الموثّقين واطلب خدمة."), () => router.navigate("/customer/mechanics"))}
-      {action("car-outline", t("Need a tow?", "تحتاج إلى سحب؟"), t("See approved tow companies and their trucks.", "تعرّف على شركات السحب المعتمدة وشاحناتها."), () => router.navigate("/customer/tow"))}
-
-      <Card>
-        <View style={[row, { alignItems: "center", gap: 14 }]}>
-          <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: col.accentSoft, alignItems: "center", justifyContent: "center" }}>
-            <Ionicons name="sparkles-outline" size={26} color={col.textMuted} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text numberOfLines={1} style={[{ color: col.text, fontSize: 17, fontWeight: "800" }, align]}>{t("AI car diagnosis", "تشخيص السيارة بالذكاء الاصطناعي")}</Text>
-            <Text numberOfLines={2} style={[{ color: col.textMuted, fontSize: 12, marginTop: 3, lineHeight: 18 }, align]}>
-              {t("Describe a problem and get help. Not available yet.", "صف المشكلة واحصل على المساعدة. غير متاح بعد.")}
-            </Text>
-          </View>
-        </View>
-        <View style={[row, { marginTop: 12 }]}>
-          <Badge tone="neutral" icon="time-outline" label={t("Coming soon", "قريبًا")} />
-        </View>
-      </Card>
-
-      {/* 7. My requests */}
-      {action("receipt-outline", t("My requests", "طلباتي"), t("Your questions to shops, tow and mechanic requests.", "أسئلتك للمتاجر وطلبات السحب والميكانيكيين."), () => router.push("/customer/requests"))}
-    </Screen>
+      <Press
+        accessibilityLabel={t("My requests", "طلباتي")}
+        onPress={() => router.push("/customer/requests")}
+        style={[row, { marginTop: 32, minHeight: 56, alignItems: "center", gap: 12, borderRadius: 20, borderWidth: 1, borderColor: c.line, backgroundColor: c.field, paddingHorizontal: 16 }]}
+      >
+        <Icon name="list" size={20} color={c.bronze} />
+        <Text style={[{ flex: 1, color: c.ink, fontSize: 14, fontWeight: "600" }, align]}>{t("My requests", "طلباتي")}</Text>
+        <Icon name="chev" size={16} color={c.soft} />
+      </Press>
+    </BlueprintPage>
   );
 }

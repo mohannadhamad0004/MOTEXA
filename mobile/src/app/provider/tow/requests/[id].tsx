@@ -1,10 +1,9 @@
 import { Async, Notice } from "../../../../components/ui/Feedback";
 import { Button } from "../../../../components/ui/Button";
 import { Card } from "../../../../components/ui/Card";
-import { Header } from "../../../../components/layout/DashboardLayout";
+import { DashboardLayout } from "../../../../components/layout/DashboardLayout";
 import { KV } from "../../../../components/ui/Rows";
 import { ReasonPanel } from "../../../../components/ui/ReasonPanel";
-import { Screen } from "../../../../components/layout/Screen";
 import { SectionHeader } from "../../../../components/ui/SectionHeader";
 import { useL } from "../../../../core/hooks/useL";
 import { useLoad } from "../../../../core/hooks/useLoad";
@@ -60,8 +59,7 @@ export default function CompanyRequestDetail() {
   };
 
   return (
-    <Screen>
-      <Header brand="MOTEXA TOW" title={t("Tow request", "طلب سحب")} back />
+    <DashboardLayout tag="REQUEST / T2" brand="MOTEXA TOW" title={t("Tow request", "طلب سحب")} back>
       <Async state={state}>
         {(r) => {
           const available = (fleet.data?.trucks ?? []).filter((x) => x.verification === "APPROVED" && x.operational === "AVAILABLE");
@@ -178,6 +176,6 @@ export default function CompanyRequestDetail() {
           );
         }}
       </Async>
-    </Screen>
+    </DashboardLayout>
   );
 }

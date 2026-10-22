@@ -1,3 +1,4 @@
+import { Avatar, Ltr } from "../../components/blueprint";
 import { Badge } from "../../components/ui/Badge";
 import { Text } from "../../components/ui/Text";
 import { StatusTimeline } from "../../components/ui/StatusTimeline";
@@ -39,7 +40,7 @@ export function useMechanicStatusLabels() {
 
 export function MechanicStatusBadge({ value }: { value: MechanicRequestStatus }) {
   const label = useMechanicStatusLabels();
-  const tone = { REQUESTED: "accent", ACCEPTED: "success", IN_PROGRESS: "success", COMPLETED: "success", DECLINED: "danger", CANCELLED: "danger" } as const;
+  const tone = { REQUESTED: "warning", ACCEPTED: "success", IN_PROGRESS: "success", COMPLETED: "success", DECLINED: "danger", CANCELLED: "danger" } as const;
   const icon = { REQUESTED: "time-outline", ACCEPTED: "checkmark-circle-outline", IN_PROGRESS: "construct-outline", COMPLETED: "flag-outline", DECLINED: "close-circle-outline", CANCELLED: "close-circle-outline" } as const;
   return <Badge tone={tone[value]} icon={icon[value]} label={label[value]} />;
 }
@@ -50,14 +51,9 @@ export function MechanicTimeline({ items }: { items: { status: MechanicRequestSt
   return <StatusTimeline items={items.map((it) => ({ key: it.status, label: label[it.status], at: fmtDateTime(it.at) }))} />;
 }
 
-/** The first letter of the name in an accent circle. */
+/** The first letter of the name on a round blueprint tile. */
 export function InitialAvatar({ name, size = 48 }: { name: string; size?: number }) {
-  const { c } = useTheme();
-  return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: c.accentSoft, borderWidth: 1, borderColor: c.accentBorder, alignItems: "center", justifyContent: "center" }}>
-      <Text style={{ color: c.accent, fontSize: size * 0.42, fontWeight: "800" }}>{name.trim().charAt(0).toUpperCase()}</Text>
-    </View>
-  );
+  return <Avatar name={name} size={size} />;
 }
 
 export function VerifiedBadge() {
@@ -65,16 +61,23 @@ export function VerifiedBadge() {
   return <Badge tone="success" icon="shield-checkmark-outline" label={t("Verified by MOTEXA", "موثّق من MOTEXA")} />;
 }
 
-/** Up to `max` skill badges and a "+N" for the rest. */
+/** Up to `max` skill pills and a bordered "+N" for the rest. */
 export function SkillBadges({ skills, max = 3 }: { skills: string[]; max?: number }) {
+  const { c } = useTheme();
   const { row } = useL();
   const label = useSkillLabel();
   return (
     <View style={[row, { flexWrap: "wrap", gap: 6 }]}>
       {skills.slice(0, max).map((s) => (
-        <Badge key={s} tone="accent" label={label(s)} />
+        <View key={s} style={{ borderRadius: 999, backgroundColor: c.pill, paddingHorizontal: 10, paddingVertical: 4 }}>
+          <Text style={{ color: c.ink, fontSize: 11, fontWeight: "600" }}>{label(s)}</Text>
+        </View>
       ))}
-      {skills.length > max ? <Badge tone="neutral" label={`+${skills.length - max}`} /> : null}
+      {skills.length > max ? (
+        <View style={{ borderRadius: 999, borderWidth: 1, borderColor: c.line, paddingHorizontal: 10, paddingVertical: 4 }}>
+          <Ltr style={{ color: c.soft, fontSize: 11 }}>{`+${skills.length - max}`}</Ltr>
+        </View>
+      ) : null}
     </View>
   );
 }

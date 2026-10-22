@@ -1,9 +1,8 @@
 import { Async, Notice } from "../../../components/ui/Feedback";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
-import { Header } from "../../../components/layout/DashboardLayout";
+import { DashboardLayout } from "../../../components/layout/DashboardLayout";
 import { ReasonPanel } from "../../../components/ui/ReasonPanel";
-import { Screen } from "../../../components/layout/Screen";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
@@ -148,8 +147,7 @@ export default function AdminTowDetail() {
   const state = useLoad(() => towAdminService.getCompany(asActor(user), id), [id, user.id]);
 
   return (
-    <Screen>
-      <Header brand="MOTEXA ADMIN" title={state.data?.company.name ?? t("Tow company", "شركة سحب")} back />
+    <DashboardLayout kind="tow" tag="COMPANY / A2" brand="MOTEXA ADMIN" title={state.data?.company.name ?? t("Tow company", "شركة سحب")} back>
       <Async state={state}>
         {({ company, trucks, companyHistory }) => {
           // Company decisions and truck events, merged in time order.
@@ -186,6 +184,6 @@ export default function AdminTowDetail() {
           );
         }}
       </Async>
-    </Screen>
+    </DashboardLayout>
   );
 }

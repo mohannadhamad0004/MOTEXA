@@ -1,7 +1,6 @@
 import { Card } from "../../components/ui/Card";
-import { Header } from "../../components/layout/DashboardLayout";
+import { DashboardLayout } from "../../components/layout/DashboardLayout";
 import { RoleGate } from "../../components/layout/RoleGate";
-import { Screen } from "../../components/layout/Screen";
 import { useL } from "../../core/hooks/useL";
 import { Text } from "../../components/ui/Text";
 import { useTheme } from "../../theme/useTheme";
@@ -25,13 +24,10 @@ function Departments() {
   const held = new Set(user.adminPermissions.map((p) => p.permission));
 
   return (
-    <Screen>
-      <Header
-        brand="MOTEXA ADMIN"
+    <DashboardLayout tag="ADMIN / A1" brand="MOTEXA ADMIN"
         title={t("Your departments", "أقسامك")}
         subtitle={t("Choose the area you want to manage", "اختر القسم الذي تريد إدارته")}
-        signOutButton
-      />
+        signOutButton>
       {AREAS.filter((a) => held.has(a.permission)).map((a) => (
         <Card key={a.permission} label={t(a.en, a.ar)} onPress={() => router.push(a.href)}>
           <View style={[row, { alignItems: "center", gap: 12 }]}>
@@ -41,7 +37,7 @@ function Departments() {
           </View>
         </Card>
       ))}
-    </Screen>
+    </DashboardLayout>
   );
 }
 

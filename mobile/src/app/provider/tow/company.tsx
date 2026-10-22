@@ -2,8 +2,7 @@ import { Async, Notice } from "../../../components/ui/Feedback";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
 import { Input } from "../../../components/ui/Input";
-import { Header } from "../../../components/layout/DashboardLayout";
-import { Screen } from "../../../components/layout/Screen";
+import { DashboardLayout } from "../../../components/layout/DashboardLayout";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
@@ -150,9 +149,8 @@ export default function CompanyProfile() {
   const { t } = useL();
   const state = useLoad(() => towFleetService.getMyFleet(asActor(user)), [user.id]);
   return (
-    <Screen>
-      <Header brand="MOTEXA TOW" title={t("Company profile", "ملف الشركة")} back />
+    <DashboardLayout tag="COMPANY / T4" brand="MOTEXA TOW" title={t("Company profile", "ملف الشركة")} back>
       <Async state={state}>{({ company }) => <ProfileForm company={company} />}</Async>
-    </Screen>
+    </DashboardLayout>
   );
 }

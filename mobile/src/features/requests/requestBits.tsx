@@ -1,12 +1,12 @@
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { Card } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
 import { Notice } from "../../components/ui/Feedback";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { useL } from "../../core/hooks/useL";
 import { Text } from "../../components/ui/Text";
 import { StatusTimeline } from "../../components/ui/StatusTimeline";
+import type { TimelineItem } from "../../components/blueprint";
 import { useTheme } from "../../theme/useTheme";
 import { useState } from "react";
 import { View } from "react-native";
@@ -23,7 +23,7 @@ export function fmtDateTime(iso?: string | null) {
 export function InquiryStatusBadge({ value }: { value: InquiryStatus }) {
   const { t } = useL();
   const m = {
-    OPEN: { tone: "accent", icon: "chatbubble-outline", label: t("Open", "مفتوح") },
+    OPEN: { tone: "warning", icon: "chatbubble-outline", label: t("Open", "مفتوح") },
     ANSWERED: { tone: "success", icon: "checkmark-done-outline", label: t("Answered", "تم الرد") },
     CLOSED: { tone: "neutral", icon: "lock-closed-outline", label: t("Closed", "مغلق") },
   } as const;
@@ -60,7 +60,7 @@ export function useProblemLabels() {
 
 export function TowStatusBadge({ value }: { value: TowStatus }) {
   const label = useTowStatusLabels();
-  const tone = { REQUESTED: "accent", ACCEPTED: "success", EN_ROUTE: "success", IN_PROGRESS: "success", COMPLETED: "success", DECLINED: "danger", CANCELLED: "danger" } as const;
+  const tone = { REQUESTED: "warning", ACCEPTED: "success", EN_ROUTE: "success", IN_PROGRESS: "success", COMPLETED: "success", DECLINED: "danger", CANCELLED: "danger" } as const;
   const icon = { REQUESTED: "time-outline", ACCEPTED: "checkmark-circle-outline", EN_ROUTE: "navigate-outline", IN_PROGRESS: "construct-outline", COMPLETED: "flag-outline", DECLINED: "close-circle-outline", CANCELLED: "close-circle-outline" } as const;
   return <Badge tone={tone[value]} icon={icon[value]} label={label[value]} />;
 }
@@ -132,4 +132,41 @@ export function Thread({
       )}
     </>
   );
+}
+
+/**
+ * Timeline for the status screens: every step that really happened with its real time; for an open request the
+ * steps still to come follow, without a time. Declined / cancelled requests only show what happened.
+ */
+export function buildTimeline<S extends string>(path: S[], happened: { status: S; at: string }[], current: S, label: Record<S, string>): TimelineItem[] {
+  const at = new Map(happened.map((h) => [h.status, h.at]));
+  const items: TimelineItem[] = [];
+  const onPath = path.includes(current);
+  for (const st of path) {
+    if (at.has(st)) items.push({ key: st, label: label[st], at: fmtDateTime(at.get(st)), state: st === current ? "now" : "done" });
+    else if (onPath) items.push({ key: st, label: label[st], state: "next" });
+  }
+  // statuses outside the path (declined, cancelled) come last, as the current step
+  for (const h of happened) if (!path.includes(h.status)) items.push({ key: h.status, label: label[h.status], at: fmtDateTime(h.at), state: h.status === current ? "now" : "done" });
+  return items;
+}
+
+/** One sentence that says where a tow request stands. */
+export function towHeadline(t: (en: string, ar: string) => string, status: TowStatus, name: string) {
+  switch (status) {
+    case "REQUESTED":
+      return t(`Waiting for ${name} to answer`, `بانتظار رد ${name}`);
+    case "ACCEPTED":
+      return t(`${name} accepted your request`, `${name} قبلت طلبك`);
+    case "EN_ROUTE":
+      return t(`${name} is on the way`, `${name} في الطريق إليك`);
+    case "IN_PROGRESS":
+      return t(`${name} is working on your car`, `${name} تعمل على سيارتك`);
+    case "COMPLETED":
+      return t("Tow completed", "اكتمل السحب");
+    case "DECLINED":
+      return t(`${name} declined your request`, `${name} رفضت طلبك`);
+    default:
+      return t("Request cancelled", "تم إلغاء الطلب");
+  }
 }

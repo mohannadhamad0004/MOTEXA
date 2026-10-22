@@ -1,7 +1,6 @@
 import { Async, EmptyState } from "../../../../components/ui/Feedback";
 import { Card } from "../../../../components/ui/Card";
-import { Header } from "../../../../components/layout/DashboardLayout";
-import { Screen } from "../../../../components/layout/Screen";
+import { DashboardLayout } from "../../../../components/layout/DashboardLayout";
 import { Segmented } from "../../../../components/ui/Chip";
 import { useL } from "../../../../core/hooks/useL";
 import { useLoad } from "../../../../core/hooks/useLoad";
@@ -29,8 +28,7 @@ export default function CompanyRequests() {
   const state = useLoad(() => companyTowRequests.list(), []);
 
   return (
-    <Screen>
-      <Header brand="MOTEXA TOW" title={t("Tow requests", "طلبات السحب")} subtitle={t("Requests from customers", "طلبات من العملاء")} back />
+    <DashboardLayout tag="REQUESTS / T2" brand="MOTEXA TOW" title={t("Tow requests", "طلبات السحب")} subtitle={t("Requests from customers", "طلبات من العملاء")} back>
       <Segmented
         value={filter}
         onChange={setFilter}
@@ -65,6 +63,6 @@ export default function CompanyRequests() {
           );
         }}
       </Async>
-    </Screen>
+    </DashboardLayout>
   );
 }

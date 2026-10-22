@@ -1,37 +1,33 @@
-import { Badge } from "../../../components/ui/Badge";
-import { Button } from "../../../components/ui/Button";
-import { Card } from "../../../components/ui/Card";
-import { EmptyState, Notice } from "../../../components/ui/Feedback";
-import { Header } from "../../../components/layout/DashboardLayout";
-import { SearchBar } from "../../../components/ui/Input";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
-import { Segmented } from "../../../components/ui/Chip";
-import { useL } from "../../../core/hooks/useL";
-import { Screen } from "../../../components/layout/Screen";
-import { Text } from "../../../components/ui/Text";
-import { useTheme } from "../../../theme/useTheme";
-import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
+import { BlueprintPage, Chip, HStrip, Hero, IconTile, Mono, PageTitle, Press, PrimaryButton, Rise, SearchField, Section, TowTruck, MapFrame } from "../../../components/blueprint";
+import { Button } from "../../../components/ui/Button";
+import { EmptyState, Notice } from "../../../components/ui/Feedback";
 import { SkeletonList } from "../../../components/ui/Skeleton";
-import { Chip, ChipRow } from "../../../features/catalog/catalogBits";
+import { Text } from "../../../components/ui/Text";
+import { cityCentre, cityLabel, cityToEnglish } from "../../../core/constants/cities";
+import { Point, locationMemory } from "../../../core/constants/geo";
+import { useL } from "../../../core/hooks/useL";
 import { TowCompanyRow, catalogService } from "../../../features/catalog/catalogService";
-import { Point, distanceLabel, locationMemory } from "../../../core/constants/geo";
 import { CompaniesMap, MAPS_AVAILABLE } from "../../../features/shared/maps";
 import { LocationProblem, useCurrentLocation } from "../../../features/shared/useCurrentLocation";
-import { cityCentre, cityLabel, cityToEnglish } from "../../../core/constants/cities";
-import { useTruckLabels } from "../../../features/tow/truckBits";
 import type { TruckType } from "../../../features/tow/towService";
+import { useTruckLabels } from "../../../features/tow/truckBits";
+import { useTheme } from "../../../theme/useTheme";
 
 const TRUCK_TYPES: TruckType[] = ["FLATBED", "HOOK_CHAIN", "WHEEL_LIFT", "HEAVY_DUTY"];
 
+/** "≈ 7.0 km" (straight line). */
+const kmShort = (km: number, ar: boolean) => (km < 1 ? (ar ? "≈ <1 كم" : "≈ <1 km") : `≈ ${km < 10 ? km.toFixed(1) : Math.round(km)} ${ar ? "كم" : "km"}`);
+
 export default function CustomerTow() {
-  const { c: col } = useTheme();
-  const { t, row, align, isArabic } = useL();
+  const { c, row, align } = useTheme();
+  const { t, isArabic } = useL();
   const { type } = useTruckLabels();
   const [city, setCity] = useState("");
-  const [mapFailed, setMapFailed] = useState(false); // the map could not load: the company list is shown instead
+  const [showCity, setShowCity] = useState(false);
+  const [mapFailed, setMapFailed] = useState(false);
   const [name, setName] = useState("");
   const [truckType, setTruckType] = useState<TruckType | null>(null);
   const [availableOnly, setAvailableOnly] = useState(false);
@@ -40,8 +36,6 @@ export default function CustomerTow() {
   const loc = useCurrentLocation();
   const [sortChoice, setSortChoice] = useState<"nearest" | "available" | "name" | null>(null);
   const sort = sortChoice === "nearest" && !me ? "available" : (sortChoice ?? (me ? "nearest" : "available"));
-  const setSort = setSortChoice;
-  const [view, setView] = useState<"list" | "map">("list");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const filtered = !!(city.trim() || name.trim() || truckType || availableOnly);
 
@@ -52,13 +46,6 @@ export default function CustomerTow() {
       setSortChoice("nearest");
     }
     return p;
-  };
-  const nearMe = async () => {
-    const p = me ?? (await useMyLocation());
-    if (p) {
-      setAvailableOnly(true);
-      setSortChoice("nearest");
-    }
   };
   const forgetLocation = () => {
     locationMemory.current = null;
@@ -71,6 +58,27 @@ export default function CustomerTow() {
     setTruckType(null);
     setAvailableOnly(false);
   };
+
+  // "Request nearest available": the closest company that has a free truck, straight into its request form.
+  const [nearBusy, setNearBusy] = useState(false);
+  const [nearErr, setNearErr] = useState<string | null>(null);
+  const requestNearest = async () => {
+    setNearErr(null);
+    const p = me ?? (await useMyLocation());
+    if (!p) return;
+    setNearBusy(true);
+    try {
+      const list = await catalogService.listTowCompanies({ availableOnly: true, sort: "nearest", lat: p.lat, lng: p.lng });
+      const best = list[0];
+      if (!best) setNearErr(t("No company has a free truck right now. Try again soon.", "لا توجد شركة لديها شاحنة متاحة الآن. حاول مرة أخرى قريبًا."));
+      else router.push({ pathname: "/customer/towrequest/new", params: { companyId: best.id } });
+    } catch (e: any) {
+      setNearErr(e.message);
+    } finally {
+      setNearBusy(false);
+    }
+  };
+
   const [items, setItems] = useState<TowCompanyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -103,144 +111,150 @@ export default function CustomerTow() {
     return () => clearTimeout(h);
   }, [run]);
 
-  return (
-    <Screen tabs refreshing={refreshing} onRefresh={() => run("refresh")}>
-      <Header brand="MOTEXA" title={t("Tow companies", "شركات السحب")} subtitle={t("Approved companies and their trucks", "الشركات المعتمدة وشاحناتها")} />
-      {loc.dialog}
-      <View style={{ gap: 10, marginBottom: 12 }}>
-        <Button
-          variant={me ? "primary" : "ghost"}
-          icon="locate-outline"
-          label={loc.locating ? t("Finding your location…", "جارٍ تحديد موقعك…") : me ? t("Update my location", "تحديث موقعي") : t("Use my location", "استخدم موقعي")}
-          disabled={loc.locating}
-          onPress={useMyLocation}
-        />
-        <Button variant="ghost" icon="flash-outline" label={t("Available now near me", "المتاح الآن قربي")} disabled={loc.locating} onPress={nearMe} />
-        {me ? <Button variant="ghost" icon="close-circle-outline" label={t("Stop using my location", "إيقاف استخدام موقعي")} onPress={forgetLocation} /> : null}
-      </View>
-      <LocationProblem loc={loc} />
-      <SearchBar value={name} onChange={setName} placeholder={t("Company name", "اسم الشركة")} />
-      <SearchBar value={city} onChange={setCity} placeholder={t("City or service area", "المدينة أو منطقة الخدمة")} />
-      <ChipRow>
-        <Chip label={t("All types", "كل الأنواع")} on={truckType === null} onPress={() => setTruckType(null)} />
-        {TRUCK_TYPES.map((k) => (
-          <Chip key={k} label={type[k]} on={truckType === k} onPress={() => setTruckType(truckType === k ? null : k)} />
-        ))}
-      </ChipRow>
-      <ChipRow>
-        <Chip icon="radio-button-on" label={t("Available now", "متاح الآن")} on={availableOnly} onPress={() => setAvailableOnly(!availableOnly)} />
-        {me ? <Chip icon="navigate-outline" label={t("Nearest", "الأقرب")} on={sort === "nearest"} onPress={() => setSort("nearest")} /> : null}
-        <Chip label={t("Most trucks available", "الأكثر شاحنات متاحة")} on={sort === "available"} onPress={() => setSort("available")} />
-        <Chip label={t("Name", "الاسم")} on={sort === "name"} onPress={() => setSort("name")} />
-      </ChipRow>
+  const freeNow = items.filter((x) => x.availableTrucks > 0).length;
+  const cityTag = city.trim() ? cityLabel(cityToEnglish(city) || city, isArabic) : undefined;
 
-      {MAPS_AVAILABLE ? (
-        <View style={{ marginBottom: 12 }}>
-          <Segmented
-            value={view}
-            onChange={setView}
-            options={[
-              { key: "list", label: t("List", "قائمة") },
-              { key: "map", label: t("Map", "خريطة") },
-            ]}
-          />
+  const map = MAPS_AVAILABLE ? (
+    <MapFrame height={480} tl="TOW / 02" tr={cityTag}>
+      <CompaniesMap
+        bare
+        bottomInset={36}
+        height={480}
+        pins={items.flatMap((x) => {
+          const at = x.baseLat !== null && x.baseLng !== null ? { lat: x.baseLat, lng: x.baseLng } : cityCentre(x.city);
+          return at ? [{ id: x.id, name: x.name, ...at, free: x.availableTrucks > 0 }] : [];
+        })}
+        me={me}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
+        onFailedChange={setMapFailed}
+      />
+    </MapFrame>
+  ) : (
+    <Hero height={240} tl="TOW / 02" tr={cityTag}>
+      <View style={{ width: "100%", maxWidth: 300, height: "100%" }}>
+        <TowTruck animate />
+      </View>
+    </Hero>
+  );
+
+  return (
+    <BlueprintPage tabs top={map} refreshing={refreshing} onRefresh={() => run("refresh")}>
+      <View style={{ alignSelf: "center", width: 48, height: 6, borderRadius: 3, backgroundColor: c.line, marginTop: -12, marginBottom: 20 }} />
+      {loc.dialog}
+      <PageTitle size={28}>{t("Nearby towing", "سحب قريب")}</PageTitle>
+      <View style={[row, { alignItems: "center", gap: 8, marginTop: 4 }]}>
+        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: freeNow ? c.bronze : c.line }} />
+        <Text style={{ color: c.soft, fontSize: 14 }}>
+          {loading && !items.length ? t("Looking for trucks…", "جارٍ البحث عن شاحنات…") : `${freeNow} ${t("available now", "متاح الآن")}`}
+        </Text>
+      </View>
+
+      <View style={{ marginTop: 20 }}>
+        <PrimaryButton icon="tow" label={t("Request nearest available", "اطلب أقرب شاحنة متاحة")} loading={nearBusy || loc.locating} onPress={requestNearest} />
+      </View>
+      {nearErr ? (
+        <View style={{ marginTop: 12 }}>
+          <Notice tone="danger" icon="alert-circle-outline">{nearErr}</Notice>
         </View>
       ) : null}
+      <LocationProblem loc={loc} />
 
-      {view === "map" && MAPS_AVAILABLE && items.length ? (
-        <>
-          <CompaniesMap
-            pins={items.flatMap((c) => {
-              const at = c.baseLat !== null && c.baseLng !== null ? { lat: c.baseLat, lng: c.baseLng } : cityCentre(c.city);
-              return at ? [{ id: c.id, name: c.name, ...at, free: c.availableTrucks > 0 }] : [];
-            })}
-            me={me}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            onFailedChange={setMapFailed}
-          />
-          {(() => {
-            const c = items.find((x) => x.id === selectedId);
-            return c ? (
-              <Card label={c.name} onPress={() => router.push(`/customer/tow/${c.id}`)}>
-                <View style={[row, { alignItems: "center", gap: 10 }]}>
-                  <View style={{ flex: 1 }}>
-                    <Text numberOfLines={2} style={[{ color: col.text, fontSize: 15, fontWeight: "800" }, align]}>{c.name}</Text>
-                    <Text numberOfLines={1} style={[{ color: col.textMuted, fontSize: 12, marginTop: 3 }, align]}>
-                      {c.city} · {c.availableTrucks} {t("available", "متاحة")}
-                      {c.distanceKm != null ? ` · ${distanceLabel(c.distanceKm, isArabic)}` : ""}
-                    </Text>
-                  </View>
-                  <Ionicons name={isArabic ? "chevron-back" : "chevron-forward"} size={19} color={col.accent} />
-                </View>
-              </Card>
-            ) : (
-              <Text style={[{ color: col.textMuted, fontSize: 12, marginBottom: 12 }, align]}>{t("Tap a pin to see the company. Pins show the company's base, or its city centre when it has not set one.", "اضغط على دبوس لعرض الشركة. تظهر الدبابيس قاعدة الشركة، أو مركز مدينتها إن لم تحدد قاعدة.")}</Text>
-            );
-          })()}
-        </>
-      ) : null}
+      <View style={{ marginTop: 16 }}>
+        <HStrip>
+          <Chip label={t("Available now", "متاح الآن")} on={availableOnly} onPress={() => setAvailableOnly(!availableOnly)} />
+          {TRUCK_TYPES.map((k) => (
+            <Chip key={k} label={type[k]} on={truckType === k} onPress={() => setTruckType(truckType === k ? null : k)} />
+          ))}
+        </HStrip>
+      </View>
+      <View style={{ marginTop: 8 }}>
+        <HStrip>
+          <Chip icon="pin" label={me ? t("Update my location", "تحديث موقعي") : t("Use my location", "استخدم موقعي")} on={!!me} onPress={useMyLocation} />
+          {me ? <Chip label={t("Nearest", "الأقرب")} on={sort === "nearest"} onPress={() => setSortChoice("nearest")} /> : null}
+          <Chip label={t("Most trucks", "الأكثر شاحنات")} on={sort === "available"} onPress={() => setSortChoice("available")} />
+          <Chip label={t("Name", "الاسم")} on={sort === "name"} onPress={() => setSortChoice("name")} />
+          <Chip icon="search" label={city ? cityLabel(cityToEnglish(city) || city, isArabic) : t("City", "المدينة")} on={showCity || !!city} trailing="down" onPress={() => setShowCity(!showCity)} />
+          {me ? <Chip icon="close" label={t("Stop using my location", "إيقاف استخدام موقعي")} onPress={forgetLocation} /> : null}
+        </HStrip>
+      </View>
+      <SearchField style={{ marginTop: 12 }} value={name} onChangeText={setName} placeholder={t("Company name", "اسم الشركة")} />
+      {showCity ? <SearchField style={{ marginTop: 8 }} value={city} onChangeText={setCity} placeholder={t("City or service area", "المدينة أو منطقة الخدمة")} /> : null}
 
       {error && items.length ? (
-        <View style={{ gap: 8, marginBottom: 12 }}>
+        <View style={{ gap: 8, marginTop: 16 }}>
           <Notice tone="danger" icon="alert-circle-outline">{t("Could not refresh. The results below may be out of date.", "تعذّر التحديث. قد تكون النتائج أدناه قديمة.")}</Notice>
           <Button variant="ghost" icon="refresh-outline" label={t("Retry", "إعادة المحاولة")} onPress={() => run("replace")} />
         </View>
       ) : null}
-
-      {loading && !items.length ? (
-        <SkeletonList />
-      ) : error && !items.length ? (
-        <View style={{ alignItems: "center", paddingVertical: 30, gap: 14 }}>
-          <Notice tone="danger" icon="alert-circle-outline">{error}</Notice>
-          <Button label={t("Retry", "إعادة المحاولة")} variant="ghost" icon="refresh-outline" onPress={() => run("replace")} />
+      {MAPS_AVAILABLE && mapFailed ? (
+        <View style={{ marginTop: 16 }}>
+          <Notice icon="information-circle-outline">{t("The map did not load, but the list below works.", "لم تُحمَّل الخريطة، لكن القائمة أدناه تعمل.")}</Notice>
         </View>
-      ) : !items.length ? (
-        <>
-          <EmptyState icon="car-outline" text={filtered ? t("No tow companies cover this area yet.", "لا توجد شركات سحب تغطي هذه المنطقة بعد.") : t("No tow companies are available yet.", "لا توجد شركات سحب متاحة بعد.")} />
-          {filtered ? <Button variant="ghost" icon="close-circle-outline" label={t("Show all", "عرض الكل")} onPress={showAll} /> : null}
-        </>
-      ) : view === "map" && MAPS_AVAILABLE && !mapFailed ? null : (
-        items.map((c) => (
-          <Card key={c.id} label={c.name} onPress={() => router.push(`/customer/tow/${c.id}`)}>
-            <View style={[row, { alignItems: "flex-start", gap: 10 }]}>
-              <View style={{ flex: 1 }}>
-                <Text numberOfLines={2} style={[{ color: col.text, fontSize: 16, fontWeight: "800" }, align]}>{c.name}</Text>
-                <Text numberOfLines={1} style={[{ color: col.textMuted, fontSize: 12, marginTop: 4 }, align]}>{c.city}</Text>
-                {c.distanceKm != null ? <Text numberOfLines={1} style={[{ color: col.accent, fontSize: 12, fontWeight: "800", marginTop: 4 }, align]}>{distanceLabel(c.distanceKm, isArabic)}{c.distanceSource === "city" ? ` · ${t("from the city centre", "من مركز المدينة")}` : ""}</Text> : null}
-              </View>
-              <Ionicons name={row.flexDirection === "row-reverse" ? "chevron-back" : "chevron-forward"} size={19} color={col.accent} />
-            </View>
-            {c.serviceCities.length ? (
-              <Text numberOfLines={2} style={[{ color: col.textMuted, fontSize: 12, marginTop: 10 }, align]}>
-                {t("Serves", "تخدم")}: {c.serviceCities.slice(0, 2).map((x) => cityLabel(x, isArabic)).join(isArabic ? "، " : ", ")}
-                {c.serviceCities.length > 2 ? ` +${c.serviceCities.length - 2}` : ""}
-              </Text>
-            ) : null}
-            <View style={[row, { flexWrap: "wrap", gap: 6, marginTop: 12 }]}>
-              <Badge tone="neutral" icon="car-sport-outline" label={`${c.approvedTrucks} ${c.approvedTrucks === 1 ? t("truck", "شاحنة") : t("trucks", "شاحنات")}`} />
-              <Badge tone={c.availableTrucks > 0 ? "success" : "neutral"} icon="radio-button-on" label={`${c.availableTrucks} ${t("available", "متاحة")}`} />
-              {c.truckTypes.map((k) => (
-                <Badge key={k} tone="accent" label={type[k]} />
-              ))}
-            </View>
-          </Card>
-        ))
-      )}
+      ) : null}
 
-      <SectionHeader title={t("While you wait", "أثناء الانتظار")} />
-      <Card>
+      <View style={{ marginTop: 8 }}>
+        {loading && !items.length ? (
+          <View style={{ marginTop: 8 }}>
+            <SkeletonList />
+          </View>
+        ) : error && !items.length ? (
+          <View style={{ alignItems: "center", paddingVertical: 30, gap: 14 }}>
+            <Notice tone="danger" icon="alert-circle-outline">{error}</Notice>
+            <Button label={t("Retry", "إعادة المحاولة")} variant="ghost" icon="refresh-outline" onPress={() => run("replace")} />
+          </View>
+        ) : !items.length ? (
+          <>
+            <EmptyState icon="car-outline" text={filtered ? t("No tow companies cover this area yet.", "لا توجد شركات سحب تغطي هذه المنطقة بعد.") : t("No tow companies are available yet.", "لا توجد شركات سحب متاحة بعد.")} />
+            {filtered ? <Button variant="ghost" icon="close-circle-outline" label={t("Show all", "عرض الكل")} onPress={showAll} /> : null}
+          </>
+        ) : (
+          items.map((x, i) => (
+            <Rise key={x.id} i={i} style={{ marginTop: 12 }}>
+              <Press
+                accessibilityLabel={x.name}
+                onPress={() => router.push(`/customer/tow/${x.id}`)}
+                style={[row, { alignItems: "center", gap: 16, borderRadius: 20, borderWidth: 1, borderColor: selectedId === x.id ? c.bronze : c.line, backgroundColor: c.field, padding: 16 }]}
+              >
+                <IconTile icon="tow" />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={2} style={[{ color: c.ink, fontSize: 15, fontWeight: "700" }, align]}>{x.name}</Text>
+                  <Text numberOfLines={1} style={[{ color: c.soft, fontSize: 12 }, align]}>
+                    {[cityLabel(x.city, isArabic), x.truckTypes.map((k) => type[k]).join(isArabic ? "، " : ", ")].filter(Boolean).join(" · ")}
+                  </Text>
+                  <Text style={[{ color: x.availableTrucks ? c.bronze : c.soft, fontSize: 12, fontWeight: "600", marginTop: 4 }, align]}>
+                    {x.availableTrucks
+                      ? `${x.availableTrucks} ${x.availableTrucks === 1 ? t("truck free", "شاحنة متاحة") : t("trucks free", "شاحنات متاحة")}`
+                      : t("No free truck", "لا توجد شاحنة متاحة")}
+                  </Text>
+                </View>
+                {x.distanceKm != null ? (
+                  <View style={{ alignItems: isArabic ? "flex-start" : "flex-end" }}>
+                    <Mono color={c.ink} size={13} bold>{kmShort(x.distanceKm, isArabic)}</Mono>
+                    {x.distanceSource === "city" ? <Text style={{ color: c.soft, fontSize: 10 }}>{t("city centre", "مركز المدينة")}</Text> : null}
+                  </View>
+                ) : null}
+              </Press>
+            </Rise>
+          ))
+        )}
+        {items.some((x) => x.distanceKm != null) ? (
+          <Text style={[{ color: c.soft, fontSize: 11, marginTop: 12 }, align]}>{t("Distances are straight lines, not driving routes.", "المسافات خطوط مستقيمة وليست مسارات قيادة.")}</Text>
+        ) : null}
+      </View>
+
+      <Section n="01" title={t("While you wait", "أثناء الانتظار")}>
         {[
           t("Turn on your hazard lights.", "شغّل أضواء التحذير."),
           t("Stay off the road: wait behind the barrier or well away from traffic.", "ابتعد عن الطريق: انتظر خلف الحاجز أو بعيدًا عن حركة السير."),
           t("Keep your phone charged, and keep it with you.", "أبقِ هاتفك مشحونًا واحتفظ به معك."),
         ].map((tip, i) => (
-          <View key={i} style={[row, { alignItems: "flex-start", gap: 10, paddingVertical: 6 }]}>
-            <Ionicons name="shield-checkmark-outline" size={16} color={col.accent} style={{ marginTop: 2 }} />
-            <Text style={[{ color: col.text, fontSize: 13, lineHeight: 19, flex: 1 }, align]}>{tip}</Text>
+          <View key={i} style={[row, { alignItems: "flex-start", gap: 12, paddingVertical: 8 }]}>
+            <Mono color={c.bronze}>{String(i + 1).padStart(2, "0")}</Mono>
+            <Text style={[{ color: c.ink, fontSize: 14, lineHeight: 21, flex: 1 }, align]}>{tip}</Text>
           </View>
         ))}
-      </Card>
-    </Screen>
+      </Section>
+    </BlueprintPage>
   );
 }

@@ -3,14 +3,11 @@ import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
 import { Chip, ChipRow } from "../../../components/ui/Chip";
 import { Input } from "../../../components/ui/Input";
-import { Header } from "../../../components/layout/DashboardLayout";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { PrimaryButton, Section, SimplePage, Stamp } from "../../../components/blueprint";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
-import { Screen } from "../../../components/layout/Screen";
 import { Text } from "../../../components/ui/Text";
 import { useTheme } from "../../../theme/useTheme";
-import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
@@ -111,21 +108,20 @@ export default function NewMechanicRequest() {
   };
 
   return (
-    <Screen>
-      <Header brand="MOTEXA" title={t("Request service", "طلب خدمة")} back />
+    <SimplePage kind="wrench" tl="MECHANICS / 04" tr={state.data ? cityLabel(state.data.city, isArabic) : undefined} title={t("Request service", "طلب خدمة")} back="/customer/mechanics">
       <Async state={state}>
         {(m) =>
           sentId ? (
-            <Card>
-              <View style={{ alignItems: "center", paddingVertical: 14, gap: 10 }}>
-                <Ionicons name="checkmark-circle-outline" size={44} color={col.success} />
-                <Text style={{ color: col.text, fontSize: 18, fontWeight: "800", textAlign: "center" }}>{t("Request sent", "تم إرسال الطلب")}</Text>
-                <Text style={{ color: col.textMuted, fontSize: 13, lineHeight: 20, textAlign: "center" }}>
+            <View style={{ marginTop: 24 }}>
+              <View style={{ alignItems: "center", paddingVertical: 14, gap: 12 }}>
+                <Stamp label={t("Sent", "أُرسل")} />
+                <Text style={{ color: col.ink, fontSize: 20, fontWeight: "700", textAlign: "center" }}>{t("Request sent", "تم إرسال الطلب")}</Text>
+                <Text style={{ color: col.soft, fontSize: 14, lineHeight: 22, textAlign: "center" }}>
                   {t(`${m.name} will accept or decline it. You can follow its status here.`, `سيقبل ${m.name} الطلب أو يرفضه. يمكنك متابعة حالته هنا.`)}
                 </Text>
               </View>
-              <Button icon="receipt-outline" label={t("View request", "عرض الطلب")} onPress={() => router.replace(`/customer/mechanicrequest/${sentId}`)} />
-            </Card>
+              <PrimaryButton icon="arrow" label={t("View request", "عرض الطلب")} onPress={() => router.replace(`/customer/mechanicrequest/${sentId}`)} />
+            </View>
           ) : (
             <>
               <Card>
@@ -138,27 +134,30 @@ export default function NewMechanicRequest() {
                 </View>
               </Card>
 
-              <SectionHeader title={t("Skill (optional)", "المهارة (اختياري)")} />
+              <Section n="01" title={t("Skill (optional)", "المهارة (اختياري)")}>
               <ChipRow>
                 {m.skills.map((s) => (
                   <Chip key={s} label={skillLabel(s)} on={skill === s} onPress={() => setSkill(skill === s ? null : s)} />
                 ))}
               </ChipRow>
+              </Section>
 
-              <SectionHeader title={t("Your car", "سيارتك")} />
+              <Section n="02" title={t("Your car", "سيارتك")}>
               <Card>
                 <Input label={t("Make", "الشركة المصنعة")} value={make} onChangeText={setMake} maxLength={60} />
                 <Input label={t("Model", "الطراز")} value={model} onChangeText={setModel} maxLength={60} />
                 <Input label={t("Year (optional)", "السنة (اختياري)")} value={year} onChangeText={setYear} keyboardType="number-pad" maxLength={4} />
               </Card>
+              </Section>
 
-              <SectionHeader title={t("The problem", "المشكلة")} />
+              <Section n="03" title={t("The problem", "المشكلة")}>
               <Card>
                 <Input label={t("What is wrong?", "ما المشكلة؟")} value={problem} onChangeText={setProblem} multiline maxLength={1000} />
                 <Text style={[{ color: col.textDim, fontSize: 11, marginTop: -8 }, align]}>{problem.trim().length}/1000</Text>
               </Card>
+              </Section>
 
-              <SectionHeader title={t("Where and when", "المكان والوقت")} />
+              <Section n="04" title={t("Where and when", "المكان والوقت")}>
               <Card>
                 {loc.dialog}
                 <Button variant="ghost" icon="locate-outline" label={finding || loc.locating ? t("Finding your location…", "جارٍ تحديد موقعك…") : t("Use my current location", "استخدم موقعي الحالي")} disabled={finding || loc.locating} onPress={useHere} />
@@ -176,15 +175,18 @@ export default function NewMechanicRequest() {
                 ) : null}
                 <Input label={t("Preferred time (optional)", "الوقت المفضل (اختياري)")} value={when} onChangeText={setWhen} maxLength={100} placeholder={t("e.g. Tomorrow after 4 pm", "مثال: غدًا بعد الرابعة عصرًا")} />
               </Card>
+              </Section>
 
-              <SectionHeader title={t("Contact (optional)", "التواصل (اختياري)")} />
+              <Section n="05" title={t("Contact (optional)", "التواصل (اختياري)")}>
               <Card>
                 <Input label={t("Phone number", "رقم الهاتف")} value={phone} onChangeText={setPhone} keyboardType="phone-pad" maxLength={20} />
                 <Text style={[{ color: col.textDim, fontSize: 11, marginTop: -8 }, align]}>{t("Shared only with this mechanic.", "يُشارك مع هذا الميكانيكي فقط.")}</Text>
               </Card>
+              </Section>
 
+              <View style={{ height: 8 }} />
               {err ? <Notice tone="danger" icon="alert-circle-outline">{err}</Notice> : null}
-              <Button icon="send-outline" label={busy ? t("Sending…", "جارٍ الإرسال…") : t("Send request", "إرسال الطلب")} disabled={busy} onPress={submit} />
+              <PrimaryButton icon="arrow" label={t("Send request", "إرسال الطلب")} loading={busy} onPress={submit} />
               <View style={{ height: 12 }} />
               <Notice icon="information-circle-outline">
                 {t("The mechanic sees your name, your car, the problem and the location you wrote. Your email is never shared.", "يرى الميكانيكي اسمك وسيارتك والمشكلة والموقع الذي كتبته. لا تتم مشاركة بريدك الإلكتروني أبدًا.")}
@@ -193,6 +195,6 @@ export default function NewMechanicRequest() {
           )
         }
       </Async>
-    </Screen>
+    </SimplePage>
   );
 }

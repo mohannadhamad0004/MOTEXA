@@ -1,8 +1,7 @@
 import { Badge } from "../components/ui/Badge";
 import { Card } from "../components/ui/Card";
-import { Header } from "../components/layout/DashboardLayout";
+import { DashboardLayout } from "../components/layout/DashboardLayout";
 import { RoleGate } from "../components/layout/RoleGate";
-import { Screen } from "../components/layout/Screen";
 import { useL } from "../core/hooks/useL";
 import { useLoad } from "../core/hooks/useLoad";
 import { Text } from "../components/ui/Text";
@@ -33,7 +32,7 @@ function ServiceRequestsEntry() {
               : t("Requests from customers: accept, start and complete jobs.", "طلبات من العملاء: اقبل الأعمال وابدأها وأنهِها.")}
           </Text>
         </View>
-        {waiting > 0 ? <Badge tone="accent" icon="notifications-outline" label={`${waiting} ${t("new", "جديد")}`} /> : null}
+        {waiting > 0 ? <Badge tone="warning" icon="notifications-outline" label={`${waiting} ${t("new", "جديد")}`} /> : null}
         <Ionicons name={isArabic ? "chevron-back" : "chevron-forward"} size={19} color={col.accent} />
       </View>
     </Card>
@@ -47,8 +46,7 @@ function Home() {
   const { t, align } = useL();
 
   return (
-    <Screen>
-      <Header brand="MOTEXA" title={`${t("Welcome", "مرحبًا")}, ${user.fullName}`} signOutButton />
+    <DashboardLayout tag="MOTEXA / M1" kind="wrench" brand="MOTEXA" title={`${t("Welcome", "مرحبًا")}, ${user.fullName}`} signOutButton>
       {user.role === "MECHANIC" ? <ServiceRequestsEntry /> : null}
       <Card>
         <Text style={[{ color: col.text, fontSize: 18, fontWeight: "800" }, align]}>{t("Coming soon", "قريبًا")}</Text>
@@ -56,7 +54,7 @@ function Home() {
           {t("Your home screen is on its way.", "شاشتك الرئيسية قيد الإعداد.")}
         </Text>
       </Card>
-    </Screen>
+    </DashboardLayout>
   );
 }
 
