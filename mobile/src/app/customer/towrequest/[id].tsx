@@ -1,30 +1,32 @@
-import { Async, Notice } from "../../../components/ui/Feedback";
-import { Button } from "../../../components/ui/Button";
-import { Card } from "../../../components/ui/Card";
-import { Header } from "../../../components/layout/DashboardLayout";
-import { KV } from "../../../components/ui/Rows";
-import { ReasonPanel } from "../../../components/ui/ReasonPanel";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
-import { useL } from "../../../core/hooks/useL";
-import { useLoad } from "../../../core/hooks/useLoad";
-import { Screen } from "../../../components/layout/Screen";
-import { Text } from "../../../components/ui/Text";
-import { useTheme } from "../../../theme/useTheme";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
-import { TowStatusBadge, Timeline, useProblemLabels } from "../../../features/requests/requestBits";
-import { customerTowRequests } from "../../../features/requests/requestsService";
+import { BlueprintPage, Hero, Icon, LiveNote, MapFrame, Mono, Panel, PrimaryButton, Row, TowTruck, VerticalTimeline } from "../../../components/blueprint";
+import { Async, Notice } from "../../../components/ui/Feedback";
+import { ReasonPanel } from "../../../components/ui/ReasonPanel";
+import { Text } from "../../../components/ui/Text";
+import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
+import { REFRESH_MS } from "../../../features/mechanics/mechanicsService";
+import { TowStatusBadge, buildTimeline, towHeadline, useProblemLabels, useTowStatusLabels } from "../../../features/requests/requestBits";
+import { shortId } from "../../../features/requests/activeRequest";
+import { TowStatus, customerTowRequests } from "../../../features/requests/requestsService";
 import { MAPS_AVAILABLE, TripMap } from "../../../features/shared/maps";
 import { useTruckLabels } from "../../../features/tow/truckBits";
+import { useTheme } from "../../../theme/useTheme";
+
+const PATH: TowStatus[] = ["REQUESTED", "ACCEPTED", "EN_ROUTE", "IN_PROGRESS", "COMPLETED"];
+const OPEN: TowStatus[] = ["REQUESTED", "ACCEPTED", "EN_ROUTE", "IN_PROGRESS"];
 
 export default function TowRequestStatus() {
-  const { c: col } = useTheme();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { t, row, align } = useL();
+  const { c, align, row } = useTheme();
+  const { id, created } = useLocalSearchParams<{ id: string; created?: string }>();
+  const { t } = useL();
   const { type } = useTruckLabels();
   const problem = useProblemLabels();
-  const state = useLoad(() => customerTowRequests.get(id), [id]);
+  const statusLabel = useTowStatusLabels();
+  // The server is re-read every 15 s while this screen is focused, so the status changes without a pull.
+  const state = useLoad(() => customerTowRequests.get(id), [id], REFRESH_MS);
   const [cancelling, setCancelling] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -43,76 +45,95 @@ export default function TowRequestStatus() {
     }
   };
 
+  const r = state.data;
+  const top =
+    MAPS_AVAILABLE && r?.pickup ? (
+      <MapFrame height={320} back="/customer/requests" tr="ROUTE / 02">
+        <TripMap bare bottomInset={36} height={320} pickup={r.pickup} dropoff={r.dropoff} />
+      </MapFrame>
+    ) : (
+      <Hero height={200} back="/customer/requests" tl="TOW / 02" tr="ROUTE / 02">
+        <View style={{ width: "100%", maxWidth: 300, height: "100%" }}>
+          <TowTruck animate />
+        </View>
+      </Hero>
+    );
+
   return (
-    <Screen onRefresh={state.reload} refreshing={state.loading && !!state.data}>
-      <Header brand="MOTEXA" title={t("Tow request", "طلب السحب")} back />
+    <BlueprintPage top={top} onRefresh={state.reload} refreshing={state.loading && !!state.data}>
       <Async state={state}>
         {(r) => (
           <>
-            <Card>
-              <View style={[row, { justifyContent: "space-between", alignItems: "flex-start", gap: 10 }]}>
-                <View style={{ flex: 1 }}>
-                  <Text numberOfLines={2} style={[{ color: col.text, fontSize: 16, fontWeight: "800" }, align]}>{r.company.name}</Text>
-                  <Text numberOfLines={1} style={[{ color: col.textMuted, fontSize: 12, marginTop: 3 }, align]}>{r.company.city}</Text>
+            {created === "1" ? (
+              <Panel bronze style={{ marginBottom: 20 }}>
+                <View style={[row, { alignItems: "center", gap: 12 }]}>
+                  <Icon name="check" size={22} color={c.bronze} />
+                  <Text style={[{ flex: 1, color: c.ink, fontSize: 14, fontWeight: "600" }, align]}>
+                    {t("Request sent. You will see the answer here.", "تم إرسال الطلب. سترى الرد هنا.")}
+                  </Text>
                 </View>
-                <TowStatusBadge value={r.status} />
+              </Panel>
+            ) : null}
+            <View style={[row, { alignItems: "center", justifyContent: "space-between", gap: 10 }]}>
+              <Mono>{shortId(r.id)}</Mono>
+              <TowStatusBadge value={r.status} />
+            </View>
+            <Text style={[{ color: c.ink, fontSize: 30, fontWeight: "700", lineHeight: 34, marginTop: 16 }, align]}>{towHeadline(t, r.status, r.company.name)}</Text>
+            <Text style={[{ color: c.soft, fontSize: 13, marginTop: 6 }, align]}>{r.company.name} · {r.company.city}</Text>
+
+            {r.status === "DECLINED" && r.declineReason ? (
+              <View style={{ marginTop: 16 }}>
+                <Notice tone="danger" icon="close-circle-outline">{`${t("Declined by the company", "رفضته الشركة")}\n${r.declineReason}`}</Notice>
               </View>
-            </Card>
-
-            {r.status === "DECLINED" && r.declineReason ? <Notice tone="danger" icon="close-circle-outline">{`${t("Declined by the company", "رفضته الشركة")}\n${r.declineReason}`}</Notice> : null}
+            ) : null}
             {r.status === "CANCELLED" ? (
-              <Notice tone="danger" icon="close-circle-outline">
-                {r.cancelledBy === "COMPANY" ? t("Cancelled by the company", "ألغته الشركة") : t("Cancelled by you", "ألغيته أنت")}
-                {r.cancelReason ? `\n${r.cancelReason}` : ""}
-              </Notice>
+              <View style={{ marginTop: 16 }}>
+                <Notice tone="danger" icon="close-circle-outline">
+                  {r.cancelledBy === "COMPANY" ? t("Cancelled by the company", "ألغته الشركة") : t("Cancelled by you", "ألغيته أنت")}
+                  {r.cancelReason ? `\n${r.cancelReason}` : ""}
+                </Notice>
+              </View>
             ) : null}
 
-            <SectionHeader title={t("Status", "الحالة")} />
-            <Timeline items={r.timeline} />
+            <View style={{ marginTop: 32 }}>
+              <VerticalTimeline items={buildTimeline(PATH, r.timeline, r.status, statusLabel)} />
+            </View>
 
-            {r.truck && (
-              <>
-                <SectionHeader title={t("Assigned truck", "الشاحنة المعيّنة")} />
-                <Card>
-                  <KV k={t("Type", "النوع")} v={type[r.truck.type]} />
-                  <KV k={t("Vehicle", "المركبة")} v={[r.truck.make, r.truck.model, r.truck.year].filter(Boolean).join(" ")} />
-                </Card>
-              </>
-            )}
+            <View style={{ marginTop: 24 }}>
+              <Row label={t("Pickup", "الاستلام")} value={r.pickupAddress} />
+              <Row label={t("Destination", "الوجهة")} value={r.dropoffAddress} />
+              <Row label={t("Problem", "المشكلة")} value={problem[r.problemType]} />
+              <Row label={t("Car", "السيارة")} value={[r.vehicle.make, r.vehicle.model, r.vehicle.year].filter(Boolean).join(" ")} />
+              {r.truck ? <Row label={t("Assigned truck", "الشاحنة المعيّنة")} value={[type[r.truck.type], r.truck.make, r.truck.model, r.truck.year].filter(Boolean).join(" ")} /> : null}
+              <Row label={t("Contact phone", "هاتف التواصل")} value={r.contactPhone} mono />
+              {r.notes ? <Row label={t("Notes", "ملاحظات")} value={r.notes} /> : null}
+            </View>
 
-            {MAPS_AVAILABLE && r.pickup ? (
-              <>
-                <SectionHeader title={t("Pickup point", "نقطة الاستلام")} />
-                <TripMap pickup={r.pickup} dropoff={r.dropoff} height={170} />
-              </>
+            {OPEN.includes(r.status) ? <LiveNote label={t("Updates automatically", "يتحدّث تلقائياً")} /> : null}
+
+            {err ? (
+              <View style={{ marginTop: 16 }}>
+                <Notice tone="danger" icon="alert-circle-outline">{err}</Notice>
+              </View>
             ) : null}
-
-            <SectionHeader title={t("Your request", "طلبك")} />
-            <Card>
-              <KV k={t("Pickup", "الاستلام")} v={r.pickupAddress} />
-              <KV k={t("Destination", "الوجهة")} v={r.dropoffAddress} />
-              <KV k={t("Car", "السيارة")} v={[r.vehicle.make, r.vehicle.model, r.vehicle.year].filter(Boolean).join(" ")} />
-              <KV k={t("Problem", "المشكلة")} v={problem[r.problemType]} />
-              <KV k={t("Contact phone", "هاتف التواصل")} v={r.contactPhone} />
-              {r.notes ? <KV k={t("Notes", "ملاحظات")} v={r.notes} /> : null}
-            </Card>
-
-            {err ? <Notice tone="danger" icon="alert-circle-outline">{err}</Notice> : null}
-            {r.canCancel && !cancelling && (
-              <Button variant="danger" icon="close-circle-outline" label={t("Cancel request", "إلغاء الطلب")} disabled={busy} onPress={() => setCancelling(true)} />
-            )}
-            {cancelling && (
-              <ReasonPanel
-                required={false}
-                title={t("Reason (optional)", "السبب (اختياري)")}
-                confirmLabel={t("Confirm cancellation", "تأكيد الإلغاء")}
-                onCancel={() => setCancelling(false)}
-                onConfirm={cancel}
-              />
-            )}
+            {r.canCancel ? (
+              <View style={{ marginTop: 40, borderTopWidth: 1, borderTopColor: c.line, paddingTop: 24 }}>
+                {!cancelling ? (
+                  <PrimaryButton variant="danger" label={t("Cancel request", "إلغاء الطلب")} disabled={busy} onPress={() => setCancelling(true)} />
+                ) : (
+                  <ReasonPanel
+                    required={false}
+                    title={t("Reason (optional)", "السبب (اختياري)")}
+                    confirmLabel={t("Confirm cancellation", "تأكيد الإلغاء")}
+                    onCancel={() => setCancelling(false)}
+                    onConfirm={cancel}
+                  />
+                )}
+              </View>
+            ) : null}
           </>
         )}
       </Async>
-    </Screen>
+    </BlueprintPage>
   );
 }

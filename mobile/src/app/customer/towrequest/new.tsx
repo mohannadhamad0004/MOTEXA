@@ -2,15 +2,14 @@ import { Async, Notice } from "../../../components/ui/Feedback";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
 import { Input } from "../../../components/ui/Input";
-import { Header } from "../../../components/layout/DashboardLayout";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { PrimaryButton, Section, SimplePage } from "../../../components/blueprint";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
-import { Screen } from "../../../components/layout/Screen";
 import { Text } from "../../../components/ui/Text";
 import { useTheme } from "../../../theme/useTheme";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
+import { View } from "react-native";
 
 import { Chip, ChipRow } from "../../../features/catalog/catalogBits";
 import { useProblemLabels } from "../../../features/requests/requestBits";
@@ -98,7 +97,7 @@ export default function NewTowRequest() {
         problemType: problem,
         notes: notes.trim(),
       });
-      router.replace(`/customer/towrequest/${r.id}`);
+      router.replace({ pathname: "/customer/towrequest/[id]", params: { id: r.id, created: "1" } });
     } catch (e: any) {
       const existing = existingIdOf(e, "existingRequestId");
       if (existing) router.replace(`/customer/towrequest/${existing}`);
@@ -109,8 +108,7 @@ export default function NewTowRequest() {
   };
 
   return (
-    <Screen>
-      <Header brand="MOTEXA" title={t("Request a tow", "اطلب سحبًا")} back />
+    <SimplePage kind="tow" tl="TOW / 02" tr={state.data ? state.data.company.city : undefined} title={t("Request a tow", "اطلب سحبًا")} back="/customer/tow">
       <Async state={state}>
         {({ company }) =>
           company.availableTrucks === 0 ? (
@@ -120,7 +118,7 @@ export default function NewTowRequest() {
           ) : (
             <>
               <Notice icon="car-outline">{t(`Request to ${company.name} · ${company.city}`, `طلب إلى ${company.name} · ${company.city}`)}</Notice>
-              <SectionHeader title={t("Where", "أين")} />
+              <Section n="01" title={t("Where", "أين")}>
               <Card>
                 {loc.dialog}
                 <Button variant="ghost" icon="locate-outline" label={finding || loc.locating ? t("Finding your location…", "جارٍ تحديد موقعك…") : t("Use my current location", "استخدم موقعي الحالي")} disabled={finding || loc.locating} onPress={useHere} />
@@ -146,25 +144,31 @@ export default function NewTowRequest() {
                 ) : null}
                 <Input label={t("Destination", "الوجهة")} value={dropoff} onChangeText={setDropoff} multiline maxLength={300} />
               </Card>
-              <SectionHeader title={t("Your car", "سيارتك")} />
+              </Section>
+              <Section n="02" title={t("Your car", "سيارتك")}>
               <Card>
                 <Input label={t("Make", "الشركة المصنعة")} value={make} onChangeText={setMake} maxLength={60} />
                 <Input label={t("Model", "الطراز")} value={model} onChangeText={setModel} maxLength={60} />
                 <Input label={t("Year (optional)", "السنة (اختياري)")} value={year} onChangeText={setYear} keyboardType="number-pad" maxLength={4} />
               </Card>
-              <SectionHeader title={t("What is wrong?", "ما المشكلة؟")} />
+              </Section>
+              <Section n="03" title={t("What is wrong?", "ما المشكلة؟")}>
               <ChipRow>
                 {TOW_PROBLEMS.map((k) => (
                   <Chip key={k} label={problemLabel[k]} on={problem === k} onPress={() => setProblem(k)} />
                 ))}
               </ChipRow>
-              <SectionHeader title={t("Contact", "التواصل")} />
+              </Section>
+              <Section n="04" title={t("Contact", "التواصل")}>
               <Card>
                 <Input label={t("Contact phone", "هاتف التواصل")} value={phone} onChangeText={setPhone} keyboardType="phone-pad" maxLength={20} />
                 <Input label={t("Notes (optional)", "ملاحظات (اختياري)")} value={notes} onChangeText={setNotes} multiline maxLength={500} />
               </Card>
+              </Section>
               {err ? <Notice tone="danger" icon="alert-circle-outline">{err}</Notice> : null}
-              <Button icon="send-outline" label={t("Send request", "إرسال الطلب")} disabled={busy} onPress={submit} />
+              <View style={{ height: 8 }} />
+              <PrimaryButton icon="arrow" label={t("Send request", "إرسال الطلب")} loading={busy} onPress={submit} />
+              <View style={{ height: 12 }} />
               <Notice icon="information-circle-outline">
                 {t("The company sees your name, your phone and what you wrote here. Your email is never shared.", "ترى الشركة اسمك ورقم هاتفك وما كتبته هنا فقط. لا تتم مشاركة بريدك الإلكتروني أبدًا.")}
               </Notice>
@@ -172,6 +176,6 @@ export default function NewTowRequest() {
           )
         }
       </Async>
-    </Screen>
+    </SimplePage>
   );
 }

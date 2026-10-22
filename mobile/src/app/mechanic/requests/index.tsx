@@ -1,7 +1,6 @@
 import { Async, EmptyState } from "../../../components/ui/Feedback";
 import { Card } from "../../../components/ui/Card";
-import { Header } from "../../../components/layout/DashboardLayout";
-import { Screen } from "../../../components/layout/Screen";
+import { DashboardLayout } from "../../../components/layout/DashboardLayout";
 import { Segmented } from "../../../components/ui/Chip";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
@@ -34,14 +33,14 @@ export default function MechanicInbox() {
   const count = (g: Tab) => all.filter((r) => INBOX_GROUPS[g].includes(r.status)).length;
 
   return (
-    <Screen
+    <DashboardLayout tag="SERVICE / M2" kind="wrench"
       onRefresh={() => {
         setPulling(true);
         state.reload().finally(() => setPulling(false));
       }}
       refreshing={pulling}
+      brand="MOTEXA" title={t("Service requests", "طلبات الخدمة")} subtitle={t("Requests from customers", "طلبات من العملاء")} back
     >
-      <Header brand="MOTEXA" title={t("Service requests", "طلبات الخدمة")} subtitle={t("Requests from customers", "طلبات من العملاء")} back />
       <Segmented
         value={tab}
         onChange={setTab}
@@ -79,6 +78,6 @@ export default function MechanicInbox() {
           );
         }}
       </Async>
-    </Screen>
+    </DashboardLayout>
   );
 }

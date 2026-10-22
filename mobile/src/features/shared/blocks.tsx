@@ -17,7 +17,7 @@ type V = "PENDING" | "APPROVED" | "REJECTED";
 export function VerificationBadge({ value, prefix }: { value: V; prefix?: string }) {
   const { t } = useL();
   const map = {
-    PENDING: { tone: "accent", icon: "time-outline", label: t("Pending", "قيد المراجعة") },
+    PENDING: { tone: "warning", icon: "time-outline", label: t("Pending", "قيد المراجعة") },
     APPROVED: { tone: "success", icon: "shield-checkmark-outline", label: t("Approved", "معتمد") },
     REJECTED: { tone: "danger", icon: "close-circle-outline", label: t("Rejected", "مرفوض") },
   } as const;

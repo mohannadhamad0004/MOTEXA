@@ -1,12 +1,9 @@
-import { Async } from "../../../components/ui/Feedback";
-import { Card } from "../../../components/ui/Card";
-import { Header } from "../../../components/layout/DashboardLayout";
-import { KV } from "../../../components/ui/Rows";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
-import { useL } from "../../../core/hooks/useL";
-import { useLoad } from "../../../core/hooks/useLoad";
 import { useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
+import { Row, Shop } from "../../../components/blueprint";
+import { Async } from "../../../components/ui/Feedback";
+import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
 import { catalogService } from "../../../features/catalog/catalogService";
 import { ProductBrowser } from "../../../features/catalog/ProductBrowser";
 
@@ -19,23 +16,29 @@ export default function CustomerShop() {
   return (
     <ProductBrowser
       shopId={id}
-      emptyText={t("This shop has no parts listed yet.", "لا توجد قطع معروضة لهذا المتجر بعد.")}
-      header={
-        <>
-          <Header brand="MOTEXA" title={state.data?.shop.name ?? t("Parts shop", "متجر قطع غيار")} back />
-          <Async state={state}>
-            {({ shop }) => (
-              <View>
-                <Card>
-                  <KV k={t("City", "المدينة")} v={shop.city} />
-                  {shop.address ? <KV k={t("Address", "العنوان")} v={shop.address} /> : null}
-                </Card>
-                <SectionHeader title={t("Parts", "القطع")} />
-              </View>
-            )}
-          </Async>
-        </>
+      hero={{
+        height: 180,
+        back: "/customer",
+        tl: "SHOP",
+        tr: state.data?.shop.city,
+        art: (
+          <View style={{ height: "100%", aspectRatio: 1.5 }}>
+            <Shop animate />
+          </View>
+        ),
+      }}
+      title={state.data?.shop.name ?? t("Parts shop", "متجر قطع غيار")}
+      topExtra={
+        <Async state={state}>
+          {({ shop }) => (
+            <View style={{ marginTop: 16 }}>
+              <Row label={t("City", "المدينة")} value={shop.city} />
+              {shop.address ? <Row label={t("Address", "العنوان")} value={shop.address} /> : null}
+            </View>
+          )}
+        </Async>
       }
+      emptyText={t("This shop has no parts listed yet.", "لا توجد قطع معروضة لهذا المتجر بعد.")}
     />
   );
 }

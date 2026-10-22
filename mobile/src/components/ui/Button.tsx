@@ -7,7 +7,7 @@ type IconName = keyof typeof Ionicons.glyphMap;
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
 
-const HEIGHT: Record<ButtonSize, number> = { sm: 38, md: 48, lg: 56 };
+const HEIGHT: Record<ButtonSize, number> = { sm: 40, md: 48, lg: 56 };
 
 export function Button({
   label,
@@ -31,9 +31,9 @@ export function Button({
   const { c, r, row, motion } = useTheme();
   const v = {
     primary: { bg: c.accentFill, fg: c.onAccentFill, border: c.accentFill },
-    secondary: { bg: c.surfaceRaised, fg: c.text, border: c.border },
-    ghost: { bg: c.accentSoft, fg: c.accent, border: c.accentBorder },
-    danger: { bg: c.dangerSoft, fg: c.danger, border: c.dangerBorder },
+    secondary: { bg: c.field, fg: c.ink, border: c.line },
+    ghost: { bg: "transparent", fg: c.bronze, border: c.accentBorder },
+    danger: { bg: "transparent", fg: c.danger, border: c.dangerBorder },
   }[variant];
   const off = disabled || loading;
   return (

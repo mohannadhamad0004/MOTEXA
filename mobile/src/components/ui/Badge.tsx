@@ -26,9 +26,9 @@ export function Badge({ tone, label, icon, prefix }: { tone: Tone; label: string
         row,
         {
           alignItems: "center",
-          paddingHorizontal: 6,
+          paddingHorizontal: 9,
           paddingVertical: 5,
-          borderRadius: 9,
+          borderRadius: 999,
           borderWidth: 1,
           alignSelf: "flex-start",
           backgroundColor: k.bg,
@@ -40,7 +40,7 @@ export function Badge({ tone, label, icon, prefix }: { tone: Tone; label: string
     >
       {icon ? <Ionicons name={icon} size={12} color={k.fg} style={{ marginHorizontal: 3 }} /> : null}
       {prefix ? <Text style={{ color: c.textDim, fontSize: 10, fontWeight: "700", marginHorizontal: 3 }}>{prefix}</Text> : null}
-      <Text style={{ color: k.fg, fontSize: 10, fontWeight: "700", marginHorizontal: 3 }}>{label}</Text>
+      <Text style={{ color: k.fg, fontSize: 11, fontWeight: "700", marginHorizontal: 3 }}>{label}</Text>
     </View>
   );
 }

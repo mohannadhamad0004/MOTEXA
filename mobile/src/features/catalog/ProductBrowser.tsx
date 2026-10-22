@@ -1,24 +1,27 @@
-import { Button } from "../../components/ui/Button";
-import { Card } from "../../components/ui/Card";
-import { EmptyState, Notice } from "../../components/ui/Feedback";
-import { Input, SearchBar } from "../../components/ui/Input";
-import { useL } from "../../core/hooks/useL";
-import { Screen } from "../../components/layout/Screen";
 import { router } from "expo-router";
 import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
+import { BlueprintPage, Chip, HeroConfig, HStrip, PageTitle, SearchField, Sub } from "../../components/blueprint";
+import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
+import { EmptyState, Notice } from "../../components/ui/Feedback";
+import { Input } from "../../components/ui/Input";
 import { SkeletonList } from "../../components/ui/Skeleton";
-import { Chip, ChipRow, ProductCard } from "./catalogBits";
+import { useL } from "../../core/hooks/useL";
+import { ProductCard } from "./catalogBits";
 import { CatalogProduct, PartSort, catalogService, fitMemory } from "./catalogService";
 import { ActiveFilters, FilterSheet } from "./FilterSheet";
 import { PartFilters, countFilters, filterMemory, filterParams } from "./filters";
 
 /**
- * The customer's product list: search, "Fits my car", sort, Load more and pull-to-refresh. Used by the Parts tab and by a
- * category screen, which only differ in the header and in the category or group the list is limited to.
+ * The customer's product list: search, "Fits my car", filters, sort, Load more and pull-to-refresh. Used by the Parts
+ * tab, a category screen and a shop page, which only differ in the hero, the title and what the list is limited to.
  */
 export function ProductBrowser({
-  header,
+  hero,
+  title,
+  sub,
+  topExtra,
   afterSearch,
   category,
   group,
@@ -29,8 +32,13 @@ export function ProductBrowser({
   tabs = false,
   emptyText,
 }: {
-  header: ReactNode;
-  /** shown right under the search box (the Parts tab puts its category chips here) */
+  /** hero without the right-hand result count (added here once the real count is known) */
+  hero: HeroConfig;
+  title: ReactNode;
+  sub?: string;
+  /** shown between the title and the search box (a shop's details) */
+  topExtra?: ReactNode;
+  /** shown under the chips row (the Parts tab puts its category tabs here) */
   afterSearch?: ReactNode;
   category?: string | null;
   group?: string | null;
@@ -43,7 +51,7 @@ export function ProductBrowser({
   tabs?: boolean;
   emptyText?: string;
 }) {
-  const { t, row } = useL();
+  const { t } = useL();
   const [q, setQ] = useState(initialQ ?? "");
   // "Fits my car" values live in memory for the app session, so they survive leaving this screen.
   const [make, setMake] = useState(fitMemory.make);
@@ -51,6 +59,7 @@ export function ProductBrowser({
   const [year, setYear] = useState(fitMemory.year);
   const [showFit, setShowFit] = useState(!!(fitMemory.make || fitMemory.model || fitMemory.year));
   const [sort, setSort] = useState<PartSort>("relevance");
+  const [showSort, setShowSort] = useState(false);
   const [filters, setFilters] = useState<PartFilters>(filterMemory.current);
   const [sheetOpen, setSheetOpen] = useState(false);
   const applyFilters = (f: PartFilters) => {
@@ -61,7 +70,7 @@ export function ProductBrowser({
   const activeCount = countFilters(filters);
 
   const [items, setItems] = useState<CatalogProduct[]>([]);
-  const [total, setTotal] = useState(0);
+  const [total, setTotal] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -142,28 +151,53 @@ export function ProductBrowser({
     setYear("");
   };
 
-  return (
-    <Screen tabs={tabs} refreshing={refreshing} onRefresh={() => run(1, "refresh")}>
-      {header}
-      <SearchBar value={q} onChange={setQ} placeholder={t("Name, brand or part number", "الاسم أو الماركة أو رقم القطعة")} />
-      {afterSearch}
+  const SORTS: { key: PartSort; label: string }[] = [
+    { key: "relevance", label: t("Relevance", "الأكثر صلة") },
+    { key: "price_asc", label: t("Price: low to high", "السعر: من الأقل إلى الأعلى") },
+    { key: "price_desc", label: t("Price: high to low", "السعر: من الأعلى إلى الأقل") },
+    { key: "newest", label: t("Newest", "الأحدث") },
+  ];
+  const resultsLabel = total === null ? undefined : `${total} ${total === 1 ? t("result", "نتيجة") : t("results", "نتيجة")}`;
 
-      <View style={{ marginBottom: 14, gap: 10 }}>
-        <Button
-          variant={fitOn ? "primary" : "ghost"}
-          icon="car-outline"
-          label={fitOn ? `${t("Fits my car", "تناسب سيارتي")}: ${make.trim()}${model.trim() ? " " + model.trim() : ""}${year.trim() ? " " + year.trim() : ""}` : t("Fits my car", "تناسب سيارتي")}
-          onPress={() => setShowFit(!showFit)}
-        />
-        <Button
-          variant={activeCount ? "primary" : "ghost"}
-          icon="options-outline"
-          label={activeCount ? `${t("Filters", "التصفية")} (${activeCount})` : t("Filters", "التصفية")}
-          onPress={() => setSheetOpen(true)}
-        />
+  return (
+    <BlueprintPage tabs={tabs} refreshing={refreshing} onRefresh={() => run(1, "refresh")} hero={{ ...hero, tr: hero.tr ?? resultsLabel }}>
+      {typeof title === "string" ? <PageTitle>{title}</PageTitle> : title}
+      {sub ? <Sub>{sub}</Sub> : null}
+      {topExtra}
+      <SearchField style={{ marginTop: 24 }} value={q} onChangeText={setQ} placeholder={t("Name, brand or part number", "الاسم أو الماركة أو رقم القطعة")} />
+
+      <View style={{ marginTop: 16 }}>
+        <HStrip>
+          <Chip
+            on={fitOn}
+            icon={fitOn ? "check" : "car"}
+            label={fitOn ? `${t("Fits", "تناسب")} ${make.trim()}${model.trim() ? " " + model.trim() : ""}${year.trim() ? " " + year.trim() : ""}` : t("Fits my car", "تناسب سيارتي")}
+            onPress={() => setShowFit(!showFit)}
+          />
+          <Chip on={activeCount > 0} icon="filter" label={activeCount ? `${t("Filters", "التصفية")} (${activeCount})` : t("Filters", "التصفية")} onPress={() => setSheetOpen(true)} />
+          <Chip label={`${t("Sort", "ترتيب")}${sort !== "relevance" ? ": " + SORTS.find((s) => s.key === sort)!.label : ""}`} trailing="down" on={showSort} onPress={() => setShowSort(!showSort)} />
+        </HStrip>
       </View>
+      {showSort ? (
+        <View style={{ marginTop: 12 }}>
+          <HStrip>
+            {SORTS.map((s) => (
+              <Chip
+                key={s.key}
+                label={s.label}
+                on={sort === s.key}
+                onPress={() => {
+                  setSort(s.key);
+                  setShowSort(false);
+                }}
+              />
+            ))}
+          </HStrip>
+        </View>
+      ) : null}
+
       {showFit && (
-        <Card>
+        <Card style={{ marginTop: 16, marginBottom: 0 }}>
           <Input label={t("Make", "الشركة المصنعة")} value={make} onChangeText={setMake} placeholder="Toyota" autoCapitalize="words" />
           <Input label={t("Model", "الطراز")} value={model} onChangeText={setModel} placeholder="Corolla" autoCapitalize="words" />
           <Input label={t("Year", "السنة")} value={year} onChangeText={setYear} placeholder="2016" keyboardType="number-pad" maxLength={4} />
@@ -172,14 +206,10 @@ export function ProductBrowser({
         </Card>
       )}
 
-      <ActiveFilters value={filters} onChange={applyFilters} />
-
-      <ChipRow>
-        <Chip label={t("Relevance", "الأكثر صلة")} on={sort === "relevance"} onPress={() => setSort("relevance")} />
-        <Chip label={t("Price: low to high", "السعر: من الأقل إلى الأعلى")} on={sort === "price_asc"} onPress={() => setSort("price_asc")} />
-        <Chip label={t("Price: high to low", "السعر: من الأعلى إلى الأقل")} on={sort === "price_desc"} onPress={() => setSort("price_desc")} />
-        <Chip label={t("Newest", "الأحدث")} on={sort === "newest"} onPress={() => setSort("newest")} />
-      </ChipRow>
+      {afterSearch ? <View style={{ marginTop: 12 }}>{afterSearch}</View> : null}
+      <View style={{ marginTop: 12 }}>
+        <ActiveFilters value={filters} onChange={applyFilters} />
+      </View>
 
       {loading && !items.length ? (
         <SkeletonList />
@@ -195,19 +225,18 @@ export function ProductBrowser({
         />
       ) : (
         <>
-          <View style={[row, { marginBottom: 10 }]}>
-            <Notice icon="cube-outline">{`${total} ${total === 1 ? t("part", "قطعة") : t("parts", "قطع")}`}</Notice>
-          </View>
           {error ? <Notice tone="danger" icon="alert-circle-outline">{error}</Notice> : null}
           {items.map((p) => (
             <ProductCard key={p.id} p={p} showShop={!shopId} car={fitOn ? { make, model, year } : null} onPress={() => router.push(`/customer/parts/${p.id}`)} />
           ))}
           {hasMore && (
-            <Button label={loadingMore ? t("Loading…", "جارٍ التحميل…") : t("Load more", "تحميل المزيد")} variant="ghost" icon="chevron-down-outline" disabled={loadingMore} onPress={() => run(page + 1, "more")} />
+            <View style={{ marginTop: 16 }}>
+              <Button label={loadingMore ? t("Loading…", "جارٍ التحميل…") : t("Load more", "تحميل المزيد")} variant="ghost" icon="chevron-down-outline" disabled={loadingMore} onPress={() => run(page + 1, "more")} />
+            </View>
           )}
         </>
       )}
       <FilterSheet visible={sheetOpen} value={filters} category={category} group={group} onApply={applyFilters} onClose={() => setSheetOpen(false)} />
-    </Screen>
+    </BlueprintPage>
   );
 }

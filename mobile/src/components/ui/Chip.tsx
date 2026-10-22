@@ -17,7 +17,7 @@ export function Chip({
   icon?: keyof typeof Ionicons.glyphMap;
 }) {
   const { c, r, row } = useTheme();
-  const fg = on ? c.onAccentFill : c.textMuted;
+  const fg = on ? c.onAccentFill : c.ink;
   return (
     <Pressable
       accessibilityRole="button"
@@ -28,7 +28,7 @@ export function Chip({
         {
           alignItems: "center",
           gap: 5,
-          paddingHorizontal: 12,
+          paddingHorizontal: 16,
           paddingVertical: 8,
           minHeight: 44,
           borderRadius: r.pill,
@@ -39,8 +39,8 @@ export function Chip({
         },
       ]}
     >
-      {icon ? <Ionicons name={icon} size={13} color={fg} /> : null}
-      <Text style={{ color: fg, fontSize: 12, fontWeight: "700" }}>{label}</Text>
+      {icon ? <Ionicons name={icon} size={15} color={fg} /> : null}
+      <Text style={{ color: fg, fontSize: 13, fontWeight: "600" }}>{label}</Text>
     </Pressable>
   );
 }

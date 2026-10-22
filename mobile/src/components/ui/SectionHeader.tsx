@@ -9,9 +9,9 @@ export function SectionHeader({ title, onSeeAll, extra }: { title: string; onSee
   const { c, row, align, isArabic } = useTheme();
   const { t } = useL();
   return (
-    <View style={[row, { alignItems: "center", justifyContent: "space-between", marginTop: 22, marginBottom: 12, gap: 10 }]}>
-      <Text numberOfLines={2} style={[{ color: c.text, fontSize: 12, fontWeight: "700", letterSpacing: isArabic ? 0 : 1.2, flex: 1 }, align]}>
-        {title.toUpperCase()}
+    <View style={[row, { alignItems: "center", justifyContent: "space-between", marginTop: 32, marginBottom: 14, gap: 10 }]}>
+      <Text numberOfLines={2} style={[{ color: c.text, fontSize: 18, fontWeight: "700", flex: 1 }, align]}>
+        {title}
       </Text>
       {onSeeAll ? (
         <Pressable accessibilityRole="button" onPress={onSeeAll} hitSlop={10} style={[row, { alignItems: "center", gap: 2 }]}>

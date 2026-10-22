@@ -1,7 +1,6 @@
 import { Async, EmptyState } from "../../../../components/ui/Feedback";
 import { Card } from "../../../../components/ui/Card";
-import { Header } from "../../../../components/layout/DashboardLayout";
-import { Screen } from "../../../../components/layout/Screen";
+import { DashboardLayout } from "../../../../components/layout/DashboardLayout";
 import { Segmented } from "../../../../components/ui/Chip";
 import { useL } from "../../../../core/hooks/useL";
 import { useLoad } from "../../../../core/hooks/useLoad";
@@ -23,8 +22,7 @@ export default function ShopInquiries() {
   const state = useLoad(() => shopInquiries.list(filter === "ALL" ? undefined : filter), [filter]);
 
   return (
-    <Screen>
-      <Header brand="MOTEXA PARTS" title={t("Customer questions", "أسئلة العملاء")} subtitle={t("Answer questions about your parts", "أجب عن الأسئلة حول قطعك")} back />
+    <DashboardLayout tag="QUESTIONS / P3" brand="MOTEXA PARTS" title={t("Customer questions", "أسئلة العملاء")} subtitle={t("Answer questions about your parts", "أجب عن الأسئلة حول قطعك")} back>
       <Segmented
         value={filter}
         onChange={setFilter}
@@ -56,6 +54,6 @@ export default function ShopInquiries() {
           )
         }
       </Async>
-    </Screen>
+    </DashboardLayout>
   );
 }

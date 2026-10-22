@@ -3,9 +3,8 @@ import { Badge } from "../../../../components/ui/Badge";
 import { Button } from "../../../../components/ui/Button";
 import { Card } from "../../../../components/ui/Card";
 import { Input } from "../../../../components/ui/Input";
-import { Header } from "../../../../components/layout/DashboardLayout";
+import { DashboardLayout } from "../../../../components/layout/DashboardLayout";
 import { ReasonPanel } from "../../../../components/ui/ReasonPanel";
-import { Screen } from "../../../../components/layout/Screen";
 import { SectionHeader } from "../../../../components/ui/SectionHeader";
 import { useL } from "../../../../core/hooks/useL";
 import { useLoad } from "../../../../core/hooks/useLoad";
@@ -268,9 +267,8 @@ export default function MechanicApplicationInspector() {
   const state = useLoad(() => mechanicReviewService.get(id), [id]);
   const { t } = useL();
   return (
-    <Screen>
-      <Header brand="MOTEXA ADMIN" title={state.data?.account.fullName ?? t("Application", "الطلب")} back />
+    <DashboardLayout tag="REVIEW / A4" kind="wrench" brand="MOTEXA ADMIN" title={state.data?.account.fullName ?? t("Application", "الطلب")} back>
       <Async state={state}>{(a) => <Inspector a={a} reload={state.reload} />}</Async>
-    </Screen>
+    </DashboardLayout>
   );
 }

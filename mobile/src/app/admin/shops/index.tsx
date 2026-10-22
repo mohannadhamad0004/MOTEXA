@@ -1,7 +1,6 @@
 import { Async, EmptyState } from "../../../components/ui/Feedback";
 import { Card } from "../../../components/ui/Card";
-import { Header } from "../../../components/layout/DashboardLayout";
-import { Screen } from "../../../components/layout/Screen";
+import { DashboardLayout } from "../../../components/layout/DashboardLayout";
 import { SearchBar } from "../../../components/ui/Input";
 import { Segmented } from "../../../components/ui/Chip";
 import { useL } from "../../../core/hooks/useL";
@@ -27,14 +26,11 @@ export default function AdminShopsList() {
   const state = useLoad(() => partsAdminService.listShops(asActor(user)), [user.id]);
 
   return (
-    <Screen>
-      <Header
-        brand="MOTEXA ADMIN"
+    <DashboardLayout kind="shop" tag="REVIEW / A3" brand="MOTEXA ADMIN"
         title={t("Parts Shops", "متاجر قطع الغيار")}
         subtitle={t("Review shops applying to operate on MOTEXA", "مراجعة المتاجر الراغبة بالعمل على MOTEXA")}
         back
-        signOutButton
-      />
+        signOutButton>
       <SearchBar value={q} onChange={setQ} placeholder={t("Shop, owner, phone or city", "المتجر أو المالك أو الهاتف أو المدينة")} />
       <Segmented
         value={filter}
@@ -74,6 +70,6 @@ export default function AdminShopsList() {
           ));
         }}
       </Async>
-    </Screen>
+    </DashboardLayout>
   );
 }

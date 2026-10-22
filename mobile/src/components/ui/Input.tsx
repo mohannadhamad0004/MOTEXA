@@ -15,8 +15,8 @@ export function Input({ label, error, ...p }: TextInputProps & { label: string; 
         {...p}
         style={[
           {
-            minHeight: 50,
-            borderRadius: r.md,
+            minHeight: 54,
+            borderRadius: r.lg,
             borderWidth: 1,
             borderColor: error ? c.dangerBorder : c.border,
             backgroundColor: c.field,
@@ -49,13 +49,13 @@ export function SearchBar({
       style={[
         row,
         {
-          height: 54,
-          borderRadius: r.pill,
+          height: 56,
+          borderRadius: r.lg,
           borderWidth: 1,
-          borderColor: c.border,
+          borderColor: c.line,
           backgroundColor: c.field,
           alignItems: "center",
-          paddingHorizontal: 18,
+          paddingHorizontal: 16,
           marginBottom: 14,
         },
       ]}
@@ -67,7 +67,7 @@ export function SearchBar({
         placeholder={placeholder}
         placeholderTextColor={c.textDim}
         accessibilityLabel={placeholder}
-        style={{ flex: 1, height: "100%", color: c.text, marginHorizontal: 10, fontSize: 14, textAlign: isArabic ? "right" : "left" }}
+        style={{ flex: 1, height: "100%", color: c.text, marginHorizontal: 10, fontSize: 15, textAlign: isArabic ? "right" : "left" }}
       />
       {value.length > 0 && (
         <Pressable onPress={() => onChange("")} accessibilityLabel={t("Clear", "مسح")} hitSlop={8} style={{ padding: 8 }}>

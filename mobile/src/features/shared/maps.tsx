@@ -27,6 +27,8 @@ type MapData = {
   /** changes when the set of points changes: the map re-fits to them */
   fitKey: string;
   theme: { accent: string; busy: string; bg: string };
+  /** px kept free at the bottom (attribution moves up) when a sheet overlaps the map */
+  bottomInset?: number;
 };
 
 const LEAFLET = "1.9.4"; // pinned
@@ -42,6 +44,7 @@ html,body,#map{margin:0;height:100%;width:100%;background:#2D1F18}
 .leaflet-control-attribution{background:rgba(255,255,255,.85)!important;color:#333;padding:1px 6px}
 .pin{display:flex;align-items:center;justify-content:center;border-radius:50%;border:3px solid #fff;
  box-shadow:0 1px 5px rgba(0,0,0,.5);color:#fff;font:700 12px sans-serif;box-sizing:border-box}
+.leaflet-bottom{margin-bottom:var(--bi,0px)}
 .dot{width:16px;height:16px;border-radius:50%;background:#2F7BFF;border:3px solid #fff;box-shadow:0 0 0 6px rgba(47,123,255,.25)}
 </style></head><body><div id="map"></div>
 <script src="https://unpkg.com/leaflet@${LEAFLET}/dist/leaflet.js"></script>
@@ -71,7 +74,7 @@ function icon(kind,t,label){
 }
 window.setData=function(d){
   if(!map)return;
-  data=d;document.body.style.background=d.theme.bg;
+  data=d;document.body.style.background=d.theme.bg;document.documentElement.style.setProperty("--bi",(d.bottomInset||0)+"px");
   layer.clearLayers();
   var pts=[];
   d.pins.forEach(function(p){
@@ -103,8 +106,13 @@ function LeafletMap({
   onSelect,
   onMove,
   onFailedChange,
+  bare = false,
+  bottomInset = 0,
 }: {
   height: number;
+  /** no border, radius or bottom margin: the map fills a frame */
+  bare?: boolean;
+  bottomInset?: number;
   data: MapData;
   onSelect?: (id: string) => void;
   onMove?: (p: Point) => void;
@@ -119,7 +127,7 @@ function LeafletMap({
   const [tiles, setTiles] = useState(false);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const json = useMemo(() => JSON.stringify(data), [data]);
+  const json = useMemo(() => JSON.stringify({ ...data, bottomInset }), [data, bottomInset]);
   const dataRef = useRef(data);
   dataRef.current = data;
 
@@ -184,7 +192,7 @@ function LeafletMap({
   );
 
   return (
-    <View style={{ height, borderRadius: r.md + 2, overflow: "hidden", borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, marginBottom: 12 }}>
+    <View style={bare ? { height, overflow: "hidden", backgroundColor: c.surface } : { height, borderRadius: r.md + 2, overflow: "hidden", borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, marginBottom: 12 }}>
       <WebView
         key={attempt}
         ref={ref}
@@ -241,7 +249,11 @@ export function CompaniesMap({
   onSelect,
   onFailedChange,
   height = 320,
+  bare,
+  bottomInset,
 }: {
+  bare?: boolean;
+  bottomInset?: number;
   pins: Pin[];
   me: Point | null;
   selectedId: string | null;
@@ -265,7 +277,7 @@ export function CompaniesMap({
     }),
     [pinsKey, meKey, selectedId, fitKey, theme]
   );
-  return <LeafletMap height={height} data={data} onSelect={onSelect} onFailedChange={onFailedChange} />;
+  return <LeafletMap height={height} data={data} onSelect={onSelect} onFailedChange={onFailedChange} bare={bare} bottomInset={bottomInset} />;
 }
 
 /** One movable pin. Tap the map or drag the pin to move it. */
@@ -279,12 +291,12 @@ export function PinMap({ point, onChange, height = 200 }: { point: Point; onChan
 }
 
 /** Pickup (and, when there is one, destination) of a tow request. Read only. */
-export function TripMap({ pickup, dropoff, height = 200 }: { pickup: Point; dropoff?: Point | null; height?: number }) {
+export function TripMap({ pickup, dropoff, height = 200, bare, bottomInset }: { pickup: Point; dropoff?: Point | null; height?: number; bare?: boolean; bottomInset?: number }) {
   const theme = useMapTheme();
   const data = useMemo<MapData>(() => {
     const pins: MapData["pins"] = [{ id: "a", name: "A", lat: pickup.lat, lng: pickup.lng, kind: "a" }];
     if (dropoff) pins.push({ id: "b", name: "B", lat: dropoff.lat, lng: dropoff.lng, kind: "b" });
     return { mode: "trip", pins, me: null, movable: false, fitKey: pins.map((p) => `${p.lat},${p.lng}`).join("|"), theme };
   }, [pickup.lat, pickup.lng, dropoff?.lat, dropoff?.lng, theme]);
-  return <LeafletMap height={height} data={data} />;
+  return <LeafletMap height={height} data={data} bare={bare} bottomInset={bottomInset} />;
 }

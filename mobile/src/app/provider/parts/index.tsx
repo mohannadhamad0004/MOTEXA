@@ -2,8 +2,8 @@ import { Async, EmptyState, Notice } from "../../../components/ui/Feedback";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
-import { Header } from "../../../components/layout/DashboardLayout";
-import { Screen } from "../../../components/layout/Screen";
+import { StatTiles } from "../../../components/blueprint";
+import { DashboardLayout } from "../../../components/layout/DashboardLayout";
 import { SearchBar } from "../../../components/ui/Input";
 import { Segmented } from "../../../components/ui/Chip";
 import { ImageTile } from "../../../components/ui/Rows";
@@ -15,7 +15,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
 import { StockBadge, fitmentSummary } from "../../../features/parts/partsBits";
-import { Product, partsShopService, stockState } from "../../../features/parts/partsService";
+import { partsShopService, stockState } from "../../../features/parts/partsService";
 import { VerificationBadge } from "../../../features/shared/blocks";
 import { formatPrice } from "../../../core/constants/money";
 import { asActor, useSessionUser } from "../../../features/shared/session";
@@ -31,13 +31,10 @@ export default function MyParts() {
   const state = useLoad(() => partsShopService.getMyInventory(asActor(user)), [user.id]);
 
   return (
-    <Screen>
-      <Header
-        brand="MOTEXA PARTS"
+    <DashboardLayout brand="MOTEXA PARTS"
         title={t("My Parts", "قطعي")}
         subtitle={state.data ? state.data.shop.name : undefined}
-        signOutButton
-      />
+        signOutButton>
       <Async state={state}>
         {({ shop, products }) => {
           const n = q.trim().toLowerCase();
@@ -53,6 +50,13 @@ export default function MyParts() {
                   <VerificationBadge value={shop.verification} prefix={t("Shop", "المتجر")} />
                 </View>
               )}
+              <StatTiles
+                items={[
+                  { label: t("Parts", "القطع"), value: products.length },
+                  { label: t("Low stock", "مخزون منخفض"), value: products.filter((x) => stockState(x.stock) === "LOW").length, tone: "warning" },
+                  { label: t("Out of stock", "نفد المخزون"), value: products.filter((x) => stockState(x.stock) === "OUT").length, tone: "danger" },
+                ]}
+              />
               <Button variant="ghost" label={t("Customer questions", "أسئلة العملاء")} icon="chatbubbles-outline" onPress={() => router.push("/provider/parts/inquiries")} />
               <View style={{ height: 10 }} />
               <Button label={t("Add part", "إضافة قطعة")} icon="add-circle-outline" onPress={() => router.push("/provider/parts/new")} />
@@ -105,6 +109,6 @@ export default function MyParts() {
           );
         }}
       </Async>
-    </Screen>
+    </DashboardLayout>
   );
 }

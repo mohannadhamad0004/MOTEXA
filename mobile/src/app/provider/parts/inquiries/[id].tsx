@@ -1,9 +1,8 @@
 import { Async } from "../../../../components/ui/Feedback";
 import { Button } from "../../../../components/ui/Button";
 import { Card } from "../../../../components/ui/Card";
-import { Header } from "../../../../components/layout/DashboardLayout";
+import { DashboardLayout } from "../../../../components/layout/DashboardLayout";
 import { KV } from "../../../../components/ui/Rows";
-import { Screen } from "../../../../components/layout/Screen";
 import { useL } from "../../../../core/hooks/useL";
 import { useLoad } from "../../../../core/hooks/useLoad";
 import { Text } from "../../../../components/ui/Text";
@@ -39,8 +38,7 @@ export default function ShopInquiryThread() {
   };
 
   return (
-    <Screen>
-      <Header brand="MOTEXA PARTS" title={t("Customer question", "سؤال عميل")} back />
+    <DashboardLayout tag="QUESTION / P3" brand="MOTEXA PARTS" title={t("Customer question", "سؤال عميل")} back>
       <Async state={state}>
         {(q) => (
           <>
@@ -79,6 +77,6 @@ export default function ShopInquiryThread() {
           </>
         )}
       </Async>
-    </Screen>
+    </DashboardLayout>
   );
 }

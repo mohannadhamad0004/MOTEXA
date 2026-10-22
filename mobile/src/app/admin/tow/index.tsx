@@ -1,8 +1,7 @@
 import { Async, EmptyState } from "../../../components/ui/Feedback";
 import { Badge } from "../../../components/ui/Badge";
 import { Card } from "../../../components/ui/Card";
-import { Header } from "../../../components/layout/DashboardLayout";
-import { Screen } from "../../../components/layout/Screen";
+import { DashboardLayout } from "../../../components/layout/DashboardLayout";
 import { SearchBar } from "../../../components/ui/Input";
 import { Segmented } from "../../../components/ui/Chip";
 import { useL } from "../../../core/hooks/useL";
@@ -35,14 +34,11 @@ export default function AdminTowList() {
   }, [user.id]);
 
   return (
-    <Screen>
-      <Header
-        brand="MOTEXA ADMIN"
+    <DashboardLayout kind="tow" tag="REVIEW / A2" brand="MOTEXA ADMIN"
         title={t("Tow Companies", "شركات السحب")}
         subtitle={t("Review tow companies and their trucks", "مراجعة شركات السحب وشاحناتها")}
         back
-        signOutButton
-      />
+        signOutButton>
       <SearchBar value={q} onChange={setQ} placeholder={t("Company, plate or truck type", "الشركة أو اللوحة أو نوع الشاحنة")} />
       <Segmented
         value={filter}
@@ -88,13 +84,13 @@ export default function AdminTowList() {
                 <VerificationBadge value={c.verification} />
                 <Badge tone="neutral" icon="car-sport-outline" label={`${c.truckCount} ${c.truckCount === 1 ? t("truck", "شاحنة") : t("trucks", "شاحنات")}`} />
                 {c.pendingTruckCount > 0 && (
-                  <Badge tone="accent" icon="time-outline" label={`${c.pendingTruckCount} ${t("pending", "قيد المراجعة")}`} />
+                  <Badge tone="warning" icon="time-outline" label={`${c.pendingTruckCount} ${t("pending", "قيد المراجعة")}`} />
                 )}
               </View>
             </Card>
           ));
         }}
       </Async>
-    </Screen>
+    </DashboardLayout>
   );
 }
