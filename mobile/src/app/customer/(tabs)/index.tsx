@@ -166,6 +166,7 @@ export default function CustomerHome() {
 
       {/* 6. Tow shortcut and AI diagnosis */}
       <View style={{ height: 22 }} />
+      {action("build-outline", t("Need a mechanic?", "تحتاج إلى ميكانيكي؟"), t("Browse verified mechanics and request service.", "تصفح الميكانيكيين الموثّقين واطلب خدمة."), () => router.navigate("/customer/mechanics"))}
       {action("car-outline", t("Need a tow?", "تحتاج إلى سحب؟"), t("See approved tow companies and their trucks.", "تعرّف على شركات السحب المعتمدة وشاحناتها."), () => router.navigate("/customer/tow"))}
 
       <Card>
@@ -186,7 +187,7 @@ export default function CustomerHome() {
       </Card>
 
       {/* 7. My requests */}
-      {action("receipt-outline", t("My requests", "طلباتي"), t("Your questions to shops and your tow requests.", "أسئلتك للمتاجر وطلبات السحب."), () => router.push("/customer/requests"))}
+      {action("receipt-outline", t("My requests", "طلباتي"), t("Your questions to shops, tow and mechanic requests.", "أسئلتك للمتاجر وطلبات السحب والميكانيكيين."), () => router.push("/customer/requests"))}
     </Screen>
   );
 }

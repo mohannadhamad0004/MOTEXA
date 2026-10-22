@@ -19,7 +19,7 @@ const PAGE_SIZE = 20;
 /** Same threshold as the mobile `LOW_STOCK_AT`: 0 = out, 1..5 = low, above = in. */
 const LOW_STOCK_AT = 5;
 
-const text = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
+export const text = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 const idParam = (v: unknown) => String(v);
 const bad = (res: any, code: number, message: string) => res.status(code).json({ success: false, message });
 const fail = (res: any, label: string, error: unknown) => {
@@ -269,7 +269,7 @@ const TRUCK_TYPES = ["FLATBED", "HOOK_CHAIN", "WHEEL_LIFT", "HEAVY_DUTY"] as con
 const TOW_SORTS = ["available", "name", "nearest"] as const;
 
 /** ?lat=&lng= (both or none), plain numbers inside the accepted area. null = not given, string = error message. */
-function readPoint(query: any): { lat: number; lng: number } | null | string {
+export function readPoint(query: any): { lat: number; lng: number } | null | string {
   const { lat, lng } = query;
   if (lat === undefined && lng === undefined) return null;
   const isNum = (v: unknown) => typeof v === "string" && /^-?\d{1,3}(\.\d{1,15})?$/.test(v.trim());
@@ -279,7 +279,7 @@ function readPoint(query: any): { lat: number; lng: number } | null | string {
 }
 
 /** Straight-line distance from `from` to a company: from its base point, else from the centre of its city. */
-function distanceTo(from: { lat: number; lng: number }, c: { city: string; baseLat: number | null; baseLng: number | null }) {
+export function distanceTo(from: { lat: number; lng: number }, c: { city: string; baseLat: number | null; baseLng: number | null }) {
   if (c.baseLat !== null && c.baseLng !== null) return { distanceKm: Math.round(haversineKm(from, { lat: c.baseLat, lng: c.baseLng }) * 10) / 10, distanceSource: "base" as const };
   const centre = cityCentre(c.city);
   if (centre) return { distanceKm: Math.round(haversineKm(from, centre) * 10) / 10, distanceSource: "city" as const };

@@ -8,6 +8,8 @@ import filesRoutes from "./routes/files.routes.js";
 import catalogRoutes from "./routes/catalog.routes.js";
 import partInquiryRoutes from "./routes/part-inquiries.routes.js";
 import towRequestRoutes from "./routes/tow-requests.routes.js";
+import catalogMechanicRoutes from "./routes/catalog-mechanics.routes.js";
+import mechanicRequestRoutes from "./routes/mechanic-requests.routes.js";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -26,9 +28,11 @@ app.use("/api", towRoutes);
 app.use("/api", partsRoutes);
 app.use("/api/files", filesRoutes);
 app.use("/api/catalog", catalogRoutes);
+app.use("/api/catalog", catalogMechanicRoutes);
 // Request routes parse their own (small) JSON bodies after authentication.
 app.use("/api", partInquiryRoutes);
 app.use("/api", towRequestRoutes);
+app.use("/api", mechanicRequestRoutes);
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
