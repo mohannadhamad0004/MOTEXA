@@ -58,6 +58,8 @@ model User {
   partInquiries PartInquiry[]
   inquiryMessages PartInquiryMessage[]
   towRequests TowRequest[]
+  mechanicRequestsSent     MechanicRequest[] @relation("MechanicRequestCustomer")
+  mechanicRequestsReceived MechanicRequest[] @relation("MechanicRequestMechanic")
 
   sentInvitations AdminInvitation[] @relation("InvitationSender")
   acceptedInvitation AdminInvitation? @relation("InvitationRecipient")
@@ -581,6 +583,52 @@ model TowRequest {
   @@index([customerId, status])
   @@index([companyId, status])
   @@index([assignedTruckId])
+}
+
+// ---- Mechanic service requests: a customer asks one public mechanic for help; the mechanic accepts, starts and completes ----
+
+enum MechanicRequestStatus {
+  REQUESTED
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  DECLINED
+  CANCELLED
+}
+
+model MechanicRequest {
+  id         String @id @default(uuid())
+  customerId String
+  customer   User   @relation("MechanicRequestCustomer", fields: [customerId], references: [id], onDelete: Cascade)
+  // The mechanic's User id: every mechanic has one (a MechanicProfile is optional) and it is the public id in the catalog.
+  mechanicUserId String
+  mechanic       User   @relation("MechanicRequestMechanic", fields: [mechanicUserId], references: [id], onDelete: Cascade)
+
+  skill              String? // one of the mechanic's approved skills at the time of the request
+  carMake            String
+  carModel           String
+  carYear            Int?
+  problemDescription String
+  preferredTime      String? // free text ("tomorrow after 4 pm"): no date picker exists in Expo Go without a new package
+  locationText       String
+  locationLat        Float?
+  locationLng        Float?
+  contactPhone       String? // optional, typed by the customer; only the receiving mechanic sees it
+
+  status        MechanicRequestStatus @default(REQUESTED)
+  declineReason String?
+
+  requestedAt DateTime  @default(now())
+  acceptedAt  DateTime?
+  declinedAt  DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  cancelledAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([customerId, status])
+  @@index([mechanicUserId, status])
 }
 
 model AdminInvitationOtp {
