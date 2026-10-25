@@ -154,8 +154,9 @@ export function SearchField({
   placeholder,
   onSubmit,
   style,
+  compact = false,
   ...rest
-}: { value: string; onChangeText: (v: string) => void; placeholder: string; onSubmit?: () => void; style?: StyleProp<ViewStyle> } & Omit<
+}: { value: string; onChangeText: (v: string) => void; placeholder: string; onSubmit?: () => void; style?: StyleProp<ViewStyle>; compact?: boolean } & Omit<
   TextInputProps,
   "value" | "onChangeText" | "placeholder" | "style"
 >) {
@@ -164,7 +165,7 @@ export function SearchField({
     <View
       style={[
         row,
-        { height: 56, borderRadius: 20, borderWidth: 1, borderColor: c.line, backgroundColor: c.field, alignItems: "center", paddingHorizontal: 16, gap: 12 },
+        { height: compact ? 48 : 56, borderRadius: 20, borderWidth: 1, borderColor: c.line, backgroundColor: c.field, alignItems: "center", paddingHorizontal: 16, gap: 12 },
         style,
       ]}
     >

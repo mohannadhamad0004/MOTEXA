@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { Icon, Mono, Pill, Row, Section, SimplePage, StickyActionBar } from "../../../components/blueprint";
 import { Card } from "../../../components/ui/Card";
 import { Async, EmptyState, Notice } from "../../../components/ui/Feedback";
@@ -56,6 +56,11 @@ export default function CustomerTowCompany() {
                 {company.distanceSource === "city" ? ` · ${t("from the city centre", "من مركز المدينة")}` : ""}
               </Text>
             ) : null}
+
+            <Pressable accessibilityRole="link" onPress={() => router.push({ pathname: "/customer/tow/map", params: { focus: company.id } })} hitSlop={8} style={[row, { alignItems: "center", gap: 6, minHeight: 44 }]}>
+              <Icon name="map" size={16} color={c.bronze} />
+              <Text style={{ color: c.bronze, fontSize: 13, fontWeight: "700" }}>{t("Show on map", "عرض على الخريطة")}</Text>
+            </Pressable>
             {company.availableTrucks === 0 ? (
               <View style={{ marginTop: 16 }}>
                 <Notice icon="information-circle-outline">{t("No truck is available right now. Please try again later or choose another company.", "لا توجد شاحنة متاحة الآن. حاول لاحقًا أو اختر شركة أخرى.")}</Notice>
