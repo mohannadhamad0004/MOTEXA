@@ -38,28 +38,24 @@ router.get("/", (_req, res) => {
 // Real dashboard statistics from PostgreSQL
 router.get("/dashboard", async (_req, res) => {
   try {
-    const [
-      administrators,
-      mechanics,
-      pendingMechanics,
-      pendingInvitations,
-    ] = await Promise.all([
-      prisma.user.count({
-        where: { role: "ADMIN", status: "ACTIVE" },
-      }),
+    const [administrators, mechanics, pendingMechanics, pendingInvitations] =
+      await Promise.all([
+        prisma.user.count({
+          where: { role: "ADMIN", status: "ACTIVE" },
+        }),
 
-      prisma.user.count({
-        where: { role: "MECHANIC" },
-      }),
+        prisma.user.count({
+          where: { role: "MECHANIC" },
+        }),
 
-      prisma.mechanicProfile.count({
-        where: { verificationStatus: "PENDING" },
-      }),
+        prisma.mechanicProfile.count({
+          where: { verificationStatus: "PENDING" },
+        }),
 
-      prisma.adminInvitation.count({
-        where: { status: "PENDING" },
-      }),
-    ]);
+        prisma.adminInvitation.count({
+          where: { status: "PENDING" },
+        }),
+      ]);
 
     res.status(200).json({
       success: true,
@@ -84,14 +80,22 @@ router.get("/dashboard", async (_req, res) => {
 router.get("/providers", async (_req, res) => {
   try {
     const providers = await prisma.user.findMany({
-      where: {role: {in: ["MECHANIC", "PARTS_PROVIDER", "TOW_PROVIDER"]}},
-      select: {id:true, fullName:true, email:true, role:true, status:true,
-        mechanicProfile: {select: {verificationStatus:true}}},
-      orderBy: {createdAt:"desc"},
+      where: { role: { in: ["MECHANIC", "PARTS_PROVIDER", "TOW_PROVIDER"] } },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        role: true,
+        status: true,
+        mechanicProfile: { select: { verificationStatus: true } },
+      },
+      orderBy: { createdAt: "desc" },
     });
-    return res.json({success:true,providers});
+    return res.json({ success: true, providers });
   } catch {
-    return res.status(500).json({success:false,message:"Failed to load providers."});
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to load providers." });
   }
 });
 

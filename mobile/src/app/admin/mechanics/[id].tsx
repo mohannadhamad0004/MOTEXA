@@ -1,3 +1,6 @@
+import {EditorialTitle} from '../../../components/PremiumUI';
+import {useAppearance,useAppearanceStyles} from "../../../components/Appearance";
+import {palette} from "../../../components/DesignTokens";
 import { Text } from "../../../components/MotexaVisual";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -35,6 +38,8 @@ const mechanicData: Record<string, MechanicData> = {
 };
 
 export default function MechanicReviewScreen() {
+  const {dark}=useAppearance();
+  const styles=useAppearanceStyles(baseStyles);
   const insets = useSafeAreaInsets();
   const { isArabic } = useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -82,10 +87,10 @@ export default function MechanicReviewScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle={dark?"light-content":"dark-content"} />
 
       <LinearGradient
-        colors={["#120D0A", "#1C120D", "#17100C"]}
+        colors={dark?palette.canvasDark:palette.canvas}
         style={StyleSheet.absoluteFill}
       />
 
@@ -104,12 +109,12 @@ export default function MechanicReviewScreen() {
           <Ionicons
             name={isArabic ? "arrow-forward" : "arrow-back"}
             size={22}
-            color="#D99B69"
+            color={dark?"#D9AD75":"#865A32"}
           />
         </TouchableOpacity>
 
         {/* Page Header */}
-        <Text style={[styles.title, isArabic && styles.right]}>{t.title}</Text>
+        <EditorialTitle style={[styles.title, isArabic && styles.right]}>{t.title}</EditorialTitle>
 
         <Text style={[styles.subtitle, isArabic && styles.right]}>
           {t.subtitle}
@@ -120,7 +125,7 @@ export default function MechanicReviewScreen() {
           {mechanic && (
             <View style={styles.mechanicInfo}>
               <View style={styles.avatar}>
-                <Ionicons name="person-outline" size={26} color="#D99B69" />
+                <Ionicons name="person-outline" size={26} color={dark?"#D9AD75":"#865A32"} />
               </View>
 
               <Text style={[styles.mechanicName, isArabic && styles.right]}>
@@ -145,7 +150,7 @@ export default function MechanicReviewScreen() {
           <Text style={styles.id}>{id ?? "—"}</Text>
 
           <View style={styles.status}>
-            <Ionicons name="time-outline" size={15} color="#D99B69" />
+            <Ionicons name="time-outline" size={15} color={dark?"#D9AD75":"#865A32"} />
             <Text style={styles.statusText}>{t.pending}</Text>
           </View>
         </View>
@@ -153,7 +158,7 @@ export default function MechanicReviewScreen() {
         {/* Submitted Documents */}
         <View style={styles.card}>
           <View style={[styles.documentHeader, isArabic && styles.rowReverse]}>
-            <Ionicons name="documents-outline" size={22} color="#D99B69" />
+            <Ionicons name="documents-outline" size={22} color={dark?"#D9AD75":"#865A32"} />
 
             <Text style={styles.documentsTitle}>
               {isArabic ? "الوثائق المقدمة" : "Submitted Documents"}
@@ -168,7 +173,7 @@ export default function MechanicReviewScreen() {
 
           {/* National ID */}
           <View style={[styles.documentItem, isArabic && styles.rowReverse]}>
-            <Ionicons name="id-card-outline" size={25} color="#D99B69" />
+            <Ionicons name="id-card-outline" size={25} color={dark?"#D9AD75":"#865A32"} />
 
             <View style={styles.documentInfo}>
               <Text style={[styles.documentName, isArabic && styles.right]}>
@@ -199,7 +204,7 @@ export default function MechanicReviewScreen() {
             style={[styles.stageCard, isArabic && styles.rowReverse]}
           >
             <View style={styles.stageIcon}>
-              <Ionicons name={stage.icon} size={21} color="#D99B69" />
+              <Ionicons name={stage.icon} size={21} color={dark?"#D9AD75":"#865A32"} />
             </View>
 
             <View style={styles.stageContent}>
@@ -222,27 +227,23 @@ export default function MechanicReviewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#120D0A",
+    backgroundColor: '#FFF9EF',
   },
   backButton: {
     width: 45,
     height: 45,
     borderRadius: 14,
-    backgroundColor: "#2B1B13",
+    backgroundColor: "#F4E6D3",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 25,
   },
-  title: {
-    color: "#FFF5EA",
-    fontSize: 25,
-    fontWeight: "900",
-  },
+  title: {color:"#432D1E",fontSize:26,fontWeight:"900",lineHeight:36},
   subtitle: {
-    color: "#9A877A",
+    color: "#735B46",
     fontSize: 12,
     marginTop: 8,
     marginBottom: 25,
@@ -253,14 +254,7 @@ const styles = StyleSheet.create({
   rowReverse: {
     flexDirection: "row-reverse",
   },
-  card: {
-    backgroundColor: "#281A13",
-    borderWidth: 1,
-    borderColor: "#4A3020",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 25,
-  },
+  card: {backgroundColor:"#FFF9EF",borderWidth:1,borderColor:"#C69C6E",borderRadius:18,padding:21,marginBottom:25},
   mechanicInfo: {
     marginBottom: 20,
   },
@@ -268,32 +262,25 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 16,
-    backgroundColor: "#382418",
+    backgroundColor: "#EEDCC2",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 12,
   },
-  mechanicName: {
-    color: "#FFF5EA",
-    fontSize: 20,
-    fontWeight: "900",
-  },
+  mechanicName: {color:"#432D1E",fontSize:23,fontWeight:"900",lineHeight:34},
   specialization: {
-    color: "#D99B69",
+    color: "#865A32",
     fontSize: 12,
     marginTop: 8,
   },
   experience: {
-    color: "#9A877A",
+    color: "#735B46",
     fontSize: 11,
     marginTop: 8,
   },
-  label: {
-    color: "#9A877A",
-    fontSize: 11,
-  },
+  label: {color:"#735B46",fontSize:11,lineHeight:21},
   id: {
-    color: "#FFF5EA",
+    color: "#432D1E",
     fontSize: 21,
     fontWeight: "900",
     marginTop: 8,
@@ -305,7 +292,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   statusText: {
-    color: "#D99B69",
+    color: "#865A32",
     fontSize: 11,
     fontWeight: "700",
   },
@@ -314,37 +301,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
-  documentsTitle: {
-    color: "#FFF5EA",
-    fontSize: 15,
-    fontWeight: "900",
-  },
+  documentsTitle: {color:"#432D1E",fontSize:16,fontWeight:"900",lineHeight:26},
   documentsDescription: {
-    color: "#9A877A",
+    color: "#735B46",
     fontSize: 11,
     marginTop: 12,
   },
-  documentItem: {
-    marginTop: 18,
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: "#352318",
-    borderWidth: 1,
-    borderColor: "#4A3020",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
+  documentItem: {marginTop:18,padding:14,borderRadius:14,backgroundColor:"#352318",borderWidth:1,borderColor:"#C69C6E",flexDirection:"row",alignItems:"center",gap:12,minHeight:66},
   documentInfo: {
     flex: 1,
   },
   documentName: {
-    color: "#FFF5EA",
+    color: "#432D1E",
     fontSize: 12,
     fontWeight: "800",
   },
   documentStatus: {
-    color: "#D99B69",
+    color: "#865A32",
     fontSize: 10,
     marginTop: 5,
   },
@@ -368,7 +341,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 13,
-    backgroundColor: "#382418",
+    backgroundColor: "#EEDCC2",
     justifyContent: "center",
     alignItems: "center",
   },

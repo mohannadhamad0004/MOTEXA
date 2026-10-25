@@ -1,3 +1,4 @@
+import {isCurrentSession} from "../services/session-version.service.js";
 
 import { Router } from "express";
 import argon2 from "argon2";
@@ -67,7 +68,7 @@ router.post("/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { role: user.role },
+      { role: user.role, sessionVersion: user.sessionVersion },
       secret,
       {
         subject: user.id,
@@ -150,6 +151,7 @@ router.get("/me", async (req, res) => {
         email: true,
         role: true,
         status: true,
+        sessionVersion: true,
         adminPermissions: {
           select: {
             permission: true,
@@ -165,9 +167,12 @@ router.get("/me", async (req, res) => {
       });
     }
 
+    if (!isCurrentSession(payload, user.sessionVersion)) {
+      return res.status(401).json({success:false,message:"Session expired. Sign in again."});
+    }
+
     if (
-      user.role !== "SUPER_ADMIN" &&
-      user.role !== "ADMIN"
+      user.role !== "SUPER_ADMIN" && user.role !== "ADMIN" && user.role !== "MECHANIC"
     ) {
       return res.status(403).json({
         success: false,

@@ -1,3 +1,4 @@
+import { isCurrentSession } from "../services/session-version.service.js";
 
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
@@ -6,7 +7,7 @@ import { prisma } from "../prisma.js";
 export async function requireAuth(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   try {
     const authorization = req.headers.authorization;
@@ -40,10 +41,7 @@ export async function requireAuth(
       return;
     }
 
-    if (
-      typeof payload === "string" ||
-      typeof payload.sub !== "string"
-    ) {
+    if (typeof payload === "string" || typeof payload.sub !== "string") {
       res.status(401).json({
         success: false,
         message: "Invalid token payload.",
@@ -57,6 +55,7 @@ export async function requireAuth(
         id: true,
         role: true,
         status: true,
+        sessionVersion: true,
       },
     });
 
@@ -65,6 +64,13 @@ export async function requireAuth(
         success: false,
         message: "Account is not active.",
       });
+      return;
+    }
+
+    if (!isCurrentSession(payload, user.sessionVersion)) {
+      res
+        .status(401)
+        .json({ success: false, message: "Session expired. Sign in again." });
       return;
     }
 
@@ -85,7 +91,7 @@ export async function requireAuth(
 export function requireSuperAdmin(
   _req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   const user = res.locals.authUser;
 

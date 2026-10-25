@@ -1,7 +1,15 @@
+import {MechanicPage,MechanicCard,MechanicButton,useMechanicTheme} from '../../components/MechanicUI';
+import MechanicRegistration from '../../components/MechanicRegistration';
+import BrandWordmark from '../../components/BrandWordmark';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {EditorialTitle} from '../../components/PremiumUI';
+import {useAppearance,useAppearanceStyles} from "../../components/Appearance";
+import {useReducedMotion} from "../../components/MotexaVisual";
+import {palette} from "../../components/DesignTokens";
 import { PanelFill, CanvasFill } from "../../components/BrandSurfaces";
 import { Text } from "../../components/MotexaVisual";
 import LanguageSwitch from "../../components/LanguageSwitch";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 
@@ -10,7 +18,19 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import { useLanguage } from "../../i18n/LanguageContext";
 
-export default function SignUpScreen() {
+export default function SignUpScreen(){const {selectedRole}=useLocalSearchParams<{selectedRole?:string}>();const [ready,setReady]=useState(false);useEffect(()=>setReady(true),[]);if(!ready)return <View style={{flex:1}}><CanvasFill/></View>;if(!selectedRole)return <ChooseRegistrationRole/>;return selectedRole==='mechanic'?<MechanicRegistration/>:<ExistingSignUpScreen/>;}
+function ChooseRegistrationRole(){const m=useMechanicTheme();return <MechanicPage back title={m.t('Create an account','إنشاء حساب جديد')} subtitle={m.t('Choose the account you want to create.','اختر نوع الحساب الذي تريد إنشاءه.')}><MechanicCard>{[['customer','Car owner','مالك مركبة'],['mechanic','Mechanic','ميكانيكي'],['parts','Spare parts provider','مزود قطع غيار'],['towing','Towing provider','مزود سحب']].map(([role,en,ar])=><MechanicButton key={role} secondary label={m.t(en,ar)} onPress={()=>router.setParams({selectedRole:role})}/>)}</MechanicCard></MechanicPage>;}
+function ExistingSignUpScreen() {
+ const {selectedRole}=useLocalSearchParams<{selectedRole?:string}>();
+ const role=typeof selectedRole==='string'?selectedRole:'';
+ const isAdminRole=['super-admin','mechanics-admin','parts-admin','towing-admin'].includes(role);
+ useEffect(()=>{if(isAdminRole)router.replace({pathname:'/auth/login',params:{selectedRole:role}});},[isAdminRole,role]);
+
+ const insets=useSafeAreaInsets();
+ const [focusedField,setFocusedField]=useState<string|null>(null);
+  const styles=useAppearanceStyles(baseStyles);
+  const {dark}=useAppearance();
+  const reduced=useReducedMotion();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,7 +47,8 @@ export default function SignUpScreen() {
   const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
-    Animated.parallel([
+    if(reduced){fadeAnim.setValue(1);slideAnim.setValue(0);return;}
+    const animation=Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 700,
@@ -39,13 +60,15 @@ export default function SignUpScreen() {
         duration: 700,
         useNativeDriver: true,
       }),
-    ]).start();
-  }, []);
+    ]);
+    animation.start();
+    return()=>animation.stop();
+  }, [reduced]);
 
   return (
     <LinearGradient
-      colors={["#F1E9DD", "#DFCFB9", "#EDE2D3"]}
-      style={styles.background}
+      colors={dark?palette.canvasDark:palette.canvas}
+      style={[styles.background,{overflow:"hidden"}]}
     >
       <View style={styles.glowTop} />
       <View style={styles.glowBottom} />
@@ -55,7 +78,7 @@ export default function SignUpScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContainer}
+          contentContainerStyle={[styles.scrollContainer,{paddingTop:insets.top+14,paddingBottom:insets.bottom+24}]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -64,7 +87,7 @@ export default function SignUpScreen() {
               styles.content,
               {
                 opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
+
               },
             ]}
           >
@@ -86,7 +109,7 @@ export default function SignUpScreen() {
                 />
               </TouchableOpacity>
 
-              <LanguageSwitch light />
+              <LanguageSwitch light compact unified/>
             </View>
 
             {/* Logo */}
@@ -105,9 +128,7 @@ export default function SignUpScreen() {
               </LinearGradient>
             </View>
 
-            <Text style={styles.brandName}>
-              {t.common.appName}
-            </Text>
+            <BrandWordmark style={styles.brandName} />
 
             <Text
               style={[
@@ -120,14 +141,14 @@ export default function SignUpScreen() {
 
             {/* Heading */}
             <View style={styles.headingSection}>
-              <Text
+              <EditorialTitle
                 style={[
                   styles.heading,
                   isArabic && styles.arabicText,
                 ]}
               >
                 {t.signup.title}
-              </Text>
+              </EditorialTitle>
 
               <Text
                 style={[
@@ -152,10 +173,10 @@ export default function SignUpScreen() {
               </Text>
 
               <View
-                style={[
+                style={[[
                   styles.inputContainer,
                   isArabic && styles.inputContainerArabic,
-                ]}
+                ],focusedField==='fullName'&&{borderColor:dark?'#E2BA80':'#9D6530',backgroundColor:dark?'#423225':'#FFFCF6'}]}
               >
                 <View style={styles.inputIcon}>
                   <Ionicons
@@ -176,7 +197,7 @@ export default function SignUpScreen() {
                   placeholderTextColor="#9C836B"
                   value={fullName}
                   onChangeText={setFullName}
-                />
+                 onFocus={()=>setFocusedField('fullName')} onBlur={()=>setFocusedField(null)} accessibilityLabel={isArabic?'الاسم الكامل':'Full name'} />
               </View>
 
               {/* Email */}
@@ -190,10 +211,10 @@ export default function SignUpScreen() {
               </Text>
 
               <View
-                style={[
+                style={[[
                   styles.inputContainer,
                   isArabic && styles.inputContainerArabic,
-                ]}
+                ],focusedField==='email'&&{borderColor:dark?'#E2BA80':'#9D6530',backgroundColor:dark?'#423225':'#FFFCF6'}]}
               >
                 <View style={styles.inputIcon}>
                   <Ionicons
@@ -215,7 +236,7 @@ export default function SignUpScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
-                />
+                 onFocus={()=>setFocusedField('email')} onBlur={()=>setFocusedField(null)} accessibilityLabel={isArabic?'البريد الإلكتروني':'Email address'} />
               </View>
 
               {/* Password */}
@@ -229,10 +250,10 @@ export default function SignUpScreen() {
               </Text>
 
               <View
-                style={[
+                style={[[
                   styles.inputContainer,
                   isArabic && styles.inputContainerArabic,
-                ]}
+                ],focusedField==='password'&&{borderColor:dark?'#E2BA80':'#9D6530',backgroundColor:dark?'#423225':'#FFFCF6'}]}
               >
                 <View style={styles.inputIcon}>
                   <Ionicons
@@ -254,7 +275,7 @@ export default function SignUpScreen() {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
-                />
+                 onFocus={()=>setFocusedField('password')} onBlur={()=>setFocusedField(null)} accessibilityLabel={isArabic?'كلمة المرور':'Password'} />
 
                 <TouchableOpacity
                   style={styles.eyeButton}
@@ -285,10 +306,10 @@ export default function SignUpScreen() {
               </Text>
 
               <View
-                style={[
+                style={[[
                   styles.inputContainer,
                   isArabic && styles.inputContainerArabic,
-                ]}
+                ],focusedField==='confirmPassword'&&{borderColor:dark?'#E2BA80':'#9D6530',backgroundColor:dark?'#423225':'#FFFCF6'}]}
               >
                 <View style={styles.inputIcon}>
                   <Ionicons
@@ -310,7 +331,7 @@ export default function SignUpScreen() {
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showConfirmPassword}
-                />
+                 onFocus={()=>setFocusedField('confirmPassword')} onBlur={()=>setFocusedField(null)} accessibilityLabel={isArabic?'تأكيد كلمة المرور':'Confirm password'} />
 
                 <TouchableOpacity
                   style={styles.eyeButton}
@@ -381,7 +402,7 @@ export default function SignUpScreen() {
 
               <TouchableOpacity
                 onPress={() =>
-                  router.replace("/auth/login")
+                  router.replace({pathname:'/auth/login',params:role?{selectedRole:role}:{}})
                 }
               >
                 <Text style={styles.loginText}>
@@ -420,7 +441,7 @@ export default function SignUpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+;const baseStyles = StyleSheet.create({
   background: {
     flex: 1,
   },
@@ -436,11 +457,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
 
-  content: {
-    width: "100%",
-    maxWidth: 430,
-    alignSelf: "center",
-  },
+  content: {width:'100%',maxWidth:520,alignSelf:'center'},
 
   glowTop: {
     position: "absolute",
@@ -507,40 +524,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  logoCircle: {
-    width: 65,
-    height: 65,
-    borderRadius: 21,
-    justifyContent: "center",
-    alignItems: "center",
-
-    shadowColor: "#D28B57",
-    shadowOffset: {
+  logoCircle: {width:48,height:48,borderRadius:16,justifyContent:"center",alignItems:"center",shadowColor:"#D28B57",shadowOffset:{
       width: 0,
       height: 7,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 13,
-    elevation: 8,
-  },
+    },shadowOpacity:0.25,shadowRadius:13,elevation:8},
 
-  brandName: {
-    color: "#A27140",
-    fontSize: 30,
-    fontWeight: "800",
-    letterSpacing: 7,
-    textAlign: "center",
-    marginLeft: 7,
-  },
+  brandName: {color:"#A27140",fontSize:14,fontWeight:"800",letterSpacing:3,textAlign:'left',marginLeft:7,lineHeight:24,alignSelf:'flex-start',marginBottom:4},
 
-  tagline: {
-    color: "#493321",
-    fontSize: 9,
-    fontWeight: "600",
-    letterSpacing: 2,
-    textAlign: "center",
-    marginTop: 6,
-  },
+  tagline: {color:"#493321",fontSize:11,fontWeight:"600",letterSpacing:2,textAlign:'left',marginTop:6,lineHeight:20,alignSelf:'flex-start'},
 
   arabicTagline: {
     letterSpacing: 0,
@@ -549,24 +540,11 @@ const styles = StyleSheet.create({
 
   /* Heading */
 
-  headingSection: {
-    marginTop: 27,
-    marginBottom: 18,
-  },
+  headingSection: {marginTop:18,marginBottom:22,alignItems:'stretch'},
 
-  heading: {
-    color: "#493321",
-    fontSize: 30,
-    fontWeight: "600",
-    marginBottom: 6,
-    lineHeight: 42,
-  },
+  heading: {color:"#493321",fontSize:28,fontWeight:'600',marginBottom:6,lineHeight:39,textAlign:'left'},
 
-  description: {
-    color: "#92765B",
-    fontSize: 13,
-    lineHeight: 20,
-  },
+  description: {color:"#92765B",fontSize:13,lineHeight:23,textAlign:'left'},
 
   arabicText: {
     textAlign: "right",
@@ -575,21 +553,10 @@ const styles = StyleSheet.create({
 
   /* Card */
 
-  card: {
-    backgroundColor: "#F7EDDD",
-    borderWidth: 1,
-    borderColor: "#D5BFA1",
-    borderRadius: 24,
-    padding: 22,
-    shadowColor: "#000000",
-    shadowOffset: {
+  card: {backgroundColor:'transparent',borderWidth:0,borderColor:"#D5BFA1",borderRadius:0,padding:22,shadowColor:"#000000",shadowOffset:{
       width: 0,
       height: 12,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 8,
-  },
+    },shadowOpacity:0,shadowRadius:20,elevation:0,paddingHorizontal:0,paddingTop:0,marginTop:0},
 
   label: {
     color: "#92765B",
@@ -609,16 +576,7 @@ const styles = StyleSheet.create({
     marginRight: 2,
   },
 
-  inputContainer: {
-    height: 54,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F7EDDD",
-    borderWidth: 1,
-    borderColor: "#D5BFA1",
-    borderRadius: 15,
-    marginBottom: 17,
-  },
+  inputContainer: {height:58,flexDirection:"row",alignItems:"center",backgroundColor:"#F7EDDD",borderWidth:1,borderColor:'#D4BB99',borderRadius:29,marginBottom:17,borderBottomWidth:1,minHeight:58},
 
   inputContainerArabic: {
     flexDirection: "row-reverse",

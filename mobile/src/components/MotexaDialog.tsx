@@ -1,3 +1,7 @@
+import {Text,HeroReveal,useReducedMotion} from "./MotexaVisual";
+import {PanelFill} from "./BrandSurfaces";
+import {useAppearance} from "./Appearance";
+import {useLanguage} from "../i18n/LanguageContext";
 
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -5,7 +9,7 @@ import {
   Modal,
   Pressable,
   StyleSheet,
-  Text,
+  ScrollView,
   View,
 } from "react-native";
 
@@ -16,6 +20,7 @@ type Props = {
   title: string;
   message: string;
   type?: DialogType;
+  icon?: keyof typeof Ionicons.glyphMap;
   confirmText?: string;
   cancelText?: string;
   loading?: boolean;
@@ -28,12 +33,17 @@ export default function MotexaDialog({
   title,
   message,
   type = "confirm",
+  icon,
   confirmText = "Confirm",
   cancelText = "Cancel",
   loading = false,
   onConfirm,
   onCancel,
 }: Props) {
+  const {dark}=useAppearance();
+  const reduced=useReducedMotion();
+  const {isArabic}=useLanguage();
+  const ink=dark?"#FFF0DC":"#38281D", muted=dark?"#D2B99A":"#705640";
   const icons = {
     confirm: "help-circle-outline",
     success: "checkmark-circle-outline",
@@ -47,37 +57,40 @@ export default function MotexaDialog({
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType={reduced?'none':'fade'}
       statusBarTranslucent
       onRequestClose={() => {
         if (!loading) onCancel();
       }}
     >
       <View style={styles.overlay}>
-        <View style={styles.card}>
-          <View style={styles.iconCircle}>
+        <HeroReveal accessibilityViewIsModal style={[styles.card,{maxHeight:"88%"}]}><PanelFill radius={32}/><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{alignItems:"center",flexGrow:1}}>
+          <View style={[styles.iconCircle,{backgroundColor:dark?"#58432E":"#F3DFC5"}]}>
             <Ionicons
-              name={icons[type]}
-              size={30}
-              color="#E0A36F"
+              name={icon || icons[type]}
+              size={28}
+              color={type==="success"?"#377250":type==="error"?"#A84436":dark?"#E6BE88":"#8B5B32"}
             />
           </View>
 
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.message}>{message}</Text>
+          <Text accessibilityRole="header" style={[styles.title,{color:ink}]}>{title}</Text>
+          <Text style={[styles.message,{color:muted}]}>{message}</Text>
 
-          <View style={styles.actions}>
+          <View style={[styles.actions,{flexDirection:isArabic?"row-reverse":"row"}]}>
             <Pressable
-              style={styles.cancelButton}
+              accessibilityRole="button"
+              style={({pressed})=>[styles.cancelButton,{backgroundColor:"transparent",opacity:pressed?0.75:1}]}
               onPress={onCancel}
               disabled={loading}
             >
-              <Text style={styles.cancelText}>{cancelText}</Text>
+              <Text style={[styles.cancelText,{color:ink}]}>{cancelText}</Text>
             </Pressable>
 
             <Pressable
-              style={[
+              accessibilityRole="button"
+              style={({pressed})=>[
                 styles.confirmButton,
+                {opacity:pressed?0.8:1},
                 isDanger && styles.dangerButton,
                 loading && { opacity: 0.6 },
               ]}
@@ -85,7 +98,7 @@ export default function MotexaDialog({
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#21130C" />
+                <ActivityIndicator color="#FFF7EB" />
               ) : (
                 <Text style={styles.confirmText}>
                   {confirmText}
@@ -93,7 +106,7 @@ export default function MotexaDialog({
               )}
             </Pressable>
           </View>
-        </View>
+        </ScrollView></HeroReveal>
       </View>
     </Modal>
   );
@@ -102,22 +115,27 @@ export default function MotexaDialog({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.78)",
+    minWidth:100,
+    minHeight:48,
+    backgroundColor: "rgba(36,25,17,0.48)",
     justifyContent: "center",
-    padding: 24,
+    padding: 22,
   },
   card: {
-    backgroundColor: "#2B1D15",
-    borderRadius: 24,
+    overflow:"hidden",
+    maxWidth:440,
+    width:"100%",
+    alignSelf:"center",
+    borderRadius: 32,
     padding: 25,
     borderWidth: 1,
-    borderColor: "#5C3B29",
+    borderColor: "#DEC5A3",
     alignItems: "center",
   },
   iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
     backgroundColor: "#493024",
     alignItems: "center",
     justifyContent: "center",
@@ -126,45 +144,54 @@ const styles = StyleSheet.create({
   title: {
     color: "#FFF1E6",
     fontSize: 21,
-    fontWeight: "900",
+    fontWeight: "600",
     textAlign: "center",
     marginBottom: 12,
   },
   message: {
     color: "#C6A48B",
-    fontSize: 14,
+    fontSize: 13,
     lineHeight: 23,
     textAlign: "center",
-    marginBottom: 26,
+    marginBottom: 23,
   },
   actions: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
     width: "100%",
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: "#3A291F",
+    minWidth:100,
+    minHeight:48,
+    justifyContent:'center',
+    backgroundColor: "transparent",
+    borderWidth:1,
+    borderColor:"#C8A47B",
     paddingVertical: 15,
-    borderRadius: 13,
+    borderRadius: 24,
     alignItems: "center",
   },
   cancelText: {
     color: "#EAD6C6",
-    fontWeight: "800",
+    fontWeight: "600",
   },
   confirmButton: {
     flex: 1,
-    backgroundColor: "#E0A36F",
+    minWidth:100,
+    minHeight:48,
+    justifyContent:'center',
+    backgroundColor: "#573822",
     paddingVertical: 15,
-    borderRadius: 13,
+    borderRadius: 24,
     alignItems: "center",
   },
   dangerButton: {
-    backgroundColor: "#D99B69",
+    backgroundColor: "#573822",
   },
   confirmText: {
-    color: "#24160F",
-    fontWeight: "900",
+    color: "#FFF7EB",
+    fontWeight: "600",
   },
 });
