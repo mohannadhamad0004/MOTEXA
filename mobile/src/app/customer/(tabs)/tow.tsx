@@ -1,16 +1,15 @@
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
-import { BlueprintPage, Chip, HStrip, Hero, IconTile, Mono, PageTitle, Press, PrimaryButton, Rise, SearchField, Section, TowTruck, MapFrame } from "../../../components/blueprint";
+import { BlueprintPage, Chip, HStrip, HeroIconButton, IconTile, Mono, PageTitle, Press, PrimaryButton, Rise, SearchField, Section, TowTruck } from "../../../components/blueprint";
 import { Button } from "../../../components/ui/Button";
 import { EmptyState, Notice } from "../../../components/ui/Feedback";
 import { SkeletonList } from "../../../components/ui/Skeleton";
 import { Text } from "../../../components/ui/Text";
-import { cityCentre, cityLabel, cityToEnglish } from "../../../core/constants/cities";
+import { cityLabel, cityToEnglish } from "../../../core/constants/cities";
 import { Point, locationMemory } from "../../../core/constants/geo";
 import { useL } from "../../../core/hooks/useL";
 import { TowCompanyRow, catalogService } from "../../../features/catalog/catalogService";
-import { CompaniesMap, MAPS_AVAILABLE } from "../../../features/shared/maps";
 import { LocationProblem, useCurrentLocation } from "../../../features/shared/useCurrentLocation";
 import type { TruckType } from "../../../features/tow/towService";
 import { useTruckLabels } from "../../../features/tow/truckBits";
@@ -27,7 +26,6 @@ export default function CustomerTow() {
   const { type } = useTruckLabels();
   const [city, setCity] = useState("");
   const [showCity, setShowCity] = useState(false);
-  const [mapFailed, setMapFailed] = useState(false);
   const [name, setName] = useState("");
   const [truckType, setTruckType] = useState<TruckType | null>(null);
   const [availableOnly, setAvailableOnly] = useState(false);
@@ -36,7 +34,6 @@ export default function CustomerTow() {
   const loc = useCurrentLocation();
   const [sortChoice, setSortChoice] = useState<"nearest" | "available" | "name" | null>(null);
   const sort = sortChoice === "nearest" && !me ? "available" : (sortChoice ?? (me ? "nearest" : "available"));
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const filtered = !!(city.trim() || name.trim() || truckType || availableOnly);
 
   const useMyLocation = async () => {
@@ -114,35 +111,25 @@ export default function CustomerTow() {
   const freeNow = items.filter((x) => x.availableTrucks > 0).length;
   const cityTag = city.trim() ? cityLabel(cityToEnglish(city) || city, isArabic) : undefined;
 
-  const map = MAPS_AVAILABLE ? (
-    <MapFrame height={480} tl="TOW / 02" tr={cityTag}>
-      <CompaniesMap
-        bare
-        bottomInset={36}
-        height={480}
-        pins={items.flatMap((x) => {
-          const at = x.baseLat !== null && x.baseLng !== null ? { lat: x.baseLat, lng: x.baseLng } : cityCentre(x.city);
-          return at ? [{ id: x.id, name: x.name, ...at, free: x.availableTrucks > 0 }] : [];
-        })}
-        me={me}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
-        onFailedChange={setMapFailed}
-      />
-    </MapFrame>
-  ) : (
-    <Hero height={240} tl="TOW / 02" tr={cityTag}>
-      <View style={{ width: "100%", maxWidth: 300, height: "100%" }}>
-        <TowTruck animate />
-      </View>
-    </Hero>
-  );
-
   return (
-    <BlueprintPage tabs top={map} refreshing={refreshing} onRefresh={() => run("refresh")}>
-      <View style={{ alignSelf: "center", width: 48, height: 6, borderRadius: 3, backgroundColor: c.line, marginTop: -12, marginBottom: 20 }} />
+    <BlueprintPage
+      tabs
+      refreshing={refreshing}
+      onRefresh={() => run("refresh")}
+      hero={{
+        height: 240,
+        tl: "TOW / 02",
+        tr: cityTag ?? (me ? t("Near you", "بالقرب منك") : undefined),
+        right: <HeroIconButton icon="map" label={t("View on map", "عرض على الخريطة")} onPress={() => router.push("/customer/tow/map")} />,
+        art: (
+          <View style={{ width: "100%", maxWidth: 300, height: "100%" }}>
+            <TowTruck animate />
+          </View>
+        ),
+      }}
+    >
       {loc.dialog}
-      <PageTitle size={28}>{t("Nearby towing", "سحب قريب")}</PageTitle>
+      <PageTitle>{t("Tow trucks", "شاحنات السحب")}</PageTitle>
       <View style={[row, { alignItems: "center", gap: 8, marginTop: 4 }]}>
         <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: freeNow ? c.bronze : c.line }} />
         <Text style={{ color: c.soft, fontSize: 14 }}>
@@ -152,6 +139,9 @@ export default function CustomerTow() {
 
       <View style={{ marginTop: 20 }}>
         <PrimaryButton icon="tow" label={t("Request nearest available", "اطلب أقرب شاحنة متاحة")} loading={nearBusy || loc.locating} onPress={requestNearest} />
+      </View>
+      <View style={{ marginTop: 10 }}>
+        <PrimaryButton variant="outline" icon="map" label={t("View on map", "عرض على الخريطة")} onPress={() => router.push("/customer/tow/map")} />
       </View>
       {nearErr ? (
         <View style={{ marginTop: 12 }}>
@@ -187,11 +177,6 @@ export default function CustomerTow() {
           <Button variant="ghost" icon="refresh-outline" label={t("Retry", "إعادة المحاولة")} onPress={() => run("replace")} />
         </View>
       ) : null}
-      {MAPS_AVAILABLE && mapFailed ? (
-        <View style={{ marginTop: 16 }}>
-          <Notice icon="information-circle-outline">{t("The map did not load, but the list below works.", "لم تُحمَّل الخريطة، لكن القائمة أدناه تعمل.")}</Notice>
-        </View>
-      ) : null}
 
       <View style={{ marginTop: 8 }}>
         {loading && !items.length ? (
@@ -214,7 +199,7 @@ export default function CustomerTow() {
               <Press
                 accessibilityLabel={x.name}
                 onPress={() => router.push(`/customer/tow/${x.id}`)}
-                style={[row, { alignItems: "center", gap: 16, borderRadius: 20, borderWidth: 1, borderColor: selectedId === x.id ? c.bronze : c.line, backgroundColor: c.field, padding: 16 }]}
+                style={[row, { alignItems: "center", gap: 16, borderRadius: 20, borderWidth: 1, borderColor: c.line, backgroundColor: c.field, padding: 16 }]}
               >
                 <IconTile icon="tow" />
                 <View style={{ flex: 1, minWidth: 0 }}>

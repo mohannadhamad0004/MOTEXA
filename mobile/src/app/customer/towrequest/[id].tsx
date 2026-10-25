@@ -11,7 +11,11 @@ import { REFRESH_MS } from "../../../features/mechanics/mechanicsService";
 import { TowStatusBadge, buildTimeline, towHeadline, useProblemLabels, useTowStatusLabels } from "../../../features/requests/requestBits";
 import { shortId } from "../../../features/requests/activeRequest";
 import { TowStatus, customerTowRequests } from "../../../features/requests/requestsService";
-import { MAPS_AVAILABLE, TripMap } from "../../../features/shared/maps";
+import { cityCentre } from "../../../core/constants/cities";
+import { catalogService } from "../../../features/catalog/catalogService";
+import { RequestRouteMap } from "../../../features/shared/RequestRouteMap";
+import { MAPS_AVAILABLE } from "../../../features/shared/maps";
+import { RouteSummary, useRoute } from "../../../features/shared/useRoute";
 import { useTruckLabels } from "../../../features/tow/truckBits";
 import { useTheme } from "../../../theme/useTheme";
 
@@ -46,10 +50,15 @@ export default function TowRequestStatus() {
   };
 
   const r = state.data;
+  // the company base point (else its city centre) is the other end of the route
+  const company = useLoad(() => (r ? catalogService.getTowCompany(r.company.id) : Promise.resolve(null)), [r?.company.id]);
+  const co = company.data?.company;
+  const provider = co ? (co.baseLat !== null && co.baseLng !== null ? { lat: co.baseLat, lng: co.baseLng } : cityCentre(co.city)) : null;
+  const { route, loading: routing } = useRoute(r?.id ?? null, r?.pickup ?? null, provider);
   const top =
-    MAPS_AVAILABLE && r?.pickup ? (
+    MAPS_AVAILABLE && r?.pickup && provider ? (
       <MapFrame height={320} back="/customer/requests" tr="ROUTE / 02">
-        <TripMap bare bottomInset={36} height={320} pickup={r.pickup} dropoff={r.dropoff} />
+        <RequestRouteMap reqId={r.id} kind="tow" height={320} provider={{ ...provider, name: r.company.name }} pickup={r.pickup} route={route} />
       </MapFrame>
     ) : (
       <Hero height={200} back="/customer/requests" tl="TOW / 02" tr="ROUTE / 02">
@@ -108,6 +117,12 @@ export default function TowRequestStatus() {
               <Row label={t("Contact phone", "هاتف التواصل")} value={r.contactPhone} mono />
               {r.notes ? <Row label={t("Notes", "ملاحظات")} value={r.notes} /> : null}
             </View>
+
+            {r.pickup && provider ? (
+              <View style={{ marginTop: 16 }}>
+                <RouteSummary route={route} loading={routing} />
+              </View>
+            ) : null}
 
             {OPEN.includes(r.status) ? <LiveNote label={t("Updates automatically", "يتحدّث تلقائياً")} /> : null}
 

@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { Avatar, Icon, Pill, Row, Section, SimplePage, Stamp, StickyActionBar } from "../../../components/blueprint";
 import { Async, Notice } from "../../../components/ui/Feedback";
 import { Text } from "../../../components/ui/Text";
@@ -53,6 +53,12 @@ export default function MechanicProfile() {
                 {m.distanceSource === "city" ? ` · ${t("from the city centre", "من مركز المدينة")}` : ""}
               </Text>
             ) : null}
+
+
+            <Pressable accessibilityRole="link" onPress={() => router.push({ pathname: "/customer/mechanics/map", params: { focus: m.id } })} hitSlop={8} style={[row, { alignItems: "center", gap: 6, minHeight: 44 }]}>
+              <Icon name="map" size={16} color={c.bronze} />
+              <Text style={{ color: c.bronze, fontSize: 13, fontWeight: "700" }}>{t("Show on map", "عرض على الخريطة")}</Text>
+            </Pressable>
 
             <Section n="01" title={t("Skills approved by MOTEXA", "مهارات معتمدة من موتكسا")}>
               <View style={[row, { flexWrap: "wrap", gap: 8 }]}>

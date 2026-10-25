@@ -17,16 +17,25 @@ export const MAPS_AVAILABLE = true;
 
 export type Pin = { id: string; name: string; lat: number; lng: number; free: boolean };
 
-type Kind = "free" | "busy" | "selected" | "pin" | "a" | "b";
+type Kind = "free" | "busy" | "selected" | "pin" | "a" | "b" | "tow" | "mech";
 type MapData = {
-  mode: "companies" | "pin" | "trip";
-  pins: { id: string; name: string; lat: number; lng: number; kind: Kind }[];
+  mode: "companies" | "pin" | "trip" | "service";
+  pins: { id: string; name: string; lat: number; lng: number; kind: Kind; dim?: boolean }[];
   me: Point | null;
+  // service mode (the full-screen Tow / Mechanics map pages)
+  selectedId?: string | null;
+  route?: { coords: [number, number][]; dashed: boolean } | null;
+  pickup?: Point | null;
+  movePickup?: boolean;
+  /** points the map fits itself to when `fitKey` changes, kept clear of the overlays by `pad` */
+  fit?: [number, number][];
+  pad?: { top: number; bottom: number; left: number; right: number };
+  focus?: { lat: number; lng: number; key: string } | null;
   /** the single pin can be dragged, and a tap on the map moves it */
   movable: boolean;
   /** changes when the set of points changes: the map re-fits to them */
   fitKey: string;
-  theme: { accent: string; busy: string; bg: string };
+  theme: { accent: string; busy: string; bg: string; route?: string };
   /** px kept free at the bottom (attribution moves up) when a sheet overlaps the map */
   bottomInset?: number;
 };
@@ -45,7 +54,15 @@ html,body,#map{margin:0;height:100%;width:100%;background:#2D1F18}
 .pin{display:flex;align-items:center;justify-content:center;border-radius:50%;border:3px solid #fff;
  box-shadow:0 1px 5px rgba(0,0,0,.5);color:#fff;font:700 12px sans-serif;box-sizing:border-box}
 .leaflet-bottom{margin-bottom:var(--bi,0px)}
-.dot{width:16px;height:16px;border-radius:50%;background:#2F7BFF;border:3px solid #fff;box-shadow:0 0 0 6px rgba(47,123,255,.25)}
+.hide-attr .leaflet-control-attribution{display:none}
+.hide-attr .leaflet-top.leaflet-right{top:auto;bottom:calc(var(--bi,0px) + 28px)}
+.dot{position:relative;width:16px;height:16px;border-radius:50%;background:#2F7BFF;border:3px solid #fff;box-sizing:border-box;box-shadow:0 0 0 6px rgba(47,123,255,.25)}
+.dot.pulse::after{content:"";position:absolute;left:-3px;top:-3px;width:16px;height:16px;border-radius:50%;border:2px solid #2F7BFF;animation:pl 2s ease-out infinite}
+@keyframes pl{0%{transform:scale(.6);opacity:.8}100%{transform:scale(2.6);opacity:0}}
+.svc{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.55);box-sizing:border-box}
+.svc svg{transform:rotate(45deg);width:18px;height:18px}
+.svc.sel{width:44px;height:44px;box-shadow:0 0 0 4px rgba(224,163,111,.55),0 1px 8px rgba(0,0,0,.6)}
+.svc.sel svg{width:22px;height:22px}
 </style></head><body><div id="map"></div>
 <script src="https://unpkg.com/leaflet@${LEAFLET}/dist/leaflet.js"></script>
 <script>
@@ -63,7 +80,7 @@ else{
   tiles.on("tileload",function(){tilesOk++;recover();});
   tiles.on("tileerror",function(){tilesBad++;if(tilesBad>=4)fail();});
   setTimeout(function(){if(tilesOk===0)fail();},9000);
-  map.on("click",function(e){if(data&&data.movable)post({type:"move",lat:e.latlng.lat,lng:e.latlng.lng});});
+  map.on("click",function(e){if(data&&data.mode==="service")post({type:"background"});else if(data&&data.movable)post({type:"move",lat:e.latlng.lat,lng:e.latlng.lng});});
   post({type:"init"});
 }
 function icon(kind,t,label){
@@ -72,10 +89,44 @@ function icon(kind,t,label){
   var html='<div class="pin" style="width:'+size+'px;height:'+size+'px;background:'+bg+'">'+(label||"")+'</div>';
   return L.divIcon({html:html,className:"",iconSize:[size,size],iconAnchor:[size/2,size/2]});
 }
+var GLYPH={tow:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16V11H8L10 7H14V16M14 13H22V16"/><circle cx="7" cy="17" r="2"/><circle cx="18" cy="17" r="2"/></svg>',mech:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6a4 4 0 0 0 5 5L11 19a2 2 0 0 1-3-3Z"/></svg>'};
+function svcIcon(p,sel,t){
+  var bg=p.dim?t.busy:t.accent,size=sel?44:36;
+  return L.divIcon({html:'<div class="svc'+(sel?' sel':'')+'" style="background:'+bg+'">'+GLYPH[p.kind]+'</div>',className:"",iconSize:[size,size],iconAnchor:[size/2,size]});
+}
+var lastFocus="";
+function service(d){
+  d.pins.forEach(function(p){
+    var m=L.marker([p.lat,p.lng],{icon:svcIcon(p,p.id===d.selectedId,d.theme),title:p.name,keyboard:false,zIndexOffset:p.id===d.selectedId?1000:0});
+    m.on("click",function(){post({type:"select",id:p.id});});
+    m.addTo(layer);
+  });
+  if(d.route&&d.route.coords.length>1){
+    L.polyline(d.route.coords,{color:d.theme.route||d.theme.accent,weight:5,opacity:.95,lineCap:"round",dashArray:d.route.dashed?"8 10":null}).addTo(layer);
+  }
+  if(d.pickup){
+    var pm=L.marker([d.pickup.lat,d.pickup.lng],{icon:icon("a",d.theme,"A"),draggable:!!d.movePickup,keyboard:false,zIndexOffset:900}).addTo(layer);
+    if(d.movePickup)pm.on("dragend",function(){var ll=pm.getLatLng();post({type:"pickup",lat:ll.lat,lng:ll.lng});});
+  }
+  if(meMarker){map.removeLayer(meMarker);meMarker=null;}
+  if(d.me){meMarker=L.marker([d.me.lat,d.me.lng],{icon:L.divIcon({html:'<div class="dot pulse"></div>',className:"",iconSize:[16,16],iconAnchor:[8,8]}),interactive:false,keyboard:false}).addTo(map);}
+  var pad=d.pad||{top:0,bottom:0,left:0,right:0};
+  if(d.fitKey!==lastFit){
+    lastFit=d.fitKey;
+    var f=d.fit||[];
+    if(f.length>1)map.fitBounds(f,{paddingTopLeft:[pad.left+24,pad.top+24],paddingBottomRight:[pad.right+24,pad.bottom+24],maxZoom:15});
+    else if(f.length===1)map.setView(f[0],14);
+  }
+  if(d.focus&&d.focus.key!==lastFocus){
+    lastFocus=d.focus.key;
+    map.flyTo([d.focus.lat,d.focus.lng],Math.max(map.getZoom(),14),{duration:.4});
+  }
+}
 window.setData=function(d){
   if(!map)return;
-  data=d;document.body.style.background=d.theme.bg;document.documentElement.style.setProperty("--bi",(d.bottomInset||0)+"px");
+  data=d;document.body.style.background=d.theme.bg;document.documentElement.style.setProperty("--bi",(d.bottomInset||0)+"px");document.body.className=d.mode==="service"?"hide-attr":"";
   layer.clearLayers();
+  if(d.mode==="service"){service(d);return;}
   var pts=[];
   d.pins.forEach(function(p){
     var m=L.marker([p.lat,p.lng],{icon:icon(p.kind,d.theme,p.kind==="a"?"A":p.kind==="b"?"B":""),title:p.name,
@@ -106,9 +157,13 @@ function LeafletMap({
   onSelect,
   onMove,
   onFailedChange,
+  onBackground,
+  onPickup,
   bare = false,
   bottomInset = 0,
 }: {
+  onBackground?: () => void;
+  onPickup?: (p: Point) => void;
   height: number;
   /** no border, radius or bottom margin: the map fills a frame */
   bare?: boolean;
@@ -180,7 +235,14 @@ function LeafletMap({
           setFailed(true);
           break;
         case "select":
-          if (typeof msg.id === "string" && cur.mode === "companies" && cur.pins.some((p) => p.id === msg.id)) onSelect?.(msg.id);
+          if (typeof msg.id === "string" && (cur.mode === "companies" || cur.mode === "service") && cur.pins.some((p) => p.id === msg.id)) onSelect?.(msg.id);
+          break;
+        case "background":
+          if (cur.mode === "service") onBackground?.();
+          break;
+        case "pickup":
+          if (cur.mode === "service" && cur.movePickup && typeof msg.lat === "number" && typeof msg.lng === "number" && Math.abs(msg.lat) <= 90 && Math.abs(msg.lng) <= 180)
+            onPickup?.(roundPoint({ lat: msg.lat, lng: msg.lng }));
           break;
         case "move":
           if (cur.movable && typeof msg.lat === "number" && typeof msg.lng === "number" && Math.abs(msg.lat) <= 90 && Math.abs(msg.lng) <= 180)
@@ -188,7 +250,7 @@ function LeafletMap({
           break;
       }
     },
-    [onSelect, onMove]
+    [onSelect, onMove, onBackground, onPickup]
   );
 
   return (
@@ -238,7 +300,7 @@ function LeafletMap({
 
 function useMapTheme() {
   const { c } = useTheme();
-  return useMemo(() => ({ accent: c.accent, busy: "#8D8178", bg: c.surface }), [c.accent, c.surface]);
+  return useMemo(() => ({ accent: c.accent, busy: "#8D8178", bg: c.surface, route: c.accent }), [c.accent, c.surface]);
 }
 
 /** Tow companies as pins (the selected one is highlighted), and your own position as a blue dot. */
@@ -299,4 +361,70 @@ export function TripMap({ pickup, dropoff, height = 200, bare, bottomInset }: { 
     return { mode: "trip", pins, me: null, movable: false, fitKey: pins.map((p) => `${p.lat},${p.lng}`).join("|"), theme };
   }, [pickup.lat, pickup.lng, dropoff?.lat, dropoff?.lng, theme]);
   return <LeafletMap height={height} data={data} bare={bare} bottomInset={bottomInset} />;
+}
+
+export type ServicePin = { id: string; name: string; lat: number; lng: number; kind: "tow" | "mech"; dim: boolean };
+
+/**
+ * The full-screen Tow / Mechanics map: provider pins (a truck or wrench glyph, greyed when unavailable), the selected
+ * pin enlarged, your position as a pulsing blue dot, an optional pickup pin (draggable only when `movePickup`) and a
+ * route line. Pan, pinch and double-tap never move the pickup pin; only dragging the pin itself does.
+ */
+export function ServiceMap({
+  pins,
+  selectedId,
+  me,
+  pickup,
+  movePickup = false,
+  route,
+  fit,
+  fitKey,
+  pad,
+  focus,
+  onSelect,
+  onBackground,
+  onPickupMove,
+  onFailedChange,
+  height,
+  bottomInset = 0,
+}: {
+  pins: ServicePin[];
+  selectedId: string | null;
+  me: Point | null;
+  pickup?: Point | null;
+  movePickup?: boolean;
+  route?: { coords: [number, number][]; dashed: boolean } | null;
+  fit: [number, number][];
+  fitKey: string;
+  pad: { top: number; bottom: number; left: number; right: number };
+  focus?: { lat: number; lng: number; key: string } | null;
+  onSelect: (id: string) => void;
+  onBackground: () => void;
+  onPickupMove?: (p: Point) => void;
+  onFailedChange?: (failed: boolean) => void;
+  height: number;
+  bottomInset?: number;
+}) {
+  const theme = useMapTheme();
+  const pinsKey = JSON.stringify(pins);
+  const data = useMemo<MapData>(
+    () => ({
+      mode: "service",
+      pins: (JSON.parse(pinsKey) as ServicePin[]).map((p) => ({ id: p.id, name: p.name, lat: p.lat, lng: p.lng, kind: p.kind, dim: p.dim })),
+      me,
+      selectedId,
+      pickup: pickup ?? null,
+      movePickup,
+      route: route ?? null,
+      movable: false,
+      fit,
+      fitKey,
+      pad,
+      focus: focus ?? null,
+      theme,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pinsKey, JSON.stringify(me), selectedId, JSON.stringify(pickup), movePickup, JSON.stringify(route), JSON.stringify(fit), fitKey, JSON.stringify(pad), JSON.stringify(focus), theme]
+  );
+  return <LeafletMap bare height={height} data={data} bottomInset={bottomInset} onSelect={onSelect} onBackground={onBackground} onPickup={onPickupMove} onFailedChange={onFailedChange} />;
 }

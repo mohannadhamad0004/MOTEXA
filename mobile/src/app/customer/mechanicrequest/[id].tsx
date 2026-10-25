@@ -4,14 +4,16 @@ import { View } from "react-native";
 import { Avatar, BlueprintPage, Hero, LiveNote, MapFrame, Mono, PrimaryButton, Row, VerticalTimeline, Wrench } from "../../../components/blueprint";
 import { Async, Notice } from "../../../components/ui/Feedback";
 import { Text } from "../../../components/ui/Text";
-import { cityLabel } from "../../../core/constants/cities";
+import { cityCentre, cityLabel } from "../../../core/constants/cities";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { MechanicStatusBadge, useMechanicStatusLabels, useSkillLabel } from "../../../features/mechanics/mechanicBits";
 import { MechanicRequestStatus, REFRESH_MS, customerMechanicRequests } from "../../../features/mechanics/mechanicsService";
 import { shortId } from "../../../features/requests/activeRequest";
 import { buildTimeline } from "../../../features/requests/requestBits";
-import { MAPS_AVAILABLE, TripMap } from "../../../features/shared/maps";
+import { RequestRouteMap } from "../../../features/shared/RequestRouteMap";
+import { MAPS_AVAILABLE } from "../../../features/shared/maps";
+import { RouteSummary, useRoute } from "../../../features/shared/useRoute";
 import { useTheme } from "../../../theme/useTheme";
 
 const PATH: MechanicRequestStatus[] = ["REQUESTED", "ACCEPTED", "IN_PROGRESS", "COMPLETED"];
@@ -45,10 +47,13 @@ export default function MechanicRequestScreen() {
   };
 
   const r = state.data;
+  // MOTEXA stores no workshop coordinates yet: the other end of the route is the mechanic's city centre (approximate)
+  const provider = r?.mechanic.city ? cityCentre(r.mechanic.city) : null;
+  const { route, loading: routing } = useRoute(r?.id ?? null, r?.location.point ?? null, provider);
   const top =
-    MAPS_AVAILABLE && r?.location.point ? (
+    MAPS_AVAILABLE && r?.location.point && provider ? (
       <MapFrame height={320} back="/customer/requests" tr="SERVICE / 04">
-        <TripMap bare bottomInset={36} height={320} pickup={r.location.point} />
+        <RequestRouteMap reqId={r.id} kind="mech" height={320} provider={{ ...provider, name: r.mechanic.name }} pickup={r.location.point} route={route} />
       </MapFrame>
     ) : (
       <Hero height={200} back="/customer/requests" tl="MECHANICS / 04" tr="SERVICE / 04">
@@ -114,6 +119,13 @@ export default function MechanicRequestScreen() {
               {r.contactPhone ? <Row label={t("Your phone", "هاتفك")} value={r.contactPhone} mono /> : null}
             </View>
             {r.contactPhone ? <Text style={[{ color: c.soft, fontSize: 11, marginTop: 8 }, align]}>{t("Shared only with this mechanic.", "يُشارك مع هذا الميكانيكي فقط.")}</Text> : null}
+
+            {r.location.point && provider ? (
+              <View style={{ marginTop: 16 }}>
+                <RouteSummary route={route} loading={routing} />
+                <Text style={[{ color: c.soft, fontSize: 11, marginTop: 4 }, align]}>{t("The mechanic pin is approximate (city centre).", "دبوس الميكانيكي تقريبي (مركز المدينة).")}</Text>
+              </View>
+            ) : null}
 
             {["REQUESTED", "ACCEPTED", "IN_PROGRESS"].includes(r.status) ? <LiveNote label={t("Updates automatically", "يتحدّث تلقائياً")} /> : null}
 

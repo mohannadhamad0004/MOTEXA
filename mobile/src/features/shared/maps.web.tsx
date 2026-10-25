@@ -15,3 +15,8 @@ export function PinMap(_props: { point: Point; onChange?: (p: Point) => void; he
 export function TripMap(_props: { pickup: Point; dropoff?: Point | null; height?: number; bare?: boolean; bottomInset?: number }) {
   return null;
 }
+
+export type ServicePin = { id: string; name: string; lat: number; lng: number; kind: "tow" | "mech"; dim: boolean };
+export function ServiceMap(_props: Record<string, unknown>) {
+  return null;
+}

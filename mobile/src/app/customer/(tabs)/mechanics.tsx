@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
-import { Avatar, BlueprintPage, Chip, HStrip, Ltr, PageTitle, Press, Rise, SearchField, Stamp, Sub, Wrench } from "../../../components/blueprint";
+import { Avatar, BlueprintPage, Chip, HStrip, HeroIconButton, Ltr, PageTitle, Press, PrimaryButton, Rise, SearchField, Stamp, Sub, Wrench } from "../../../components/blueprint";
 import { Button } from "../../../components/ui/Button";
 import { EmptyState, Notice } from "../../../components/ui/Feedback";
 import { SkeletonList } from "../../../components/ui/Skeleton";
@@ -103,6 +103,7 @@ export default function CustomerMechanics() {
         height: 260,
         tl: "MECHANICS / 04",
         tr: t("Verified by MOTEXA", "موثّق من موتكسا"),
+        right: <HeroIconButton icon="map" label={t("View on map", "عرض على الخريطة")} onPress={() => router.push("/customer/mechanics/map")} />,
         art: (
           <View style={{ height: "100%", aspectRatio: 1.6 }}>
             <Wrench animate />
@@ -122,6 +123,9 @@ export default function CustomerMechanics() {
         </HStrip>
       </View>
       <LocationProblem loc={loc} />
+      <View style={{ marginTop: 12 }}>
+        <PrimaryButton variant="outline" icon="map" label={t("View on map", "عرض على الخريطة")} onPress={() => router.push("/customer/mechanics/map")} />
+      </View>
       {cityOpen ? (
         <View style={{ marginTop: 12 }}>
           <HStrip>
