@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
-import { Avatar, BlueprintPage, Chip, HStrip, HeroIconButton, Ltr, PageTitle, Press, PrimaryButton, Rise, SearchField, Stamp, Sub, Wrench } from "../../../components/blueprint";
+import { Avatar, BlueprintPage, Chip, HStrip, HeroIconButton, Ltr, Odometer, PageTitle, Press, PrimaryButton, Rise, SearchField, Stamp, Sub, TightenOnce, Wrench } from "../../../components/blueprint";
 import { Button } from "../../../components/ui/Button";
 import { EmptyState, Notice } from "../../../components/ui/Feedback";
 import { SkeletonList } from "../../../components/ui/Skeleton";
@@ -9,6 +9,7 @@ import { Text } from "../../../components/ui/Text";
 import { CITIES, cityLabel } from "../../../core/constants/cities";
 import { Point, locationMemory, roundPoint } from "../../../core/constants/geo";
 import { useL } from "../../../core/hooks/useL";
+import { M, useIgnition } from "../../../motion";
 import { SkillBadges, useSkillLabel } from "../../../features/mechanics/mechanicBits";
 import { MECHANIC_SKILLS, MechanicRow, mechanicCatalog } from "../../../features/mechanics/mechanicsService";
 import { LocationProblem, useCurrentLocation } from "../../../features/shared/useCurrentLocation";
@@ -18,6 +19,7 @@ export default function CustomerMechanics() {
   const { c, row, align } = useTheme();
   const { t, isArabic } = useL();
   const skillLabel = useSkillLabel();
+  const ig = useIgnition("mechanics");
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
   const [cityOpen, setCityOpen] = useState(false);
@@ -97,6 +99,7 @@ export default function CustomerMechanics() {
   return (
     <BlueprintPage
       tabs
+      ignition={ig}
       refreshing={refreshing}
       onRefresh={() => run("refresh")}
       hero={{
@@ -106,7 +109,9 @@ export default function CustomerMechanics() {
         right: <HeroIconButton icon="map" label={t("View on map", "عرض على الخريطة")} onPress={() => router.push("/customer/mechanics/map")} />,
         art: (
           <View style={{ height: "100%", aspectRatio: 1.6 }}>
-            <Wrench animate />
+            <TightenOnce active={ig} delay={M.grid + M.hero}>
+              <Wrench animate={ig} delay={M.grid} />
+            </TightenOnce>
           </View>
         ),
       }}
@@ -185,9 +190,10 @@ export default function CustomerMechanics() {
           </>
         ) : (
           <>
-            <Text style={[{ color: c.soft, fontSize: 12, marginBottom: 4 }, align]}>
-              {total} {total === 1 ? t("mechanic", "ميكانيكي") : t("mechanics", "ميكانيكيين")}
-            </Text>
+            <View style={[row, { alignItems: "center", gap: 4, marginBottom: 4 }]}>
+              <Odometer value={total} size={12} color={c.soft} />
+              <Text style={{ color: c.soft, fontSize: 12 }}>{total === 1 ? t("mechanic", "ميكانيكي") : t("mechanics", "ميكانيكيين")}</Text>
+            </View>
             {items.map((m, i) => (
               <Rise key={m.id} i={i}>
                 <Press
@@ -206,10 +212,10 @@ export default function CustomerMechanics() {
                       ) : null}
                     </View>
                     <View style={{ marginTop: 8 }}>
-                      <SkillBadges skills={m.skills} max={2} />
+                      <SkillBadges skills={m.skills} max={2} after={i < 8 ? i * M.stagger + 150 : undefined} />
                     </View>
                   </View>
-                  <Stamp label={t("Verified", "موثّق")} />
+                  <Stamp label={t("Verified", "موثّق")} animate={i < 8} delay={i * M.stagger + 150 + Math.min(m.skills.length, 2) * M.staggerFine + 100} />
                 </Press>
               </Rise>
             ))}

@@ -45,7 +45,7 @@ export default function CustomerCategories() {
         tl: "CATEGORIES",
         art: (
           <View style={{ height: "100%", aspectRatio: 1.5 }}>
-            <Toolbox animate />
+            <Toolbox />
           </View>
         ),
       }}

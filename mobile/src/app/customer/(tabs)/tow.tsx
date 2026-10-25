@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
-import { BlueprintPage, Chip, HStrip, HeroIconButton, IconTile, Mono, PageTitle, Press, PrimaryButton, Rise, SearchField, Section, TowTruck } from "../../../components/blueprint";
+import { BlueprintPage, Chip, HStrip, HeroIconButton, IconTile, Mono, Odometer, PageTitle, Press, PrimaryButton, Rise, SearchField, Section, TowTruck } from "../../../components/blueprint";
 import { Button } from "../../../components/ui/Button";
 import { EmptyState, Notice } from "../../../components/ui/Feedback";
 import { SkeletonList } from "../../../components/ui/Skeleton";
@@ -13,6 +13,7 @@ import { TowCompanyRow, catalogService } from "../../../features/catalog/catalog
 import { LocationProblem, useCurrentLocation } from "../../../features/shared/useCurrentLocation";
 import type { TruckType } from "../../../features/tow/towService";
 import { useTruckLabels } from "../../../features/tow/truckBits";
+import { M, useIgnition } from "../../../motion";
 import { useTheme } from "../../../theme/useTheme";
 
 const TRUCK_TYPES: TruckType[] = ["FLATBED", "HOOK_CHAIN", "WHEEL_LIFT", "HEAVY_DUTY"];
@@ -24,6 +25,7 @@ export default function CustomerTow() {
   const { c, row, align } = useTheme();
   const { t, isArabic } = useL();
   const { type } = useTruckLabels();
+  const ig = useIgnition("tow");
   const [city, setCity] = useState("");
   const [showCity, setShowCity] = useState(false);
   const [name, setName] = useState("");
@@ -114,6 +116,7 @@ export default function CustomerTow() {
   return (
     <BlueprintPage
       tabs
+      ignition={ig}
       refreshing={refreshing}
       onRefresh={() => run("refresh")}
       hero={{
@@ -123,7 +126,7 @@ export default function CustomerTow() {
         right: <HeroIconButton icon="map" label={t("View on map", "عرض على الخريطة")} onPress={() => router.push("/customer/tow/map")} />,
         art: (
           <View style={{ width: "100%", maxWidth: 300, height: "100%" }}>
-            <TowTruck animate />
+            <TowTruck animate={ig} delay={M.grid} />
           </View>
         ),
       }}
@@ -132,13 +135,14 @@ export default function CustomerTow() {
       <PageTitle>{t("Tow trucks", "شاحنات السحب")}</PageTitle>
       <View style={[row, { alignItems: "center", gap: 8, marginTop: 4 }]}>
         <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: freeNow ? c.bronze : c.line }} />
+        {loading && !items.length ? null : <Odometer value={freeNow} size={14} color={c.soft} />}
         <Text style={{ color: c.soft, fontSize: 14 }}>
-          {loading && !items.length ? t("Looking for trucks…", "جارٍ البحث عن شاحنات…") : `${freeNow} ${t("available now", "متاح الآن")}`}
+          {loading && !items.length ? t("Looking for trucks…", "جارٍ البحث عن شاحنات…") : t("available now", "متاح الآن")}
         </Text>
       </View>
 
       <View style={{ marginTop: 20 }}>
-        <PrimaryButton icon="tow" label={t("Request nearest available", "اطلب أقرب شاحنة متاحة")} loading={nearBusy || loc.locating} onPress={requestNearest} />
+        <PrimaryButton icon="tow" label={t("Request nearest available", "اطلب أقرب شاحنة متاحة")} loading={nearBusy || loc.locating} road onPress={requestNearest} />
       </View>
       <View style={{ marginTop: 10 }}>
         <PrimaryButton variant="outline" icon="map" label={t("View on map", "عرض على الخريطة")} onPress={() => router.push("/customer/tow/map")} />
@@ -207,11 +211,14 @@ export default function CustomerTow() {
                   <Text numberOfLines={1} style={[{ color: c.soft, fontSize: 12 }, align]}>
                     {[cityLabel(x.city, isArabic), x.truckTypes.map((k) => type[k]).join(isArabic ? "، " : ", ")].filter(Boolean).join(" · ")}
                   </Text>
-                  <Text style={[{ color: x.availableTrucks ? c.bronze : c.soft, fontSize: 12, fontWeight: "600", marginTop: 4 }, align]}>
-                    {x.availableTrucks
-                      ? `${x.availableTrucks} ${x.availableTrucks === 1 ? t("truck free", "شاحنة متاحة") : t("trucks free", "شاحنات متاحة")}`
-                      : t("No free truck", "لا توجد شاحنة متاحة")}
-                  </Text>
+                  <View style={[row, { alignItems: "center", gap: 4, marginTop: 4 }]}>
+                    {x.availableTrucks ? <Odometer value={x.availableTrucks} size={12} color={c.bronze} /> : null}
+                    <Text style={{ color: x.availableTrucks ? c.bronze : c.soft, fontSize: 12, fontWeight: "600" }}>
+                      {x.availableTrucks
+                        ? x.availableTrucks === 1 ? t("truck free", "شاحنة متاحة") : t("trucks free", "شاحنات متاحة")
+                        : t("No free truck", "لا توجد شاحنة متاحة")}
+                    </Text>
+                  </View>
                 </View>
                 {x.distanceKm != null ? (
                   <View style={{ alignItems: isArabic ? "flex-start" : "flex-end" }}>

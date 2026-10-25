@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
-import { Avatar, BlueprintPage, Hero, LiveNote, MapFrame, Mono, PrimaryButton, Row, VerticalTimeline, Wrench } from "../../../components/blueprint";
+import { Avatar, BlueprintPage, CrossFade, FadeSwitch, Hero, LiveNote, MapFrame, Mono, PrimaryButton, Row, VerticalTimeline, Wrench } from "../../../components/blueprint";
 import { Async, Notice } from "../../../components/ui/Feedback";
 import { Text } from "../../../components/ui/Text";
 import { cityCentre, cityLabel } from "../../../core/constants/cities";
@@ -58,7 +58,7 @@ export default function MechanicRequestScreen() {
     ) : (
       <Hero height={200} back="/customer/requests" tl="MECHANICS / 04" tr="SERVICE / 04">
         <View style={{ height: "100%", aspectRatio: 1.6 }}>
-          <Wrench animate />
+          <Wrench />
         </View>
       </Hero>
     );
@@ -87,9 +87,11 @@ export default function MechanicRequestScreen() {
           <>
             <View style={[row, { alignItems: "center", justifyContent: "space-between", gap: 10 }]}>
               <Mono>{shortId(r.id)}</Mono>
-              <MechanicStatusBadge value={r.status} />
+              <CrossFade k={r.status}><MechanicStatusBadge value={r.status} /></CrossFade>
             </View>
-            <Text style={[{ color: c.ink, fontSize: 30, fontWeight: "700", lineHeight: isArabic ? 40 : 34, marginTop: 16 }, align]}>{headline(r.mechanic.name, r.status)}</Text>
+            <CrossFade k={r.status}>
+              <Text style={[{ color: c.ink, fontSize: 30, fontWeight: "700", lineHeight: isArabic ? 40 : 34, marginTop: 16 }, align]}>{headline(r.mechanic.name, r.status)}</Text>
+            </CrossFade>
             <View style={[row, { alignItems: "center", gap: 12, marginTop: 12 }]}>
               <Avatar name={r.mechanic.name} size={40} />
               <Text numberOfLines={2} style={[{ flex: 1, color: c.soft, fontSize: 13 }, align]}>
@@ -134,7 +136,7 @@ export default function MechanicRequestScreen() {
                 <Notice tone="danger" icon="alert-circle-outline">{err}</Notice>
               </View>
             ) : null}
-            {r.canCancel ? (
+            <FadeSwitch show={r.canCancel}>
               <View style={{ marginTop: 40, borderTopWidth: 1, borderTopColor: c.line, paddingTop: 24, gap: 8 }}>
                 {!confirming ? (
                   <PrimaryButton variant="danger" label={t("Cancel request", "إلغاء الطلب")} disabled={busy} onPress={() => setConfirming(true)} />
@@ -146,7 +148,7 @@ export default function MechanicRequestScreen() {
                   </>
                 )}
               </View>
-            ) : null}
+            </FadeSwitch>
           </>
         )}
       </Async>

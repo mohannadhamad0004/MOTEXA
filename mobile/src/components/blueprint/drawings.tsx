@@ -1,15 +1,15 @@
-import { ComponentProps, createContext, ReactNode, useContext, useEffect, useRef, useState } from "react";
-import { Animated, Easing, StyleProp, View, ViewStyle } from "react-native";
-import Svg, { Circle, G, Path, Rect } from "react-native-svg";
+import { ComponentProps, createContext, ReactNode, useContext, useEffect, useState } from "react";
+import { StyleProp, View, ViewStyle } from "react-native";
+import Animated, { cancelAnimation, SharedValue, useAnimatedProps, useSharedValue, withDelay, withTiming, runOnJS } from "react-native-reanimated";
+import Svg, { Circle, Defs, G, LinearGradient, Path, RadialGradient, Rect, Stop } from "react-native-svg";
 import { useTheme } from "../../theme/useTheme";
-import { motion } from "../../theme/tokens";
-import { useReducedMotion } from "./motion";
+import { ease, M, useReduced } from "../../motion";
 
-// Line drawings: 1.5px bronzeLight strokes, round caps. A drawing renders its shapes twice — once as a soft
+// Line drawings: 1.5px bronzeLight strokes, round caps. A drawing renders its shapes twice: once as a soft
 // "glow" underlay (strokeWidth 4, opacity .25; RN has no drop-shadow filter) and once as the crisp line. With
-// `animate` the line draws itself (strokeDashoffset 1400 -> 0, 2200 ms) once per mount.
+// `animate` the line traces itself once per mount (strokeDashoffset 1400 -> 0, `duration` ms, UI thread).
 
-type Mode = { glow: boolean; progress: Animated.Value | null; done: boolean };
+type Mode = { glow: boolean; progress: SharedValue<number> | null; done: boolean };
 const Ctx = createContext<Mode>({ glow: false, progress: null, done: true });
 
 const AnimPath = Animated.createAnimatedComponent(Path);
@@ -21,73 +21,120 @@ function make<T extends typeof Path | typeof Circle | typeof Rect>(Plain: T, Ani
   return function Shape(props: ComponentProps<T>) {
     const { glow, progress, done } = useContext(Ctx);
     const p = props as any;
+    const dashed = !!p.strokeDasharray;
+    const base = p.opacity ?? 1;
+    const ap = useAnimatedProps<any>(() => {
+      if (!progress) return {};
+      // dashed guide lines cannot be traced with a dash offset: they fade in at the end instead
+      if (dashed) return { opacity: base * Math.min(1, Math.max(0, (progress.value - 0.6) / 0.4)) };
+      return { strokeDashoffset: 1400 * (1 - progress.value) };
+    });
     if (glow) return <Plain {...p} strokeWidth={4} />;
     if (!progress || done) return <Plain {...p} />;
-    if (p.strokeDasharray) {
-      // dashed guide lines cannot be drawn with a dash offset: fade them in at the end instead
-      const base = p.opacity ?? 1;
-      return <Anim {...p} opacity={progress.interpolate({ inputRange: [0.6, 1], outputRange: [0, base], extrapolate: "clamp" })} />;
-    }
-    return <Anim {...p} strokeDasharray={1400} strokeDashoffset={progress.interpolate({ inputRange: [0, 1], outputRange: [1400, 0] })} />;
+    return dashed ? <Anim {...p} animatedProps={ap} /> : <Anim {...p} strokeDasharray={1400} animatedProps={ap} />;
   };
 }
 const P = make(Path, AnimPath);
 const Ci = make(Circle, AnimCircle);
 const Rc = make(Rect, AnimRect);
 
-export type DrawingProps = { animate?: boolean; glow?: boolean; style?: StyleProp<ViewStyle> };
+export type DrawingProps = {
+  animate?: boolean;
+  glow?: boolean;
+  style?: StyleProp<ViewStyle>;
+  /** trace duration in ms (default: the hero signature, max 900) */
+  duration?: number;
+  /** ms to wait before the trace starts */
+  delay?: number;
+  /** called on the JS thread when the trace has finished */
+  onDone?: () => void;
+};
 
-function Drawing({ vb, animate = false, glow = true, style, children }: DrawingProps & { vb: string; children: ReactNode }) {
+function Drawing({
+  vb,
+  animate = false,
+  glow = true,
+  style,
+  duration = M.hero,
+  delay = 0,
+  onDone,
+  overlay,
+  children,
+}: DrawingProps & { vb: string; children: ReactNode; overlay?: ReactNode }) {
   const { c } = useTheme();
-  const reduced = useReducedMotion();
-  const progress = useRef(new Animated.Value(animate ? 0 : 1)).current;
+  const reduced = useReduced();
+  const progress = useSharedValue(animate ? 0 : 1);
   const [done, setDone] = useState(!animate);
   useEffect(() => {
     if (!animate) return;
-    if (reduced) {
-      progress.setValue(1);
+    const fin = () => {
       setDone(true);
-      return;
-    }
-    const a = Animated.timing(progress, {
-      toValue: 1,
-      duration: motion.draw,
-      easing: Easing.bezier(0.6, 0.1, 0.3, 1),
-      useNativeDriver: false,
-      isInteraction: false,
-    });
-    a.start(({ finished }) => finished && setDone(true));
-    return () => a.stop();
-  }, [animate, reduced, progress]);
+      onDone?.();
+    };
+    const wait = reduced ? 0 : delay;
+    progress.value = withDelay(wait, withTiming(1, { duration: reduced ? M.reduced : duration, easing: ease }, (ok) => ok && runOnJS(fin)()));
+    return () => cancelAnimation(progress);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animate, reduced]);
 
   const line: Mode = { glow: false, progress: animate ? progress : null, done };
-  const glowOpacity = animate && !done ? progress.interpolate({ inputRange: [0.5, 1], outputRange: [0, 0.25], extrapolate: "clamp" }) : 0.25;
+  const glowProps = useAnimatedProps(() => ({ opacity: animate && !done ? 0.25 * Math.min(1, Math.max(0, (progress.value - 0.5) / 0.5)) : 0.25 }));
   return (
     <View style={[{ width: "100%", height: "100%" }, style]}>
-    <Svg
-      viewBox={vb}
-      width="100%"
-      height="100%"
-      fill="none"
-      stroke={c.bronzeLight}
-      strokeWidth={1.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {glow && (
-        <AnimG opacity={glowOpacity as any}>
-          <Ctx.Provider value={{ glow: true, progress: null, done: true }}>{children}</Ctx.Provider>
-        </AnimG>
-      )}
-      <Ctx.Provider value={line}>{children}</Ctx.Provider>
-    </Svg>
+      <Svg viewBox={vb} width="100%" height="100%" fill="none" stroke={c.bronzeLight} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        {glow && (
+          <AnimG animatedProps={glowProps}>
+            <Ctx.Provider value={{ glow: true, progress: null, done: true }}>{children}</Ctx.Provider>
+          </AnimG>
+        )}
+        <Ctx.Provider value={line}>{children}</Ctx.Provider>
+        {overlay}
+      </Svg>
     </View>
   );
 }
 
-export function CarTop(p: DrawingProps) {
+/** Two soft bronze headlight glows + short beams at the front of the car. Fades 0 -> .9 -> .6 once, then rests low. */
+function Headlights({ delay, reduced }: { delay: number; reduced: boolean }) {
+  const o = useSharedValue(0);
+  useEffect(() => {
+    o.value = withDelay(
+      reduced ? 0 : delay,
+      withTiming(0.9, { duration: reduced ? M.reduced : 250, easing: ease }, () => {
+        o.value = withTiming(0.6, { duration: reduced ? M.reduced : 250, easing: ease });
+      })
+    );
+    return () => cancelAnimation(o);
+  }, [o, delay, reduced]);
+  const ap = useAnimatedProps(() => ({ opacity: o.value }));
   return (
-    <Drawing vb="0 0 320 160" {...p}>
+    <AnimG animatedProps={ap}>
+      <Defs>
+        <RadialGradient id="hlGlow" cx="50%" cy="50%" r="50%">
+          <Stop offset="0" stopColor="#E0A36F" stopOpacity="0.9" />
+          <Stop offset="1" stopColor="#E0A36F" stopOpacity="0" />
+        </RadialGradient>
+        <LinearGradient id="hlBeam" x1="0" y1="0" x2="1" y2="0">
+          <Stop offset="0" stopColor="#E0A36F" stopOpacity="0.45" />
+          <Stop offset="1" stopColor="#E0A36F" stopOpacity="0" />
+        </LinearGradient>
+      </Defs>
+      <Path d="M286 66 L318 52 L318 80 Z" fill="url(#hlBeam)" stroke="none" />
+      <Path d="M286 94 L318 80 L318 108 Z" fill="url(#hlBeam)" stroke="none" />
+      <Circle cx="286" cy="67" r="14" fill="url(#hlGlow)" stroke="none" />
+      <Circle cx="286" cy="93" r="14" fill="url(#hlGlow)" stroke="none" />
+    </AnimG>
+  );
+}
+
+export function CarTop({ headlights, ...p }: DrawingProps & { headlights?: boolean }) {
+  const reduced = useReduced();
+  return (
+    <Drawing
+      vb="0 0 320 160"
+      {...p}
+      overlay={headlights ? <Headlights delay={(p.delay ?? 0) + (p.duration ?? M.hero)} reduced={reduced} /> : undefined}
+    >
       <P d="M40 80 C40 50 60 38 100 36 L220 36 C262 38 285 52 288 80 C285 108 262 122 220 124 L100 124 C60 122 40 110 40 80 Z" />
       <P d="M110 44 L200 44 C215 50 222 64 222 80 C222 96 215 110 200 116 L110 116 C100 108 96 95 96 80 C96 65 100 52 110 44Z" />
       <P d="M222 54 L250 60 C258 70 258 90 250 100 L222 106" />

@@ -1,7 +1,10 @@
 import { router } from "expo-router";
 import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
-import { BlueprintPage, Chip, HeroConfig, HStrip, PageTitle, SearchField, Sub } from "../../components/blueprint";
+import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
+import { BlueprintPage, Chip, HeroConfig, HStrip, Odometer, PageTitle, SearchField, Sub, Tag } from "../../components/blueprint";
+import { closeMs, M } from "../../motion";
+import { useTheme } from "../../theme/useTheme";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { EmptyState, Notice } from "../../components/ui/Feedback";
@@ -30,6 +33,7 @@ export function ProductBrowser({
   initialSort,
   initialFit,
   tabs = false,
+  ignition = false,
   emptyText,
 }: {
   /** hero without the right-hand result count (added here once the real count is known) */
@@ -49,9 +53,12 @@ export function ProductBrowser({
   /** open the "Fits my car" form (the Home link "Set your car") */
   initialFit?: boolean;
   tabs?: boolean;
+  /** first entry of the Parts tab (see useIgnition) */
+  ignition?: boolean;
   emptyText?: string;
 }) {
-  const { t } = useL();
+  const { t, isArabic } = useL();
+  const { c } = useTheme();
   const [q, setQ] = useState(initialQ ?? "");
   // "Fits my car" values live in memory for the app session, so they survive leaving this screen.
   const [make, setMake] = useState(fitMemory.make);
@@ -157,10 +164,28 @@ export function ProductBrowser({
     { key: "price_desc", label: t("Price: high to low", "السعر: من الأعلى إلى الأقل") },
     { key: "newest", label: t("Newest", "الأحدث") },
   ];
-  const resultsLabel = total === null ? undefined : `${total} ${total === 1 ? t("result", "نتيجة") : t("results", "نتيجة")}`;
+  // the result count is an odometer: digits roll when the count changes
+  const resultsLabel =
+    total === null ? undefined : (
+      <View style={{ flexDirection: isArabic ? "row-reverse" : "row", alignItems: "center", gap: 6 }}>
+        <Odometer value={total} size={12} color={c.bronzeLight} />
+        <Tag color={c.bronzeLight}>{total === 1 ? t("result", "نتيجة") : t("results", "نتيجة")}</Tag>
+      </View>
+    );
+  // first results ever shown cascade in; later result sets crossfade and reposition
+  const firstBatch = useRef(true);
+  useEffect(() => {
+    if (items.length) firstBatch.current = false;
+  }, [items.length]);
+  // "Fits my car" just switched on: the check sweeps in row by row for a moment
+  const prevFit = useRef(false);
+  const sweepUntil = useRef(0);
+  if (fitOn && !prevFit.current) sweepUntil.current = Date.now() + 1500;
+  prevFit.current = fitOn;
+  const sweeping = fitOn && Date.now() < sweepUntil.current;
 
   return (
-    <BlueprintPage tabs={tabs} refreshing={refreshing} onRefresh={() => run(1, "refresh")} hero={{ ...hero, tr: hero.tr ?? resultsLabel }}>
+    <BlueprintPage tabs={tabs} ignition={ignition} refreshing={refreshing} onRefresh={() => run(1, "refresh")} hero={{ ...hero, tr: hero.tr ?? resultsLabel }}>
       {typeof title === "string" ? <PageTitle>{title}</PageTitle> : title}
       {sub ? <Sub>{sub}</Sub> : null}
       {topExtra}
@@ -169,12 +194,13 @@ export function ProductBrowser({
       <View style={{ marginTop: 16 }}>
         <HStrip>
           <Chip
+            check
             on={fitOn}
             icon={fitOn ? "check" : "car"}
             label={fitOn ? `${t("Fits", "تناسب")} ${make.trim()}${model.trim() ? " " + model.trim() : ""}${year.trim() ? " " + year.trim() : ""}` : t("Fits my car", "تناسب سيارتي")}
             onPress={() => setShowFit(!showFit)}
           />
-          <Chip on={activeCount > 0} icon="filter" label={activeCount ? `${t("Filters", "التصفية")} (${activeCount})` : t("Filters", "التصفية")} onPress={() => setSheetOpen(true)} />
+          <Chip check on={activeCount > 0} icon="filter" label={activeCount ? `${t("Filters", "التصفية")} (${activeCount})` : t("Filters", "التصفية")} onPress={() => setSheetOpen(true)} />
           <Chip label={`${t("Sort", "ترتيب")}${sort !== "relevance" ? ": " + SORTS.find((s) => s.key === sort)!.label : ""}`} trailing="down" on={showSort} onPress={() => setShowSort(!showSort)} />
         </HStrip>
       </View>
@@ -226,9 +252,27 @@ export function ProductBrowser({
       ) : (
         <>
           {error ? <Notice tone="danger" icon="alert-circle-outline">{error}</Notice> : null}
-          {items.map((p) => (
-            <ProductCard key={p.id} p={p} showShop={!shopId} car={fitOn ? { make, model, year } : null} onPress={() => router.push(`/customer/parts/${p.id}`)} />
-          ))}
+          {items.map((p, k) => {
+            const early = k < 8;
+            const cascading = early && firstBatch.current;
+            return (
+              <Animated.View
+                key={p.id}
+                entering={early && !firstBatch.current ? FadeIn.duration(M.chip) : undefined}
+                exiting={early ? FadeOut.duration(closeMs(M.chip)) : undefined}
+                layout={early ? LinearTransition.duration(M.detail) : undefined}
+              >
+                <ProductCard
+                  p={p}
+                  showShop={!shopId}
+                  car={fitOn ? { make, model, year } : null}
+                  cascade={cascading ? k : undefined}
+                  sweep={early && sweeping ? k : undefined}
+                  onPress={() => router.push(`/customer/parts/${p.id}`)}
+                />
+              </Animated.View>
+            );
+          })}
           {hasMore && (
             <View style={{ marginTop: 16 }}>
               <Button label={loadingMore ? t("Loading…", "جارٍ التحميل…") : t("Load more", "تحميل المزيد")} variant="ghost" icon="chevron-down-outline" disabled={loadingMore} onPress={() => run(page + 1, "more")} />

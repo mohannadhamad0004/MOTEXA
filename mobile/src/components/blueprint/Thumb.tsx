@@ -2,6 +2,7 @@ import { Image } from "expo-image";
 import { View, ViewStyle } from "react-native";
 import { useTheme } from "../../theme/useTheme";
 import { Text } from "../ui/Text";
+import { CategoryAssembly, assemblyForCategory } from "./assemblies";
 import { DRAWINGS, DrawingKind } from "./drawings";
 import { Icon, IconName } from "./Icon";
 import { BlueprintSurface } from "./Surface";
@@ -34,7 +35,6 @@ export const drawingForCategory = (key?: string | null): DrawingKind | null => (
  */
 export function PartThumb({ category, uri, size, style }: { category?: string | null; uri?: string | null; size?: number; style?: ViewStyle }) {
   const { c } = useTheme();
-  const kind = drawingForCategory(category);
   const box: ViewStyle = size ? { width: size, height: size } : { width: "100%", aspectRatio: 1 };
   if (uri)
     return (
@@ -42,10 +42,10 @@ export function PartThumb({ category, uri, size, style }: { category?: string | 
         <Image source={{ uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
       </View>
     );
-  const D = kind ? DRAWINGS[kind] : null;
+  // the same technical illustration as the product hero, static here; an unknown category shows the generic part box
   return (
-    <BlueprintSurface style={[box, { borderRadius: 16, padding: 8, alignItems: "center", justifyContent: "center" }, style]}>
-      {D ? <D glow={false} /> : <Icon name="box" size={Math.round((size ?? 80) * 0.5)} color={c.bronzeLight} />}
+    <BlueprintSurface style={[box, { borderRadius: 16, padding: 4, alignItems: "center", justifyContent: "center" }, style]}>
+      <CategoryAssembly kind={assemblyForCategory(category)} />
     </BlueprintSurface>
   );
 }

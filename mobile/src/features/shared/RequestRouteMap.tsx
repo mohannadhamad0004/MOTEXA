@@ -1,5 +1,6 @@
 import { useWindowDimensions } from "react-native";
 import { Point } from "../../core/constants/geo";
+import { useReduced } from "../../motion";
 import { MAPS_AVAILABLE, ServiceMap } from "./maps";
 import type { RouteResult } from "./routing";
 
@@ -20,6 +21,7 @@ export function RequestRouteMap({
   height: number;
 }) {
   const { width } = useWindowDimensions();
+  const reduced = useReduced();
   if (!MAPS_AVAILABLE) return null;
   return (
     <ServiceMap
@@ -29,7 +31,8 @@ export function RequestRouteMap({
       selectedId="p"
       me={null}
       pickup={pickup}
-      route={route ? { coords: route.coords, dashed: route.kind === "line" } : null}
+      route={route ? { coords: route.coords, dashed: route.kind === "line", key: reqId } : null}
+      reduced={reduced}
       fit={[[provider.lat, provider.lng], [pickup.lat, pickup.lng]]}
       fitKey={`req:${reqId}:${width}`}
       pad={{ top: 24, bottom: 56, left: 0, right: 0 }}

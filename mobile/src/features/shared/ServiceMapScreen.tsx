@@ -2,7 +2,8 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Chip, HScroll, Icon, Mono, Pill, PrimaryButton, SearchField, Stamp, Steps } from "../../components/blueprint";
+import { Chip, CrossFade, FadeSwitch, HScroll, Icon, InspectionCheck, Mono, Pill, PrimaryButton, RoadLoader, SearchField, Stamp, Steps } from "../../components/blueprint";
+import { useReduced } from "../../motion";
 import { Notice } from "../../components/ui/Feedback";
 import { Text } from "../../components/ui/Text";
 import { cityCentre, cityLabel } from "../../core/constants/cities";
@@ -89,6 +90,12 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const seq = useRef(0);
+  const reduced = useReduced();
+  // Radar: sonar rings on the map ONLY while a location lookup / search is really running.
+  const [searching, setSearching] = useState(false);
+  const [loadCount, setLoadCount] = useState(0);
+  const pendingNear = useRef<number | null>(null);
+  const [highlight, setHighlight] = useState<{ id: string; key: string } | null>(null);
 
   useEffect(() => {
     if (isTow) return;
@@ -116,7 +123,10 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
     } catch (e: any) {
       if (mine === seq.current) setError(e.message);
     } finally {
-      if (mine === seq.current) setLoading(false);
+      if (mine === seq.current) {
+        setLoading(false);
+        setLoadCount((n) => n + 1);
+      }
     }
   }, [isTow, truckType, availableOnly, skill, me]);
   useEffect(() => {
@@ -168,6 +178,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
   const form = isTow ? towForm : mechForm;
 
   const select = (p: Provider) => {
+    setHighlight((h) => (h && h.id !== p.id ? null : h));
     setSelectedId(p.id);
     setStep("select");
     setSnap("collapsed");
@@ -186,32 +197,61 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [providers, focusParam]);
 
+  const pickNearest = (list: Provider[]) => {
+    const withKm = list.filter((p) => p.distanceKm !== null);
+    if (!withKm.length) return null;
+    const pool = isTow && withKm.some((p) => (p.tow?.availableTrucks ?? 0) > 0) ? withKm.filter((p) => (p.tow?.availableTrucks ?? 0) > 0) : withKm;
+    return [...pool].sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0))[0];
+  };
   const nearMe = async () => {
     if (me) {
       locationMemory.current = null;
       setMe(null);
+      setHighlight(null);
       return;
     }
+    setSearching(true);
     const p = await loc.locate();
     if (p) {
+      pendingNear.current = loadCount;
       setMe(p);
       setFocus({ lat: p.lat, lng: p.lng, key: `me-${Date.now()}` });
-    }
+    } else setSearching(false);
   };
+  // Near me: when the nearby results are in, the nearest valid pin is highlighted (no line, nothing selected)
+  useEffect(() => {
+    if (pendingNear.current === null || loading || loadCount <= pendingNear.current) return;
+    pendingNear.current = null;
+    const best = pickNearest(providers);
+    if (best) setHighlight({ id: best.id, key: `hl-${Date.now()}` });
+    setSearching(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadCount, loading, providers]);
+  // never leave the radar running if something stalls
+  useEffect(() => {
+    if (!searching) return;
+    const h = setTimeout(() => {
+      setSearching(false);
+      setWantNearest(false);
+      pendingNear.current = null;
+    }, 15000);
+    return () => clearTimeout(h);
+  }, [searching]);
   // "Nearest": the closest matching provider (tow: one with a free truck first), once distances are known
   const [wantNearest, setWantNearest] = useState(false);
   const nearest = () => {
-    if (!me) loc.locate().then((p) => p && (setMe(p), setWantNearest(true)));
+    setSearching(true);
+    if (!me) loc.locate().then((p) => (p ? (setMe(p), setWantNearest(true)) : setSearching(false)));
     else setWantNearest(true);
   };
   useEffect(() => {
     if (!wantNearest || loading || !me) return;
-    const withKm = providers.filter((p) => p.distanceKm !== null);
-    if (!withKm.length) return;
-    const pool = isTow && withKm.some((p) => (p.tow?.availableTrucks ?? 0) > 0) ? withKm.filter((p) => (p.tow?.availableTrucks ?? 0) > 0) : withKm;
-    const best = [...pool].sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0))[0];
+    const best = pickNearest(providers);
+    if (!best) return;
     setWantNearest(false);
+    setSearching(false);
     select(best);
+    setHighlight({ id: best.id, key: `hl-${Date.now()}` });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wantNearest, loading, me, providers]);
 
@@ -467,13 +507,17 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
     footer = (
       <View style={{ gap: 8 }}>
         {form.err ? <Notice tone="danger" icon="alert-circle-outline">{form.err}</Notice> : null}
-        <PrimaryButton icon="arrow" label={t("Send request", "إرسال الطلب")} loading={form.busy} onPress={send} />
+        <PrimaryButton icon="arrow" label={t("Send request", "إرسال الطلب")} loading={form.busy} road onPress={send} />
       </View>
     );
   } else if (step === "route" && selected && req) {
     const d = req.data;
     const status = d.status as string;
-    const idx = (isTow ? { REQUESTED: 0, ACCEPTED: 1, EN_ROUTE: 2, IN_PROGRESS: 2, COMPLETED: 3 } : { REQUESTED: 0, ACCEPTED: 1, IN_PROGRESS: 2, COMPLETED: 3 })[status as "REQUESTED"];
+    const stepOf = (isTow ? { REQUESTED: 0, ACCEPTED: 1, EN_ROUTE: 2, IN_PROGRESS: 2, COMPLETED: 3 } : { REQUESTED: 0, ACCEPTED: 1, IN_PROGRESS: 2, COMPLETED: 3 }) as Record<string, number>;
+    const failed = status === "DECLINED" || status === "CANCELLED";
+    // declined / cancelled: the line stops at the last step that really happened, and that node turns danger
+    const reached = (d.timeline as { status: string }[]).map((h) => stepOf[h.status]).filter((n) => n !== undefined && n < 3);
+    const idx = failed ? Math.max(0, ...reached) : stepOf[status];
     const labels = isTow
       ? [t("Requested", "تم الطلب"), t("Accepted", "مقبول"), status === "IN_PROGRESS" ? t("In progress", "قيد التنفيذ") : t("On the way", "في الطريق"), t("Completed", "مكتمل")]
       : [t("Requested", "تم الطلب"), t("Accepted", "مقبول"), t("In progress", "قيد التنفيذ"), t("Completed", "مكتمل")];
@@ -483,17 +527,17 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
     header = (
       <View style={{ marginTop: 6, gap: 6 }}>
         {justSent ? (
-          <Pill icon={<Icon name="check" size={14} color={c.bronze} />}>{t(`Request sent to ${selected.name}`, `تم إرسال الطلب إلى ${selected.name}`)}</Pill>
+          <Pill icon={<InspectionCheck size={14} color={c.bronze} />}>{t(`Request sent to ${selected.name}`, `تم إرسال الطلب إلى ${selected.name}`)}</Pill>
         ) : null}
         <View style={[row, { alignItems: "center", justifyContent: "space-between", gap: 10 }]}>
           <Text numberOfLines={2} style={[{ flex: 1, color: c.ink, fontSize: 18, fontWeight: "700" }, align]}>{selected.name}</Text>
-          {req.kind === "tow" ? <TowStatusBadge value={req.data.status} /> : <MechanicStatusBadge value={req.data.status} />}
+          <CrossFade k={status}>{req.kind === "tow" ? <TowStatusBadge value={req.data.status} /> : <MechanicStatusBadge value={req.data.status} />}</CrossFade>
         </View>
       </View>
     );
     body = (
       <View style={{ gap: 14, marginTop: 4 }}>
-        {idx !== undefined ? <Steps labels={labels} index={idx} /> : null}
+        {idx !== undefined ? <Steps labels={labels} index={idx} tone={failed ? "danger" : status === "COMPLETED" ? "success" : "brand"} /> : null}
         {status === "DECLINED" || status === "CANCELLED" ? (
           <Notice tone="danger" icon="close-circle-outline">
             {status === "DECLINED" ? t("Declined by the provider", "رفضه مقدّم الخدمة") : req.kind === "tow" && req.data.cancelledBy === "COMPANY" ? t("Cancelled by the company", "ألغته الشركة") : t("Cancelled by you", "ألغيته أنت")}
@@ -525,7 +569,9 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
     ) : (
       <View style={[row, { gap: 10 }]}>
         <PrimaryButton style={{ flex: 1 }} variant="outline" label={t("Request details", "تفاصيل الطلب")} onPress={() => router.push(req.kind === "tow" ? `/customer/towrequest/${d.id}` : `/customer/mechanicrequest/${d.id}`)} />
-        {(d as { canCancel: boolean }).canCancel ? <PrimaryButton style={{ flex: 1 }} variant="danger" label={t("Cancel request", "إلغاء الطلب")} onPress={() => setConfirming(true)} /> : null}
+        <FadeSwitch show={(d as { canCancel: boolean }).canCancel} style={{ flex: 1 }}>
+          <PrimaryButton variant="danger" label={t("Cancel request", "إلغاء الطلب")} onPress={() => setConfirming(true)} />
+        </FadeSwitch>
       </View>
     );
   }
@@ -549,7 +595,10 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
         me={me}
         pickup={step === "select" ? null : pickupPoint}
         movePickup={step === "form"}
-        route={step === "route" && route ? { coords: route.coords, dashed: route.kind === "line" } : null}
+        route={step === "route" && route ? { coords: route.coords, dashed: route.kind === "line", key: reqId ?? "" } : null}
+        radar={step === "select" && (loc.locating || searching)}
+        highlight={step === "select" ? highlight : null}
+        reduced={reduced}
         fit={fit}
         fitKey={fitKey}
         pad={pad}
@@ -564,7 +613,8 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
         onFailedChange={setMapFailed}
       />
       {overlay}
-      {!loading && !error && step === "select" && providers.length === 0 ? banner(t("No results", "لا توجد نتائج")) : null}
+      {step === "select" && (loc.locating || (searching && loading)) ? banner(loc.locating ? t("Finding your location…", "جارٍ تحديد موقعك…") : t("Finding the nearest…", "جارٍ البحث عن الأقرب…"), "neutral", <RoadLoader compact />) : null}
+      {!loading && !error && step === "select" && providers.length === 0 && !searching && !loc.locating ? banner(t("No results", "لا توجد نتائج")) : null}
       {error && step === "select" ? banner(error, "danger", <Pressable accessibilityRole="button" onPress={load} hitSlop={8}><Text style={{ color: c.bronze, fontSize: 12, fontWeight: "700" }}>{t("Retry", "إعادة المحاولة")}</Text></Pressable>) : null}
       {mapFailed ? null : (
         <Text

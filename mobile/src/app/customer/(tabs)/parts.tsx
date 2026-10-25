@@ -7,6 +7,7 @@ import { ALL_CATEGORIES, labelOf } from "../../../core/constants/categories";
 import { useL } from "../../../core/hooks/useL";
 import type { PartSort } from "../../../features/catalog/catalogService";
 import { ProductBrowser } from "../../../features/catalog/ProductBrowser";
+import { useIgnition } from "../../../motion";
 import { useTheme } from "../../../theme/useTheme";
 
 export default function CustomerParts() {
@@ -16,10 +17,12 @@ export default function CustomerParts() {
   const SORTS = ["relevance", "price_asc", "price_desc", "newest"];
   const sortParam = SORTS.includes(params.sort ?? "") ? (params.sort as PartSort) : undefined;
   const [category, setCategory] = useState<string | null>(null);
+  const ig = useIgnition("parts");
 
   return (
     <ProductBrowser
       tabs
+      ignition={ig}
       initialQ={params.q}
       initialSort={sortParam}
       initialFit={params.fit === "1"}
@@ -29,7 +32,7 @@ export default function CustomerParts() {
         tl: "PARTS / 03",
         art: (
           <View style={{ height: "100%", aspectRatio: 1.5 }}>
-            <BrakeDisc animate />
+            <BrakeDisc animate={ig} />
           </View>
         ),
       }}

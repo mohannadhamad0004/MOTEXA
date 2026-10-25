@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { ReactNode } from "react";
 import { View } from "react-native";
-import { BlueprintPage, CarTop, H1, Icon, IconName, Mono, Pill, PrimaryButton, Press, Rise, SettingsControls, Tag } from "../../../components/blueprint";
+import { BlueprintPage, CarTop, H1, Icon, IconName, Mono, Pill, PrimaryButton, Press, SettingsControls, Tag } from "../../../components/blueprint";
 import { Text } from "../../../components/ui/Text";
 import { useL } from "../../../core/hooks/useL";
 import { carName } from "../../../features/catalog/catalogBits";
@@ -12,12 +12,12 @@ import { useTheme } from "../../../theme/useTheme";
 function Group({ title, children }: { title: string; children: ReactNode }) {
   const { c } = useTheme();
   return (
-    <Rise style={{ marginTop: 32 }}>
+    <View style={{ marginTop: 32 }}>
       <View style={{ marginBottom: 8 }}>
         <Tag color={c.soft}>{title}</Tag>
       </View>
       <View style={{ borderRadius: 20, borderWidth: 1, borderColor: c.line, backgroundColor: c.field, paddingHorizontal: 16 }}>{children}</View>
-    </Rise>
+    </View>
   );
 }
 
@@ -54,7 +54,7 @@ export default function CustomerProfile() {
         ) : undefined,
         art: (
           <View style={{ width: "100%", maxWidth: 280, height: "100%" }}>
-            <CarTop animate />
+            <CarTop />
           </View>
         ),
       }}
@@ -81,6 +81,12 @@ export default function CustomerProfile() {
       <Group title={t("Settings", "الإعدادات")}>
         <SettingsControls />
       </Group>
+
+      {__DEV__ ? (
+        <Group title="Dev">
+          <Item icon="spark" label="DEV: Motion lab" sub="Every motion piece with Replay" onPress={() => router.push("/dev/motion-lab" as never)} />
+        </Group>
+      ) : null}
 
       <PrimaryButton style={{ marginTop: 32 }} variant="danger" icon="logout" label={t("Sign out", "تسجيل الخروج")} onPress={signOut} />
     </BlueprintPage>

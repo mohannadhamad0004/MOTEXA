@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { View } from "react-native";
-import { Mono } from "../../components/blueprint";
+import { Mono, RoadLoader } from "../../components/blueprint";
 import { Text } from "../../components/ui/Text";
 import { useL } from "../../core/hooks/useL";
 import { useTheme } from "../../theme/useTheme";
@@ -47,8 +47,8 @@ export function useRoute(requestId: string | null, from: LatLng | null, to: LatL
 export function RouteSummary({ route, loading }: { route: RouteResult | null; loading: boolean }) {
   const { c, row, align } = useTheme();
   const { t, isArabic } = useL();
-  if (loading || !route)
-    return <Text style={[{ color: c.soft, fontSize: 12 }, align]}>{loading ? t("Finding the route…", "جارٍ حساب المسار…") : ""}</Text>;
+  if (loading) return <RoadLoader label={t("Finding the route…", "جارٍ حساب المسار…")} />;
+  if (!route) return <Text style={[{ color: c.soft, fontSize: 12 }, align]}>{""}</Text>;
   const km = route.km < 10 ? route.km.toFixed(1) : String(Math.round(route.km));
   const unit = isArabic ? "كم" : "km";
   return (

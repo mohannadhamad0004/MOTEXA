@@ -1,3 +1,4 @@
+import { Move } from "../../../components/blueprint";
 import { Async, EmptyState } from "../../../components/ui/Feedback";
 import { Badge } from "../../../components/ui/Badge";
 import { Card } from "../../../components/ui/Card";
@@ -69,7 +70,7 @@ export default function AdminTowList() {
           });
           if (!rows.length) return <EmptyState icon="car-outline" text={t("No tow companies match.", "لا توجد شركات مطابقة.")} />;
           return rows.map((c) => (
-            <Card key={c.id} label={c.name} onPress={() => router.push(`/admin/tow/${c.id}`)}>
+            <Move key={c.id}><Card label={c.name} onPress={() => router.push(`/admin/tow/${c.id}`)}>
               <View style={[row, { justifyContent: "space-between", alignItems: "flex-start", gap: 10 }]}>
                 <View style={{ flex: 1 }}>
                   <Text numberOfLines={2} style={[{ color: col.text, fontSize: 16, fontWeight: "800" }, align]}>{c.name}</Text>
@@ -87,7 +88,7 @@ export default function AdminTowList() {
                   <Badge tone="warning" icon="time-outline" label={`${c.pendingTruckCount} ${t("pending", "قيد المراجعة")}`} />
                 )}
               </View>
-            </Card>
+            </Card></Move>
           ));
         }}
       </Async>

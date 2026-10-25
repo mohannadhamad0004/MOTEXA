@@ -1,3 +1,4 @@
+import { hapticError, hapticSuccess } from "../../motion";
 import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import { Section } from "../../components/blueprint";
@@ -91,7 +92,14 @@ export function useTowRequestForm(company: { id: string; city: string }) {
   const startPin = () => place(locationMemory.current ?? cityCentre(company.city) ?? { lat: 32.2211, lng: 35.2544 }, false);
 
   /** Validates and sends. Returns the request id (a 409 "already open" answer returns that request's id), or null. */
-  const submit = async (): Promise<{ id: string; existing: boolean; request?: CustomerTowRequest } | null> => {
+  const submit = async () => {
+    const r = await send();
+    // haptic feedback for the outcome only: a request sent, or a failed submit
+    if (!r) hapticError();
+    else if (!r.existing) hapticSuccess();
+    return r;
+  };
+  const send = async (): Promise<{ id: string; existing: boolean; request?: CustomerTowRequest } | null> => {
     const y = year.trim() ? Number(year.trim()) : null;
     if (pickup.trim().length < 3) return fail(t("Enter the pickup address.", "أدخل عنوان الاستلام."));
     if (dropoff.trim().length < 3) return fail(t("Enter the destination.", "أدخل الوجهة."));

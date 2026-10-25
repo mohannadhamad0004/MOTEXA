@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { Pressable, View } from "react-native";
-import { Avatar, Icon, Pill, Row, Section, SimplePage, Stamp, StickyActionBar } from "../../../components/blueprint";
+import { Avatar, Icon, Pill, Rise, Row, Section, SimplePage, Stamp, StickyActionBar } from "../../../components/blueprint";
 import { Async, Notice } from "../../../components/ui/Feedback";
 import { Text } from "../../../components/ui/Text";
 import { cityLabel } from "../../../core/constants/cities";
@@ -9,6 +9,7 @@ import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { useSkillLabel } from "../../../features/mechanics/mechanicBits";
 import { mechanicCatalog } from "../../../features/mechanics/mechanicsService";
+import { M } from "../../../motion";
 import { useTheme } from "../../../theme/useTheme";
 
 // Public mechanic profile. Only fields MOTEXA verified or the mechanic published; no phone, email or credentials.
@@ -41,7 +42,7 @@ export default function MechanicProfile() {
                 <Text numberOfLines={2} style={[{ color: c.ink, fontSize: 26, fontWeight: "700", lineHeight: isArabic ? 34 : 29 }, align]}>{m.name}</Text>
                 <Text numberOfLines={2} style={[{ color: c.soft, fontSize: 14, marginTop: 2 }, align]}>{m.workshopName}</Text>
               </View>
-              <Stamp label={t("Verified", "موثّق")} />
+              <Stamp label={t("Verified", "موثّق")} delay={M.entrance + m.skills.length * M.staggerFine + 100} />
             </View>
             <View style={[row, { flexWrap: "wrap", gap: 8, marginTop: 16 }]}>
               <Pill icon={<Icon name="shield" size={14} color={c.bronze} />}>{t("Verified by MOTEXA", "موثّق من موتكسا")}</Pill>
@@ -62,8 +63,10 @@ export default function MechanicProfile() {
 
             <Section n="01" title={t("Skills approved by MOTEXA", "مهارات معتمدة من موتكسا")}>
               <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
-                {m.skills.map((s) => (
-                  <Pill key={s} icon={<Icon name="check" size={14} color={c.bronze} />}>{skillLabel(s)}</Pill>
+                {m.skills.map((s, k) => (
+                  <Rise key={s} i={0} delay={M.entrance + k * M.staggerFine} distance={4}>
+                    <Pill icon={<Icon name="check" size={14} color={c.bronze} />}>{skillLabel(s)}</Pill>
+                  </Rise>
                 ))}
               </View>
             </Section>

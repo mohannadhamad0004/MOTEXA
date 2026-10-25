@@ -1,92 +1,87 @@
-import { ReactNode, useEffect, useRef, useState } from "react";
-import { AccessibilityInfo, Animated, Easing, Pressable, PressableProps, StyleProp, View, ViewStyle } from "react-native";
-import { motion } from "../../theme/tokens";
+import { ComponentProps, createContext, ReactNode, useEffect } from "react";
+import { Pressable, PressableProps, StyleProp, View, ViewStyle } from "react-native";
+import Animated, { cancelAnimation, Easing, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withTiming } from "react-native-reanimated";
+import { ease, M, useReduced } from "../../motion";
 
-export function useReducedMotion() {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    let live = true;
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then((v) => live && setReduced(v))
-      .catch(() => {});
-    const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduced);
-    return () => {
-      live = false;
-      sub.remove();
-    };
-  }, []);
-  return reduced;
-}
+export { useReduced as useReducedMotion };
 
-/** Fade + translateY 8 -> 0 over 600 ms, once per mount. `i` staggers list items by 70 ms. */
-export function Rise({ children, i = 0, style }: { children: ReactNode; i?: number; style?: StyleProp<ViewStyle> }) {
-  const reduced = useReducedMotion();
-  const v = useRef(new Animated.Value(0)).current;
+/** Inside a page-level reveal: Sections do not animate again on their own. */
+export const InReveal = createContext(false);
+
+/**
+ * PrecisionReveal: fade + rise over 270 ms, once per mount. `i` staggers siblings by 45 ms (only the first batch of
+ * 8 animates; later items just appear). Reduced motion: 150 ms fade, no movement.
+ */
+export function Rise({
+  children,
+  i = 0,
+  style,
+  distance = M.riseDetail,
+  delay = 0,
+  layout,
+}: {
+  children: ReactNode;
+  i?: number;
+  style?: StyleProp<ViewStyle>;
+  distance?: number;
+  delay?: number;
+  layout?: ComponentProps<typeof Animated.View>["layout"];
+}) {
+  const reduced = useReduced();
+  const batch = i < 8;
+  const p = useSharedValue(batch ? 0 : 1);
   useEffect(() => {
-    if (reduced) {
-      v.setValue(1);
-      return;
-    }
-    const a = Animated.timing(v, {
-      toValue: 1,
-      duration: motion.rise,
-      delay: Math.min(i, 8) * motion.stagger,
-      easing: Easing.bezier(0.2, 0.7, 0.3, 1),
-      useNativeDriver: true,
-      isInteraction: false,
-    });
-    a.start();
-    return () => a.stop();
-  }, [v, i, reduced]);
+    if (!batch) return;
+    p.value = withDelay(reduced ? 0 : delay + i * M.stagger, withTiming(1, { duration: reduced ? M.reduced : M.entrance, easing: ease }));
+    return () => cancelAnimation(p);
+  }, [p, batch, reduced, i, delay]);
+  const s = useAnimatedStyle(() => ({ opacity: p.value, transform: [{ translateY: reduced ? 0 : (1 - p.value) * distance }] }));
   return (
-    <Animated.View
-      style={[style, { opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }]}
-    >
-      {children}
-    </Animated.View>
+    <InReveal.Provider value>
+      <Animated.View layout={layout} style={[style, s]}>{children}</Animated.View>
+    </InReveal.Provider>
   );
 }
 
-/** Pressable that scales to .98 while held. */
-export function Press({ style, children, ...p }: Omit<PressableProps, "style"> & { style?: StyleProp<ViewStyle> }) {
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+/** Pressable that scales to .98 while held (120 ms). */
+export function Press({ style, children, onPressIn, onPressOut, ...p }: Omit<PressableProps, "style"> & { style?: StyleProp<ViewStyle> }) {
+  const reduced = useReduced();
+  const s = useSharedValue(1);
+  const a = useAnimatedStyle(() => ({ transform: [{ scale: s.value }] }));
   return (
-    <Pressable
+    <AnimatedPressable
       accessibilityRole="button"
       {...p}
-      style={({ pressed }) => [style, pressed && { transform: [{ scale: motion.press }] }]}
+      onPressIn={(e) => {
+        if (!reduced) s.value = withTiming(M.press, { duration: M.feedback, easing: ease });
+        onPressIn?.(e);
+      }}
+      onPressOut={(e) => {
+        s.value = withTiming(1, { duration: M.feedback, easing: ease });
+        onPressOut?.(e);
+      }}
+      style={[style, a]}
     >
-      {children}
-    </Pressable>
+      {children as ReactNode}
+    </AnimatedPressable>
   );
 }
 
-/** Expanding ring used behind live dots (the only looping animation in the kit). */
+/** Expanding ring behind live dots: the only infinite loop in the kit (the location pulse). */
 export function PulseRing({ size = 8, color }: { size?: number; color: string }) {
-  const reduced = useReducedMotion();
-  const v = useRef(new Animated.Value(0)).current;
+  const reduced = useReduced();
+  const v = useSharedValue(0);
   useEffect(() => {
     if (reduced) return;
-    const loop = Animated.loop(
-      Animated.timing(v, { toValue: 1, duration: 2000, easing: Easing.out(Easing.quad), useNativeDriver: true, isInteraction: false })
-    );
-    loop.start();
-    return () => loop.stop();
+    v.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.out(Easing.quad) }), -1, false);
+    return () => cancelAnimation(v);
   }, [v, reduced]);
+  const ring = useAnimatedStyle(() => ({ opacity: 0.8 * (1 - v.value), transform: [{ scale: 0.6 + 1.8 * v.value }] }));
   return (
     <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
-      {!reduced && (
-        <Animated.View
-          style={{
-            position: "absolute",
-            width: size,
-            height: size,
-            borderRadius: size,
-            backgroundColor: color,
-            opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.8, 0] }),
-            transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.6, 2.4] }) }],
-          }}
-        />
-      )}
+      {!reduced && <Animated.View style={[{ position: "absolute", width: size, height: size, borderRadius: size, backgroundColor: color }, ring]} />}
       <View style={{ width: size, height: size, borderRadius: size, backgroundColor: color }} />
     </View>
   );

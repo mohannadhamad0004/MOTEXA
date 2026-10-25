@@ -1,3 +1,4 @@
+import { hapticError, hapticSuccess } from "../../motion";
 import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import { Section } from "../../components/blueprint";
@@ -94,7 +95,14 @@ export function useMechanicRequestForm(mechanic: { id: string; city: string }) {
     return null;
   };
   /** Validates and sends. Returns the created request, or null (the error is in `err`). */
-  const submit = async (): Promise<CustomerMechanicRequest | null> => {
+  const submit = async () => {
+    const r = await send();
+    // haptic feedback for the outcome only: a request sent, or a failed submit
+    if (r) hapticSuccess();
+    else hapticError();
+    return r;
+  };
+  const send = async (): Promise<CustomerMechanicRequest | null> => {
     const y = year.trim() ? Number(year.trim()) : undefined;
     if (!make.trim() || !model.trim()) return fail(t("Enter the car make and model.", "أدخل ماركة السيارة وطرازها."));
     if (y !== undefined && !(Number.isInteger(y) && y >= 1950 && y <= new Date().getFullYear() + 1)) return fail(t("The car year is not valid.", "سنة السيارة غير صحيحة."));

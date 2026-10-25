@@ -1,4 +1,4 @@
-import { VerticalTimeline } from "../blueprint/Primitives";
+import { VerticalTimeline } from "../blueprint/route";
 
 /** One line per step that happened, with its time. The last step is the current one. */
 export function StatusTimeline({ items }: { items: { key: string; label: string; at: string }[] }) {

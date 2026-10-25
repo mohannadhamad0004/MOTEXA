@@ -1,3 +1,5 @@
+import { Steps } from "../../../../components/blueprint";
+import { hapticError, hapticSuccess } from "../../../../motion";
 import { Async, Notice } from "../../../../components/ui/Feedback";
 import { Badge } from "../../../../components/ui/Badge";
 import { Button } from "../../../../components/ui/Button";
@@ -102,10 +104,12 @@ function Inspector({ a, reload }: { a: ApplicationDetail; reload: () => void }) 
     setErr(null);
     try {
       await fn();
+      hapticSuccess();
       setRejectingSkill(null);
       setPanel(null);
       reload();
     } catch (e: any) {
+      hapticError();
       setErr(e.message);
     } finally {
       setBusy(false);
@@ -123,6 +127,13 @@ function Inspector({ a, reload }: { a: ApplicationDetail; reload: () => void }) 
     <>
       <View style={{ alignItems: "flex-start", gap: 8 }}>
         <ReviewStatusBadge value={a.reviewStatus} />
+        <View style={{ alignSelf: "stretch" }}>
+          <Steps
+            labels={[t("Submitted", "مقدّم"), t("In review", "قيد المراجعة"), t("Decision", "القرار")]}
+            index={a.reviewStatus === "PENDING_REVIEW" ? 0 : a.reviewStatus === "READY_FOR_AUTHORITY" ? 2 : 1}
+            tone={a.reviewStatus === "REJECTED" ? "danger" : a.reviewStatus === "READY_FOR_AUTHORITY" ? "success" : "brand"}
+          />
+        </View>
         <Text style={{ color: col.textDim, fontSize: 11 }}>{t("Application", "الطلب")} {a.id}</Text>
       </View>
       {a.reviewReason && (a.reviewStatus === "NEEDS_CORRECTION" || a.reviewStatus === "REJECTED" || a.reviewStatus === "MANUAL_REVIEW") ? (

@@ -1,4 +1,5 @@
-import { Avatar, Ltr } from "../../components/blueprint";
+import { Avatar, Ltr, Rise } from "../../components/blueprint";
+import { M } from "../../motion";
 import { Badge } from "../../components/ui/Badge";
 import { Text } from "../../components/ui/Text";
 import { StatusTimeline } from "../../components/ui/StatusTimeline";
@@ -62,16 +63,18 @@ export function VerifiedBadge() {
 }
 
 /** Up to `max` skill pills and a bordered "+N" for the rest. */
-export function SkillBadges({ skills, max = 3 }: { skills: string[]; max?: number }) {
+export function SkillBadges({ skills, max = 3, after }: { skills: string[]; max?: number; /** ms: chips fade in one by one (35 ms apart) starting after this delay */ after?: number }) {
   const { c } = useTheme();
   const { row } = useL();
   const label = useSkillLabel();
   return (
     <View style={[row, { flexWrap: "wrap", gap: 6 }]}>
-      {skills.slice(0, max).map((s) => (
-        <View key={s} style={{ borderRadius: 999, backgroundColor: c.pill, paddingHorizontal: 10, paddingVertical: 4 }}>
-          <Text style={{ color: c.ink, fontSize: 11, fontWeight: "600" }}>{label(s)}</Text>
-        </View>
+      {skills.slice(0, max).map((s, k) => (
+        <Rise key={s} i={after === undefined ? 99 : 0} delay={(after ?? 0) + k * M.staggerFine} distance={4}>
+          <View style={{ borderRadius: 999, backgroundColor: c.pill, paddingHorizontal: 10, paddingVertical: 4 }}>
+            <Text style={{ color: c.ink, fontSize: 11, fontWeight: "600" }}>{label(s)}</Text>
+          </View>
+        </Rise>
       ))}
       {skills.length > max ? (
         <View style={{ borderRadius: 999, borderWidth: 1, borderColor: c.line, paddingHorizontal: 10, paddingVertical: 4 }}>
