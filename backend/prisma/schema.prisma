@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -24,13 +23,14 @@ enum AccountStatus {
   REJECTED
 }
 
-
 enum InvitationStatus {
   PENDING
   ACCEPTED
   REVOKED
 }
+
 enum MechanicVerificationStatus {
+  DRAFT
   PENDING
   NEEDS_COMPLETION
   VERIFIED
@@ -39,22 +39,26 @@ enum MechanicVerificationStatus {
 }
 
 model User {
-  id           String        @id @default(uuid())
-  fullName     String
-  email        String        @unique
-  passwordHash String
-  role         UserRole
-  status       AccountStatus @default(PENDING)
-  mechanicProfile MechanicProfile?
+  id                  String               @id @default(uuid())
+  fullName            String
+  email               String               @unique
+  sessionVersion      Int                  @default(0)
+  passwordHash        String
+  role                UserRole
+  status              AccountStatus        @default(PENDING)
+  mechanicProfile     MechanicProfile?
+  emailVerifiedAt     DateTime?
+  mechanicEmailChecks MechanicEmailCheck[]
+  notifications       Notification[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  adminPermissions AdminPermission[]
-  
+  passwordResetRequests PasswordResetRequest[]
+  adminPermissions      AdminPermission[]
 
-  sentInvitations AdminInvitation[] @relation("InvitationSender")
-  acceptedInvitation AdminInvitation? @relation("InvitationRecipient")
+  sentInvitations    AdminInvitation[] @relation("InvitationSender")
+  acceptedInvitation AdminInvitation?  @relation("InvitationRecipient")
 
   @@index([role, status])
 }
@@ -69,30 +73,28 @@ model AdminPermission {
   @@unique([adminId, permission])
 }
 
-
 model AdminInvitation {
   id        String @id @default(uuid())
   email     String
   fullName  String
   tokenHash String @unique
 
-  status      InvitationStatus @default(PENDING)
-  expiresAt   DateTime
- permission String
+  status     InvitationStatus @default(PENDING)
+  expiresAt  DateTime
+  permission String
 
   invitedById String
-  invitedBy   User @relation("InvitationSender", fields: [invitedById], references: [id])
+  invitedBy   User   @relation("InvitationSender", fields: [invitedById], references: [id])
 
   acceptedById String? @unique
-  acceptedBy   User? @relation("InvitationRecipient", fields: [acceptedById], references: [id])
+  acceptedBy   User?   @relation("InvitationRecipient", fields: [acceptedById], references: [id])
 
-  createdAt  DateTime @default(now())
+  createdAt  DateTime             @default(now())
   acceptedAt DateTime?
+  otps       AdminInvitationOtp[]
 
   @@index([email, status])
-  otps AdminInvitationOtp[]
 }
-
 
 model AuditLog {
   id        String   @id @default(uuid())
@@ -104,14 +106,28 @@ model AuditLog {
 
   @@index([actorId, createdAt])
 }
+
 model MechanicProfile {
   id     String @id @default(uuid())
   userId String @unique
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  phoneNumber String?
-  nationalId  String?
+  city              String?
+  experienceSummary String?
+  workshopAddress   String?
+  coverageAreas     String[]           @default([])
+  termsAcceptedAt   DateTime?
+  submittedAt       DateTime?
+  submissionVersion Int                @default(0)
+  interviewResult   String?
+  interviewNotes    String?
+  interviewedAt     DateTime?
+  interviewedById   String?
+  ministryStatus    String             @default("NOT_REQUESTED")
+  documents         MechanicDocument[]
+  phoneNumber       String?
+  nationalId        String?
 
   nationalIdDocumentUrl String?
   licenseDocumentUrl    String?
@@ -122,13 +138,13 @@ model MechanicProfile {
 
   specializations String[]
 
-  offersOnSite  Boolean @default(false)
+  offersOnSite   Boolean @default(false)
   offersWorkshop Boolean @default(false)
   offersOnline   Boolean @default(false)
 
   verificationStatus MechanicVerificationStatus @default(PENDING)
 
-  reviewNotes String?
+  reviewNotes  String?
   reviewedById String?
   reviewedAt   DateTime?
 
@@ -138,20 +154,19 @@ model MechanicProfile {
   @@index([verificationStatus])
 }
 
-
 model AdminInvitationOtp {
   id String @id @default(uuid())
 
   invitationId String
-  invitation AdminInvitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  invitation   AdminInvitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
 
   codeHash String
 
-  expiresAt DateTime
+  expiresAt  DateTime
   verifiedAt DateTime?
   consumedAt DateTime?
 
-  attempts Int @default(0)
+  attempts    Int @default(0)
   maxAttempts Int @default(5)
 
   createdAt DateTime @default(now())
@@ -159,4 +174,62 @@ model AdminInvitationOtp {
   @@index([invitationId, createdAt])
 }
 
+// Recovery codes are isolated from AdminInvitationOtp.
+model PasswordResetRequest {
+  id             String    @id @default(uuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resetTokenHash String?   @unique
+  resetExpiresAt DateTime?
+  codeHash       String
+  expiresAt      DateTime
+  sentAt         DateTime?
+  verifiedAt     DateTime?
+  consumedAt     DateTime?
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(5)
+  createdAt      DateTime  @default(now())
 
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+}
+
+model MechanicEmailCheck {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash    String
+  attempts    Int       @default(0)
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  deliveredAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model MechanicDocument {
+  id         String          @id @default(uuid())
+  profileId  String
+  profile    MechanicProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  kind       String
+  fileName   String
+  mimeType   String
+  size       Int
+  storageKey String
+  createdAt  DateTime        @default(now())
+
+  @@unique([profileId, kind])
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}

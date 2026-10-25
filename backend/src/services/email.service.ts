@@ -1,30 +1,57 @@
-
 import { Resend } from "resend";
 import nodemailer from "nodemailer";
 
-async function deliverEmail(message: {to: string[]; subject: string; text: string}) {
+async function deliverEmail(message: {
+  to: string[];
+  subject: string;
+  text: string;
+}) {
   if (process.env.SMTP_HOST) {
-    const user=process.env.SMTP_USER?.trim();
-    const pass=process.env.SMTP_PASS?.replace(/\s/g, "");
-    const port=Number(process.env.SMTP_PORT || 465);
-    if (!user || !pass || ![465,587].includes(port)) throw new Error("SMTP configuration is incomplete.");
-    const transport=nodemailer.createTransport({host:process.env.SMTP_HOST,port,secure:port===465,requireTLS:true,auth:{user,pass},connectionTimeout:15000,greetingTimeout:15000,socketTimeout:20000,logger:false,debug:false});
+    const user = process.env.SMTP_USER?.trim();
+    const pass = process.env.SMTP_PASS?.replace(/\s/g, "");
+    const port = Number(process.env.SMTP_PORT || 465);
+    if (!user || !pass || ![465, 587].includes(port))
+      throw new Error("SMTP configuration is incomplete.");
+    const transport = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port,
+      secure: port === 465,
+      requireTLS: true,
+      auth: { user, pass },
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000,
+      logger: false,
+      debug: false,
+    });
     try {
-      const result=await transport.sendMail({...message,from:{name:"MOTEXA",address:user}});
-      if (!result.accepted.length || result.rejected.length) throw new Error("Email recipient was not accepted.");
-      return {data:{id:result.messageId},error:null};
+      const result = await transport.sendMail({
+        ...message,
+        from: { name: "MOTEXA", address: user },
+      });
+      if (!result.accepted.length || result.rejected.length)
+        throw new Error("Email recipient was not accepted.");
+      return { data: { id: result.messageId }, error: null };
     } catch (error) {
-      const safe=error as {code?:string;responseCode?:number};
-      console.error("SMTP delivery failed",{code:safe.code,responseCode:safe.responseCode});
+      const safe = error as { code?: string; responseCode?: number };
+      console.error("SMTP delivery failed", {
+        code: safe.code,
+        responseCode: safe.responseCode,
+      });
       throw new Error("Email could not be sent through SMTP.");
-    } finally { transport.close(); }
+    } finally {
+      transport.close();
+    }
   }
-  const apiKey=process.env.RESEND_API_KEY;
-  const from=process.env.RESEND_FROM_EMAIL;
-  if (!apiKey || !from) throw new Error("Resend email configuration is missing.");
-  return new Resend(apiKey).emails.send({...message,from:`MOTEXA <${from}>`});
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM_EMAIL;
+  if (!apiKey || !from)
+    throw new Error("Resend email configuration is missing.");
+  return new Resend(apiKey).emails.send({
+    ...message,
+    from: `MOTEXA <${from}>`,
+  });
 }
-
 
 type InvitationEmailInput = {
   to: string;
@@ -47,9 +74,7 @@ export async function sendAdminInvitationEmail({
   activationLink,
   expoGoActivationLink,
 }: InvitationEmailInput) {
-
-  const department =
-    departmentNames[permission] ?? "Administration";
+  const department = departmentNames[permission] ?? "Administration";
 
   const { data, error } = await deliverEmail({
     to: [to],
@@ -62,7 +87,9 @@ export async function sendAdminInvitationEmail({
       "",
       "Activate your account using this link:",
       activationLink,
-      ...(expoGoActivationLink ? ["", "Expo Go test only (same Wi-Fi):", expoGoActivationLink] : []),
+      ...(expoGoActivationLink
+        ? ["", "Expo Go test only (same Wi-Fi):", expoGoActivationLink]
+        : []),
       "",
       "This invitation expires in 24 hours.",
       "If you did not expect this invitation, ignore this email.",
@@ -89,12 +116,7 @@ type OtpEmailInput = {
   otp: string;
 };
 
-export async function sendAdminOtpEmail({
-  to,
-  fullName,
-  otp,
-}: OtpEmailInput) {
-
+export async function sendAdminOtpEmail({ to, fullName, otp }: OtpEmailInput) {
   const { data, error } = await deliverEmail({
     to: [to],
     subject: "MOTEXA | Administrator Verification Code",
@@ -123,5 +145,38 @@ export async function sendAdminOtpEmail({
     throw new Error("Failed to send administrator OTP email.");
   }
 
+  return { emailId: data.id };
+}
+
+// Password recovery is deliberately separate from administrator invitation verification.
+export async function sendPasswordResetOtpEmail({
+  to,
+  fullName,
+  otp,
+}: OtpEmailInput) {
+  const { data, error } = await deliverEmail({
+    to: [to],
+    subject: "MOTEXA | Password Recovery Code",
+    text: [
+      `Hello ${fullName},`,
+      "",
+      "A password reset was requested for your MOTEXA account.",
+      "Your password recovery verification code is:",
+      "",
+      otp,
+      "",
+      "This code expires in 5 minutes. Never share it with anyone.",
+      "This code is for password recovery only, not for administrator invitation activation.",
+      "If you did not request a password reset, ignore this email. Your password has not changed.",
+      "",
+      "تم طلب استعادة كلمة مرور حسابك في MOTEXA.",
+      "رمز التحقق أعلاه صالح لمدة 5 دقائق. لا تشاركه مع أي شخص.",
+      "إذا لم تطلب الاستعادة، تجاهل هذه الرسالة. لم يتم تغيير كلمة المرور.",
+      "",
+      "MOTEXA Security Team",
+    ].join("\n"),
+  });
+  if (error || !data?.id)
+    throw new Error("Password recovery email could not be delivered.");
   return { emailId: data.id };
 }
