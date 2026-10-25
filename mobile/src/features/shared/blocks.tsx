@@ -1,3 +1,4 @@
+import { Resolved } from "../../components/blueprint";
 import { Text } from "../../components/ui/Text";
 import { useTheme } from "../../theme/useTheme";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,7 +23,11 @@ export function VerificationBadge({ value, prefix }: { value: V; prefix?: string
     REJECTED: { tone: "danger", icon: "close-circle-outline", label: t("Rejected", "مرفوض") },
   } as const;
   const m = map[value];
-  return <Badge tone={m.tone} icon={m.icon} label={m.label} prefix={prefix} />;
+  return (
+    <Resolved k={value} kind={value === "APPROVED" ? "check" : value === "REJECTED" ? "x" : null}>
+      <Badge tone={m.tone} icon={m.icon} label={m.label} prefix={prefix} />
+    </Resolved>
+  );
 }
 
 export const fmtDate = (iso?: string | null) => (iso ? iso.slice(0, 10) : "");

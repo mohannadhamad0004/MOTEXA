@@ -1,3 +1,4 @@
+import { hapticError, hapticSuccess } from "../../../motion";
 import { Async, Notice } from "../../../components/ui/Feedback";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
@@ -43,7 +44,9 @@ export default function MechanicRequestDetail() {
     try {
       if (action === "decline") await mechanicInbox.decline(id, reason);
       else await mechanicInbox[action](id);
+      if (action === "accept") hapticSuccess();
     } catch (e: any) {
+      if (action === "accept") hapticError();
       setErr(e.message);
     } finally {
       setConfirm(null);

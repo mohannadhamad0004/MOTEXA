@@ -23,7 +23,7 @@ export default function CustomerShop() {
         tr: state.data?.shop.city,
         art: (
           <View style={{ height: "100%", aspectRatio: 1.5 }}>
-            <Shop animate />
+            <Shop />
           </View>
         ),
       }}

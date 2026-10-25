@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
-import { BlueprintPage, BlueprintSurface, CarTop, Chip, H1, HScroll, Icon, IconName, Mono, Press, Rise, SearchField, Section, Sub, Tag, TowTruck } from "../../../components/blueprint";
+import { BlueprintPage, BlueprintSurface, CarTop, Chip, H1, HScroll, Icon, IconName, Mono, Press, SearchField, Section, Sub, Tag, TowTruck } from "../../../components/blueprint";
 import { Button } from "../../../components/ui/Button";
 import { Notice } from "../../../components/ui/Feedback";
 import { SkeletonList } from "../../../components/ui/Skeleton";
@@ -14,6 +14,7 @@ import { catalogService, currentCar } from "../../../features/catalog/catalogSer
 import { HRow, MiniProductCard, ShopRow } from "../../../features/catalog/homeBits";
 import { ActiveRequestCard, useActiveRequest } from "../../../features/requests/activeRequest";
 import { useSessionUser } from "../../../features/shared/session";
+import { M, useIgnition } from "../../../motion";
 import { alpha } from "../../../theme/tokens";
 import { useTheme } from "../../../theme/useTheme";
 
@@ -40,6 +41,7 @@ export default function CustomerHome() {
   const { c, row, align } = useTheme();
   const user = useSessionUser();
   const { t, isArabic } = useL();
+  const ig = useIgnition("home");
   const [q, setQ] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
@@ -71,7 +73,7 @@ export default function CustomerHome() {
   const num = () => String(++n).padStart(2, "0");
 
   const tile = (icon: IconName, no: string, title: string, sub: string, onPress: () => void) => (
-    <Rise style={{ flex: 1 }}>
+    <View style={{ flex: 1 }}>
       <Press
         accessibilityLabel={title}
         onPress={onPress}
@@ -86,12 +88,15 @@ export default function CustomerHome() {
           <Text style={[{ color: c.soft, fontSize: 12, marginTop: 2 }, align]}>{sub}</Text>
         </View>
       </Press>
-    </Rise>
+    </View>
   );
 
   return (
     <BlueprintPage
       tabs
+      ignition={ig}
+      shift
+      lead={active ? <ActiveRequestCard a={active} /> : null}
       refreshing={refreshing}
       onRefresh={refresh}
       hero={{
@@ -101,13 +106,11 @@ export default function CustomerHome() {
         bl: carChip,
         art: (
           <View style={{ width: "100%", maxWidth: 300, height: "100%" }}>
-            <CarTop animate />
+            <CarTop animate={ig} delay={M.grid} headlights={ig} />
           </View>
         ),
       }}
     >
-      {active ? <ActiveRequestCard a={active} /> : null}
-
       <H1>{t("What does your car need today?", "ماذا تحتاج سيارتك اليوم؟")}</H1>
       <Sub>{t("Parts, towing and mechanics — verified, in one place.", "قطع وسحب وميكانيكيون موثّقون، في مكان واحد.")}</Sub>
       <SearchField
@@ -118,7 +121,7 @@ export default function CustomerHome() {
         onSubmit={() => router.navigate({ pathname: "/customer/parts", params: q.trim() ? { q: q.trim() } : {} })}
       />
 
-      <Rise style={{ marginTop: 24 }}>
+      <View style={{ marginTop: 24 }}>
         <Press accessibilityLabel={t("Request a tow", "اطلب سحب")} onPress={() => router.navigate("/customer/tow")}>
           <BlueprintSurface style={{ borderRadius: 24, padding: 20 }}>
             <View style={[row, { justifyContent: "space-between", alignItems: "flex-start" }]}>
@@ -132,7 +135,7 @@ export default function CustomerHome() {
             <Text style={[{ color: alpha(c.cream, 0.7), fontSize: 13 }, align]}>{t("Nearest available truck by GPS", "أقرب شاحنة متاحة عبر GPS")}</Text>
           </BlueprintSurface>
         </Press>
-      </Rise>
+      </View>
 
       <View style={[row, { gap: 12, marginTop: 12 }]}>
         {tile("parts", "03", t("Buy parts", "شراء قطع"), t("From verified shops", "من محلات موثّقة"), () => router.navigate("/customer/parts"))}

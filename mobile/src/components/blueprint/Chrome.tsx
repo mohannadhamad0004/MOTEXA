@@ -1,4 +1,6 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
+import { M, useReduced } from "../../motion";
 import { Modal, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../theme/useTheme";
@@ -22,8 +24,24 @@ type BarProps = {
  */
 export function FloatingTabBar({ state, navigation, items }: BarProps & { items: TabItem[] }) {
   const insets = useSafeAreaInsets();
-  const { c, row } = useTheme();
+  const { c, row, isArabic } = useTheme();
+  const reduced = useReduced();
   const activeName = state.routes[state.index]?.name;
+  const shown = items.filter((it) => state.routes.some((r) => r.name === it.name));
+  const active = Math.max(0, shown.findIndex((it) => it.name === activeName));
+  // the active pill slides between tabs; in Arabic the row is mirrored, so is the slot
+  const [inner, setInner] = useState(0);
+  const slot = shown.length ? inner / shown.length : 0;
+  const x = useSharedValue(0);
+  const placed = useRef(false);
+  useEffect(() => {
+    if (!slot) return;
+    const target = (isArabic ? shown.length - 1 - active : active) * slot;
+    x.value = placed.current && !reduced ? withSpring(target, M.spring) : target;
+    placed.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, slot, isArabic, reduced]);
+  const pill = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
   return (
     <View
       style={[
@@ -40,7 +58,9 @@ export function FloatingTabBar({ state, navigation, items }: BarProps & { items:
           backgroundColor: alpha(c.sheet, 0.95),
         },
       ]}
+      onLayout={(e) => setInner(e.nativeEvent.layout.width - 14)}
     >
+      {slot > 0 && <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 6, top: 6, width: slot, height: 56, borderRadius: 20, backgroundColor: c.btn }, pill]} />}
       {items.map((it) => {
         const route = state.routes.find((r) => r.name === it.name);
         if (!route) return null;
@@ -63,8 +83,7 @@ export function FloatingTabBar({ state, navigation, items }: BarProps & { items:
               alignItems: "center",
               justifyContent: "center",
               gap: 2,
-              backgroundColor: on ? c.btn : "transparent",
-              transform: [{ scale: pressed ? 0.98 : 1 }],
+                            transform: [{ scale: pressed ? 0.98 : 1 }],
             })}
           >
             <Icon name={it.icon} size={20} color={fg} />

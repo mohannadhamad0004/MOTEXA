@@ -1,6 +1,8 @@
 import { useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { ReactNode, useCallback } from "react";
+import { ReactNode, useCallback, useEffect } from "react";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { ease, M } from "../../motion";
 import { Pressable, StatusBar, StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 import Svg, { Defs, Path, Pattern, Rect } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -13,11 +15,28 @@ import { Icon } from "./Icon";
 import { Tag } from "./Primitives";
 
 /** Dark panel (in both modes): blueprint -> blueprint2 gradient at ~160deg + a 24px grid at 7% bronzeLight. */
-export function BlueprintSurface({ children, style, construction = false }: { children?: ReactNode; style?: StyleProp<ViewStyle>; construction?: boolean }) {
+export function BlueprintSurface({
+  children,
+  style,
+  construction = false,
+  gridFade = false,
+}: {
+  children?: ReactNode;
+  style?: StyleProp<ViewStyle>;
+  construction?: boolean;
+  /** Ignition: the grid fades in over 200 ms */
+  gridFade?: boolean;
+}) {
   const { c } = useTheme();
+  const g = useSharedValue(gridFade ? 0 : 1);
+  useEffect(() => {
+    if (gridFade) g.value = withTiming(1, { duration: M.grid, easing: ease });
+  }, [gridFade, g]);
+  const gridStyle = useAnimatedStyle(() => ({ opacity: g.value }));
   return (
     <View style={[{ overflow: "hidden", backgroundColor: c.blueprint }, style]}>
       <LinearGradient colors={[c.blueprint, c.blueprint2]} start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }} style={StyleSheet.absoluteFill} />
+      <Animated.View style={[StyleSheet.absoluteFill, gridStyle]} pointerEvents="none">
       <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" pointerEvents="none">
         <Defs>
           <Pattern id="bpgrid" width="24" height="24" patternUnits="userSpaceOnUse">
@@ -26,6 +45,7 @@ export function BlueprintSurface({ children, style, construction = false }: { ch
         </Defs>
         <Rect width="100%" height="100%" fill="url(#bpgrid)" />
       </Svg>
+      </Animated.View>
       {construction && <Construction />}
       {children}
     </View>
@@ -63,6 +83,7 @@ export function Hero({
   children,
   back,
   right,
+  ignition = false,
 }: {
   tl?: ReactNode;
   tr?: ReactNode;
@@ -74,6 +95,8 @@ export function Hero({
   back?: Parameters<typeof goBack>[0];
   /** node pinned to the top end (settings icon on provider screens) */
   right?: ReactNode;
+  /** first entry of a main tab: the grid fades in */
+  ignition?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   const { c, isArabic } = useTheme();
@@ -94,7 +117,7 @@ export function Hero({
     typeof x === "string" ? <Tag color={color} align={align(which)}>{x}</Tag> : x;
   // the sheet overlaps the bottom 32px, so bottom labels sit above that
   return (
-    <BlueprintSurface construction style={{ height: top + height }}>
+    <BlueprintSurface construction gridFade={ignition} style={{ height: top + height }}>
       {tl ? (
         <View style={tagBox("start", { top: tagTop })}>
           {tag(tl, alpha(c.cream, 0.7), "start")}

@@ -1,6 +1,11 @@
 import { IBMPlexMono_400Regular, IBMPlexMono_600SemiBold } from "@expo-google-fonts/ibm-plex-mono";
 import { useFonts } from "expo-font";
-import { ReactNode, useRef } from "react";
+import { ReactNode, useContext, useEffect, useRef, useState } from "react";
+import { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { ease, M, useReduced } from "../../motion";
+import { InspectionCheck } from "./InspectionCheck";
+import { Odometer } from "./Odometer";
+import { RoadLoader } from "./RoadLoader";
 import {
   ActivityIndicator,
   ScrollView,
@@ -17,7 +22,7 @@ import Svg, { Line } from "react-native-svg";
 import { Text } from "../ui/Text";
 import { useTheme } from "../../theme/useTheme";
 import { Icon, IconName } from "./Icon";
-import { Press, PulseRing, Rise } from "./motion";
+import { InReveal, Press, PulseRing, Rise } from "./motion";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useL } from "../../core/hooks/useL";
 
@@ -136,16 +141,18 @@ export function Sub({ children, style }: { children: ReactNode; style?: StylePro
 /** "01 —  Title": mono number in bronze + 18px bold title, 40px above, rises in. */
 export function Section({ n, title, children, right }: { n?: string; title: string; children?: ReactNode; right?: ReactNode }) {
   const { c, row, align } = useTheme();
-  return (
-    <Rise style={{ marginTop: 40 }}>
+  const inReveal = useContext(InReveal);
+  const body = (
+    <>
       <View style={[row, { alignItems: "baseline", gap: 12, marginBottom: 16 }]}>
         {n ? <Mono color={c.bronze}>{`${n} —`}</Mono> : null}
         <Text style={[{ color: c.ink, fontSize: 18, fontWeight: "700", flex: 1 }, align]}>{title}</Text>
         {right}
       </View>
       {children}
-    </Rise>
+    </>
   );
+  return inReveal ? <View style={{ marginTop: 40 }}>{body}</View> : <Rise style={{ marginTop: 40 }}>{body}</Rise>;
 }
 
 export function SearchField({
@@ -190,40 +197,55 @@ export function SearchField({
   );
 }
 
-/** 44px pill. on = filled (btn / btnFg), off = field + line border. */
+/**
+ * 44px pill. on = filled (btn / btnFg), off = field + line border. Toggling morphs border -> fill (190 ms); with
+ * `check` an InspectionCheck sweeps in as it turns on (filter chips).
+ */
 export function Chip({
   label,
   on = false,
   onPress,
   icon,
   trailing,
+  check = false,
 }: {
   label: string;
   on?: boolean;
   onPress?: () => void;
   icon?: IconName;
   trailing?: IconName;
+  check?: boolean;
 }) {
   const { c, row } = useTheme();
-  const fg = on ? c.btnFg : c.ink;
+  const reduced = useReduced();
+  const p = useSharedValue(on ? 1 : 0);
+  const [ink, setInk] = useState(on);
+  const mounted = useRef(false);
+  useEffect(() => {
+    p.value = withTiming(on ? 1 : 0, { duration: reduced ? M.reduced : M.chip, easing: ease });
+    // the label colour flips half-way through the fill
+    const id = setTimeout(() => setInk(on), reduced ? 0 : M.chip / 2);
+    mounted.current = true;
+    return () => clearTimeout(id);
+  }, [on, reduced, p]);
+  const body = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(p.value, [0, 1], [c.field, c.btn]),
+    borderColor: interpolateColor(p.value, [0, 1], [c.line, c.btn]),
+  }));
+  const fg = ink ? c.btnFg : c.ink;
   return (
     <Press
       onPress={onPress}
       accessibilityState={{ selected: on }}
-      style={[
-        row,
-        {
-          height: 44,
-          alignItems: "center",
-          gap: 6,
-          paddingHorizontal: 16,
-          borderRadius: 999,
-          borderWidth: 1,
-          borderColor: on ? c.btn : c.line,
-          backgroundColor: on ? c.btn : c.field,
-        },
-      ]}
+      style={
+        [
+          row,
+          { height: 44, alignItems: "center", gap: 6, paddingHorizontal: 16, borderRadius: 999, borderWidth: 1 },
+          body,
+        ] as never
+      }
     >
+      {check && on ? <InspectionCheck size={14} color={fg} animate={mounted.current} /> : null}
       {icon ? <Icon name={icon} size={16} color={fg} /> : null}
       <Text numberOfLines={1} style={{ color: fg, fontSize: 13, fontWeight: "600" }}>
         {label}
@@ -242,11 +264,14 @@ export function PrimaryButton({
   disabled,
   variant = "primary",
   style,
+  road = false,
 }: {
   label: string;
   onPress: () => void;
   icon?: IconName;
   loading?: boolean;
+  /** show the RoadLoader instead of the spinner while loading (sending a request, accepting a job) */
+  road?: boolean;
   disabled?: boolean;
   variant?: "primary" | "outline" | "danger";
   style?: StyleProp<ViewStyle>;
@@ -276,7 +301,7 @@ export function PrimaryButton({
         style,
       ]}
     >
-      {loading ? <ActivityIndicator size="small" color={fg} /> : icon ? <Icon name={icon} size={20} color={fg} /> : null}
+      {loading ? road ? <RoadLoader compact color={fg} /> : <ActivityIndicator size="small" color={fg} /> : icon ? <Icon name={icon} size={20} color={fg} /> : null}
       <Text numberOfLines={2} style={{ color: fg, fontSize: 15, fontWeight: "700", flexShrink: 1, textAlign: "center" }}>
         {label}
       </Text>
@@ -284,24 +309,19 @@ export function PrimaryButton({
   );
 }
 
-/** Verified stamp: dashed bronze ring, inner ring, check and a tiny label. */
-export function Stamp({ label }: { label: string }) {
-  const { c, isArabic } = useTheme();
+/**
+ * Verified mark: a thin bronze ring with a check that resolves (stroke sweep). It is a precise check, not a seal
+ * that stamps down. `delay` lets it resolve after the name and the skill chips.
+ */
+export function Stamp({ label, delay = 0, animate = true }: { label: string; delay?: number; animate?: boolean }) {
+  const { c } = useTheme();
   return (
     <View
       accessible
       accessibilityLabel={label}
-      style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 1, borderStyle: "dashed", borderColor: c.bronze, alignItems: "center", justifyContent: "center" }}
+      style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: c.bronze, alignItems: "center", justifyContent: "center" }}
     >
-      <View style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: c.bronze, alignItems: "center", justifyContent: "center" }}>
-        <Icon name="check" size={14} color={c.bronze} />
-        <Text
-          numberOfLines={1}
-          style={{ color: c.bronze, fontSize: 8, fontWeight: "700", marginTop: -1, letterSpacing: isArabic ? 0 : 0.6, maxWidth: 40, textAlign: "center" }}
-        >
-          {isArabic ? label : label.toUpperCase()}
-        </Text>
-      </View>
+      <InspectionCheck size={20} color={c.bronze} delay={delay} animate={animate} />
     </View>
   );
 }
@@ -335,97 +355,6 @@ export function Dash({ color, style }: { color: string; style?: StyleProp<ViewSt
       <Svg width="100%" height="2">
         <Line x1="0" y1="1" x2="100%" y2="1" stroke={color} strokeWidth={1} strokeDasharray="3 3" />
       </Svg>
-    </View>
-  );
-}
-
-/** Horizontal progress: done = filled bronze + check, current = ring + dot, future = line colour, dashed connector. */
-export function Steps({ labels, index }: { labels: string[]; index: number }) {
-  const { c, row, isArabic } = useTheme();
-  return (
-    <View style={[row, { marginTop: 16, alignItems: "flex-start" }]}>
-      {labels.map((l, k) => {
-        const done = k < index;
-        const now = k === index;
-        const reached = k <= index;
-        const conn = isArabic ? { right: "-50%" as const } : { left: "-50%" as const };
-        return (
-          <View key={k} style={{ flex: 1, alignItems: "center", gap: 8 }}>
-            <View style={{ width: "100%", height: 24, alignItems: "center", justifyContent: "center" }}>
-              {k > 0 &&
-                (reached ? (
-                  <View style={[{ position: "absolute", width: "100%", height: 1, top: 11.5, backgroundColor: c.bronze }, conn]} />
-                ) : (
-                  <Dash color={c.line} style={[{ position: "absolute", width: "100%", top: 11 }, conn]} />
-                ))}
-              <View
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderColor: reached ? c.bronze : c.line,
-                  backgroundColor: done ? c.bronze : c.sheet,
-                }}
-              >
-                {done ? <Icon name="check" size={14} color={c.sheet} /> : now ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: c.bronze }} /> : null}
-              </View>
-            </View>
-            <Text numberOfLines={2} style={{ fontSize: 11, textAlign: "center", color: reached ? c.ink : c.soft, fontWeight: reached ? "700" : "400" }}>
-              {l}
-            </Text>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
-export type TimelineItem = { key: string; label: string; at?: string; state: "done" | "now" | "next" };
-
-/** Status screen timeline: circle rail with connectors, real timestamps in mono. */
-export function VerticalTimeline({ items }: { items: TimelineItem[] }) {
-  const { c, row, align } = useTheme();
-  return (
-    <View>
-      {items.map((s, i) => (
-        <View key={s.key} style={[row, { gap: 16 }]}>
-          <View style={{ alignItems: "center" }}>
-            <View
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 14,
-                borderWidth: 1,
-                alignItems: "center",
-                justifyContent: "center",
-                borderColor: s.state === "next" ? c.line : c.bronze,
-                backgroundColor: s.state === "done" ? c.bronze : c.sheet,
-              }}
-            >
-              {s.state === "done" ? (
-                <Icon name="check" size={16} color={c.sheet} />
-              ) : s.state === "now" ? (
-                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: c.bronze }} />
-              ) : (
-                <View style={{ width: 8, height: 8, borderRadius: 4, borderWidth: 1, borderColor: c.line }} />
-              )}
-            </View>
-            {i < items.length - 1 &&
-              (s.state === "done" ? (
-                <View style={{ width: 1, height: 36, backgroundColor: c.bronze }} />
-              ) : (
-                <View style={{ width: 1, height: 36, borderLeftWidth: 1, borderStyle: "dashed", borderColor: c.line }} />
-              ))}
-          </View>
-          <View style={[row, { flex: 1, justifyContent: "space-between", paddingTop: 4, gap: 10 }]}>
-            <Text style={[{ flex: 1, fontSize: 15, color: s.state === "next" ? c.soft : c.ink, fontWeight: s.state === "next" ? "400" : "700" }, align]}>{s.label}</Text>
-            {s.at && s.state !== "next" ? <Mono>{s.at}</Mono> : null}
-          </View>
-        </View>
-      ))}
     </View>
   );
 }
@@ -569,7 +498,7 @@ export function StatTiles({ items }: { items: { label: string; value: number | s
     <View style={[row, { gap: 8, marginBottom: 16 }]}>
       {items.map((it) => (
         <View key={it.label} style={{ flex: 1, minWidth: 0, borderRadius: 16, borderWidth: 1, borderColor: c.line, backgroundColor: c.field, paddingHorizontal: 12, paddingVertical: 10 }}>
-          <Mono color={it.tone ? c[it.tone] : c.ink} size={20} bold>{String(it.value)}</Mono>
+          {typeof it.value === "number" ? <Odometer value={it.value} size={20} color={it.tone ? c[it.tone] : c.ink} /> : <Mono color={it.tone ? c[it.tone] : c.ink} size={20} bold>{String(it.value)}</Mono>}
           <Text numberOfLines={2} style={[{ color: c.soft, fontSize: 11, marginTop: 2 }, align]}>{it.label}</Text>
         </View>
       ))}

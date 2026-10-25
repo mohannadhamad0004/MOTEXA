@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
-import { BlueprintPage, Hero, Icon, LiveNote, MapFrame, Mono, Panel, PrimaryButton, Row, TowTruck, VerticalTimeline } from "../../../components/blueprint";
+import { BlueprintPage, CrossFade, FadeSwitch, Hero, InspectionCheck, LiveNote, MapFrame, Mono, Panel, PrimaryButton, Row, TowTruck, VerticalTimeline } from "../../../components/blueprint";
 import { Async, Notice } from "../../../components/ui/Feedback";
 import { ReasonPanel } from "../../../components/ui/ReasonPanel";
 import { Text } from "../../../components/ui/Text";
@@ -63,7 +63,7 @@ export default function TowRequestStatus() {
     ) : (
       <Hero height={200} back="/customer/requests" tl="TOW / 02" tr="ROUTE / 02">
         <View style={{ width: "100%", maxWidth: 300, height: "100%" }}>
-          <TowTruck animate />
+          <TowTruck />
         </View>
       </Hero>
     );
@@ -76,7 +76,7 @@ export default function TowRequestStatus() {
             {created === "1" ? (
               <Panel bronze style={{ marginBottom: 20 }}>
                 <View style={[row, { alignItems: "center", gap: 12 }]}>
-                  <Icon name="check" size={22} color={c.bronze} />
+                  <InspectionCheck size={22} color={c.bronze} />
                   <Text style={[{ flex: 1, color: c.ink, fontSize: 14, fontWeight: "600" }, align]}>
                     {t("Request sent. You will see the answer here.", "تم إرسال الطلب. سترى الرد هنا.")}
                   </Text>
@@ -85,9 +85,11 @@ export default function TowRequestStatus() {
             ) : null}
             <View style={[row, { alignItems: "center", justifyContent: "space-between", gap: 10 }]}>
               <Mono>{shortId(r.id)}</Mono>
-              <TowStatusBadge value={r.status} />
+              <CrossFade k={r.status}><TowStatusBadge value={r.status} /></CrossFade>
             </View>
-            <Text style={[{ color: c.ink, fontSize: 30, fontWeight: "700", lineHeight: 34, marginTop: 16 }, align]}>{towHeadline(t, r.status, r.company.name)}</Text>
+            <CrossFade k={r.status}>
+              <Text style={[{ color: c.ink, fontSize: 30, fontWeight: "700", lineHeight: 34, marginTop: 16 }, align]}>{towHeadline(t, r.status, r.company.name)}</Text>
+            </CrossFade>
             <Text style={[{ color: c.soft, fontSize: 13, marginTop: 6 }, align]}>{r.company.name} · {r.company.city}</Text>
 
             {r.status === "DECLINED" && r.declineReason ? (
@@ -131,7 +133,7 @@ export default function TowRequestStatus() {
                 <Notice tone="danger" icon="alert-circle-outline">{err}</Notice>
               </View>
             ) : null}
-            {r.canCancel ? (
+            <FadeSwitch show={r.canCancel}>
               <View style={{ marginTop: 40, borderTopWidth: 1, borderTopColor: c.line, paddingTop: 24 }}>
                 {!cancelling ? (
                   <PrimaryButton variant="danger" label={t("Cancel request", "إلغاء الطلب")} disabled={busy} onPress={() => setCancelling(true)} />
@@ -145,7 +147,7 @@ export default function TowRequestStatus() {
                   />
                 )}
               </View>
-            ) : null}
+            </FadeSwitch>
           </>
         )}
       </Async>

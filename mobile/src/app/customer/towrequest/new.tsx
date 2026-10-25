@@ -33,7 +33,7 @@ export default function NewTowRequest() {
               <TowRequestFields form={form} pinMap />
               {form.err ? <Notice tone="danger" icon="alert-circle-outline">{form.err}</Notice> : null}
               <View style={{ height: 8 }} />
-              <PrimaryButton icon="arrow" label={t("Send request", "إرسال الطلب")} loading={form.busy} onPress={send} />
+              <PrimaryButton icon="arrow" label={t("Send request", "إرسال الطلب")} loading={form.busy} road onPress={send} />
               <View style={{ height: 12 }} />
               <Notice icon="information-circle-outline">
                 {t("The company sees your name, your phone and what you wrote here. Your email is never shared.", "ترى الشركة اسمك ورقم هاتفك وما كتبته هنا فقط. لا تتم مشاركة بريدك الإلكتروني أبدًا.")}

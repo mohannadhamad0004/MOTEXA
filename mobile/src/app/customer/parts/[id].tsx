@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
-import { BlueprintPage, BrakeDisc, DRAWINGS, DrawingKind, Icon, Mono, Panel, Pill, Press, RoundIcon, Row, Section, Stamp, StickyActionBar, drawingForCategory } from "../../../components/blueprint";
+import { Image } from "expo-image";
+import { BlueprintPage, CategoryAssembly, Icon, InspectionCheck, Mono, Panel, Pill, Press, RoundIcon, Rise, Row, Section, Stamp, StickyActionBar, assemblyForCategory } from "../../../components/blueprint";
 import { Async, Notice } from "../../../components/ui/Feedback";
 import { Text } from "../../../components/ui/Text";
 import { findCategory, labelOf } from "../../../core/constants/categories";
@@ -10,7 +11,11 @@ import { useLoad } from "../../../core/hooks/useLoad";
 import { ProductCard } from "../../../features/catalog/catalogBits";
 import { catalogService, currentCar, fitsCar } from "../../../features/catalog/catalogService";
 import { usePartLabels } from "../../../features/catalog/partAttrs";
+import { M } from "../../../motion";
 import { useTheme } from "../../../theme/useTheme";
+
+// the name, price and fitment badge reveal after the hero assembly (about 700 ms)
+const REVEAL = 480;
 
 /** Up to 6 more visible parts of the same shop. Hidden when there are none (or the call fails). */
 function OtherFromShop({ shopId, currentId, n }: { shopId: string; currentId: string; n: string }) {
@@ -37,8 +42,6 @@ export default function CustomerPartDetail() {
   const labels = usePartLabels();
   const p = state.data;
   const cat = findCategory(p?.category);
-  const kind: DrawingKind | null = drawingForCategory(p?.category);
-  const Art = kind ? DRAWINGS[kind] : null;
   const carShort = car ? car.model || car.make : "";
 
   return (
@@ -62,7 +65,7 @@ export default function CustomerPartDetail() {
         tr: cat ? labelOf(cat, isArabic) : undefined,
         art: (
           <View style={{ height: "100%", aspectRatio: 1.5, alignItems: "center", justifyContent: "center" }}>
-            {p?.category === "BRAKE_SYSTEM" ? <BrakeDisc dims animate /> : Art ? <Art animate /> : <Icon name="box" size={96} color={c.bronzeLight} />}
+            {p ? <CategoryAssembly key={p.id} kind={assemblyForCategory(p.category)} assemble delay={M.grid / 2} /> : null}
           </View>
         ),
       }}
@@ -74,11 +77,15 @@ export default function CustomerPartDetail() {
           const fits = car ? fitsCar(p, car) : null;
           return (
             <>
-              <Mono>{`${p.brand} · ${p.partNumber}`}</Mono>
-              <Text style={[{ color: c.ink, fontSize: 32, fontWeight: "700", lineHeight: isArabic ? 42 : 35, marginTop: 8 }, align]}>{p.name}</Text>
-              <Text style={[{ color: c.ink, fontSize: 28, fontWeight: "700", marginTop: 8, writingDirection: "ltr" }, align]}>{formatPrice(p.price)}</Text>
-              <View style={[row, { flexWrap: "wrap", gap: 8, marginTop: 16 }]}>
-                {fits === true ? <Pill icon={<Icon name="check" size={14} color={c.bronze} />}>{`${t("Fits your", "تناسب")} ${carShort}`}</Pill> : null}
+              <Rise i={0} delay={REVEAL}>
+                <Mono>{`${p.brand} · ${p.partNumber}`}</Mono>
+                <Text style={[{ color: c.ink, fontSize: 32, fontWeight: "700", lineHeight: isArabic ? 42 : 35, marginTop: 8 }, align]}>{p.name}</Text>
+              </Rise>
+              <Rise i={0} delay={REVEAL + M.stagger}>
+                <Text style={[{ color: c.ink, fontSize: 28, fontWeight: "700", marginTop: 8, writingDirection: "ltr" }, align]}>{formatPrice(p.price)}</Text>
+              </Rise>
+              <Rise i={0} delay={REVEAL + 2 * M.stagger} style={[row, { flexWrap: "wrap", gap: 8, marginTop: 16 }]}>
+                {fits === true ? <Pill icon={<InspectionCheck size={14} color={c.bronze} delay={REVEAL + 3 * M.stagger + M.entrance} />}>{`${t("Fits your", "تناسب")} ${carShort}`}</Pill> : null}
                 {fits === false ? (
                   <Pill tone="danger" icon={<Icon name="alert" size={14} color={c.danger} />}>
                     {`${t("Does not fit your", "لا تناسب")} ${carShort}`}
@@ -88,7 +95,13 @@ export default function CustomerPartDetail() {
                   {p.stock === "OUT" ? t("Out of stock", "نفد المخزون") : p.stock === "LOW" ? t("Low stock", "مخزون منخفض") : t("In stock", "متوفر")}
                 </Pill>
                 <Pill icon={<Icon name="spark" size={14} color={c.bronze} />}>{labels.condition[p.condition]}</Pill>
-              </View>
+              </Rise>
+
+              {p.imageUri ? (
+                <View style={{ marginTop: 24, aspectRatio: 1.5, borderRadius: 20, overflow: "hidden", backgroundColor: c.pill }}>
+                  <Image source={{ uri: p.imageUri }} style={{ width: "100%", height: "100%" }} contentFit="cover" transition={M.detail} />
+                </View>
+              ) : null}
 
               {fits === false ? (
                 <View style={{ marginTop: 16 }}>
@@ -113,7 +126,7 @@ export default function CustomerPartDetail() {
                         <Text style={[{ color: c.ink, fontSize: 15, fontWeight: "700" }, align]}>{`${mine.make} ${mine.model}`}</Text>
                         <Mono>{`${mine.yearFrom}–${mine.yearTo}${mine.trim ? ` · ${mine.trim}` : ""}`}</Mono>
                       </View>
-                      <Pill icon={<Icon name="car" size={14} color={c.bronze} />}>{t("Your car", "سيارتك")}</Pill>
+                      <Pill icon={<InspectionCheck size={14} color={c.bronze} />}>{t("Your car", "سيارتك")}</Pill>
                     </View>
                   </Panel>
                 ) : null}

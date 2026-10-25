@@ -13,6 +13,7 @@ import { useState } from "react";
 import { View } from "react-native";
 import { HistoryList, KV, PrivateDocs, VerificationBadge } from "../../../features/shared/blocks";
 import { asActor, useSessionUser } from "../../../features/shared/session";
+import { hapticError, hapticSuccess } from "../../../motion";
 import { cityLabel } from "../../../core/constants/cities";
 import { TowCompany, Truck, towAdminService } from "../../../features/tow/towService";
 import { TruckSummary, docLabel, useTruckLabels } from "../../../features/tow/truckBits";
@@ -31,9 +32,11 @@ function TruckReview({ truck, onDone }: { truck: Truck; onDone: () => void }) {
     setErr(null);
     try {
       await towAdminService.decideTruck(asActor(user), truck.id, d);
+      hapticSuccess();
       setRejecting(false);
       onDone();
     } catch (e: any) {
+      hapticError();
       setErr(e.message);
     } finally {
       setBusy(false);
@@ -95,9 +98,11 @@ function CompanyDecision({ company, onDone }: { company: TowCompany; onDone: () 
     setErr(null);
     try {
       await towAdminService.decideCompany(asActor(user), company.id, d);
+      hapticSuccess();
       setRejecting(false);
       onDone();
     } catch (e: any) {
+      hapticError();
       setErr(e.message);
     } finally {
       setBusy(false);

@@ -1,3 +1,4 @@
+import { hapticError, hapticSuccess } from "../../../motion";
 import { Async, EmptyState, Notice } from "../../../components/ui/Feedback";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
@@ -34,9 +35,11 @@ function ProductModeration({ product: p, onDone }: { product: Product; onDone: (
     setErr(null);
     try {
       await partsAdminService.setProductVisibility(asActor(user), p.id, c);
+      hapticSuccess();
       setHiding(false);
       onDone();
     } catch (e: any) {
+      hapticError();
       setErr(e.message);
     } finally {
       setBusy(false);
@@ -102,9 +105,11 @@ export default function AdminShopDetail() {
     setErr(null);
     try {
       await partsAdminService.decideShop(asActor(user), id, d);
+      hapticSuccess();
       setRejecting(false);
       state.reload();
     } catch (e: any) {
+      hapticError();
       setErr(e.message);
     } finally {
       setBusy(false);

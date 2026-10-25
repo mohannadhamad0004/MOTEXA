@@ -1,3 +1,4 @@
+import { Resolved } from "../../components/blueprint";
 import { Badge } from "../../components/ui/Badge";
 import { useL } from "../../core/hooks/useL";
 import type { Observation, ReviewStatus } from "./mechanicReviewService";
@@ -43,12 +44,25 @@ export function ReviewStatusBadge({ value }: { value: ReviewStatus }) {
     READY_FOR_AUTHORITY: { tone: "success", icon: "paper-plane-outline" },
     REJECTED: { tone: "danger", icon: "close-circle-outline" },
   } as const;
-  return <Badge tone={m[value].tone} icon={m[value].icon} label={l[value]} />;
+  const kind = value === "READY_FOR_AUTHORITY" ? "check" : value === "REJECTED" ? "x" : value === "NEEDS_CORRECTION" ? "warn" : null;
+  return (
+    <Resolved k={value} kind={kind}>
+      <Badge tone={m[value].tone} icon={m[value].icon} label={l[value]} />
+    </Resolved>
+  );
 }
 
 export function SkillStatusBadge({ value }: { value: "PENDING" | "APPROVED" | "REJECTED" }) {
   const { t } = useL();
-  if (value === "APPROVED") return <Badge tone="success" icon="checkmark-circle-outline" label={t("Approved", "معتمدة")} />;
-  if (value === "REJECTED") return <Badge tone="danger" icon="close-circle-outline" label={t("Rejected", "مرفوضة")} />;
-  return <Badge tone="warning" icon="time-outline" label={t("Pending", "قيد المراجعة")} />;
+  return (
+    <Resolved k={value} kind={value === "APPROVED" ? "check" : value === "REJECTED" ? "x" : null}>
+      {value === "APPROVED" ? (
+        <Badge tone="success" icon="checkmark-circle-outline" label={t("Approved", "معتمدة")} />
+      ) : value === "REJECTED" ? (
+        <Badge tone="danger" icon="close-circle-outline" label={t("Rejected", "مرفوضة")} />
+      ) : (
+        <Badge tone="warning" icon="time-outline" label={t("Pending", "قيد المراجعة")} />
+      )}
+    </Resolved>
+  );
 }

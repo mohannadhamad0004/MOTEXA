@@ -1,3 +1,4 @@
+import { Move } from "../../../../components/blueprint";
 import { Async, EmptyState } from "../../../../components/ui/Feedback";
 import { Card } from "../../../../components/ui/Card";
 import { DashboardLayout } from "../../../../components/layout/DashboardLayout";
@@ -68,7 +69,7 @@ export default function MechanicApplicationsList() {
             <EmptyState icon="document-text-outline" text={t("No applications match.", "لا توجد طلبات مطابقة.")} />
           ) : (
             rows.map((a) => (
-              <Card key={a.id} label={a.applicantName} onPress={() => router.push(`/admin/mechanics/applications/${a.id}`)}>
+              <Move key={a.id}><Card label={a.applicantName} onPress={() => router.push(`/admin/mechanics/applications/${a.id}`)}>
                 <View style={[row, { justifyContent: "space-between", alignItems: "flex-start", gap: 10 }]}>
                   <View style={{ flex: 1 }}>
                     <Text numberOfLines={2} style={[{ color: col.text, fontSize: 16, fontWeight: "800" }, align]}>{a.applicantName}</Text>
@@ -85,7 +86,7 @@ export default function MechanicApplicationsList() {
                     {t("Submitted", "قُدّم في")} {fmtDate(a.submittedAt)} · {a.id.slice(0, 8)}
                   </Text>
                 </View>
-              </Card>
+              </Card></Move>
             ))
           )
         }

@@ -1,5 +1,8 @@
+import { useEffect } from "react";
 import { View } from "react-native";
-import { Icon, Ltr, Mono, PartThumb, Press } from "../../components/blueprint";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { Icon, InspectionCheck, Ltr, Mono, PartThumb, Press, Rise } from "../../components/blueprint";
+import { ease, M, useReduced } from "../../motion";
 import { Text } from "../../components/ui/Text";
 import { formatPrice } from "../../core/constants/money";
 import { useL } from "../../core/hooks/useL";
@@ -12,7 +15,7 @@ type Car = { make: string; model: string; year: string };
 export const carName = (c: Car) => [c.make, c.model, c.year].map((v) => v.trim()).filter(Boolean).join(" ");
 
 /** "Fits your <car>" (bronze check) / "Doesn't fit your <car>" (danger). Renders nothing when no car is set. */
-export function FitBadge({ p, car }: { p: { fitments: CatalogProduct["fitments"] }; car: Car | null }) {
+export function FitBadge({ p, car, sweep }: { p: { fitments: CatalogProduct["fitments"] }; car: Car | null; sweep?: number }) {
   const { t, row } = useL();
   const { c } = useTheme();
   if (!car) return null;
@@ -20,7 +23,7 @@ export function FitBadge({ p, car }: { p: { fitments: CatalogProduct["fitments"]
   const color = fits ? c.bronze : c.danger;
   return (
     <View style={[row, { alignItems: "center", gap: 4 }]}>
-      <Icon name={fits ? "check" : "alert"} size={14} color={color} />
+      {fits ? <InspectionCheck size={14} color={color} animate={sweep !== undefined} delay={(sweep ?? 0) * M.staggerFine} /> : <Icon name="alert" size={14} color={color} />}
       <Text numberOfLines={1} style={{ color, fontSize: 12, fontWeight: "600", flexShrink: 1 }}>
         {`${fits ? t("Fits your", "تناسب سيارتك") : t("Doesn't fit your", "لا تناسب سيارتك")} ${carName(car)}`}
       </Text>
@@ -43,18 +46,46 @@ export function StockWord({ state }: { state: "IN" | "LOW" | "OUT" }) {
 }
 
 /** One catalog product in a list: thumb, name, price, "brand · condition · part number", fit line, shop. */
-export function ProductCard({ p, onPress, showShop = true, car = null }: { p: CatalogProduct; onPress: () => void; showShop?: boolean; car?: Car | null }) {
+export function ProductCard({
+  p,
+  onPress,
+  showShop = true,
+  car = null,
+  cascade,
+  sweep,
+}: {
+  p: CatalogProduct;
+  onPress: () => void;
+  showShop?: boolean;
+  car?: Car | null;
+  /** row index in the first visible batch: the photo fades in 50 ms before the text, rows 45 ms apart */
+  cascade?: number;
+  /** row index while "Fits my car" has just been switched on: the check sweeps in row by row */
+  sweep?: number;
+}) {
   const { c } = useTheme();
+  const reduced = useReduced();
+  // with a car set, parts that do not fit dim slightly
+  const dim = !!car && !fitsCar(p, car);
+  const o = useSharedValue(dim ? 0.55 : 1);
+  useEffect(() => {
+    o.value = withTiming(dim ? 0.55 : 1, { duration: reduced ? M.reduced : M.chip, easing: ease });
+  }, [dim, reduced, o]);
+  const dimStyle = useAnimatedStyle(() => ({ opacity: o.value }));
+  const ci = cascade ?? 99;
   const { t, row, align } = useL();
   const labels = usePartLabels();
   return (
+    <Animated.View style={dimStyle}>
     <Press
       accessibilityLabel={p.name}
       onPress={onPress}
       style={[row, { gap: 16, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: c.line + "99" }]}
     >
-      <PartThumb category={p.category} uri={p.imageUri} size={96} />
-      <View style={{ flex: 1, minWidth: 0 }}>
+      <Rise i={ci} distance={0}>
+        <PartThumb category={p.category} uri={p.imageUri} size={96} />
+      </Rise>
+      <Rise i={ci} delay={50} style={{ flex: 1, minWidth: 0 }}>
         <Text numberOfLines={2} style={[{ color: c.ink, fontSize: 15, fontWeight: "700" }, align]}>{p.name}</Text>
         <View style={[row, { alignItems: "baseline", justifyContent: "space-between", gap: 8, marginTop: 4 }]}>
           <Ltr style={{ fontSize: 22, fontWeight: "700" }}>{formatPrice(p.price)}</Ltr>
@@ -66,7 +97,7 @@ export function ProductCard({ p, onPress, showShop = true, car = null }: { p: Ca
         </View>
         {car ? (
           <View style={{ marginTop: 4 }}>
-            <FitBadge p={p} car={car} />
+            <FitBadge p={p} car={car} sweep={sweep} />
           </View>
         ) : (
           <Text numberOfLines={1} style={[{ color: c.soft, fontSize: 12, marginTop: 4 }, align]}>{fitmentSummary(p, t)}</Text>
@@ -76,7 +107,8 @@ export function ProductCard({ p, onPress, showShop = true, car = null }: { p: Ca
             {p.shop.name} · {p.shop.city}
           </Text>
         )}
-      </View>
+      </Rise>
     </Press>
+    </Animated.View>
   );
 }

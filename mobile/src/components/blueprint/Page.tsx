@@ -1,6 +1,9 @@
-import { ReactNode } from "react";
+import { Children, ReactNode, useEffect } from "react";
 import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleProp, View, ViewStyle } from "react-native";
+import Animated, { LinearTransition, useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ease, M, useReduced } from "../../motion";
+import { Rise } from "./motion";
 import { useTheme } from "../../theme/useTheme";
 import { DRAWINGS, DrawingKind } from "./drawings";
 import { PageTitle, Sub } from "./Primitives";
@@ -33,8 +36,17 @@ export function BlueprintPage({
   footer,
   sheetStyle,
   top,
+  ignition = false,
+  shift = false,
+  lead,
 }: {
   hero?: HeroConfig;
+  /** first entry of a main tab (see useIgnition): grid fades in, sheet springs up, content staggers in */
+  ignition?: boolean;
+  /** siblings glide to their new place when content above them appears or goes (Home active request) */
+  shift?: boolean;
+  /** state-driven block above the content that expands in and collapses away (see Expand) */
+  lead?: ReactNode;
   /** replaces the Hero (a MapFrame) */
   top?: ReactNode;
   children: ReactNode;
@@ -48,6 +60,20 @@ export function BlueprintPage({
   const { c } = useTheme();
   const { art, ...h } = hero ?? {};
   const bottom = (footer ? 144 : tabs ? 112 : 56) + insets.bottom;
+  const reduced = useReduced();
+  // Ignition: the sheet springs up 16px after the hero has started tracing
+  const lift = useSharedValue(ignition ? 0 : 1);
+  useEffect(() => {
+    if (!ignition) return;
+    lift.value = reduced ? withTiming(1, { duration: M.reduced }) : withDelay(M.grid + 300, withSpring(1, M.spring));
+  }, [ignition, reduced, lift]);
+  const liftStyle = useAnimatedStyle(() => ({ opacity: lift.value, transform: [{ translateY: reduced ? 0 : (1 - lift.value) * 16 }] }));
+  const base = ignition ? M.grid + 450 : 0;
+  const kids = Children.toArray(children).map((ch, i) => (
+    <Rise key={(ch as { key?: string }).key ?? i} i={i} delay={base} distance={ignition ? M.rise : M.riseDetail} layout={shift ? LinearTransition.duration(M.detail) : undefined}>
+      {ch}
+    </Rise>
+  ));
   return (
     <View style={{ flex: 1, backgroundColor: c.page }}>
       {/* keeps the overscroll area above the hero dark */}
@@ -59,10 +85,13 @@ export function BlueprintPage({
           contentContainerStyle={{ flexGrow: 1 }}
           refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.bronzeLight} colors={[c.bronze]} progressViewOffset={insets.top + 8} /> : undefined}
         >
-          {top ?? <Hero {...h}>{art}</Hero>}
-          <Sheet bottom={bottom} style={sheetStyle}>
-            {children}
-          </Sheet>
+          {top ?? <Hero {...h} ignition={ignition}>{art}</Hero>}
+          <Animated.View style={[{ flexGrow: 1 }, ignition ? liftStyle : null]}>
+            <Sheet bottom={bottom} style={sheetStyle}>
+              {lead}
+              {kids}
+            </Sheet>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
       {footer}
@@ -121,7 +150,7 @@ export function SimplePage({
         height: height ?? (dense ? 150 : 180),
         art: (
           <View style={{ height: "100%", aspectRatio: 1.5 }}>
-            <Art animate />
+            <Art />
           </View>
         ),
       }}

@@ -45,7 +45,7 @@ export default function NewMechanicRequest() {
               <MechanicRequestFields form={form} skills={m.skills} pinMap />
               <View style={{ height: 8 }} />
               {form.err ? <Notice tone="danger" icon="alert-circle-outline">{form.err}</Notice> : null}
-              <PrimaryButton icon="arrow" label={t("Send request", "إرسال الطلب")} loading={form.busy} onPress={send} />
+              <PrimaryButton icon="arrow" label={t("Send request", "إرسال الطلب")} loading={form.busy} road onPress={send} />
               <View style={{ height: 12 }} />
               <Notice icon="information-circle-outline">
                 {t("The mechanic sees your name, your car, the problem and the location you wrote. Your email is never shared.", "يرى الميكانيكي اسمك وسيارتك والمشكلة والموقع الذي كتبته. لا تتم مشاركة بريدك الإلكتروني أبدًا.")}

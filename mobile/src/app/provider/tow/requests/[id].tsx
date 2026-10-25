@@ -1,3 +1,5 @@
+import { PrimaryButton } from "../../../../components/blueprint";
+import { hapticError, hapticSuccess } from "../../../../motion";
 import { Async, Notice } from "../../../../components/ui/Feedback";
 import { Button } from "../../../../components/ui/Button";
 import { Card } from "../../../../components/ui/Card";
@@ -144,7 +146,16 @@ export default function CompanyRequestDetail() {
                     ))
                   )}
                   <View style={{ gap: 8, marginTop: 6 }}>
-                    <Button label={t("Confirm and accept", "تأكيد والقبول")} disabled={busy || !pickedId} onPress={() => act(() => companyTowRequests.accept(r.id, pickedId!))} />
+                    <PrimaryButton label={t("Confirm and accept", "تأكيد والقبول")} disabled={!pickedId} road loading={busy} onPress={() => act(async () => {
+                      try {
+                        const done = await companyTowRequests.accept(r.id, pickedId!);
+                        hapticSuccess();
+                        return done;
+                      } catch (e) {
+                        hapticError();
+                        throw e;
+                      }
+                    })} />
                     <Button variant="ghost" label={t("Back", "رجوع")} onPress={() => { setMode("none"); setPickedId(null); }} />
                   </View>
                 </Card>

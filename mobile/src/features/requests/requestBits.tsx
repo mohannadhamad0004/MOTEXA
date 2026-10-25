@@ -148,6 +148,10 @@ export function buildTimeline<S extends string>(path: S[], happened: { status: S
   }
   // statuses outside the path (declined, cancelled) come last, as the current step
   for (const h of happened) if (!path.includes(h.status)) items.push({ key: h.status, label: label[h.status], at: fmtDateTime(h.at), state: h.status === current ? "now" : "done" });
+  // end states: declined / cancelled stop the line on a danger node; completed settles every node green
+  const last = items[items.length - 1];
+  if (last && last.key === current && !path.includes(current)) last.state = "failed";
+  else if (last && last.key === current && current === path[path.length - 1]) for (const it of items) { it.state = "done"; it.tone = "success"; }
   return items;
 }
 

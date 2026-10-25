@@ -24,9 +24,11 @@ type MapData = {
   me: Point | null;
   // service mode (the full-screen Tow / Mechanics map pages)
   selectedId?: string | null;
-  route?: { coords: [number, number][]; dashed: boolean } | null;
+  route?: { coords: [number, number][]; dashed: boolean; key?: string } | null;
   pickup?: Point | null;
   movePickup?: boolean;
+  /** motion, triggered from React Native: sonar while really searching, one highlight of the nearest pin, reduced motion */
+  anim?: { radar: boolean; reduced: boolean; hl: { id: string; key: string } | null };
   /** points the map fits itself to when `fitKey` changes, kept clear of the overlays by `pad` */
   fit?: [number, number][];
   pad?: { top: number; bottom: number; left: number; right: number };
@@ -63,6 +65,28 @@ html,body,#map{margin:0;height:100%;width:100%;background:#2D1F18}
 .svc svg{transform:rotate(45deg);width:18px;height:18px}
 .svc.sel{width:44px;height:44px;box-shadow:0 0 0 4px rgba(224,163,111,.55),0 1px 8px rgba(0,0,0,.6)}
 .svc.sel svg{width:22px;height:22px}
+.svc{position:relative}
+.svc.pin-in{animation:pinIn .27s cubic-bezier(.2,0,0,1) both}
+@keyframes pinIn{from{opacity:0;transform:rotate(-45deg) scale(.8)}to{opacity:1;transform:rotate(-45deg) scale(1)}}
+@keyframes fadeOnly{from{opacity:0}to{opacity:1}}
+.rm .svc.pin-in{animation:fadeOnly .15s linear both}
+.svc.hl{transform:rotate(-45deg) scale(1.12)}
+.svc.hl::before{content:"";position:absolute;left:-9px;top:-9px;right:-9px;bottom:-9px;border-radius:50% 50% 50% 0;border:3px solid #E0A36F;opacity:.95}
+.svc.hl.go{animation:hlPop .45s cubic-bezier(.2,0,0,1)}
+.svc.hl.go::before{animation:ringOut .45s cubic-bezier(.2,0,0,1)}
+@keyframes hlPop{0%{transform:rotate(-45deg) scale(1)}60%{transform:rotate(-45deg) scale(1.22)}100%{transform:rotate(-45deg) scale(1.12)}}
+@keyframes ringOut{0%{opacity:0;transform:scale(.8)}100%{opacity:.95;transform:scale(1)}}
+.rm .svc.hl.go,.rm .svc.hl.go::before{animation:none}
+.meWrap{position:relative;width:16px;height:16px}
+.meWrap .ring{position:absolute;left:-3px;top:-3px;width:16px;height:16px;border-radius:50%;border:2px solid #2F7BFF;opacity:0;pointer-events:none}
+.radar .ring{animation:sonar 1.4s cubic-bezier(.2,0,0,1) infinite}
+.radar .ring.r2{animation-delay:.45s}
+.radar .ring.r3{animation-delay:.9s}
+@keyframes sonar{0%{transform:scale(.6);opacity:.8}100%{transform:scale(7);opacity:0}}
+.dot.in{animation:dotIn .27s cubic-bezier(.2,0,0,1) both}
+@keyframes dotIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+.rm .dot.in{animation:fadeOnly .15s linear both}
+.rm .radar .ring{animation:none}
 </style></head><body><div id="map"></div>
 <script src="https://unpkg.com/leaflet@${LEAFLET}/dist/leaflet.js"></script>
 <script>
@@ -90,26 +114,48 @@ function icon(kind,t,label){
   return L.divIcon({html:html,className:"",iconSize:[size,size],iconAnchor:[size/2,size/2]});
 }
 var GLYPH={tow:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16V11H8L10 7H14V16M14 13H22V16"/><circle cx="7" cy="17" r="2"/><circle cx="18" cy="17" r="2"/></svg>',mech:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6a4 4 0 0 0 5 5L11 19a2 2 0 0 1-3-3Z"/></svg>'};
-function svcIcon(p,sel,t){
+function svcIcon(p,sel,t,cls,delay){
   var bg=p.dim?t.busy:t.accent,size=sel?44:36;
-  return L.divIcon({html:'<div class="svc'+(sel?' sel':'')+'" style="background:'+bg+'">'+GLYPH[p.kind]+'</div>',className:"",iconSize:[size,size],iconAnchor:[size/2,size]});
+  return L.divIcon({html:'<div class="svc'+(sel?' sel':'')+(cls||'')+'" style="background:'+bg+(delay!=null?';animation-delay:'+delay+'ms':'')+'">'+GLYPH[p.kind]+'</div>',className:"",iconSize:[size,size],iconAnchor:[size/2,size]});
 }
-var lastFocus="";
+var lastFocus="",seen={},lastHlKey="",lastRouteKey="";
 function service(d){
+  var an=d.anim||{radar:false,reduced:false,hl:null},order=0,hlUsed=false;
   d.pins.forEach(function(p){
-    var m=L.marker([p.lat,p.lng],{icon:svcIcon(p,p.id===d.selectedId,d.theme),title:p.name,keyboard:false,zIndexOffset:p.id===d.selectedId?1000:0});
+    var cls="",delay=null;
+    if(!seen[p.id]){seen[p.id]=1;cls+=" pin-in";delay=order++*35;}
+    if(an.hl&&an.hl.id===p.id){cls+=" hl";if(an.hl.key!==lastHlKey){cls+=" go";hlUsed=true;}}
+    var m=L.marker([p.lat,p.lng],{icon:svcIcon(p,p.id===d.selectedId,d.theme,cls,delay),title:p.name,keyboard:false,zIndexOffset:(p.id===d.selectedId||(an.hl&&an.hl.id===p.id))?1000:0});
     m.on("click",function(){post({type:"select",id:p.id});});
     m.addTo(layer);
   });
+  if(hlUsed)lastHlKey=an.hl.key;
   if(d.route&&d.route.coords.length>1){
-    L.polyline(d.route.coords,{color:d.theme.route||d.theme.accent,weight:5,opacity:.95,lineCap:"round",dashArray:d.route.dashed?"8 10":null}).addTo(layer);
+    var pl=L.polyline(d.route.coords,{color:d.theme.route||d.theme.accent,weight:5,opacity:.95,lineCap:"round",dashArray:d.route.dashed?"8 10":null}).addTo(layer);
+    var rk=d.route.key||"";
+    if(rk!==lastRouteKey){
+      lastRouteKey=rk;
+      var pe=pl.getElement();
+      if(pe){
+        if(an.reduced||d.route.dashed){pe.style.opacity=0;pe.getBoundingClientRect();pe.style.transition="opacity "+(an.reduced?.15:.8)+"s linear";pe.style.opacity=.95;}
+        else if(pe.getTotalLength){
+          var len=pe.getTotalLength();
+          pe.style.strokeDasharray=len;pe.style.strokeDashoffset=len;pe.getBoundingClientRect();
+          pe.style.transition="stroke-dashoffset .8s cubic-bezier(.2,0,0,1)";pe.style.strokeDashoffset=0;
+          setTimeout(function(){pe.style.strokeDasharray="";pe.style.transition="";},900);
+        }
+      }
+    }
   }
   if(d.pickup){
     var pm=L.marker([d.pickup.lat,d.pickup.lng],{icon:icon("a",d.theme,"A"),draggable:!!d.movePickup,keyboard:false,zIndexOffset:900}).addTo(layer);
     if(d.movePickup)pm.on("dragend",function(){var ll=pm.getLatLng();post({type:"pickup",lat:ll.lat,lng:ll.lng});});
   }
-  if(meMarker){map.removeLayer(meMarker);meMarker=null;}
-  if(d.me){meMarker=L.marker([d.me.lat,d.me.lng],{icon:L.divIcon({html:'<div class="dot pulse"></div>',className:"",iconSize:[16,16],iconAnchor:[8,8]}),interactive:false,keyboard:false}).addTo(map);}
+  if(d.me){
+    if(!meMarker){meMarker=L.marker([d.me.lat,d.me.lng],{icon:L.divIcon({html:'<div class="meWrap"><i class="ring"></i><i class="ring r2"></i><i class="ring r3"></i><div class="dot pulse in"></div></div>',className:"",iconSize:[16,16],iconAnchor:[8,8]}),interactive:false,keyboard:false}).addTo(map);}
+    else meMarker.setLatLng([d.me.lat,d.me.lng]);
+    var me_el=meMarker.getElement();if(me_el)me_el.classList.toggle("radar",!!an.radar&&!an.reduced);
+  }else if(meMarker){map.removeLayer(meMarker);meMarker=null;}
   var pad=d.pad||{top:0,bottom:0,left:0,right:0};
   if(d.fitKey!==lastFit){
     lastFit=d.fitKey;
@@ -124,7 +170,7 @@ function service(d){
 }
 window.setData=function(d){
   if(!map)return;
-  data=d;document.body.style.background=d.theme.bg;document.documentElement.style.setProperty("--bi",(d.bottomInset||0)+"px");document.body.className=d.mode==="service"?"hide-attr":"";
+  data=d;document.body.style.background=d.theme.bg;document.documentElement.style.setProperty("--bi",(d.bottomInset||0)+"px");document.body.className=(d.mode==="service"?"hide-attr":"")+(d.anim&&d.anim.reduced?" rm":"");
   layer.clearLayers();
   if(d.mode==="service"){service(d);return;}
   var pts=[];
@@ -381,6 +427,9 @@ export function ServiceMap({
   fitKey,
   pad,
   focus,
+  radar = false,
+  highlight = null,
+  reduced = false,
   onSelect,
   onBackground,
   onPickupMove,
@@ -393,11 +442,16 @@ export function ServiceMap({
   me: Point | null;
   pickup?: Point | null;
   movePickup?: boolean;
-  route?: { coords: [number, number][]; dashed: boolean } | null;
+  route?: { coords: [number, number][]; dashed: boolean; key?: string } | null;
   fit: [number, number][];
   fitKey: string;
   pad: { top: number; bottom: number; left: number; right: number };
   focus?: { lat: number; lng: number; key: string } | null;
+  /** sonar rings around your dot while a search is really running */
+  radar?: boolean;
+  /** the nearest valid pin gets one ring + scale highlight when its key is new */
+  highlight?: { id: string; key: string } | null;
+  reduced?: boolean;
   onSelect: (id: string) => void;
   onBackground: () => void;
   onPickupMove?: (p: Point) => void;
@@ -421,10 +475,11 @@ export function ServiceMap({
       fitKey,
       pad,
       focus: focus ?? null,
+      anim: { radar, reduced, hl: highlight },
       theme,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pinsKey, JSON.stringify(me), selectedId, JSON.stringify(pickup), movePickup, JSON.stringify(route), JSON.stringify(fit), fitKey, JSON.stringify(pad), JSON.stringify(focus), theme]
+    [pinsKey, JSON.stringify(me), selectedId, JSON.stringify(pickup), movePickup, JSON.stringify(route), JSON.stringify(fit), fitKey, JSON.stringify(pad), JSON.stringify(focus), radar, reduced, JSON.stringify(highlight), theme]
   );
   return <LeafletMap bare height={height} data={data} bottomInset={bottomInset} onSelect={onSelect} onBackground={onBackground} onPickup={onPickupMove} onFailedChange={onFailedChange} />;
 }

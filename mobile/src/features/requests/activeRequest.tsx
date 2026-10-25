@@ -1,6 +1,8 @@
 import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
-import { Icon, Mono, Press, Rise, Steps, Tag } from "../../components/blueprint";
+import { Expand, Icon, Mono, Press, Steps, Tag } from "../../components/blueprint";
+import { M } from "../../motion";
 import { Text } from "../../components/ui/Text";
 import { useL } from "../../core/hooks/useL";
 import { useLoad } from "../../core/hooks/useLoad";
@@ -60,8 +62,16 @@ export function useActiveRequest() {
 export function ActiveRequestCard({ a }: { a: Active }) {
   const { c } = useTheme();
   const { t, row, align } = useL();
+  // the steps draw in once the card has expanded; later status changes extend the line from the old node
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    if (a.index === undefined) return;
+    const id = setTimeout(() => setShown(a.index!), shown === 0 && a.index > 0 ? M.detail : 0);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [a.index]);
   return (
-    <Rise style={{ marginBottom: 32 }}>
+    <Expand style={{ marginBottom: 32 }}>
       <Press accessibilityLabel={a.title} onPress={() => router.push(a.href as never)} style={{ borderRadius: 20, borderWidth: 1, borderColor: c.bronze, backgroundColor: c.field, padding: 16 }}>
         <View style={[row, { alignItems: "center", justifyContent: "space-between", gap: 8 }]}>
           <View style={{ flexShrink: 1 }}>
@@ -70,12 +80,12 @@ export function ActiveRequestCard({ a }: { a: Active }) {
           <Mono>{shortId(a.id)}</Mono>
         </View>
         <Text style={[{ color: c.ink, fontSize: 15, fontWeight: "700", marginTop: 8 }, align]}>{a.title}</Text>
-        {a.labels && a.index !== undefined ? <Steps labels={a.labels} index={a.index} /> : null}
+        {a.labels && a.index !== undefined ? <Steps labels={a.labels} index={Math.min(shown, a.index)} /> : null}
         <View style={[row, { alignItems: "center", gap: 4, marginTop: 16 }]}>
           <Text style={{ color: c.bronze, fontSize: 13, fontWeight: "700" }}>{a.labels ? t("View request", "عرض الطلب") : t("View answer", "عرض الرد")}</Text>
           <Icon name="arrow" size={16} color={c.bronze} />
         </View>
       </Press>
-    </Rise>
+    </Expand>
   );
 }

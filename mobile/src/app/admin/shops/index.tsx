@@ -1,3 +1,4 @@
+import { Move } from "../../../components/blueprint";
 import { Async, EmptyState } from "../../../components/ui/Feedback";
 import { Card } from "../../../components/ui/Card";
 import { DashboardLayout } from "../../../components/layout/DashboardLayout";
@@ -52,7 +53,7 @@ export default function AdminShopsList() {
           );
           if (!rows.length) return <EmptyState icon="storefront-outline" text={t("No shops match.", "لا توجد متاجر مطابقة.")} />;
           return rows.map((s) => (
-            <Card key={s.id} label={s.name} onPress={() => router.push(`/admin/shops/${s.id}`)}>
+            <Move key={s.id}><Card label={s.name} onPress={() => router.push(`/admin/shops/${s.id}`)}>
               <View style={[row, { justifyContent: "space-between", alignItems: "flex-start", gap: 10 }]}>
                 <View style={{ flex: 1 }}>
                   <Text numberOfLines={2} style={[{ color: col.text, fontSize: 16, fontWeight: "800" }, align]}>{s.name}</Text>
@@ -66,7 +67,7 @@ export default function AdminShopsList() {
               <View style={{ marginTop: 12 }}>
                 <VerificationBadge value={s.verification} />
               </View>
-            </Card>
+            </Card></Move>
           ));
         }}
       </Async>
