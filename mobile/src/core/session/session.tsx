@@ -1,6 +1,6 @@
 import { apiUrl } from "../config/api";
 import { router } from "expo-router";
-import * as SecureStore from "expo-secure-store";
+import * as SecureStore from "../../components/SessionStore"; // same token store as the login (SecureStore on a phone, session storage on web)
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 
 export type SessionUser = {

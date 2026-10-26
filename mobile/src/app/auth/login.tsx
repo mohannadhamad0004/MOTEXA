@@ -18,6 +18,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams, type Href } from "expo-router";
 import * as SecureStore from '../../components/SessionStore';
 import MotexaDialog from "../../components/MotexaDialog";
+import { landingFor } from "../../core/session/landing";
 
 const API_BASE = (process.env.EXPO_PUBLIC_API_URL || "")
   .replace(/\/+$/, "");
@@ -179,10 +180,11 @@ if(user.role==="MECHANIC"){destination="/mechanic";} else if (user.role === "SUP
   destination = "/mechanics-admin";
 }
 
-      if (!destination) {
+      const target = destination ?? landingFor(user.role, permissions);
+      if (!target) {
         error(t(
-          "This role's dashboard is not available yet.",
-          "لوحة التحكم الخاصة بهذا الدور غير جاهزة بعد."
+          "This account is not assigned to a department yet.",
+          "هذا الحساب غير مرتبط بأي قسم بعد."
         ));
         return;
       }
@@ -194,7 +196,7 @@ if(user.role==="MECHANIC"){destination="/mechanic";} else if (user.role === "SUP
 
       console.log("TOKEN SAVED - NAVIGATING TO:", destination);
 
-      router.replace(destination as Href);
+      router.replace(target as Href);
     } catch (err) {
       console.error("MOTEXA LOGIN ERROR:", err);
 

@@ -471,6 +471,20 @@ router.get("/parts/fitment-search", requireAuth, async (req, res) => {
 // =====================================================================
 const admin = [requireAuth, requirePartsAdmin, express.json()];
 
+// Counts only (department home screen).
+router.get("/admin/parts/stats", ...admin, async (_req, res) => {
+  try {
+    const [pendingShops, approvedShops, hiddenProducts] = await Promise.all([
+      prisma.partsShopProfile.count({ where: { verificationStatus: "PENDING" } }),
+      prisma.partsShopProfile.count({ where: { verificationStatus: "APPROVED" } }),
+      prisma.partsProduct.count({ where: { isHidden: true } }),
+    ]);
+    return res.json({ success: true, stats: { pendingShops, approvedShops, hiddenProducts } });
+  } catch (e) {
+    return fail(res, "Parts stats error", e);
+  }
+});
+
 // ?status=PENDING|APPROVED|REJECTED & ?q= (shop name, owner name, phone, city)
 router.get("/admin/parts/shops", ...admin, async (req, res) => {
   try {
