@@ -41,7 +41,8 @@
         {
           "locationWhenInUsePermission": "MOTEXA uses your location only when you tap a button, to find tow companies near you and to mark where your car is. It is not tracked in the background."
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

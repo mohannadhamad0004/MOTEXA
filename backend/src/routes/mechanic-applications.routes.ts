@@ -135,7 +135,7 @@ router.post("/", async (req, res) => {
 // Private document download: Super Admin, or Admin with MANAGE_MECHANICS. Never public.
 router.get("/:applicationId/documents/:documentId", requireAuth, requireMechanicsAdmin, async (req, res) => {
   try {
-    const doc = await prisma.mechanicDocument.findFirst({
+    const doc = await prisma.mechanicApplicationDocument.findFirst({
       where: { id: String(req.params.documentId), applicationId: String(req.params.applicationId) },
     });
     if (!doc) return res.status(404).json({ success: false, message: "Document not found." });
