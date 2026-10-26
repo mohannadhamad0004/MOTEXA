@@ -13,7 +13,7 @@ import { customerInquiries, customerTowRequests } from "./requestsService";
 /** Short, readable form of a request id for the mono label. */
 export const shortId = (id: string) => id.replace(/-/g, "").slice(0, 8).toUpperCase();
 
-type Active = { key: string; at: string; tag: string; id: string; title: string; labels?: string[]; index?: number; href: string };
+export type Active = { key: string; at: string; tag: string; id: string; title: string; labels?: string[]; index?: number; href: string; /** provider / shop name */ who: string; /** current stage label, e.g. "Accepted" */ stage: string };
 
 /** The customer's most recently updated OPEN tow / mechanic request or ANSWERED question. Null when there is none. */
 export function useActiveRequest() {
@@ -34,6 +34,8 @@ export function useActiveRequest() {
     all.push({
       key: "tow" + r.id, at: r.updatedAt, tag: t("Active tow", "سحب نشط"), id: r.id, title, index: i, href: `/customer/towrequest/${r.id}`,
       labels: [t("Requested", "تم الطلب"), t("Accepted", "مقبول"), r.status === "IN_PROGRESS" ? t("In progress", "قيد التنفيذ") : t("On the way", "في الطريق"), t("Completed", "مكتمل")],
+      who: name,
+      stage: [t("Requested", "تم الطلب"), t("Accepted", "مقبول"), r.status === "IN_PROGRESS" ? t("In progress", "قيد التنفيذ") : t("On the way", "في الطريق")][i],
     });
   }
   for (const r of mechs.data ?? []) {
@@ -48,11 +50,13 @@ export function useActiveRequest() {
     all.push({
       key: "mech" + r.id, at: r.updatedAt, tag: t("Active mechanic request", "طلب ميكانيكي نشط"), id: r.id, title, index: i, href: `/customer/mechanicrequest/${r.id}`,
       labels: [t("Requested", "تم الطلب"), t("Accepted", "مقبول"), t("In progress", "قيد التنفيذ"), t("Completed", "مكتمل")],
+      who: name,
+      stage: [t("Requested", "تم الطلب"), t("Accepted", "مقبول"), t("In progress", "قيد التنفيذ")][i],
     });
   }
   for (const q of asks.data ?? []) {
     if (q.status !== "ANSWERED") continue;
-    all.push({ key: "ask" + q.id, at: q.updatedAt, tag: t("Answered question", "سؤال تم الرد عليه"), id: q.id, title: t(`${q.shop.name} answered your question about ${q.product.name}`, `${q.shop.name} ردّ على سؤالك عن ${q.product.name}`), href: `/customer/inquiry/${q.id}` });
+    all.push({ key: "ask" + q.id, at: q.updatedAt, tag: t("Answered question", "سؤال تم الرد عليه"), id: q.id, title: t(`${q.shop.name} answered your question about ${q.product.name}`, `${q.shop.name} ردّ على سؤالك عن ${q.product.name}`), href: `/customer/inquiry/${q.id}`, who: q.shop.name, stage: t("Answered", "تم الرد") });
   }
   all.sort((a, b) => b.at.localeCompare(a.at));
   return { active: all[0] ?? null, reload: () => Promise.allSettled([tows.reload(), mechs.reload(), asks.reload()]) };

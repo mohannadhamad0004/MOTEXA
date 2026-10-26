@@ -23,3 +23,8 @@ export const MO = {
 } as const;
 
 export type MoConfig = { [K in keyof typeof MO]: (typeof MO)[K] extends number ? number : { [P in keyof (typeof MO)[K]]: number } };
+
+// Mo at the desk with a coffee (Home hero): ONE transparent scene image (both arms attached, the mug in his hand), trimmed to 344 x 470.
+export const HOME_MO = {
+  ratio: 344 / 470,
+};

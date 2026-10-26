@@ -40,6 +40,7 @@ export function BlueprintPage({
   shift = false,
   lead,
   overlap,
+  contentDelay,
 }: {
   hero?: HeroConfig;
   /** first entry of a main tab (see useIgnition): grid fades in, sheet springs up, content staggers in */
@@ -50,6 +51,8 @@ export function BlueprintPage({
   lead?: ReactNode;
   /** how far the sheet overlaps the hero (24 for a CompactHero) */
   overlap?: number;
+  /** ms before the first sheet child resolves on an ignition entry (default: right after the grid and the sheet lift) */
+  contentDelay?: number;
   /** replaces the Hero (a MapFrame) */
   top?: ReactNode;
   children: ReactNode;
@@ -71,7 +74,7 @@ export function BlueprintPage({
     lift.value = reduced ? withTiming(1, { duration: M.reduced }) : withDelay(M.grid + 300, withSpring(1, M.spring));
   }, [ignition, reduced, lift]);
   const liftStyle = useAnimatedStyle(() => ({ opacity: lift.value, transform: [{ translateY: reduced ? 0 : (1 - lift.value) * 16 }] }));
-  const base = ignition ? M.grid + 450 : 0;
+  const base = ignition ? (contentDelay ?? M.grid + 450) : 0;
   const kids = Children.toArray(children).map((ch, i) => (
     <Rise key={(ch as { key?: string }).key ?? i} i={i} delay={base} distance={ignition ? M.rise : M.riseDetail} layout={shift ? LinearTransition.duration(M.detail) : undefined}>
       {ch}

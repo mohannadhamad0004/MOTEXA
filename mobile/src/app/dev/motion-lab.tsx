@@ -9,6 +9,7 @@ import {
   TowHero,
   MascotMo,
   MO,
+  HomeMo,
   CompactHero,
   CategoryAssembly,
   CrossFade,
@@ -286,6 +287,34 @@ function MoDemo({ n }: { n: number }) {
   );
 }
 
+/** Mo at his desk (Home): the one-shot entrance with a Replay button and a size stepper. */
+function HomeMoDemo({ n }: { n: number }) {
+  const { c, row } = useTheme();
+  const [k, setK] = useState(0);
+  const [size, setSize] = useState(170);
+  return (
+    <View>
+      <BlueprintSurface style={{ borderRadius: 20, height: size + 40, alignItems: "center", justifyContent: "flex-end", paddingBottom: 14 }}>
+        <HomeMo key={n} size={size} playKey={k} onPress={() => setK(k + 1)} />
+      </BlueprintSurface>
+      <PrimaryButton style={{ marginTop: 10 }} label="Replay" onPress={() => setK(k + 1)} />
+      <Text style={{ color: c.soft, fontSize: 12, marginTop: 10 }}>Fade in, rise 10 px, settle 0.98 to 1 (one-shot, no loop). The sip needs a layered export (body without the mug arm + the mug arm), so there is no sip yet.</Text>
+      <Text style={{ color: c.ink, fontSize: 13, fontWeight: "700", marginTop: 14 }}>Arabic options (Mo on the left)</Text>
+      <View style={[row, { gap: 10, marginTop: 8 }]}>
+        {[false, true].map((m) => (
+          <View key={String(m)} style={{ flex: 1 }}>
+            <BlueprintSurface style={{ borderRadius: 16, height: 190, alignItems: "flex-start", justifyContent: "flex-end", paddingLeft: 12 }}>
+              <HomeMo key={`${n}-${m}`} size={150} playKey={k} mirrored={m} />
+            </BlueprintSurface>
+            <Text style={{ color: c.soft, fontSize: 11, marginTop: 4 }}>{m ? "B: mirrored (M marks reversed, mug toward the text)" : "A: unflipped (current; mug toward the screen edge)"}</Text>
+          </View>
+        ))}
+      </View>
+      <Stepper label="size (px)" value={size} step={10} onChange={setSize} />
+    </View>
+  );
+}
+
 export default function MotionLab() {
   if (!__DEV__) return <Redirect href="/" />;
   return <Lab />;
@@ -379,6 +408,10 @@ function Lab() {
             <CarTop animate headlights />
           </BlueprintSurface>
         )}
+      </Demo>
+
+      <Demo title="Mo — Home (desk scene)" note="Tap Mo or Replay: fade in and settle.">
+        {(n) => <HomeMoDemo n={n} />}
       </Demo>
 
       <Demo title="Mo (mascot experiment)" note="Tap Mo or Replay. Steppers align the arm: set pivot / offset until the cuff hides the seam.">
