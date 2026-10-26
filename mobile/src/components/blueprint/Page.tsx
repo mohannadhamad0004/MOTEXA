@@ -39,6 +39,7 @@ export function BlueprintPage({
   ignition = false,
   shift = false,
   lead,
+  overlap,
 }: {
   hero?: HeroConfig;
   /** first entry of a main tab (see useIgnition): grid fades in, sheet springs up, content staggers in */
@@ -47,6 +48,8 @@ export function BlueprintPage({
   shift?: boolean;
   /** state-driven block above the content that expands in and collapses away (see Expand) */
   lead?: ReactNode;
+  /** how far the sheet overlaps the hero (24 for a CompactHero) */
+  overlap?: number;
   /** replaces the Hero (a MapFrame) */
   top?: ReactNode;
   children: ReactNode;
@@ -59,7 +62,7 @@ export function BlueprintPage({
   const insets = useSafeAreaInsets();
   const { c } = useTheme();
   const { art, ...h } = hero ?? {};
-  const bottom = (footer ? 144 : tabs ? 112 : 56) + insets.bottom;
+  const bottom = (footer ? 144 : tabs ? 116 : 56) + insets.bottom;
   const reduced = useReduced();
   // Ignition: the sheet springs up 16px after the hero has started tracing
   const lift = useSharedValue(ignition ? 0 : 1);
@@ -87,7 +90,7 @@ export function BlueprintPage({
         >
           {top ?? <Hero {...h} ignition={ignition}>{art}</Hero>}
           <Animated.View style={[{ flexGrow: 1 }, ignition ? liftStyle : null]}>
-            <Sheet bottom={bottom} style={sheetStyle}>
+            <Sheet bottom={bottom} style={sheetStyle} overlap={overlap}>
               {lead}
               {kids}
             </Sheet>

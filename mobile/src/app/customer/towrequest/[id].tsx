@@ -9,6 +9,7 @@ import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { REFRESH_MS } from "../../../features/mechanics/mechanicsService";
 import { TowStatusBadge, buildTimeline, towHeadline, useProblemLabels, useTowStatusLabels } from "../../../features/requests/requestBits";
+import { WhileYouWait } from "../../../features/requests/WhileYouWait";
 import { shortId } from "../../../features/requests/activeRequest";
 import { TowStatus, customerTowRequests } from "../../../features/requests/requestsService";
 import { cityCentre } from "../../../core/constants/cities";
@@ -109,6 +110,8 @@ export default function TowRequestStatus() {
             <View style={{ marginTop: 32 }}>
               <VerticalTimeline items={buildTimeline(PATH, r.timeline, r.status, statusLabel)} />
             </View>
+
+            {(["REQUESTED", "ACCEPTED", "EN_ROUTE"] as TowStatus[]).includes(r.status) ? <WhileYouWait /> : null}
 
             <View style={{ marginTop: 24 }}>
               <Row label={t("Pickup", "الاستلام")} value={r.pickupAddress} />

@@ -50,17 +50,17 @@ export function FloatingTabBar({ state, navigation, items }: BarProps & { items:
           position: "absolute",
           left: 12,
           right: 12,
-          bottom: 12 + insets.bottom,
-          padding: 6,
+          bottom: 10 + insets.bottom,
+          padding: 5,
           borderRadius: 26,
           borderWidth: 1,
           borderColor: c.line,
           backgroundColor: alpha(c.sheet, 0.95),
         },
       ]}
-      onLayout={(e) => setInner(e.nativeEvent.layout.width - 14)}
+      onLayout={(e) => setInner(e.nativeEvent.layout.width - 12)}
     >
-      {slot > 0 && <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 6, top: 6, width: slot, height: 56, borderRadius: 20, backgroundColor: c.btn }, pill]} />}
+      {slot > 0 && <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 5, top: 5, width: slot, height: 49, borderRadius: 18, backgroundColor: c.btn }, pill]} />}
       {items.map((it) => {
         const route = state.routes.find((r) => r.name === it.name);
         if (!route) return null;
@@ -78,11 +78,11 @@ export function FloatingTabBar({ state, navigation, items }: BarProps & { items:
             }}
             style={({ pressed }) => ({
               flex: 1,
-              height: 56,
-              borderRadius: 20,
+              height: 49,
+              borderRadius: 18,
               alignItems: "center",
               justifyContent: "center",
-              gap: 2,
+              gap: 1,
                             transform: [{ scale: pressed ? 0.98 : 1 }],
             })}
           >
@@ -106,6 +106,7 @@ export function StickyActionBar({
   loading,
   disabled,
   extra,
+  road,
 }: {
   price?: string;
   label: string;
@@ -114,6 +115,8 @@ export function StickyActionBar({
   loading?: boolean;
   disabled?: boolean;
   extra?: ReactNode;
+  /** RoadLoader instead of the spinner while loading */
+  road?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   const { c, row } = useTheme();
@@ -136,7 +139,7 @@ export function StickyActionBar({
       {extra}
       <View style={[row, { alignItems: "center", gap: 16 }]}>
         {price ? <Ltr style={{ fontSize: 22, fontWeight: "700" }}>{price}</Ltr> : null}
-        <PrimaryButton style={{ flex: 1 }} label={label} icon={icon} onPress={onPress} loading={loading} disabled={disabled} />
+        <PrimaryButton style={{ flex: 1 }} label={label} icon={icon} onPress={onPress} loading={loading} road={road} disabled={disabled} />
       </View>
     </View>
   );

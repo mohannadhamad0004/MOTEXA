@@ -77,38 +77,38 @@ export function ProductCard({
   const labels = usePartLabels();
   return (
     <Animated.View style={dimStyle}>
-    <Press
-      accessibilityLabel={p.name}
-      onPress={onPress}
-      style={[row, { gap: 16, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: c.line + "99" }]}
-    >
-      <Rise i={ci} distance={0}>
-        <PartThumb category={p.category} uri={p.imageUri} size={96} />
-      </Rise>
-      <Rise i={ci} delay={50} style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={2} style={[{ color: c.ink, fontSize: 15, fontWeight: "700" }, align]}>{p.name}</Text>
-        <View style={[row, { alignItems: "baseline", justifyContent: "space-between", gap: 8, marginTop: 4 }]}>
-          <Ltr style={{ fontSize: 22, fontWeight: "700" }}>{formatPrice(p.price)}</Ltr>
-          <StockWord state={p.stock} />
-        </View>
-        <View style={[row, { alignItems: "center", flexWrap: "wrap", gap: 4, marginTop: 2 }]}>
-          <Text numberOfLines={1} style={{ color: c.soft, fontSize: 12 }}>{`${p.brand} · ${labels.condition[p.condition]} ·`}</Text>
-          <Mono numberOfLines={1} size={11}>{p.partNumber}</Mono>
-        </View>
-        {car ? (
-          <View style={{ marginTop: 4 }}>
-            <FitBadge p={p} car={car} sweep={sweep} />
+      <Press
+        accessibilityLabel={p.name}
+        onPress={onPress}
+        style={[row, { gap: 14, paddingVertical: 14, alignItems: "flex-start", borderBottomWidth: 1, borderBottomColor: c.line + "99" }]}
+      >
+        <Rise i={ci} distance={0} style={{ width: "30%" }}>
+          <PartThumb category={p.category} uri={p.imageUri} />
+        </Rise>
+        <Rise i={ci} delay={50} style={{ flex: 1, minWidth: 0 }}>
+          <Text numberOfLines={2} style={[{ color: c.ink, fontSize: 16, fontWeight: "700", lineHeight: 21 }, align]}>{p.name}</Text>
+          <View style={[row, { alignItems: "baseline", justifyContent: "space-between", gap: 8, marginTop: 3 }]}>
+            <Ltr style={{ fontSize: 21, fontWeight: "700" }}>{formatPrice(p.price)}</Ltr>
+            <StockWord state={p.stock} />
           </View>
-        ) : (
-          <Text numberOfLines={1} style={[{ color: c.soft, fontSize: 12, marginTop: 4 }, align]}>{fitmentSummary(p, t)}</Text>
-        )}
-        {showShop && (
-          <Text numberOfLines={1} style={[{ color: c.soft, fontSize: 12, marginTop: 2 }, align]}>
-            {p.shop.name} · {p.shop.city}
-          </Text>
-        )}
-      </Rise>
-    </Press>
+          <Text numberOfLines={1} style={[{ color: c.soft, fontSize: 13, marginTop: 2 }, align]}>{`${p.brand} · ${labels.condition[p.condition]}`}</Text>
+          <View style={[row, { marginTop: 1 }]}>
+            <Mono numberOfLines={1} size={11}>{p.partNumber}</Mono>
+          </View>
+          {car ? (
+            <View style={{ marginTop: 6 }}>
+              <FitBadge p={p} car={car} sweep={sweep} />
+            </View>
+          ) : (
+            <Text numberOfLines={1} style={[{ color: c.soft, fontSize: 12, marginTop: 6 }, align]}>{fitmentSummary(p, t)}</Text>
+          )}
+          {showShop && (
+            <Text numberOfLines={1} style={[{ color: c.soft, fontSize: 12, marginTop: 3 }, align]}>
+              {p.shop.name} · {p.shop.city}
+            </Text>
+          )}
+        </Rise>
+      </Press>
     </Animated.View>
   );
 }

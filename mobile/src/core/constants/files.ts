@@ -33,3 +33,11 @@ export function isRealDate(v: string) {
   const d = new Date(`${v}T00:00:00.000Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
 }
+
+/**
+ * DEV ONLY. The dev seed (backend/src/seed/test-accounts.ts, placeholderPng) writes every product picture as a 96x96 letter
+ * tile. In a development build such a tile is treated like "no photo" so the category illustration shows instead. In a
+ * production build nothing is ever hidden because of its size: every real upload is shown.
+ */
+export const SEED_TILE_SIZE = 96;
+export const isDevSeedTile = (width: number, height: number) => __DEV__ && width === SEED_TILE_SIZE && height === SEED_TILE_SIZE;

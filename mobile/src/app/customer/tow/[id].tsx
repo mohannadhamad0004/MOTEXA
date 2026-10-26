@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { Pressable, View } from "react-native";
-import { Icon, Mono, Pill, Row, Section, SimplePage, StickyActionBar } from "../../../components/blueprint";
+import { Icon, InspectionCheck, Mono, Pill, Row, Section, SimplePage, StickyActionBar } from "../../../components/blueprint";
 import { Card } from "../../../components/ui/Card";
 import { Async, EmptyState, Notice } from "../../../components/ui/Feedback";
 import { ImageTile } from "../../../components/ui/Rows";
@@ -56,6 +56,13 @@ export default function CustomerTowCompany() {
                 {company.distanceSource === "city" ? ` · ${t("from the city centre", "من مركز المدينة")}` : ""}
               </Text>
             ) : null}
+
+            <View style={[row, { flexWrap: "wrap", gap: 8, marginTop: 12 }]}>
+              <Pill icon={<InspectionCheck size={14} color={c.bronze} />}>{t("Verified by MOTEXA", "موثّقة من موتكسا")}</Pill>
+              {[...new Set(trucks.map((x) => x.type))].map((k) => (
+                <Pill key={k} icon={<Icon name="tow" size={14} color={c.bronze} />}>{type[k]}</Pill>
+              ))}
+            </View>
 
             <Pressable accessibilityRole="link" onPress={() => router.push({ pathname: "/customer/tow/map", params: { focus: company.id } })} hitSlop={8} style={[row, { alignItems: "center", gap: 6, minHeight: 44 }]}>
               <Icon name="map" size={16} color={c.bronze} />
