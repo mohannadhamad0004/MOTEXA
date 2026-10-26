@@ -168,11 +168,12 @@ export function SearchField({
   "value" | "onChangeText" | "placeholder" | "style"
 >) {
   const { c, row, isArabic } = useTheme();
+  const [focused, setFocused] = useState(false);
   return (
     <View
       style={[
         row,
-        { height: compact ? 48 : 56, borderRadius: 20, borderWidth: 1, borderColor: c.line, backgroundColor: c.field, alignItems: "center", paddingHorizontal: 16, gap: 12 },
+        { height: compact ? 48 : 56, borderRadius: 20, borderWidth: 1, borderColor: focused ? c.bronze : c.line, backgroundColor: c.field, alignItems: "center", paddingHorizontal: 16, gap: 12 },
         style,
       ]}
     >
@@ -186,6 +187,14 @@ export function SearchField({
         returnKeyType="search"
         onSubmitEditing={onSubmit}
         {...rest}
+        onFocus={(e) => {
+          setFocused(true);
+          rest.onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          rest.onBlur?.(e);
+        }}
         style={{ flex: 1, height: "100%", color: c.ink, fontSize: 15, textAlign: isArabic ? "right" : "left" }}
       />
       {value.length > 0 && (
@@ -228,9 +237,10 @@ export function Chip({
     mounted.current = true;
     return () => clearTimeout(id);
   }, [on, reduced, p]);
+  const { field, btn, line } = c; // strings only: the worklet must not capture the whole theme
   const body = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(p.value, [0, 1], [c.field, c.btn]),
-    borderColor: interpolateColor(p.value, [0, 1], [c.line, c.btn]),
+    backgroundColor: interpolateColor(p.value, [0, 1], [field, btn]),
+    borderColor: interpolateColor(p.value, [0, 1], [line, btn]),
   }));
   const fg = ink ? c.btnFg : c.ink;
   return (
@@ -246,8 +256,8 @@ export function Chip({
       }
     >
       {check && on ? <InspectionCheck size={14} color={fg} animate={mounted.current} /> : null}
-      {icon ? <Icon name={icon} size={16} color={fg} /> : null}
-      <Text numberOfLines={1} style={{ color: fg, fontSize: 13, fontWeight: "600" }}>
+      {icon && !(check && on) ? <Icon name={icon} size={16} color={fg} /> : null}
+      <Text numberOfLines={1} style={{ flexShrink: 1, color: fg, fontSize: 13, fontWeight: "600" }}>
         {label}
       </Text>
       {trailing ? <Icon name={trailing} size={16} color={fg} /> : null}
@@ -469,7 +479,8 @@ export function UnderlineTabs<K extends string>({ items, value, onChange }: { it
 export function HScroll({ children, gap = 8, style }: { children: ReactNode; gap?: number; style?: StyleProp<ViewStyle> }) {
   const { row, isArabic } = useTheme();
   const ref = useRef<ScrollView>(null);
-  const placed = useRef(false);
+  // Arabic starts at the right end; stay there while the content grows or shrinks (items load) until the user scrolls
+  const dragged = useRef(false);
   return (
     <ScrollView
       ref={ref}
@@ -477,11 +488,11 @@ export function HScroll({ children, gap = 8, style }: { children: ReactNode; gap
       showsHorizontalScrollIndicator={false}
       style={[{ marginHorizontal: -20 }, style]}
       contentContainerStyle={[row, { paddingHorizontal: 20, gap, minWidth: "100%" }]}
+      onScrollBeginDrag={() => {
+        dragged.current = true;
+      }}
       onContentSizeChange={() => {
-        if (isArabic && !placed.current) {
-          placed.current = true;
-          ref.current?.scrollToEnd({ animated: false });
-        }
+        if (isArabic && !dragged.current) ref.current?.scrollToEnd({ animated: false });
       }}
     >
       {children}

@@ -6,6 +6,8 @@ import {
   AssemblyKind,
   BlueprintSurface,
   CarTop,
+  TowHero,
+  CompactHero,
   CategoryAssembly,
   CrossFade,
   FadeSwitch,
@@ -28,6 +30,8 @@ import {
 import { Text } from "../../components/ui/Text";
 import { useL } from "../../core/hooks/useL";
 import { ServiceMap } from "../../features/shared/maps";
+import { MiniMap } from "../../features/shared/MiniMap";
+import { router } from "expo-router";
 import { M, hapticSuccess, setReducedOverride, useReduced } from "../../motion";
 import { useTheme } from "../../theme/useTheme";
 
@@ -315,6 +319,39 @@ function Lab() {
           <BlueprintSurface key={n} style={{ borderRadius: 20, height: 150, padding: 10 }}>
             <CarTop animate headlights />
           </BlueprintSurface>
+        )}
+      </Demo>
+
+      <Demo title="Tow Discovery hero (Ignition)" note="Road draws, truck settles in, availability dot resolves; then still. Tap the scene to replay it.">
+        {(n) => (
+          <View key={n} style={{ marginHorizontal: -20, marginTop: -4 }}>
+            <TowHero
+              play
+              available
+              tag="TOW / 02"
+              title="Tow trucks"
+              line={<Text style={{ color: c.cream, fontSize: 14 }}>3 tow companies available</Text>}
+              hint="Choose your location to find nearby towing"
+              primary={{ label: "Request nearest available", icon: "tow", onPress: () => hapticSuccess() }}
+              secondary={{ label: "View map", icon: "map", onPress: () => router.push("/customer/tow/map" as never) }}
+            />
+          </View>
+        )}
+      </Demo>
+
+      <Demo title="Hero v2: Tow (mini live map, earlier idea)" note="Compact hero: real-line + primary action + non-interactive map. Dev mock pins around Nablus; the real Tow tab uses real companies.">
+        {(n) => (
+          <View key={n} style={{ marginHorizontal: -20, marginTop: -4 }}>
+            <CompactHero
+              ignition
+              tag="TOW / 02"
+              title="Tow trucks"
+              line={<Text style={{ color: c.cream, fontSize: 13 }}>Showing Nablus — use my location</Text>}
+              primary={{ label: "Request nearest available", icon: "tow", onPress: () => hapticSuccess() }}
+              secondary={{ label: "View on map", icon: "map", onPress: () => router.push("/customer/tow/map" as never) }}
+              visual={<MiniMap pins={MOCK} me={{ lat: 32.2205, lng: 35.2605 }} searching height={128} fitKey={`lab-hero${n}`} onOpen={() => undefined} label="Open the map" />}
+            />
+          </View>
         )}
       </Demo>
 

@@ -389,11 +389,12 @@ function Layer({
     return () => cancelAnimation(p);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assemble, reduced]);
-  const sx = size.w / VB_W;
-  const sy = size.h / VB_H;
+  // plain numbers only: a worklet must never capture `g` (it holds React elements, which cannot be sent to the UI thread)
+  const ox = g.dx * (size.w / VB_W);
+  const oy = g.dy * (size.h / VB_H);
   const st = useAnimatedStyle(() => ({
     opacity: reduced ? p.value : 0.3 + 0.7 * p.value,
-    transform: reduced ? [] : [{ translateX: g.dx * sx * (1 - p.value) }, { translateY: g.dy * sy * (1 - p.value) }],
+    transform: reduced ? [] : [{ translateX: ox * (1 - p.value) }, { translateY: oy * (1 - p.value) }],
   }));
   const common = { fill: "none", strokeLinecap: "round", strokeLinejoin: "round" } as const;
   return (

@@ -2,11 +2,11 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Chip, CrossFade, FadeSwitch, HScroll, Icon, InspectionCheck, Mono, Pill, PrimaryButton, RoadLoader, SearchField, Stamp, Steps } from "../../components/blueprint";
-import { useReduced } from "../../motion";
+import { Chip, CrossFade, FadeSwitch, HScroll, Icon, IconName, InspectionCheck, Mono, OptionSheet, Pill, PrimaryButton, RoadLoader, SearchField, Stamp, Steps } from "../../components/blueprint";
+import { useDelayed, useReduced } from "../../motion";
 import { Notice } from "../../components/ui/Feedback";
 import { Text } from "../../components/ui/Text";
-import { cityCentre, cityLabel } from "../../core/constants/cities";
+import { CITIES, cityCentre, cityLabel } from "../../core/constants/cities";
 import { Point, locationMemory } from "../../core/constants/geo";
 import { goBack } from "../../core/hooks/nav";
 import { useL } from "../../core/hooks/useL";
@@ -48,16 +48,16 @@ const TERMINAL = ["DECLINED", "CANCELLED", "COMPLETED"];
 const TOW_TYPES: TruckType[] = ["FLATBED", "WHEEL_LIFT", "HEAVY_DUTY"];
 
 /** Round overlay button (back). */
-function OverlayButton({ icon, label, onPress }: { icon: "back" | "close"; label: string; onPress: () => void }) {
+function OverlayButton({ icon, label, onPress, on = false }: { icon: IconName; label: string; onPress: () => void; on?: boolean }) {
   const { c } = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      style={({ pressed }) => ({ width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: c.line, backgroundColor: c.field, alignItems: "center", justifyContent: "center", transform: [{ scale: pressed ? 0.96 : 1 }] })}
+      style={({ pressed }) => ({ width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: on ? c.btn : c.line, backgroundColor: on ? c.btn : c.field, alignItems: "center", justifyContent: "center", transform: [{ scale: pressed ? 0.96 : 1 }] })}
     >
-      <Icon name={icon} size={20} color={c.ink} />
+      <Icon name={icon} size={20} color={on ? c.btnFg : c.ink} />
     </Pressable>
   );
 }
@@ -96,6 +96,10 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
   const [loadCount, setLoadCount] = useState(0);
   const pendingNear = useRef<number | null>(null);
   const [highlight, setHighlight] = useState<{ id: string; key: string } | null>(null);
+  const [showSearch, setShowSearch] = useState(false);
+  const [citySheet, setCitySheet] = useState(false);
+  // the sonar appears only if the work is still running after ~300 ms
+  const radarOn = useDelayed(loc.locating || searching, 300);
 
   useEffect(() => {
     if (isTow) return;
@@ -161,7 +165,8 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
   const [snap, setSnap] = useState<Snap>("collapsed");
   const [inset, setInset] = useState(0);
   const [topH, setTopH] = useState(0);
-  const [focus, setFocus] = useState<{ lat: number; lng: number; key: string } | null>(null);
+  const [focus, setFocus] = useState<{ lat: number; lng: number; key: string; zoom?: number } | null>(null);
+  const [mapCity, setMapCity] = useState<string | null>(null);
   const [req, setReq] = useState<Req | null>(null);
   const [reqProvider, setReqProvider] = useState<Provider | null>(null);
   const [reqPickup, setReqPickup] = useState<Point | null>(null);
@@ -352,7 +357,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
       ? [...pins.map((p) => [p.lat, p.lng] as [number, number]), ...(me ? [[me.lat, me.lng] as [number, number]] : [])]
       : [...(toPoint ? [[toPoint.lat, toPoint.lng] as [number, number]] : []), ...(pickupPoint ? [[pickupPoint.lat, pickupPoint.lng] as [number, number]] : [])];
   const fitKey = step === "select" ? `sel:${isTow}:${pins.map((p) => p.id).join(",")}:${me ? 1 : 0}` : step === "form" ? `form:${selected?.id}:${pickupPoint ? 1 : 0}` : `route:${reqId}:${pickupPoint ? 1 : 0}`;
-  const panelVisible = step !== "select" || !!selected;
+  const panelVisible = true;
   const pad = { top: topH, bottom: wide ? 0 : inset, left: wide && panelVisible && !isArabic ? SIDE_PANEL_WIDTH : 0, right: wide && panelVisible && isArabic ? SIDE_PANEL_WIDTH : 0 };
 
   // ---- overlay ----
@@ -376,12 +381,12 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
     >
       <View style={[row, { alignItems: "center", gap: 10 }]}>
         <OverlayButton icon="back" label={t("Back", "رجوع")} onPress={() => goBack(isTow ? "/customer/tow" : "/customer/mechanics")} />
-        <View style={{ flex: 1 }}>
-          <SearchField compact value={q} onChangeText={setQ} placeholder={isTow ? t("Company name or city", "اسم الشركة أو المدينة") : t("Mechanic, workshop or city", "ميكانيكي أو ورشة أو مدينة")} />
-        </View>
+        <Text numberOfLines={1} style={[{ flex: 1, color: c.ink, fontSize: 20, fontWeight: "700" }, align]}>{isTow ? t("Tow map", "خريطة السحب") : t("Mechanics map", "خريطة الميكانيكيين")}</Text>
+        <OverlayButton icon="search" label={t("Search", "بحث")} on={showSearch || !!q} onPress={() => setShowSearch(!showSearch)} />
+        <OverlayButton icon="pin" label={me ? t("Stop using my location", "إيقاف استخدام موقعي") : t("Use my location", "استخدم موقعي")} on={!!me} onPress={nearMe} />
       </View>
+      {showSearch || q ? <SearchField compact value={q} onChangeText={setQ} placeholder={isTow ? t("Company name or city", "اسم الشركة أو المدينة") : t("Mechanic, workshop or city", "ميكانيكي أو ورشة أو مدينة")} /> : null}
       <HScroll>
-        <Chip icon="pin" label={loc.locating ? t("Finding…", "جارٍ التحديد…") : t("Near me", "بالقرب مني")} on={!!me} onPress={nearMe} />
         <Chip icon="spark" label={t("Nearest", "الأقرب")} on={wantNearest} onPress={nearest} />
         {isTow ? (
           <>
@@ -394,7 +399,12 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
           skills.map((k) => <Chip key={k} label={skillLabel(k)} on={skill === k} onPress={() => setSkill(skill === k ? null : k)} />)
         )}
       </HScroll>
-      <LocationProblem loc={loc} />
+      {loc.status === "problem" && !me ? (
+        <View style={[row, { alignItems: "center", gap: 10 }]}>
+          <Text style={{ flex: 1, color: c.soft, fontSize: 12 }}>{mapCity ? `${t("Showing", "عرض")} ${cityLabel(mapCity, isArabic)}` : t("Location unavailable", "الموقع غير متاح")}</Text>
+          <PrimaryButton variant="outline" style={{ height: 40, paddingHorizontal: 14 }} label={t("Choose a city", "اختر مدينة")} onPress={() => setCitySheet(true)} />
+        </View>
+      ) : null}
     </View>
   );
 
@@ -443,15 +453,56 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
   let body: ReactNode = null;
   let footer: ReactNode = null;
 
-  if (step === "select" && selected) {
+  if (step === "select" && !selected) {
+    header = (
+      <View style={[row, { alignItems: "center", justifyContent: "space-between", marginTop: 6 }]}>
+        <Text style={[{ color: c.ink, fontSize: 20, fontWeight: "700" }, align]}>{isTow ? t("Nearby towing", "سحب قريب") : t("Nearby mechanics", "ميكانيكيون قريبون")}</Text>
+        {!loading ? <Mono>{String(providers.length)}</Mono> : null}
+      </View>
+    );
+    body = loading && !providers.length ? (
+      <View style={{ paddingVertical: 20 }}>
+        <RoadLoader label={t("Finding providers…", "جارٍ البحث…")} />
+      </View>
+    ) : !providers.length ? (
+      <Text style={[{ color: c.soft, fontSize: 14, paddingVertical: 20 }, align]}>{error ?? t("No results", "لا توجد نتائج")}</Text>
+    ) : (
+      <View style={{ marginTop: 4 }}>
+        {providers.map((p) => {
+          const free = p.tow ? p.tow.availableTrucks : null;
+          const km = distText(p);
+          return (
+            <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={p.name} onPress={() => select(p)} style={[row, { alignItems: "center", gap: 12, minHeight: 60, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: alpha(c.line, 0.6) }]}>
+              <View style={{ width: 3, alignSelf: "stretch", borderRadius: 2, backgroundColor: free === null || free > 0 ? c.bronze : c.line }} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text numberOfLines={1} style={[{ color: c.ink, fontSize: 15, fontWeight: "700" }, align]}>{p.name}</Text>
+                <Text numberOfLines={1} style={[{ color: c.soft, fontSize: 12 }, align]}>
+                  {[cityLabel(p.city, isArabic), free !== null ? (free > 0 ? `${free} ${free === 1 ? t("truck free", "شاحنة متاحة") : t("trucks free", "شاحنات متاحة")}` : t("No free truck", "لا توجد شاحنة متاحة")) : null, km].filter(Boolean).join(" · ")}
+                </Text>
+              </View>
+              <Icon name="chev" size={16} color={c.soft} />
+            </Pressable>
+          );
+        })}
+      </View>
+    );
+  } else if (step === "select" && selected) {
     const km = distText(selected);
-    header = nameBlock(
-      selected,
-      <Stamp label={t("Verified", "موثّق")} />,
-      <>
-        {km ? <Mono color={c.ink} size={13} bold>{`· ${km}`}</Mono> : null}
-        {km ? <Text style={{ color: c.soft, fontSize: 11 }}>{t("straight line", "خط مستقيم")}</Text> : null}
-      </>
+    header = (
+      <View>
+        <Pressable accessibilityRole="button" onPress={() => setSelectedId(null)} hitSlop={8} style={[row, { alignItems: "center", gap: 4, minHeight: 32 }]}>
+          <Icon name="back" size={16} color={c.bronze} />
+          <Text style={{ color: c.bronze, fontSize: 13, fontWeight: "700" }}>{isTow ? t("Nearby towing", "سحب قريب") : t("Nearby mechanics", "ميكانيكيون قريبون")}</Text>
+        </Pressable>
+        nameBlock(
+        selected,
+        <Stamp label={t("Verified", "موثّق")} />,
+        <>
+          {km ? <Mono color={c.ink} size={13} bold>{`· ${km}`}</Mono> : null}
+          {km ? <Text style={{ color: c.soft, fontSize: 11 }}>{t("straight line", "خط مستقيم")}</Text> : null}
+        </>
+      )
+      </View>
     );
     body = (
       <View style={{ gap: 12, marginTop: 8 }}>
@@ -596,7 +647,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
         pickup={step === "select" ? null : pickupPoint}
         movePickup={step === "form"}
         route={step === "route" && route ? { coords: route.coords, dashed: route.kind === "line", key: reqId ?? "" } : null}
-        radar={step === "select" && (loc.locating || searching)}
+        radar={step === "select" && radarOn}
         highlight={step === "select" ? highlight : null}
         reduced={reduced}
         fit={fit}
@@ -624,6 +675,19 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
           © OpenStreetMap contributors
         </Text>
       )}
+      <OptionSheet
+        visible={citySheet}
+        onClose={() => setCitySheet(false)}
+        title={t("Choose a city", "اختر مدينة")}
+        value={mapCity}
+        options={CITIES.map((x) => ({ key: x.name as string, label: cityLabel(x.name, isArabic) }))}
+        onSelect={(k) => {
+          setCitySheet(false);
+          setMapCity(k);
+          const at = cityCentre(k);
+          if (at) setFocus({ lat: at.lat, lng: at.lng, key: `city-${k}-${Date.now()}`, zoom: 12 });
+        }}
+      />
       <MapPanel visible={panelVisible && !!header} snap={snap} onSnap={setSnap} onInset={setInset} header={header} footer={footer}>
         {body}
       </MapPanel>

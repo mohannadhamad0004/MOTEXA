@@ -1,5 +1,9 @@
 import { Image } from "expo-image";
+import { useState } from "react";
 import { View, ViewStyle } from "react-native";
+import { isDevSeedTile } from "../../core/constants/files";
+import { M } from "../../motion";
+import { alpha } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
 import { Text } from "../ui/Text";
 import { CategoryAssembly, assemblyForCategory } from "./assemblies";
@@ -36,10 +40,12 @@ export const drawingForCategory = (key?: string | null): DrawingKind | null => (
 export function PartThumb({ category, uri, size, style }: { category?: string | null; uri?: string | null; size?: number; style?: ViewStyle }) {
   const { c } = useTheme();
   const box: ViewStyle = size ? { width: size, height: size } : { width: "100%", aspectRatio: 1 };
-  if (uri)
+  // a photo that fails to load falls back to the category illustration
+  const [failed, setFailed] = useState(false);
+  if (uri && !failed)
     return (
       <View style={[box, { borderRadius: 16, overflow: "hidden", backgroundColor: c.pill }, style]}>
-        <Image source={{ uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+        <Image source={{ uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" transition={M.detail} onError={() => setFailed(true)} onLoad={(e) => isDevSeedTile(e.source.width, e.source.height) && setFailed(true)} />
       </View>
     );
   // the same technical illustration as the product hero, static here; an unknown category shows the generic part box
@@ -86,6 +92,16 @@ export function DrawingThumb({ kind, size = 64 }: { kind: DrawingKind; size?: nu
   return (
     <BlueprintSurface style={{ width: size, height: size, borderRadius: 16, padding: 6, alignItems: "center", justifyContent: "center" }}>
       <D glow={false} />
+    </BlueprintSurface>
+  );
+}
+
+/** Designed placeholder for a mechanic (there is no profile photo in the data): a person line mark on the blueprint plate. */
+export function MechanicAvatar({ size = 56 }: { size?: number }) {
+  const { c } = useTheme();
+  return (
+    <BlueprintSurface style={{ width: size, height: size, borderRadius: size / 2, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: alpha(c.bronzeLight, 0.3) }}>
+      <Icon name="user" size={Math.round(size * 0.5)} color={c.bronzeLight} />
     </BlueprintSurface>
   );
 }

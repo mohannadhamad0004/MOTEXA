@@ -182,14 +182,14 @@ export function BackButton({ fallback, below = false }: { fallback: Parameters<t
 }
 
 /** Cream/sheet panel that overlaps the hero by 32px. */
-export function Sheet({ children, style, bottom = 112 }: { children: ReactNode; style?: StyleProp<ViewStyle>; bottom?: number }) {
+export function Sheet({ children, style, bottom = 112, overlap = 32 }: { children: ReactNode; style?: StyleProp<ViewStyle>; bottom?: number; overlap?: number }) {
   const { c, r } = useTheme();
   return (
     <View
       style={[
         {
           flexGrow: 1,
-          marginTop: -32,
+          marginTop: -overlap,
           borderTopLeftRadius: r.sheet,
           borderTopRightRadius: r.sheet,
           backgroundColor: c.sheet,

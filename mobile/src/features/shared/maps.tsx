@@ -29,10 +29,12 @@ type MapData = {
   movePickup?: boolean;
   /** motion, triggered from React Native: sonar while really searching, one highlight of the nearest pin, reduced motion */
   anim?: { radar: boolean; reduced: boolean; hl: { id: string; key: string } | null };
+  /** hero preview: no gestures, no zoom buttons, smaller pins, one sonar ring */
+  mini?: boolean;
   /** points the map fits itself to when `fitKey` changes, kept clear of the overlays by `pad` */
   fit?: [number, number][];
   pad?: { top: number; bottom: number; left: number; right: number };
-  focus?: { lat: number; lng: number; key: string } | null;
+  focus?: { lat: number; lng: number; key: string; zoom?: number } | null;
   /** the single pin can be dragged, and a tap on the map moves it */
   movable: boolean;
   /** changes when the set of points changes: the map re-fits to them */
@@ -87,6 +89,11 @@ html,body,#map{margin:0;height:100%;width:100%;background:#2D1F18}
 @keyframes dotIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
 .rm .dot.in{animation:fadeOnly .15s linear both}
 .rm .radar .ring{animation:none}
+.mini .leaflet-control-zoom{display:none}
+.mini .svc{width:24px;height:24px;border-width:2px}
+.mini .svc svg{width:12px;height:12px}
+.mini .ring.r2,.mini .ring.r3{display:none}
+.mini .dot{width:12px;height:12px}
 </style></head><body><div id="map"></div>
 <script src="https://unpkg.com/leaflet@${LEAFLET}/dist/leaflet.js"></script>
 <script>
@@ -114,18 +121,19 @@ function icon(kind,t,label){
   return L.divIcon({html:html,className:"",iconSize:[size,size],iconAnchor:[size/2,size/2]});
 }
 var GLYPH={tow:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16V11H8L10 7H14V16M14 13H22V16"/><circle cx="7" cy="17" r="2"/><circle cx="18" cy="17" r="2"/></svg>',mech:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6a4 4 0 0 0 5 5L11 19a2 2 0 0 1-3-3Z"/></svg>'};
+var MINI=false;
 function svcIcon(p,sel,t,cls,delay){
-  var bg=p.dim?t.busy:t.accent,size=sel?44:36;
+  var bg=p.dim?t.busy:t.accent,size=MINI?(sel?30:24):(sel?44:36);
   return L.divIcon({html:'<div class="svc'+(sel?' sel':'')+(cls||'')+'" style="background:'+bg+(delay!=null?';animation-delay:'+delay+'ms':'')+'">'+GLYPH[p.kind]+'</div>',className:"",iconSize:[size,size],iconAnchor:[size/2,size]});
 }
-var lastFocus="",seen={},lastHlKey="",lastRouteKey="";
+var lastFocus="",seen={},lastHlKey="",lastRouteKey="",miniDone=false;
 function service(d){
   var an=d.anim||{radar:false,reduced:false,hl:null},order=0,hlUsed=false;
   d.pins.forEach(function(p){
     var cls="",delay=null;
     if(!seen[p.id]){seen[p.id]=1;cls+=" pin-in";delay=order++*35;}
     if(an.hl&&an.hl.id===p.id){cls+=" hl";if(an.hl.key!==lastHlKey){cls+=" go";hlUsed=true;}}
-    var m=L.marker([p.lat,p.lng],{icon:svcIcon(p,p.id===d.selectedId,d.theme,cls,delay),title:p.name,keyboard:false,zIndexOffset:(p.id===d.selectedId||(an.hl&&an.hl.id===p.id))?1000:0});
+    var m=L.marker([p.lat,p.lng],{icon:svcIcon(p,p.id===d.selectedId,d.theme,cls,delay),title:p.name,keyboard:false,interactive:!d.mini,zIndexOffset:(p.id===d.selectedId||(an.hl&&an.hl.id===p.id))?1000:0});
     m.on("click",function(){post({type:"select",id:p.id});});
     m.addTo(layer);
   });
@@ -165,12 +173,12 @@ function service(d){
   }
   if(d.focus&&d.focus.key!==lastFocus){
     lastFocus=d.focus.key;
-    map.flyTo([d.focus.lat,d.focus.lng],Math.max(map.getZoom(),14),{duration:.4});
+    map.flyTo([d.focus.lat,d.focus.lng],d.focus.zoom||Math.max(map.getZoom(),14),{duration:.4});
   }
 }
 window.setData=function(d){
   if(!map)return;
-  data=d;document.body.style.background=d.theme.bg;document.documentElement.style.setProperty("--bi",(d.bottomInset||0)+"px");document.body.className=(d.mode==="service"?"hide-attr":"")+(d.anim&&d.anim.reduced?" rm":"");
+  data=d;document.body.style.background=d.theme.bg;document.documentElement.style.setProperty("--bi",(d.bottomInset||0)+"px");document.body.className=(d.mode==="service"?"hide-attr":"")+(d.anim&&d.anim.reduced?" rm":"")+(d.mini?" mini":"");MINI=!!d.mini;if(d.mini&&!miniDone){miniDone=true;map.dragging.disable();map.touchZoom.disable();map.doubleClickZoom.disable();map.scrollWheelZoom.disable();map.boxZoom.disable();map.keyboard.disable();if(map.tap)map.tap.disable();}
   layer.clearLayers();
   if(d.mode==="service"){service(d);return;}
   var pts=[];
@@ -430,6 +438,7 @@ export function ServiceMap({
   radar = false,
   highlight = null,
   reduced = false,
+  mini = false,
   onSelect,
   onBackground,
   onPickupMove,
@@ -446,12 +455,14 @@ export function ServiceMap({
   fit: [number, number][];
   fitKey: string;
   pad: { top: number; bottom: number; left: number; right: number };
-  focus?: { lat: number; lng: number; key: string } | null;
+  focus?: { lat: number; lng: number; key: string; zoom?: number } | null;
   /** sonar rings around your dot while a search is really running */
   radar?: boolean;
   /** the nearest valid pin gets one ring + scale highlight when its key is new */
   highlight?: { id: string; key: string } | null;
   reduced?: boolean;
+  /** hero preview (see MiniMap) */
+  mini?: boolean;
   onSelect: (id: string) => void;
   onBackground: () => void;
   onPickupMove?: (p: Point) => void;
@@ -476,10 +487,11 @@ export function ServiceMap({
       pad,
       focus: focus ?? null,
       anim: { radar, reduced, hl: highlight },
+      mini,
       theme,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pinsKey, JSON.stringify(me), selectedId, JSON.stringify(pickup), movePickup, JSON.stringify(route), JSON.stringify(fit), fitKey, JSON.stringify(pad), JSON.stringify(focus), radar, reduced, JSON.stringify(highlight), theme]
+    [pinsKey, JSON.stringify(me), selectedId, JSON.stringify(pickup), movePickup, JSON.stringify(route), JSON.stringify(fit), fitKey, JSON.stringify(pad), JSON.stringify(focus), radar, reduced, JSON.stringify(highlight), mini, theme]
   );
   return <LeafletMap bare height={height} data={data} bottomInset={bottomInset} onSelect={onSelect} onBackground={onBackground} onPickup={onPickupMove} onFailedChange={onFailedChange} />;
 }

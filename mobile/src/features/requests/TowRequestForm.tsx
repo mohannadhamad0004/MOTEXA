@@ -151,7 +151,7 @@ export function TowRequestFields({ form, pinMap, numbered = true }: { form: TowF
     <>
       {wrap(
         "01",
-        t("Where", "أين"),
+        t("Pickup", "الاستلام"),
         <Card>
           {form.loc.dialog}
           <Button
@@ -191,29 +191,25 @@ export function TowRequestFields({ form, pinMap, numbered = true }: { form: TowF
       )}
       {wrap(
         "02",
-        t("Your car", "سيارتك"),
-        <Card>
-          <Input label={t("Make", "الشركة المصنعة")} value={form.make} onChangeText={form.setMake} maxLength={60} />
-          <Input label={t("Model", "الطراز")} value={form.model} onChangeText={form.setModel} maxLength={60} />
-          <Input label={t("Year (optional)", "السنة (اختياري)")} value={form.year} onChangeText={form.setYear} keyboardType="number-pad" maxLength={4} />
-        </Card>
-      )}
-      {wrap(
-        "03",
-        t("What is wrong?", "ما المشكلة؟"),
-        <ChipRow>
-          {TOW_PROBLEMS.map((k) => (
-            <Chip key={k} label={problemLabel[k]} on={form.problem === k} onPress={() => form.setProblem(k)} />
-          ))}
-        </ChipRow>
-      )}
-      {wrap(
-        "04",
-        t("Contact", "التواصل"),
-        <Card>
-          <Input label={t("Contact phone", "هاتف التواصل")} value={form.phone} onChangeText={form.setPhone} keyboardType="phone-pad" maxLength={20} />
-          <Input label={t("Notes (optional)", "ملاحظات (اختياري)")} value={form.notes} onChangeText={form.setNotes} multiline maxLength={500} />
-        </Card>
+        t("Car and problem", "السيارة والمشكلة"),
+        <>
+          <Card>
+            <Input label={t("Make", "الشركة المصنعة")} value={form.make} onChangeText={form.setMake} maxLength={60} />
+            <Input label={t("Model", "الطراز")} value={form.model} onChangeText={form.setModel} maxLength={60} />
+            <Input label={t("Year (optional)", "السنة (اختياري)")} value={form.year} onChangeText={form.setYear} keyboardType="number-pad" maxLength={4} />
+          </Card>
+          <Text style={[{ color: c.soft, fontSize: 13, marginBottom: 8 }, align]}>{t("What is wrong?", "ما المشكلة؟")}</Text>
+          <ChipRow>
+            {TOW_PROBLEMS.map((k) => (
+              <Chip key={k} label={problemLabel[k]} on={form.problem === k} onPress={() => form.setProblem(k)} />
+            ))}
+          </ChipRow>
+          <View style={{ height: 12 }} />
+          <Card>
+            <Input label={t("Contact phone", "هاتف التواصل")} value={form.phone} onChangeText={form.setPhone} keyboardType="phone-pad" maxLength={20} />
+            <Input label={t("Notes (optional)", "ملاحظات (اختياري)")} value={form.notes} onChangeText={form.setNotes} multiline maxLength={500} />
+          </Card>
+        </>
       )}
     </>
   );
