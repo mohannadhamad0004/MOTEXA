@@ -94,7 +94,12 @@ router.post("/", async (req, res) => {
       },
     });
 
-    const activationBaseUrl = process.env.ADMIN_ACTIVATION_URL;
+    // Development only: fall back to this server's own invitation page when ADMIN_ACTIVATION_URL is not set.
+    const activationBaseUrl =
+      process.env.ADMIN_ACTIVATION_URL ??
+      (process.env.NODE_ENV !== "production"
+        ? `http://localhost:${process.env.PORT || 5000}/api/auth/admin/open-invitation`
+        : undefined);
 
     if (!activationBaseUrl) {
       await prisma.adminInvitation.delete({
@@ -136,6 +141,15 @@ router.post("/", async (req, res) => {
         message: "Invitation email could not be sent. Please try again.",
       });
     }
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: res.locals.authUser.id,
+        action: "ADMIN_INVITATION_CREATED",
+        targetId: invitation.id,
+        details: { permission: invitation.permission },
+      },
+    });
 
     return res.status(201).json({
       success: true,
@@ -231,6 +245,10 @@ router.patch("/:id/revoke", async (req, res) => {
       });
     }
 
+    await prisma.auditLog.create({
+      data: { actorId: res.locals.authUser.id, action: "ADMIN_INVITATION_REVOKED", targetId: invitationId },
+    });
+
     return res.status(200).json({
       success: true,
       message: "Invitation revoked successfully.",
@@ -271,6 +289,14 @@ router.patch("/:id/status", async (req, res) => {
         message: "Administrator not found or status already updated.",
       });
     }
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: res.locals.authUser.id,
+        action: status === "SUSPENDED" ? "ADMIN_SUSPENDED" : "ADMIN_REACTIVATED",
+        targetId: id,
+      },
+    });
 
     return res.json({
       success: true,

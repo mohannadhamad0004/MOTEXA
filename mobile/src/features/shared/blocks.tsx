@@ -60,7 +60,7 @@ export function HistoryList({ items }: { items: Entry[] }) {
 }
 
 /** Full-screen viewer for one private image. The image is fetched with the bearer token, never from a public URL. */
-function DocViewer({ doc, onClose }: { doc: { label: string; uri: string } | null; onClose: () => void }) {
+export function DocViewer({ doc, onClose }: { doc: { label: string; uri: string } | null; onClose: () => void }) {
   const { c: col } = useTheme();
   const { t, row } = useL();
   const [src, setSrc] = useState<{ uri: string; headers: Record<string, string> } | null>(null);

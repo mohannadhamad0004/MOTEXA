@@ -45,6 +45,11 @@ async function deliverEmail(message: {
   }
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_EMAIL;
+  // Development only: with no mail provider configured, print the message (invitation link, OTP) instead of failing.
+  if ((!apiKey || !from) && process.env.NODE_ENV !== "production") {
+    console.log("[DEV EMAIL] to=" + message.to.join(",") + " subject=" + message.subject + " | " + message.text.split("\n").join(" "));
+    return { data: { id: "dev-console" }, error: null };
+  }
   if (!apiKey || !from)
     throw new Error("Resend email configuration is missing.");
   return new Resend(apiKey).emails.send({

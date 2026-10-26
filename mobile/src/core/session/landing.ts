@@ -9,16 +9,9 @@ export function landingFor(role: string, permissions: string[]): Href | null {
   switch (role) {
     case "SUPER_ADMIN":
       return "/admin/(tabs)";
-    case "ADMIN": {
-      const areas = {
-        MANAGE_MECHANICS: "/mechanics-admin",
-        MANAGE_TOWING: "/admin/tow",
-        MANAGE_SPARE_PARTS: "/admin/shops",
-      } as const;
-      const held = (Object.keys(areas) as (keyof typeof areas)[]).filter((p) => permissions.includes(p));
-      if (held.length === 0) return null;
-      return held.length === 1 ? areas[held[0]] : "/admin/departments";
-    }
+    case "ADMIN":
+      // every department admin (towing, parts, mechanics) works in the shared /dept area
+      return permissions.length ? ("/dept" as Href) : null;
     case "TOW_PROVIDER":
       return "/provider/tow";
     case "PARTS_PROVIDER":

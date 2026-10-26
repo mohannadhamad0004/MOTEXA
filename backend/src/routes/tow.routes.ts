@@ -585,6 +585,20 @@ router.delete("/tow/me/trucks/:id", ...provider, async (req, res) => {
 // =====================================================================
 const admin = [requireAuth, requireTowAdmin, express.json()];
 
+// Counts only (department home screen).
+router.get("/admin/tow/stats", ...admin, async (_req, res) => {
+  try {
+    const [pendingCompanies, approvedCompanies, pendingTrucks] = await Promise.all([
+      prisma.towCompanyProfile.count({ where: { verificationStatus: "PENDING" } }),
+      prisma.towCompanyProfile.count({ where: { verificationStatus: "APPROVED" } }),
+      prisma.truck.count({ where: { verificationStatus: "PENDING" } }),
+    ]);
+    return res.json({ success: true, stats: { pendingCompanies, approvedCompanies, pendingTrucks } });
+  } catch (e) {
+    return fail(res, "Tow stats error", e);
+  }
+});
+
 // List. ?status=PENDING|APPROVED|REJECTED (company) & ?q= (company name or any truck plate)
 router.get("/admin/tow/companies", ...admin, async (req, res) => {
   try {
