@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
-import { BlueprintPage, BlueprintSurface, CarTop, Chip, H1, HScroll, Icon, IconName, Mono, Press, SearchField, Section, Sub, Tag, TowTruck } from "../../../components/blueprint";
+import { BlueprintPage, BlueprintSurface, Chip, HOME_HERO_OVERLAP, HomeHero, H1, HScroll, Icon, IconName, Mono, Press, SearchField, Section, Sub, Tag, TowTruck } from "../../../components/blueprint";
 import { Button } from "../../../components/ui/Button";
 import { Notice } from "../../../components/ui/Feedback";
 import { SkeletonList } from "../../../components/ui/Skeleton";
@@ -95,44 +95,45 @@ export default function CustomerHome() {
     <BlueprintPage
       tabs
       ignition={ig}
-      shift
-      lead={active ? <ActiveRequestCard a={active} /> : null}
+      overlap={HOME_HERO_OVERLAP}
+      contentDelay={840}
       refreshing={refreshing}
       onRefresh={refresh}
-      hero={{
-        height: 240,
-        tl: greeting(t, firstName),
-        tr: "M / 01",
-        bl: carChip,
-        art: (
-          <View style={{ width: "100%", maxWidth: 300, height: "100%" }}>
-            <CarTop animate={ig} delay={M.grid} headlights={ig} />
-          </View>
-        ),
-      }}
+      top={
+        <HomeHero
+          play={ig}
+          greeting={greeting(t, firstName)}
+          carLabel={carChip}
+          onCar={() => router.navigate({ pathname: "/customer/parts", params: { fit: "1" } })}
+          active={active && active.index !== undefined && active.labels ? { who: active.who, stage: active.stage, steps: active.labels.length, index: active.index, onPress: () => router.push(active.href as never) } : null}
+          primary={{ label: t("Request a tow", "اطلب سحب"), icon: "tow", onPress: () => router.navigate("/customer/tow") }}
+          secondary={{ label: t("Find parts", "ابحث عن قطع"), icon: "parts", onPress: () => router.navigate("/customer/parts") }}
+        />
+      }
     >
-      <H1>{t("What does your car need today?", "ماذا تحتاج سيارتك اليوم؟")}</H1>
-      <Sub>{t("Parts, towing and mechanics — verified, in one place.", "قطع وسحب وميكانيكيون موثّقون، في مكان واحد.")}</Sub>
       <SearchField
-        style={{ marginTop: 24 }}
         value={q}
         onChangeText={setQ}
-        placeholder={t("Search parts, brands or part numbers", "ابحث عن قطع أو ماركات أو أرقام قطع")}
+        placeholder={t("Search parts or part numbers", "ابحث عن قطع أو أرقام قطع")}
         onSubmit={() => router.navigate({ pathname: "/customer/parts", params: q.trim() ? { q: q.trim() } : {} })}
       />
 
-      <View style={{ marginTop: 24 }}>
+      <View style={{ marginTop: 16 }}>
         <Press accessibilityLabel={t("Request a tow", "اطلب سحب")} onPress={() => router.navigate("/customer/tow")}>
-          <BlueprintSurface style={{ borderRadius: 24, padding: 20 }}>
-            <View style={[row, { justifyContent: "space-between", alignItems: "flex-start" }]}>
-              <Tag color={c.bronzeLight}>TOW / 02</Tag>
+          <BlueprintSurface style={{ borderRadius: 20, minHeight: 136, padding: 16 }}>
+            <View style={[row, { flex: 1, alignItems: "center", gap: 8 }]}>
+              <View style={{ flex: 1, minWidth: 0, alignSelf: "stretch", justifyContent: "space-between" }}>
+                <Tag color={c.bronzeLight} align={isArabic ? "right" : "left"}>TOW / 02</Tag>
+                <View>
+                  <Text numberOfLines={2} style={[{ color: c.cream, fontSize: 21, fontWeight: "700", lineHeight: isArabic ? 29 : 25 }, align]}>{t("Request a tow", "اطلب سحب")}</Text>
+                  <Text numberOfLines={2} style={[{ color: alpha(c.cream, 0.7), fontSize: 13, marginTop: 2 }, align]}>{t("Nearest available truck by GPS", "أقرب شاحنة متاحة عبر GPS")}</Text>
+                </View>
+              </View>
+              <View style={{ width: 118, height: 70 }}>
+                <TowTruck />
+              </View>
               <Icon name="arrow" size={20} color={c.bronzeLight} />
             </View>
-            <View style={{ height: 96, marginVertical: 8 }}>
-              <TowTruck />
-            </View>
-            <Text style={[{ color: c.cream, fontSize: 22, fontWeight: "700" }, align]}>{t("Request a tow", "اطلب سحب")}</Text>
-            <Text style={[{ color: alpha(c.cream, 0.7), fontSize: 13 }, align]}>{t("Nearest available truck by GPS", "أقرب شاحنة متاحة عبر GPS")}</Text>
           </BlueprintSurface>
         </Press>
       </View>

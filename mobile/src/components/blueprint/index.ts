@@ -21,3 +21,5 @@ export * from "./MechanicScene";
 export * from "./mascot/MascotMo";
 export * from "./mascot/MoHero";
 export * from "./mascot/moConfig";
+export * from "./mascot/HomeMo";
+export * from "./mascot/HomeHero";
