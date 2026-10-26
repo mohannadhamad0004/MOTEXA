@@ -7,15 +7,14 @@ import {
   InspectionCheck,
   Ltr,
   MechanicAvatar,
-  MechanicScene,
+  MO_HERO_OVERLAP,
+  MoHero,
   Odometer,
   OptionSheet,
   PrimaryButton,
   Press,
   Rise,
   SearchField,
-  TOW_HERO_OVERLAP,
-  TowHero,
   UnderlineTabs,
 } from "../../../components/blueprint";
 import { Button } from "../../../components/ui/Button";
@@ -184,23 +183,22 @@ export default function CustomerMechanics() {
     <BlueprintPage
       tabs
       ignition={ig}
-      overlap={TOW_HERO_OVERLAP}
+      overlap={MO_HERO_OVERLAP}
       refreshing={refreshing}
       onRefresh={() => run("refresh")}
       top={
-        <TowHero
+        <MoHero
           play={ig}
+          verified={(total ?? 0) > 0}
           tag="MECHANICS / 04"
           title={t("Mechanics", "الميكانيكيون")}
           line={heroLine}
-          hint={hint}
           primary={
             me
               ? { label: t("Near you", "بالقرب منك"), icon: "pin", active: true, onPress: forgetLocation }
               : { label: t("Use my location", "استخدم موقعي"), icon: "pin", loading: loc.locating, onPress: () => void useMyLocation() }
           }
-          secondary={{ label: t("View map", "الخريطة"), icon: "map", onPress: () => router.push("/customer/mechanics/map") }}
-          scene={(k, p) => <MechanicScene key={k} play={p} verified={(total ?? 0) > 0} />}
+          secondary={{ label: t("View on map", "الخريطة"), icon: "map", onPress: () => router.push("/customer/mechanics/map") }}
         />
       }
     >
