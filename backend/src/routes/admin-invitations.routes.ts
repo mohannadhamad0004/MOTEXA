@@ -1,4 +1,3 @@
-
 import { Router } from "express";
 import { randomBytes, createHash } from "node:crypto";
 import { prisma } from "../prisma.js";
@@ -16,41 +15,36 @@ router.use(requireAuth, requireSuperAdmin);
 
 router.post("/", async (req, res) => {
   try {
-
     const { email, permission } = req.body ?? {};
     const fullName = req.body?.fullName;
 
-if (typeof fullName !== "string" || !fullName.trim()) {
-  return res.status(400).json({
-    success: false,
-    message: "Administrator full name is required.",
-  });
-}
+    if (typeof fullName !== "string" || !fullName.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Administrator full name is required.",
+      });
+    }
 
-  if (
-  typeof email !== "string" ||
-  !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
-  typeof permission !== "string"
-) {
-  return res.status(400).json({
-    success: false,
-    message: "Valid email and permissions are required.",
-  });
-}
+    if (
+      typeof email !== "string" ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
+      typeof permission !== "string"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid email and permissions are required.",
+      });
+    }
 
     const normalizedEmail = email.trim().toLowerCase();
 
+    const allowedPermissions = [
+      "MANAGE_MECHANICS",
+      "MANAGE_SPARE_PARTS",
+      "MANAGE_TOWING",
+    ];
 
-const allowedPermissions = [
-  "MANAGE_MECHANICS",
-  "MANAGE_SPARE_PARTS",
-  "MANAGE_TOWING",
-];
-
-
-
-   if (!allowedPermissions.includes(permission)) 
-    {
+    if (!allowedPermissions.includes(permission)) {
       return res.status(400).json({
         success: false,
         message: "Invalid administrator permission.",
@@ -85,78 +79,76 @@ const allowedPermissions = [
 
     const token = randomBytes(32).toString("hex");
 
-    const tokenHash = createHash("sha256")
-      .update(token)
-      .digest("hex");
+    const tokenHash = createHash("sha256").update(token).digest("hex");
 
-    const expiresAt = new Date(
-      Date.now() + 24 * 60 * 60 * 1000
-    );
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
- 
-const invitation = await prisma.adminInvitation.create({
- data: {
-  email: normalizedEmail,
-  fullName: fullName.trim(),
-  tokenHash,
-  expiresAt,
-  permission,
-  invitedById: res.locals.authUser.id,
-},
-});
+    const invitation = await prisma.adminInvitation.create({
+      data: {
+        email: normalizedEmail,
+        fullName: fullName.trim(),
+        tokenHash,
+        expiresAt,
+        permission,
+        invitedById: res.locals.authUser.id,
+      },
+    });
 
-const activationBaseUrl = process.env.ADMIN_ACTIVATION_URL;
+    const activationBaseUrl = process.env.ADMIN_ACTIVATION_URL;
 
-if (!activationBaseUrl) {
-  await prisma.adminInvitation.delete({
-    where: { id: invitation.id },
-  });
+    if (!activationBaseUrl) {
+      await prisma.adminInvitation.delete({
+        where: { id: invitation.id },
+      });
 
-  return res.status(500).json({
-    success: false,
-    message: "Admin activation URL is not configured.",
-  });
-}
+      return res.status(500).json({
+        success: false,
+        message: "Admin activation URL is not configured.",
+      });
+    }
 
-const activationLink =
-  `${activationBaseUrl}?token=${encodeURIComponent(token)}`;
+    const activationLink = `${activationBaseUrl}?token=${encodeURIComponent(token)}`;
 
-const expoGoEmailBase = process.env.NODE_ENV !== "production" ? process.env.EXPO_GO_ACTIVATION_URL : undefined;
+    const expoGoEmailBase =
+      process.env.NODE_ENV !== "production"
+        ? process.env.EXPO_GO_ACTIVATION_URL
+        : undefined;
 
-try {
-  await sendAdminInvitationEmail({
-    to: invitation.email,
-    fullName: invitation.fullName,
-    permission: invitation.permission,
-    activationLink,
-    expoGoActivationLink: expoGoEmailBase ? `${expoGoEmailBase}?token=${encodeURIComponent(token)}` : undefined,
-  });
-} catch (emailError) {
-  console.error("Invitation email error:", emailError);
+    try {
+      await sendAdminInvitationEmail({
+        to: invitation.email,
+        fullName: invitation.fullName,
+        permission: invitation.permission,
+        activationLink,
+        expoGoActivationLink: expoGoEmailBase
+          ? `${expoGoEmailBase}?token=${encodeURIComponent(token)}`
+          : undefined,
+      });
+    } catch (emailError) {
+      console.error("Invitation email error:", emailError);
 
-  await prisma.adminInvitation.delete({
-    where: { id: invitation.id },
-  });
+      await prisma.adminInvitation.delete({
+        where: { id: invitation.id },
+      });
 
-  return res.status(502).json({
-    success: false,
-    message: "Invitation email could not be sent. Please try again.",
-  });
-}
+      return res.status(502).json({
+        success: false,
+        message: "Invitation email could not be sent. Please try again.",
+      });
+    }
 
-return res.status(201).json({
-  success: true,
-  message: "Administrator invitation created and email sent.",
-  invitation: {
-    id: invitation.id,
-    email: invitation.email,
-    fullName: invitation.fullName,
-    status: invitation.status,
-    permission: invitation.permission,
-    expiresAt: invitation.expiresAt,
-  },
-});
-
+    return res.status(201).json({
+      success: true,
+      message: "Administrator invitation created and email sent.",
+      invitation: {
+        id: invitation.id,
+        email: invitation.email,
+        fullName: invitation.fullName,
+        status: invitation.status,
+        permission: invitation.permission,
+        expiresAt: invitation.expiresAt,
+      },
+    });
   } catch (error) {
     console.error("Create invitation error:", error);
 
@@ -257,8 +249,7 @@ router.patch("/:id/status", async (req, res) => {
     const id = req.params.id;
     const { status } = req.body ?? {};
 
-    if (typeof id !== "string" ||
-        !["ACTIVE", "SUSPENDED"].includes(status)) {
+    if (typeof id !== "string" || !["ACTIVE", "SUSPENDED"].includes(status)) {
       return res.status(400).json({
         success: false,
         message: "Invalid administrator ID or status.",

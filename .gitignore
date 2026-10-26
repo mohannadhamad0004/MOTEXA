@@ -34,3 +34,6 @@ Desktop.ini
 **/.windsurf/
 # Additional development tool files
 **/.devin/
+# Private uploads and local test artifacts
+**/.private/
+**/test-results/

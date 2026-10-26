@@ -9,6 +9,7 @@ import {
   TowHero,
   MascotMo,
   MO,
+  HOME_MO,
   HomeMo,
   CompactHero,
   CategoryAssembly,
@@ -289,28 +290,23 @@ function MoDemo({ n }: { n: number }) {
 
 /** Mo at his desk (Home): the one-shot entrance with a Replay button and a size stepper. */
 function HomeMoDemo({ n }: { n: number }) {
-  const { c, row } = useTheme();
+  const { c } = useTheme();
   const [k, setK] = useState(0);
   const [size, setSize] = useState(170);
+  const [arm, setArm] = useState({ dx: HOME_MO.restArm.dx, dy: HOME_MO.restArm.dy, scale: HOME_MO.restArm.scale });
   return (
     <View>
       <BlueprintSurface style={{ borderRadius: 20, height: size + 40, alignItems: "center", justifyContent: "flex-end", paddingBottom: 14 }}>
-        <HomeMo key={n} size={size} playKey={k} onPress={() => setK(k + 1)} />
+        <HomeMo key={n} size={size} playKey={k} delay={0} sipDelay={400} restArm={arm} />
       </BlueprintSurface>
       <PrimaryButton style={{ marginTop: 10 }} label="Replay" onPress={() => setK(k + 1)} />
-      <Text style={{ color: c.soft, fontSize: 12, marginTop: 10 }}>Fade in, rise 10 px, settle 0.98 to 1 (one-shot, no loop). The sip needs a layered export (body without the mug arm + the mug arm), so there is no sip yet.</Text>
-      <Text style={{ color: c.ink, fontSize: 13, fontWeight: "700", marginTop: 14 }}>Arabic options (Mo on the left)</Text>
-      <View style={[row, { gap: 10, marginTop: 8 }]}>
-        {[false, true].map((m) => (
-          <View key={String(m)} style={{ flex: 1 }}>
-            <BlueprintSurface style={{ borderRadius: 16, height: 190, alignItems: "flex-start", justifyContent: "flex-end", paddingLeft: 12 }}>
-              <HomeMo key={`${n}-${m}`} size={150} playKey={k} mirrored={m} />
-            </BlueprintSurface>
-            <Text style={{ color: c.soft, fontSize: 11, marginTop: 4 }}>{m ? "B: mirrored (M marks reversed, mug toward the text)" : "A: unflipped (current; mug toward the screen edge)"}</Text>
-          </View>
-        ))}
-      </View>
+      <Text style={{ color: c.soft, fontSize: 12, marginTop: 10 }}>Fade in, rise 10 px, settle 0.98 to 1; then one sip (arm crossfade 350 ms, hold 0.9 s, back) with steam over the mug. Tap Mo or Replay to sip again. Arabic keeps the artwork unflipped.</Text>
       <Stepper label="size (px)" value={size} step={10} onChange={setSize} />
+      <Text style={{ color: c.ink, fontSize: 13, fontWeight: "700", marginTop: 14 }}>Resting arm: sleeve cap fit</Text>
+      <Stepper label="offset x (frame px)" value={arm.dx} step={2} onChange={(v) => setArm((a) => ({ ...a, dx: v }))} />
+      <Stepper label="offset y (frame px)" value={arm.dy} step={2} onChange={(v) => setArm((a) => ({ ...a, dy: v }))} />
+      <Stepper label="scale" value={arm.scale} step={0.02} onChange={(v) => setArm((a) => ({ ...a, scale: v }))} />
+      <Text style={{ color: c.soft, fontSize: 12, marginTop: 8 }}>{`Copy into moConfig.ts HOME_MO.restArm: { dx: ${arm.dx}, dy: ${arm.dy}, scale: ${arm.scale} }`}</Text>
     </View>
   );
 }

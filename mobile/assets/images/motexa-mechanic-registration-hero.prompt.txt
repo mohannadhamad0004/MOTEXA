@@ -1,0 +1,3 @@
+Mode: built-in image_gen. Preview reference: approved MOTEXA onboarding concept.
+Prompt: Create a standalone landscape photographic asset for the MOTEXA mobile mechanic registration header. A skilled professional male mechanic wearing a clean black work shirt and dark gloves examining an open vehicle engine in a realistic workshop. Mechanic center-right, warm amber lighting, workshop tools blurred behind him, face and hands near central horizontal band for a mobile crop. Wide 3:2 photo. No UI, text, logos, borders or baked-in waves.
+File: motexa-mechanic-registration-hero.png

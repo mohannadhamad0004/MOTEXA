@@ -34,5 +34,9 @@ Thumbs.db
 # Build output
 build/
 coverage/
+
 # Private uploaded verification documents (dev local disk)
 storage/
+
+# Private mechanic identity documents (never public or committed)
+.private/

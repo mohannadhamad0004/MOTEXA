@@ -13,28 +13,28 @@ export function EditorialSplit({children, reverse = false}: {children: React.Rea
 }
 
 /** Brand artwork drawn with native Views. It has no hit targets or network assets. */
-export function MobilityArtwork({compact = false}: {compact?: boolean}) {
+export function MobilityArtwork({compact = false, lightSurface = false}: {compact?: boolean; lightSurface?: boolean}) {
   const {width} = useWindowDimensions();
   const small = width < 900;
   const teaser = compact && small;
-  return <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.art,{height:teaser?80:small?146:270}]}>
-    <View style={[styles.drawing, {transform:[{scale:teaser?0.47:small?0.62:1}]}]}>
+  return <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.art,{height:teaser?(lightSurface?100:80):small?146:270}]}>
+    <View style={[styles.drawing, {transform:[{scale:teaser?(lightSurface?0.62:0.47):small?0.62:1}]}]}>
       {[0,1,2,3,4,5,6].map(i=><View key={'h'+i} style={[styles.grid,{top:i*42}]}/>)}
       {[0,1,2,3,4,5,6,7].map(i=><View key={'v'+i} style={[styles.gridVertical,{left:i*45}]}/>)}
-      <View style={styles.orbit}/><View style={styles.innerOrbit}/>
-      <View style={styles.road}/><View style={styles.roadCentre}/>
+      <View style={[styles.orbit,lightSurface&&{borderColor:"#79512E66"}]}/><View style={[styles.innerOrbit,lightSurface&&{borderColor:"#79512E44"}]}/>
+      <View style={[styles.road,lightSurface&&{borderColor:"#76502F77"}]}/><View style={[styles.roadCentre,lightSurface&&{backgroundColor:"#76502F55"}]}/>
       <View style={styles.car}>
         <View style={[styles.wheel,{left:-8,top:29}]}/><View style={[styles.wheel,{right:-8,top:29}]}/>
         <View style={[styles.wheel,{left:-8,bottom:24}]}/><View style={[styles.wheel,{right:-8,bottom:24}]}/>
-        <View style={styles.carBody}>
-          <View style={styles.bonnet}/><View style={styles.windshield}/><View style={styles.roof}/><View style={styles.rearWindow}/>
+        <View style={[styles.carBody,lightSurface&&{borderWidth:2,borderColor:"#F8E1BE",backgroundColor:"#49301E"}]}>
+          <View style={styles.bonnet}/><View style={[styles.windshield,lightSurface&&{backgroundColor:"#B79670",borderColor:"#EDD2AB"}]}/><View style={[styles.roof,lightSurface&&{borderColor:"#D9B68A"}]}/><View style={[styles.rearWindow,lightSurface&&{backgroundColor:"#B79670",borderColor:"#EDD2AB"}]}/>
           <View style={[styles.light,{left:8}]}/><View style={[styles.light,{right:8}]}/>
           <View style={styles.tail}/>
         </View>
       </View>
       <View style={styles.pin}><View style={styles.pinCore}/></View>
     </View>
-    <Text style={styles.artIndex}>M / 01</Text><Text style={styles.artCaption}>ALWAYS MOVING FORWARD</Text>
+    <Text style={[styles.artIndex,lightSurface&&{color:"#654426"}]}>M / 01</Text><Text style={[styles.artCaption,lightSurface&&{color:"#654426"}]}>ALWAYS MOVING FORWARD</Text>
   </View>;
 }
 

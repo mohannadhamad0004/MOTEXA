@@ -1,16 +1,19 @@
+import {motion} from './DesignTokens';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, StyleSheet, Text as NativeText, TextProps, View, ViewProps } from 'react-native';
+import { AccessibilityInfo, Platform, Animated, Easing, StyleSheet, Text as NativeText, TextProps, View, ViewProps } from 'react-native';
 import { useFonts } from 'expo-font';
 
 const FontsReady = createContext(false);
 export function VisualProvider({ children }: { children: React.ReactNode }) {
   const [loaded] = useFonts({
-    MotexaRegular: require('../../assets/fonts/Manrope-Regular.ttf'),
-    MotexaMedium: require('../../assets/fonts/Manrope-SemiBold.ttf'),
-    MotexaBold: require('../../assets/fonts/Manrope-Bold.ttf'),
-    MotexaArabic: require('../../assets/fonts/Cairo-Regular.ttf'),
-    MotexaArabicMedium: require('../../assets/fonts/Cairo-SemiBold.ttf'),
-    MotexaArabicBold: require('../../assets/fonts/Cairo-Bold.ttf'),
+    MotexaDisplay: require('../../assets/fonts/Outfit-SemiBold.ttf'),
+    MotexaDisplayBold: require('../../assets/fonts/Outfit-Bold.ttf'),
+    MotexaRegular: require('../../assets/fonts/Outfit-Regular.ttf'),
+    MotexaMedium: require('../../assets/fonts/Outfit-SemiBold.ttf'),
+    MotexaBold: require('../../assets/fonts/Outfit-Bold.ttf'),
+    MotexaArabic: require('../../assets/fonts/IBMPlexSansArabic-Regular.ttf'),
+    MotexaArabicMedium: require('../../assets/fonts/IBMPlexSansArabic-Medium.ttf'),
+    MotexaArabicBold: require('../../assets/fonts/IBMPlexSansArabic-SemiBold.ttf'),
   });
   // Font loading never hides the screen or delays interaction.
   return <FontsReady.Provider value={loaded}>{children}</FontsReady.Provider>;
@@ -28,10 +31,13 @@ export function Text({ style, children, ...props }: TextProps) {
   const weight = flat.fontWeight === 'bold' ? 700 : Number(flat.fontWeight || 400);
   const family = arabic
     ? weight >= 700 ? 'MotexaArabicBold' : weight >= 500 ? 'MotexaArabicMedium' : 'MotexaArabic'
-    : weight >= 700 ? 'MotexaBold' : weight >= 500 ? 'MotexaMedium' : 'MotexaRegular';
-  return <NativeText {...props} style={[style, ready && { fontFamily: family, fontWeight: 'normal' }, arabic && {letterSpacing: 0, writingDirection: "rtl", textAlign: flat.textAlign || "right"}]}>{children}</NativeText>;
+    : Number(flat.fontSize || 0) >= 20 ? (weight >= 700 ? 'MotexaDisplayBold' : 'MotexaDisplay') : weight >= 700 ? 'MotexaBold' : weight >= 500 ? 'MotexaMedium' : 'MotexaRegular';
+  return <NativeText {...props} style={[style, ready && { fontFamily: flat.fontFamily || family, fontWeight: 'normal' }, arabic && {letterSpacing: 0, writingDirection: "rtl", textAlign: flat.textAlign || "right"}]}>{children}</NativeText>;
 }
-function useReducedMotion() {
+export function Heading({style,children,...props}:TextProps){
+  return <Text {...props} style={[{fontSize:28,lineHeight:38,fontWeight:'600'},style]}>{children}</Text>;
+}
+export function useReducedMotion() {
   const [reduced, setReduced] = useState(true);
   useEffect(() => {
     let active = true;
@@ -41,16 +47,16 @@ function useReducedMotion() {
   }, []);
   return reduced;
 }
-export function HeroReveal({ children, style, ...props }: ViewProps) {
+export function HeroReveal({ children, style, delay = 0, ...props }: ViewProps & {delay?:number}) {
   const reduced = useReducedMotion();
   const progress = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     if (reduced) { progress.setValue(1); return; }
     progress.setValue(0);
-    const animation = Animated.timing(progress, {toValue: 1, duration: 650, easing: Easing.out(Easing.cubic), useNativeDriver: true, isInteraction: false});
+    const animation = Animated.timing(progress, {toValue: 1, duration: motion.reveal, delay: Math.min(Math.max(delay,0),240), easing: Easing.out(Easing.cubic), useNativeDriver: true, isInteraction: false});
     animation.start();
     return () => { animation.stop(); progress.setValue(1); };
-  }, [progress, reduced]);
+  }, [progress, reduced, delay]);
   return <Animated.View {...props} style={[style, {opacity: progress, transform: [{translateY: progress.interpolate({inputRange: [0,1], outputRange: [12,0]})}]}]}>{children}</Animated.View>;
 }
 export function DecorativeHalo() {
@@ -68,3 +74,7 @@ export function DecorativeHalo() {
     <View style={{position:'absolute', inset:32, borderRadius:120, borderWidth:1, borderColor:'#AA78451C'}} />
   </Animated.View>;
 }
+
+
+
+

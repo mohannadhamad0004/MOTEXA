@@ -1,3 +1,9 @@
+import CurvedPhotoHero from '../components/CurvedPhotoHero';
+import {palette as motexaTheme} from '../components/DesignTokens';
+import BrandWordmark from '../components/BrandWordmark';
+import {RolePhotography} from '../components/RolePhotography';
+import {EditorialTitle,SectionCaption} from '../components/PremiumUI';
+import {useBrandPalette} from "../components/BrandSurfaces";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppearanceStyles, useAppearance } from "../components/Appearance";
 import { PanelFill, CanvasFill } from "../components/BrandSurfaces";
@@ -6,14 +12,14 @@ import { useLanguage } from "../i18n/LanguageContext";
 import LanguageSwitch from "../components/LanguageSwitch";
 import { Text, VisualProvider, HeroReveal, DecorativeHalo } from "../components/MotexaVisual";
 
-import React, { useEffect, useRef, useState } from "react";
-import { View, ScrollView, Modal, Pressable, StyleSheet, StatusBar, Platform, Animated, AccessibilityInfo, useWindowDimensions } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { View, ScrollView, Modal, Pressable, StyleSheet, StatusBar, Platform, Animated, AccessibilityInfo, useWindowDimensions, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 
 const C = {
-  bg: "#E9DECE",
+  bg: '#FFF9EF',
   card: "#F7EDDD",
   card2: "#352318",
   border: "#D5BFA1",
@@ -26,6 +32,7 @@ const C = {
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
 export default function ChooseRoleScreen() {
+ const brandPalette=useBrandPalette();
   const insets = useSafeAreaInsets();
   const reduced = useMotionPreference();
   const styles = useAppearanceStyles(baseStyles);
@@ -33,6 +40,7 @@ export default function ChooseRoleScreen() {
   const { isArabic: ar, language, setLanguage } = useLanguage();
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [adminOpen, setAdminOpen] = useState(false);
+  useFocusEffect(useCallback(()=>{setSelectedRole(null);setAdminOpen(false);},[]));
 
   const t = (en: string, arabic: string) => ar ? arabic : en;
 
@@ -119,117 +127,44 @@ export default function ChooseRoleScreen() {
 
   return (
     <VisualProvider><View style={styles.root}>
-      <StatusBar barStyle={dark ? "light-content" : "dark-content"} backgroundColor="#E9DECE" />
+      <StatusBar barStyle={dark ? "light-content" : "dark-content"} backgroundColor='#FFF9EF' />
 
       <LinearGradient
-        colors={dark ? ["#211B17", "#30251D", "#241D18"] : ["#DBC8AD", "#BE9E77", "#D0B795"]}
+        colors={dark ? motexaTheme.canvasDark : motexaTheme.canvas}
         style={StyleSheet.absoluteFill}
       />
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content,{paddingTop:insets.top+16,paddingBottom:insets.bottom+35}]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.topRow}>
           <View style={styles.brandMini}>
-            <Ionicons name="car-sport" size={24} color={C.bronze} />
-            <Text style={styles.brandMiniText}>MOTEXA</Text>
+            
+            <BrandWordmark style={styles.brandMiniText} />
           </View>
 
-          <LanguageSwitch light />
+          <LanguageSwitch light compact unified/>
         </View>
 
-        <HeroReveal style={[styles.hero, {alignItems: ar ? "flex-end" : "flex-start"}]}><PanelFill kind="hero" radius={29}/>
-          <View style={styles.heroEyebrow}><View style={styles.heroDot}/><Text style={styles.heroKicker}>THE MOTEXA EXPERIENCE</Text></View>
-
-          <Text style={[styles.heroTitle, {textAlign: ar ? "right" : "left"}]}>
-            {t("One place.\nEvery journey.", "مساحة واحدة.\nلكل رحلة.")}
-          </Text>
-
-          <Text style={[styles.heroSubtitle, {textAlign: ar ? "right" : "left"}]}>
-            {t(
-              "One platform. Every automotive solution.",
-              "منصة واحدة لجميع خدمات السيارات"
-            )}
-          </Text>
-        <MobilityArtwork compact /></HeroReveal>
-
-        <Text style={[
-          styles.sectionLabel,
-          { textAlign: ar ? "right" : "left" },
-        ]}>
-          {t("HOW WOULD YOU LIKE TO START?", "كيف تحب تبدأ مع MOTEXA؟")}
-        </Text>
-
-        <View accessibilityRole="radiogroup" accessibilityLabel={t('Choose your role','اختر دورك')} style={{gap:12}}>
-          <RoleChoice icon="car-sport-outline" title={t('Car Owner','مالك المركبة')} description={t('Your car. Your care. Your next journey.','العناية بسيارتك تبدأ من هنا.')} selected={selectedRole==='customer'} onPress={()=>setSelectedRole(current=>current==='customer'?null:'customer')} ar={ar}/>
-          <View style={{marginTop:14,marginBottom:3}}><Text style={{color:dark?'#F8EDDC':'#3D2B1D',fontSize:21,fontWeight:'800',lineHeight:34,textAlign:ar?'right':'left'}}>{t('Here to offer a service?','تقدّم خدمة؟')}</Text><Text style={{color:dark?'#D5C2A8':'#624B34',fontSize:13,lineHeight:23,marginTop:3,textAlign:ar?'right':'left'}}>{t('Choose your professional workspace.','اختر مساحة العمل المناسبة لخدمتك.')}</Text></View>
-          {roles.slice(1).map(role=><RoleChoice key={role.key} compact icon={role.icon} title={t(role.en,role.ar)} description={t(role.descEn,role.descAr)} selected={selectedRole===role.key} onPress={()=>setSelectedRole(current=>current===role.key?null:role.key)} ar={ar}/>)}
+        <HeroReveal style={{minHeight:230,marginTop:8,marginBottom:18,overflow:'hidden',paddingTop:18,paddingBottom:16}}>
+          <View pointerEvents="none" accessible={false} style={{position:'absolute',top:0,bottom:0,width:'47%',right:ar?undefined:0,left:ar?0:undefined,overflow:'hidden',borderBottomLeftRadius:ar?0:64,borderBottomRightRadius:ar?64:0}}><Image source={require('../../assets/images/motexa-mercedes-coastal.png')} resizeMode="cover" style={{width:'100%',height:'100%'}}/><LinearGradient colors={['#3C291400','#3C291430']} style={StyleSheet.absoluteFill}/></View>
+          <View style={{width:'51%',alignSelf:ar?'flex-end':'flex-start',paddingRight:ar?0:9,paddingLeft:ar?9:0}}>
+            <Text style={{fontSize:9,letterSpacing:2,color:dark?'#D7B383':'#97704A',marginBottom:15,textAlign:ar?'right':'left'}}>01 / MOTEXA</Text>
+            <EditorialTitle accent style={{fontSize:ar?31:38,lineHeight:ar?43:40,color:dark?'#FFF0DC':'#35251B',textAlign:ar?'right':'left'}}>{t('Choose\nyour role.','اختر\nدورك.')}</EditorialTitle>
+            <Text style={{fontSize:8,lineHeight:16,letterSpacing:ar?0:1.3,color:dark?'#D5B17F':'#8E663F',marginTop:16,textAlign:ar?'right':'left'}}>{t('YOUR JOURNEY STARTS HERE','رحلتك تبدأ هنا')}</Text>
+            <Text style={{fontSize:11,lineHeight:18,color:dark?'#D7C5AF':'#75614C',marginTop:7,textAlign:ar?'right':'left'}}>{t('One platform. Every automotive solution.','منصة واحدة لجميع خدمات السيارات')}</Text>
+          </View>
+        </HeroReveal>
+        <View accessibilityRole="radiogroup" accessibilityLabel={t('Choose your role','اختر دورك')}>
+          {roles.map((role,index)=><PhotoRoleChoice key={role.key} index={index} icon={role.icon} title={t(role.en,role.ar)} description={t(role.descEn,role.descAr)} selected={selectedRole===role.key} onPress={()=>setSelectedRole(current=>current===role.key?null:role.key)} ar={ar}/>)}
         </View>
-
-        <Text style={[
-          styles.sectionLabel,
-          { marginTop: 19, textAlign: ar ? "right" : "left" },
-        ]}>
-          {t("SECURE ACCESS", "الدخول الإداري الآمن")}
-        </Text>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{expanded:adminOpen}}
-          accessibilityLabel={t("Administration, four access roles", "الإدارة، أربعة أدوار للدخول")}
-          onPress={() => setAdminOpen(true)}
-          style={({ pressed }) => [
-            { opacity: pressed ? 0.88 : 1 },
-          ]}
-        >
-          <LinearGradient
-            colors={["#F1D3A8", "#D6AE78", "#BA8B52"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.adminButton}
-          >
-            <View style={[
-              styles.roleContent,
-              { flexDirection: ar ? "row-reverse" : "row" },
-            ]}>
-              <View style={styles.adminIcon}>
-                <Ionicons
-                  name="shield-checkmark"
-                  size={25}
-                  color="#633B1C"
-                />
-              </View>
-
-              <View style={{ flex: 1 }}>
-                <Text style={[
-                  styles.adminTitle,
-                  { textAlign: ar ? "right" : "left" },
-                ]}>
-                  {t("Administration", "الإدارة")}
-                </Text>
-                <Text style={[
-                  styles.adminSubtitle,
-                  { textAlign: ar ? "right" : "left" },
-                ]}>
-                  {t("4 roles · Select your assigned access", "٤ أدوار · اختر صلاحيتك المخصّصة")}
-                </Text>
-              </View>
-
-              <Ionicons
-                name={ar ? "arrow-back" : "arrow-forward"}
-                size={21}
-                color="#633B1C"
-              />
-            </View>
-          </LinearGradient>
-        </Pressable>
-
-
+        <View style={{flexDirection:ar?'row-reverse':'row',alignItems:'center',gap:12,marginTop:7,marginBottom:11}}><Text style={{fontSize:9,letterSpacing:1.5,color:dark?'#D7B383':'#937049'}}>{t('SECURE ACCESS','الدخول الإداري الآمن')}</Text><View style={{flex:1,height:1,backgroundColor:dark?'#806044':'#DCC3A2'}}/></View>
+        <PhotoRoleChoice index={4} icon="shield-outline" title={t('Administration','الإدارة')} description={t('Choose your administrator role','اختر دورك الإداري')} ar={ar} expanded={adminOpen} onPress={()=>{setSelectedRole(null);setAdminOpen(true);}}/>
 
         <View style={{marginTop:24,gap:12}}>
           <Text accessibilityLiveRegion="polite" style={{color:dark?'#F4E8D8':'#493321',fontSize:14,lineHeight:24,textAlign:ar?'right':'left'}}>{selectedRole ? t('Selected: ','تم اختيار: ')+([...roles,...admins].find(role=>role.key===selectedRole)?.[ar?'ar':'en']??'') : t('Choose your role to continue.','اختر دورك للمتابعة.')}</Text>
-          <Pressable accessibilityRole="button" disabled={!selectedRole} onPress={()=>{if(selectedRole)goLogin(selectedRole)}} style={({pressed,hovered})=>({backgroundColor:selectedRole?'#563923':dark?'#46372C':'#CBB89E',borderRadius:19,minHeight:58,padding:18,flexDirection:ar?'row-reverse':'row',alignItems:'center',justifyContent:'space-between',opacity:pressed?.8:hovered?.92:1})}>
+          <Pressable accessibilityRole="button" disabled={!selectedRole} onPress={()=>{if(selectedRole)goLogin(selectedRole)}} style={({pressed,hovered})=>({backgroundColor:selectedRole?'#563923':dark?'#46372C':'#CBB89E',borderRadius:29,minHeight:58,padding:18,flexDirection:ar?'row-reverse':'row',alignItems:'center',justifyContent:'space-between',opacity:pressed?.8:hovered?.92:1})}>
             <Text style={{color:'#FFF8EF',fontSize:14,fontWeight:'800',flex:1,lineHeight:23,textAlign:ar?'right':'left'}}>{selectedRole ? t('Continue as ','المتابعة بصفتك ')+([...roles,...admins].find(item=>item.key===selectedRole)?.[ar?'ar':'en']??'') : t('Choose your role to continue','اختر دورك للمتابعة')}</Text><Ionicons name={ar?'arrow-back':'arrow-forward'} size={23} color="#FFF8EF"/>
           </Pressable>
         </View>
@@ -242,17 +177,16 @@ export default function ChooseRoleScreen() {
         </View>
       </ScrollView>
 
-      <Modal visible={adminOpen} transparent={false} animationType={reduced?'none':'slide'} statusBarTranslucent onRequestClose={()=>setAdminOpen(false)}>
+      <Modal visible={adminOpen} transparent animationType={reduced?'none':'slide'} statusBarTranslucent onRequestClose={()=>setAdminOpen(false)}>
        <View style={{flex:1,backgroundColor:dark?'#241C16':'#D0B795'}}>
         <CanvasFill/>
-        <View accessibilityViewIsModal style={{width:'100%',maxWidth:620,alignSelf:'center',flex:1,borderTopLeftRadius:0,borderTopRightRadius:0,backgroundColor:dark?'#2D241D':'#FFF7EA',paddingBottom:Math.max(insets.bottom,18),paddingTop:insets.top+18}}>
-         <View style={{paddingHorizontal:22,marginBottom:20,flexDirection:ar?'row-reverse':'row',alignItems:'center',gap:9}}><Ionicons name="shield-checkmark-outline" size={22} color={dark?'#E5C28F':'#80532D'}/><Text style={{color:dark?'#E5C28F':'#80532D',fontSize:12,fontWeight:'800',letterSpacing:2}}>MOTEXA / ADMIN</Text></View>
-         <View style={{paddingHorizontal:22,flexDirection:ar?'row-reverse':'row',justifyContent:'space-between',alignItems:'center',marginBottom:14}}><View style={{flex:1}}><Text style={{color:dark?'#FFF1DF':'#3E2A1A',fontSize:23,fontWeight:'800',textAlign:ar?'right':'left'}}>{t('Your control centre','مساحة إدارتك')}</Text><Text style={{color:dark?'#D9C6AD':'#6B523A',fontSize:13,lineHeight:22,textAlign:ar?'right':'left'}}>{t('Select your assigned access','اختر الصلاحية المخصّصة لحسابك')}</Text></View><Pressable accessibilityRole="button" accessibilityLabel={t('Close','إغلاق')} onPress={()=>setAdminOpen(false)} style={{width:44,height:44,borderRadius:22,alignItems:'center',justifyContent:'center',backgroundColor:dark?'#493729':'#EEDFC9'}}><Ionicons name="close" size={22} color={dark?'#F2DBBC':'#664226'}/></Pressable></View>
-         <View style={{paddingHorizontal:22,paddingBottom:16,alignItems:ar?'flex-end':'flex-start'}}><View accessibilityRole="radiogroup" accessibilityLabel="Language / اللغة" style={{flexDirection:'row',padding:4,gap:3,borderRadius:25,backgroundColor:dark?'#493729':'#EADAC2',borderWidth:1,borderColor:dark?'#796046':'#CDB08C'}}>{(['en','ar'] as const).map(value=><Pressable key={value} accessibilityRole="radio" accessibilityState={{checked:language===value}} accessibilityLabel={value==='ar'?'العربية':'English'} onPress={()=>setLanguage(value)} style={({pressed,hovered})=>({minWidth:52,minHeight:40,borderRadius:21,alignItems:'center',justifyContent:'center',backgroundColor:language===value?'#80532D':'transparent',opacity:pressed?.75:hovered?.85:1})}><Text style={{fontSize:12,fontWeight:'800',color:language===value?'#FFF7EA':dark?'#EBD7BA':'#624326'}}>{value.toUpperCase()}</Text></Pressable>)}</View></View>
-         <ScrollView style={{flexShrink:1}} showsVerticalScrollIndicator={false}>
-          <View style={{paddingHorizontal:22,paddingBottom:12}}><Text style={{color:dark?"#F4E8D8":"#493321",fontSize:15,fontWeight:"800",marginBottom:6,textAlign:ar?"right":"left"}}>{t("Choose your administration role", "اختر دورك الإداري")}</Text><Text style={{color:dark?"#DBCAB5":"#62503E",fontSize:13,lineHeight:22,marginBottom:18,textAlign:ar?"right":"left"}}>{t("Choose the role assigned to your account.", "اختر الدور المعيّن لحسابك.")}</Text>
-            {admins.map((item) => (
-              <RoleChoice
+        <View accessibilityViewIsModal style={{width:'100%',maxWidth:620,alignSelf:'center',flex:1,borderTopLeftRadius:30,borderTopRightRadius:30,overflow:'hidden',backgroundColor:dark?'#38291F':'#FFF9EF',paddingBottom:Math.max(insets.bottom,18),paddingTop:12}}><CanvasFill/>
+         <View style={{paddingHorizontal:22,flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:8,marginBottom:12,flexWrap:'wrap'}}><Pressable accessibilityRole="button" accessibilityLabel={t('Close','إغلاق')} onPress={()=>setAdminOpen(false)} style={{width:40,height:40,borderRadius:20,alignItems:'center',justifyContent:'center',backgroundColor:dark?'#493729':'#EEDFC9'}}><Ionicons name="close" size={21} color={dark?'#F2DBBC':'#664226'}/></Pressable><BrandWordmark size={18} rule={false} style={{flex:1}}/><LanguageSwitch light compact unified/></View>
+         <CurvedPhotoHero eyebrow="MOTEXA / ADMIN" title={t('Select your\nadmin role.','اختر دورك\nالإداري.')} caption={t('Administration','الإدارة')} description={t('Select your assigned access','اختر الصلاحية المخصّصة لحسابك')} icon="people-outline"/>
+         <ScrollView style={{flex:1}} contentContainerStyle={{paddingBottom:8}} showsVerticalScrollIndicator={false}>
+          <View style={{marginHorizontal:22}}><SectionCaption index="01" title={t('SELECT YOUR WORKSPACE','اختر مساحة عملك')}/><View accessibilityRole="radiogroup" accessibilityLabel={t('Administrator roles','الأدوار الإدارية')} style={{marginTop:14}}>
+            {admins.map((item,adminIndex) => (
+              <RoleChoice gold
                 key={item.key}
                 icon={item.icon}
                 title={t(item.en, item.ar)}
@@ -264,6 +198,7 @@ export default function ChooseRoleScreen() {
               />
             ))}
 
+            </View>
             <View style={styles.securityNote}>
               <Ionicons
                 name="lock-closed-outline"
@@ -297,18 +232,31 @@ function RolePanel({open,children}:{open:boolean;children:React.ReactNode}) {
  useEffect(()=>{if(reduced){progress.setValue(open?1:0);return;}const animation=Animated.timing(progress,{toValue:open?1:0,duration:260,useNativeDriver:false});animation.start();return()=>animation.stop()},[open,progress,reduced]);
  return <Animated.View pointerEvents={open?'auto':'none'} accessibilityElementsHidden={!open} importantForAccessibility={open?'auto':'no-hide-descendants'} style={{height:progress.interpolate({inputRange:[0,1],outputRange:[0,height]}),overflow:'hidden',opacity:progress}}>{open&&<View style={{position:'absolute',top:0,left:0,right:0}} onLayout={event=>setHeight(event.nativeEvent.layout.height)}>{children}</View>}</Animated.View>;
 }
-function RoleChoice({icon,title,description,onPress,compact=false,selected,ar,index=0,featured=false}:{icon:IconName;title:string;description?:string;onPress:()=>void;compact?:boolean;selected:boolean;ar:boolean;index?:number;featured?:boolean}) {
+function PhotoRoleChoice({index,icon,title,description,selected=false,expanded,onPress,ar}:{index:number;icon:IconName;title:string;description:string;selected?:boolean;expanded?:boolean;onPress:()=>void;ar:boolean}){
+ const {dark}=useAppearance();const [frame,setFrame]=useState({width:92,height:92});
+ const photoWidth=frame.height*10/3;
+ return <Pressable accessibilityRole={index===4?'button':'radio'} accessibilityLabel={index===4?(ar?'فتح أدوار الإدارة':'Open administration roles'):title} accessibilityState={index===4?{expanded}:{checked:selected}} onPress={onPress} style={({pressed})=>({flexDirection:ar?'row-reverse':'row',minHeight:92,borderRadius:25,borderWidth:selected?2:1,borderColor:selected?'#B78248':dark?'#98714D':'#D9BD97',backgroundColor:dark?(selected?'#65472F':'#463226'):(selected?'#F3DEC0':'#FFF8ED'),overflow:'hidden',marginBottom:9,opacity:pressed?.78:1})}>
+  <View pointerEvents="none" accessible={false} onLayout={e=>setFrame({width:e.nativeEvent.layout.width,height:e.nativeEvent.layout.height})} style={{width:'27%',overflow:'hidden',backgroundColor:'#795236'}}><Image source={require('../../assets/images/motexa-role-atlas.png')} resizeMode="stretch" style={{position:'absolute',width:photoWidth,height:frame.height*5,left:(frame.width-photoWidth)/2,top:-index*frame.height}}/></View>
+  <View style={{flex:1,flexDirection:ar?'row-reverse':'row',alignItems:'center',gap:9,paddingHorizontal:11,paddingVertical:12}}>
+   <View style={{width:31,height:36,borderRadius:18,alignItems:'center',justifyContent:'center',backgroundColor:dark?'#6E4D31':'#F0D7B5'}}><Ionicons name={icon} size={19} color={dark?'#F4D6AE':'#93673B'}/></View>
+   <View style={{flex:1,minWidth:0}}><Text style={{fontSize:8,color:dark?'#C6A77E':'#A0805B',letterSpacing:1,marginBottom:2,textAlign:ar?'right':'left'}}>{'0'+(index+1)}</Text><Text style={{fontSize:14,lineHeight:20,fontWeight:'600',color:dark?'#FFF2DE':'#3D2B1D',textAlign:ar?'right':'left'}}>{title}</Text><Text style={{fontSize:10,lineHeight:15,color:dark?'#D9C5A9':'#806A52',marginTop:3,textAlign:ar?'right':'left'}}>{description}</Text></View>
+   <View style={{width:25,height:25,borderRadius:13,backgroundColor:selected?'#654024':'#B68755',alignItems:'center',justifyContent:'center'}}><Ionicons name={selected?'checkmark':ar?'arrow-back':'arrow-forward'} size={14} color='#FFF9EF'/></View>
+  </View>
+ </Pressable>
+}
+function RoleChoice({icon,title,description,onPress,compact=false,selected,ar,index=0,featured=false,gold=false,photoIndex}:{icon:IconName;title:string;description?:string;onPress:()=>void;compact?:boolean;selected:boolean;ar:boolean;index?:number;featured?:boolean;gold?:boolean;photoIndex?:number}) {
  const {dark}=useAppearance();const {width,fontScale}=useWindowDimensions();const tile=false;
  const reduced=useMotionPreference();const progress=useRef(new Animated.Value(selected?1:0)).current;const hover=useRef(new Animated.Value(0)).current;
  const [focused,setFocused]=useState(false);
  useEffect(()=>{if(reduced){progress.setValue(selected?1:0);return;}const animation=Animated.spring(progress,{toValue:selected?1:0,damping:18,stiffness:190,mass:.8,useNativeDriver:true});animation.start();return()=>animation.stop()},[selected,reduced,progress]);
  const move=(value:number)=>{hover.stopAnimation();if(reduced){hover.setValue(0);return;}Animated.timing(hover,{toValue:value,duration:150,useNativeDriver:true}).start()};
  const ink=featured?'#FFF5E8':dark?'#FFF5E8':'#30241D',muted=featured?'#E2C5A1':dark?'#D7C5AF':'#65513E';
- const iconNode=<View style={{width:46,height:46,borderRadius:15,backgroundColor:featured?'#80532D':selected?'#80532D':dark?'#4D3B2B':'#EEDCC2',alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} size={25} color={featured||selected?'#FFF9F0':dark?'#E4BD88':'#754623'}/></View>;
- const check=<Ionicons name={selected?'checkmark-circle':'ellipse-outline'} size={23} color={featured?'#EDC58E':selected?(dark?'#EDC58E':'#80532D'):dark?'#AE967A':'#A58B6A'}/>;
- return <Animated.View style={{width:tile?'48%':'100%',marginBottom:compact?10:0,transform:[{translateY:hover.interpolate({inputRange:[0,1],outputRange:[0,-3]})},{scale:progress.interpolate({inputRange:[0,1],outputRange:[1,1]})}]}}>
- <Pressable accessibilityRole="radio" accessibilityState={{checked:selected}} accessibilityLabel={title} accessibilityHint={ar ? (selected ? "اضغط مرة ثانية لإلغاء التحديد" : "اضغط لاختيار هذا الدور") : (selected ? "Tap again to deselect" : "Tap to select this role")} onPress={onPress} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} onHoverIn={()=>move(1)} onHoverOut={()=>move(0)} style={({pressed})=>({minHeight:102,height:fontScale<1.2?102:undefined,padding:15,borderRadius:23,borderWidth:2,shadowColor:'#77471F',shadowOffset:{width:0,height:3},shadowOpacity:selected?.18:0,shadowRadius:selected?8:0,elevation:selected?3:0,borderColor:selected?'#9A602D':focused?'#AD855A':dark?'#66503D':'#CDB797',backgroundColor:featured?(selected?'#6A482D':'#3E2B1D'):selected?(dark?'#593D28':'#F3DFC1'):dark?'#352A23':'#FFFDF8',opacity:pressed?.86:1,outlineStyle:focused?'solid':undefined,outlineWidth:focused?2:0,outlineColor:'#B78049',outlineOffset:3,overflow:'hidden'})}>
- {tile?<><View style={{flexDirection:ar?'row-reverse':'row',alignItems:'center',justifyContent:'space-between'}}>{iconNode}{check}</View><Text style={{color:muted,fontSize:10,letterSpacing:2,marginTop:16,textAlign:ar?'right':'left'}}>{'0'+(index+1)}</Text><Text style={{color:ink,fontSize:16,lineHeight:25,fontWeight:'800',marginTop:4,textAlign:ar?'right':'left'}}>{title}</Text><Text style={{color:muted,fontSize:12,lineHeight:20,marginTop:5,textAlign:ar?'right':'left'}}>{description}</Text></>:<View style={{flexDirection:ar?'row-reverse':'row',alignItems:'center',gap:13}}>{iconNode}<View style={{flex:1,minWidth:0}}><Text style={{fontSize:featured?23:16,lineHeight:featured?34:25,fontWeight:'800',color:ink,textAlign:ar?'right':'left'}}>{title}</Text>{description&&<Text style={{fontSize:13,lineHeight:21,marginTop:4,color:muted,textAlign:ar?'right':'left'}}>{description}</Text>}</View>{check}</View>}
+ const iconNode=<View style={{width:gold?40:48,height:gold?40:48,borderRadius:24,backgroundColor:featured?'#80532D':selected?'#80532D':dark?'#4D3B2B':'#F3D2AE',alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} size={gold?22:25} color={featured||selected?'#FFF9F0':dark?'#E4BD88':'#754623'}/></View>;
+ const check=gold?<View style={{width:27,height:27,borderRadius:14,borderWidth:1,borderColor:dark?'#BB9466':'#BC9368',backgroundColor:selected?'#8C6039':'transparent',alignItems:'center',justifyContent:'center'}}><Ionicons name={selected?'checkmark':ar?'arrow-back':'arrow-forward'} size={15} color={selected?'#FFF4E4':dark?'#E7C89F':'#9A704A'}/></View>:<Ionicons name={selected?'checkmark-circle':'ellipse-outline'} size={23} color={featured?'#EDC58E':selected?(dark?'#EDC58E':'#80532D'):dark?'#AE967A':'#A58B6A'}/>;
+ return <Animated.View style={{width:tile?'48%':'100%',marginBottom:gold?10:compact?12:0,transform:[{translateY:hover.interpolate({inputRange:[0,1],outputRange:[0,-3]})},{scale:progress.interpolate({inputRange:[0,1],outputRange:[1,1]})}]}}>
+ <Pressable accessibilityRole="radio" accessibilityState={{checked:selected}} accessibilityLabel={title} accessibilityHint={ar ? (selected ? "اضغط مرة ثانية لإلغاء التحديد" : "اضغط لاختيار هذا الدور") : (selected ? "Tap again to deselect" : "Tap to select this role")} onPress={onPress} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} onHoverIn={()=>move(1)} onHoverOut={()=>move(0)} style={({pressed})=>({minHeight:gold?92:compact?88:96,height:gold?Math.max(92,Math.ceil(62*fontScale+24)):undefined,padding:gold?12:compact?16:15,borderRadius:gold?25:compact?30:23,borderWidth:selected?2:1.5,shadowColor:'#77471F',shadowOffset:{width:0,height:3},shadowOpacity:selected?.14:compact?.07:0,shadowRadius:selected?10:compact?8:0,elevation:selected?3:compact?2:0,borderColor:gold?(selected?'#A77B3E':dark?'#C2A06C':'#C5A16B'):selected?'#9A602D':focused?'#AD855A':dark?'#9B7852':'#C69C6E',backgroundColor:featured?(selected?'#6A482D':'#3E2B1D'):selected?(dark?'#593D28':'#F3DFC1'):dark?'#352A23':'#FFFBF3',opacity:pressed?.86:1,outlineStyle:focused?'solid':undefined,outlineWidth:focused?2:0,outlineColor:'#B78049',outlineOffset:3,overflow:'hidden'})}>
+ {gold&&photoIndex!==undefined&&<RolePhotography index={photoIndex} style={{position:'absolute',top:0,bottom:0,width:80,left:ar?undefined:0,right:ar?0:undefined}}/>}
+ {tile?<><View style={{flexDirection:ar?'row-reverse':'row',alignItems:'center',justifyContent:'space-between'}}>{iconNode}{check}</View><Text style={{color:muted,fontSize:10,letterSpacing:2,marginTop:16,textAlign:ar?'right':'left'}}>{'0'+(index+1)}</Text><Text style={{color:ink,fontSize:16,lineHeight:25,fontWeight:'800',marginTop:4,textAlign:ar?'right':'left'}}>{title}</Text><Text style={{color:muted,fontSize:12,lineHeight:20,marginTop:5,textAlign:ar?'right':'left'}}>{description}</Text></>:<View style={{flexDirection:ar?'row-reverse':'row',alignItems:'center',gap:gold&&photoIndex!==undefined?9:13,paddingLeft:gold&&photoIndex!==undefined&&!ar?78:0,paddingRight:gold&&photoIndex!==undefined&&ar?78:0}}>{gold&&photoIndex!==undefined?null:iconNode}<View style={{flex:1,minWidth:0}}><EditorialTitle accent={false} style={{fontSize:gold?17:17,lineHeight:gold?25:26,color:ink,textAlign:ar?'right':'left'}}>{title}</EditorialTitle>{description&&<Text style={{fontSize:gold?11:13,lineHeight:gold?17:21,marginTop:4,color:muted,textAlign:ar?'right':'left'}}>{description}</Text>}</View>{check}</View>}
  <Animated.View pointerEvents="none" style={{position:'absolute',bottom:0,left:18,right:18,height:3,borderRadius:2,backgroundColor:dark?'#EDC58E':'#9A6331',opacity:progress,transform:[{scaleX:progress}]}}/>
  </Pressable></Animated.View>
 }
@@ -316,14 +264,14 @@ function RoleChoice({icon,title,description,onPress,compact=false,selected,ar,in
 const baseStyles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#E9DECE",
+    backgroundColor: '#FFF9EF',
   },
   content: {
     paddingHorizontal: 22,
     paddingTop: 28,
     paddingBottom: 35,
     width: "100%",
-    maxWidth: 760,
+    maxWidth: 560,
     alignSelf: "center",
   },
   topRow: {
@@ -397,11 +345,11 @@ const baseStyles = StyleSheet.create({
   },
   heroTitle: {
     color: "#FAF4E9",
-    fontSize: 34,
+    fontSize: 30,
     fontWeight: "600",
     textAlign: "left",
     letterSpacing: 0.1,
-    lineHeight: 44,
+    lineHeight: 39,
   },
   heroSubtitle: {
     color: "#CDAA82",
@@ -540,3 +488,6 @@ heroKicker: {
     letterSpacing: 1.6,
   },
 });
+
+
+

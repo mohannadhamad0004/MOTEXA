@@ -24,7 +24,15 @@ export const MO = {
 
 export type MoConfig = { [K in keyof typeof MO]: (typeof MO)[K] extends number ? number : { [P in keyof (typeof MO)[K]]: number } };
 
-// Mo at the desk with a coffee (Home hero): ONE transparent scene image (both arms attached, the mug in his hand), trimmed to 344 x 470.
+// Mo at the desk with a coffee (Home hero): three layers (body, resting arm, lifted arm) sharing one trimmed frame of 325 x 456.
 export const HOME_MO = {
-  ratio: 344 / 470,
+  ratio: 325 / 456,
+  /** the top of the mug in the resting pose, as fractions of the frame (steam rises from here) */
+  mug: { x: 0.305, y: 0.55 },
+  /** the shoulder both arms pivot around, as fractions of the frame */
+  shoulder: { x: 0.514, y: 0.397 },
+  /** sleeve-cap fit of the RESTING arm: dx / dy in px of the 456 px high frame, and a scale about the shoulder (Motion Lab steppers) */
+  restArm: { dx: 0, dy: 0, scale: 1 },
+  /** degrees an arm turns (counter-clockwise) while it leaves / arrives; hides the swap */
+  swapTurn: 5,
 };
