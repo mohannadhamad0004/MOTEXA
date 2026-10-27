@@ -41,7 +41,11 @@ router.get("/private/:id", requireAuth, async (req, res) => {
 
     let allowed = file.ownerUserId === user.id || user.role === "SUPER_ADMIN";
     if (!allowed && user.role === "ADMIN") {
-      const permission = (TOW_PURPOSES as readonly string[]).includes(file.purpose)
+      const permission = file.purpose === "MESSAGE_ATTACHMENT"
+        ? file.towCompanyId
+          ? "MANAGE_TOWING"
+          : "MANAGE_SPARE_PARTS"
+        : (TOW_PURPOSES as readonly string[]).includes(file.purpose)
         ? "MANAGE_TOWING"
         : (PARTS_PURPOSES as readonly string[]).includes(file.purpose)
           ? "MANAGE_SPARE_PARTS"

@@ -7,6 +7,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "seed:test": "tsx src/seed/test-accounts.ts",
+    "seed:providers": "tsx src/seed/provider-onboarding-demo.ts",
     "seed:mechanics": "tsx src/seed/mechanics-demo.ts",
     "start": "node dist/server.js",
     "postinstall": "prisma skills sync || exit 0"

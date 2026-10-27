@@ -9,7 +9,7 @@ import {palette} from "../../components/DesignTokens";
 import { PanelFill, CanvasFill } from "../../components/BrandSurfaces";
 import { Text } from "../../components/MotexaVisual";
 import LanguageSwitch from "../../components/LanguageSwitch";
-import { router, useLocalSearchParams } from "expo-router";
+import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 
@@ -18,7 +18,7 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import { useLanguage } from "../../i18n/LanguageContext";
 
-export default function SignUpScreen(){const {selectedRole}=useLocalSearchParams<{selectedRole?:string}>();const [ready,setReady]=useState(false);useEffect(()=>setReady(true),[]);if(!ready)return <View style={{flex:1}}><CanvasFill/></View>;if(!selectedRole)return <ChooseRegistrationRole/>;return selectedRole==='mechanic'?<MechanicRegistration/>:<ExistingSignUpScreen/>;}
+export default function SignUpScreen(){const {selectedRole}=useLocalSearchParams<{selectedRole?:string}>();const [ready,setReady]=useState(false);useEffect(()=>setReady(true),[]);if(!ready)return <View style={{flex:1}}><CanvasFill/></View>;if(!selectedRole)return <ChooseRegistrationRole/>;if(selectedRole==='towing'||selectedRole==='parts')return <Redirect href={{pathname:'/provider/register',params:{kind:selectedRole==='towing'?'TOW':'PARTS'}} as never}/>;return selectedRole==='mechanic'?<MechanicRegistration/>:<ExistingSignUpScreen/>;}
 function ChooseRegistrationRole(){const m=useMechanicTheme();return <MechanicPage back title={m.t('Create an account','إنشاء حساب جديد')} subtitle={m.t('Choose the account you want to create.','اختر نوع الحساب الذي تريد إنشاءه.')}><MechanicCard>{[['customer','Car owner','مالك مركبة'],['mechanic','Mechanic','ميكانيكي'],['parts','Spare parts provider','مزود قطع غيار'],['towing','Towing provider','مزود سحب']].map(([role,en,ar])=><MechanicButton key={role} secondary label={m.t(en,ar)} onPress={()=>router.setParams({selectedRole:role})}/>)}</MechanicCard></MechanicPage>;}
 function ExistingSignUpScreen() {
  const {selectedRole}=useLocalSearchParams<{selectedRole?:string}>();

@@ -13,7 +13,7 @@ import { KV } from "../../components/ui/Rows";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { useL } from "../../core/hooks/useL";
 
-type V = "PENDING" | "APPROVED" | "REJECTED";
+type V = "PENDING" | "APPROVED" | "REJECTED" | "DRAFT" | "NEEDS_CHANGES";
 
 export function VerificationBadge({ value, prefix }: { value: V; prefix?: string }) {
   const { t } = useL();
@@ -21,6 +21,8 @@ export function VerificationBadge({ value, prefix }: { value: V; prefix?: string
     PENDING: { tone: "warning", icon: "time-outline", label: t("Pending", "قيد المراجعة") },
     APPROVED: { tone: "success", icon: "shield-checkmark-outline", label: t("Approved", "معتمد") },
     REJECTED: { tone: "danger", icon: "close-circle-outline", label: t("Rejected", "مرفوض") },
+    DRAFT: { tone: "neutral", icon: "document-outline", label: t("Draft", "مسودة") },
+    NEEDS_CHANGES: { tone: "warning", icon: "create-outline", label: t("Needs changes", "مطلوب تعديلات") },
   } as const;
   const m = map[value];
   return (

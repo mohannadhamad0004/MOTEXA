@@ -6,6 +6,8 @@ import { isCategory } from "../catalogCategories.js";
 import { CONDITIONS, PART_TYPES } from "../partAttributes.js";
 import { requireAuth, requirePartsAdmin, requirePartsProvider } from "../middleware/auth.middleware.js";
 import { type ParsedUpload, filePath, parseUpload, removeStoredFiles, storeFile } from "../uploads/providerFiles.js";
+import { requireApprovedProvider } from "../services/provider-onboarding.js";
+import { checklist, loadApp } from "../services/provider-onboarding.js";
 
 // Parts shops + products. Mounted at /api.
 //  - /api/parts/me/*       PARTS_PROVIDER, always scoped to the caller's own shop.
@@ -202,6 +204,8 @@ const fitKey = (f: { make: string; model: string; yearFrom: number; yearTo: numb
 // Parts shop (PARTS_PROVIDER)
 // =====================================================================
 const provider = [requireAuth, requirePartsProvider, express.json({ limit: "25mb" })];
+// product changes need an approved shop (reading the shop and its products stays open during onboarding)
+const approved = [...provider, requireApprovedProvider];
 
 /** Optional { image: { name, dataBase64 } }. Returns null when no image was sent. */
 function parseImage(body: any): { image: ParsedUpload | null } | { error: string } {
@@ -285,7 +289,7 @@ router.get("/parts/me/products/:id", ...provider, async (req, res) => {
   }
 });
 
-router.post("/parts/me/products", ...provider, async (req, res) => {
+router.post("/parts/me/products", ...approved, async (req, res) => {
   const written: string[] = [];
   try {
     const actor = res.locals.authUser as { id: string };
@@ -336,7 +340,7 @@ router.post("/parts/me/products", ...provider, async (req, res) => {
   }
 });
 
-router.patch("/parts/me/products/:id", ...provider, async (req, res) => {
+router.patch("/parts/me/products/:id", ...approved, async (req, res) => {
   const written: string[] = [];
   try {
     const actor = res.locals.authUser as { id: string };
@@ -405,7 +409,7 @@ router.patch("/parts/me/products/:id", ...provider, async (req, res) => {
   }
 });
 
-router.delete("/parts/me/products/:id", ...provider, async (req, res) => {
+router.delete("/parts/me/products/:id", ...approved, async (req, res) => {
   try {
     const actor = res.locals.authUser as { id: string };
     const own = await ownProduct(req, res);
@@ -474,12 +478,13 @@ const admin = [requireAuth, requirePartsAdmin, express.json()];
 // Counts only (department home screen).
 router.get("/admin/parts/stats", ...admin, async (_req, res) => {
   try {
-    const [pendingShops, approvedShops, hiddenProducts] = await Promise.all([
+    const [pendingShops, approvedShops, hiddenProducts, needsChanges] = await Promise.all([
       prisma.partsShopProfile.count({ where: { verificationStatus: "PENDING" } }),
       prisma.partsShopProfile.count({ where: { verificationStatus: "APPROVED" } }),
       prisma.partsProduct.count({ where: { isHidden: true } }),
+      prisma.partsShopProfile.count({ where: { verificationStatus: "NEEDS_CHANGES" } }),
     ]);
-    return res.json({ success: true, stats: { pendingShops, approvedShops, hiddenProducts } });
+    return res.json({ success: true, stats: { pendingShops, approvedShops, hiddenProducts, needsChanges } });
   } catch (e) {
     return fail(res, "Parts stats error", e);
   }
@@ -547,6 +552,12 @@ router.patch("/admin/parts/shops/:id/decision", ...admin, async (req, res) => {
     if (decision === "REJECTED" && !reason) return bad(res, 400, "A rejection reason is required.");
     const s = await prisma.partsShopProfile.findUnique({ where: { id: idParam(req.params.id) }, select: { id: true } });
     if (!s) return bad(res, 404, "Shop not found.");
+    if (decision === "APPROVED") {
+      // same rule as the application review: the checklist must be complete
+      const app = await loadApp("PARTS", { id: s.id });
+      const failing = app ? checklist(app).filter((c) => !c.ok) : [];
+      if (failing.length) return res.status(409).json({ success: false, message: "The approval checklist is not complete.", failing: failing.map((c) => c.key) });
+    }
 
     await prisma.$transaction([
       prisma.partsShopProfile.update({

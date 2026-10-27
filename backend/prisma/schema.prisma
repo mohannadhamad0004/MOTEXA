@@ -60,6 +60,7 @@ model User {
   towCompanyProfile        TowCompanyProfile?
   partsShopProfile         PartsShopProfile?
   providerFiles            ProviderFile[]
+  providerMessages         ProviderMessage[]      @relation("ProviderMessageAuthor")
   partInquiries            PartInquiry[]
   inquiryMessages          PartInquiryMessage[]
   towRequests              TowRequest[]
@@ -256,10 +257,13 @@ model MechanicApplicationDocument {
 
 // ---- Tow fleet (companies + trucks). Truck photos/documents are a later step. ----
 
+// PENDING = submitted and waiting for review. DRAFT / NEEDS_CHANGES belong to the provider onboarding flow.
 enum ProviderVerificationStatus {
   PENDING
   APPROVED
   REJECTED
+  DRAFT
+  NEEDS_CHANGES
 }
 
 enum TruckVerificationStatus {
@@ -308,9 +312,20 @@ model TowCompanyProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // onboarding (all optional / defaulted, so existing rows are untouched)
+  companyNameAr     String?
+  ownerName         String?
+  open24h           Boolean   @default(false)
+  truckTypes        String[]  @default([])
+  truckCountClaimed Int?
+  submittedAt       DateTime?
+  submissionVersion Int       @default(0)
+  flaggedFields     String[]  @default([]) // fields / document kinds the reviewer asked to fix
+
   trucks      Truck[]
   files       ProviderFile[]
   towRequests TowRequest[]
+  messages    ProviderMessage[]
 }
 
 model Truck {
@@ -362,9 +377,22 @@ model PartsShopProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // onboarding (all optional / defaulted)
+  shopNameAr        String?
+  ownerName         String?
+  baseLat           Float?
+  baseLng           Float?
+  categories        String[]  @default([])
+  brands            String[]  @default([])
+  workingHours      String?
+  submittedAt       DateTime?
+  submissionVersion Int       @default(0)
+  flaggedFields     String[]  @default([])
+
   products  PartsProduct[]
   files     ProviderFile[]
   inquiries PartInquiry[]
+  messages  ProviderMessage[]
 }
 
 enum PartCondition {
@@ -423,6 +451,19 @@ enum ProviderFilePurpose {
   TOW_COMPANY_DOCUMENT
   PRODUCT_IMAGE
   PARTS_SHOP_DOCUMENT
+  MESSAGE_ATTACHMENT
+}
+
+enum ProviderDocStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum ProviderMessageAuthor {
+  PROVIDER
+  ADMIN
+  SYSTEM
 }
 
 enum ProviderFileVisibility {
@@ -456,11 +497,39 @@ model ProviderFile {
   expiresAt    DateTime?
   createdAt    DateTime  @default(now())
 
+  // onboarding: which document this is and how the reviewer judged it
+  docKind      String?
+  reviewStatus ProviderDocStatus @default(PENDING)
+  reviewReason String?
+  reviewedAt   DateTime?
+  messageId    String?
+  message      ProviderMessage?  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
   @@unique([truckId, purpose])
   @@unique([productId, purpose])
   @@index([ownerUserId])
   @@index([towCompanyId])
   @@index([partsShopId])
+}
+
+// One thread per application (tow company or parts shop) between the provider and that department's admins.
+model ProviderMessage {
+  id               String                @id @default(uuid())
+  towCompanyId     String?
+  towCompany       TowCompanyProfile?    @relation(fields: [towCompanyId], references: [id], onDelete: Cascade)
+  partsShopId      String?
+  partsShop        PartsShopProfile?     @relation(fields: [partsShopId], references: [id], onDelete: Cascade)
+  authorUserId     String?
+  author           User?                 @relation("ProviderMessageAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  authorRole       ProviderMessageAuthor
+  body             String
+  createdAt        DateTime              @default(now())
+  readByProviderAt DateTime?
+  readByAdminAt    DateTime?
+  attachments      ProviderFile[]
+
+  @@index([towCompanyId, createdAt])
+  @@index([partsShopId, createdAt])
 }
 
 // ---- Vehicle fitment: which vehicles a part fits. Free text (no make/model catalogue yet). ----

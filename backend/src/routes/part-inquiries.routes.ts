@@ -3,6 +3,7 @@ import express from "express";
 import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
 import { requireAuth, requireCustomer, requirePartsProvider } from "../middleware/auth.middleware.js";
+import { requireApprovedProvider } from "../services/provider-onboarding.js";
 
 // Part inquiries: a customer asks a parts shop about one product; both sides exchange messages.
 //  - /api/requests/part-inquiries/*   CUSTOMER, only their own inquiries.
@@ -31,7 +32,8 @@ const log = (tx: Prisma.TransactionClient, actorId: string, action: string, targ
   tx.auditLog.create({ data: { actorId, action, targetId, details } });
 
 const customer = [requireAuth, requireCustomer, express.json()];
-const shopSide = [requireAuth, requirePartsProvider, express.json()];
+// a shop can answer inquiries only after MOTEXA approved its application
+const shopSide = [requireAuth, requirePartsProvider, requireApprovedProvider, express.json()];
 
 const inquiryInclude = {
   shop: { select: { id: true, shopName: true, city: true, verificationStatus: true } },

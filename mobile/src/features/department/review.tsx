@@ -183,79 +183,8 @@ function PrivatePhoto({ uri }: { uri?: string | null }) {
   );
 }
 
-// ---------------------------------------------------------------- towing: company
-function CompanyReview({ id }: { id: string }) {
-  const d = useDT();
-  const state = useLoad(() => towAdminService.getCompany(NOACTOR, id), [id]);
-  return (
-    <DeptPage back tabs={false} onRefresh={() => void state.reload()} refreshing={state.loading && !!state.data}>
-      <Load state={state}>
-        {({ company, trucks, companyHistory }: { company: TowCompany; trucks: Truck[]; companyHistory: any[] }) => {
-          const history = [
-            ...companyHistory.map((h) => ({ ...h, actor: `${h.actor} · ${d.t("company", "الشركة")}` })),
-            ...trucks.flatMap((tr) => tr.history.map((h) => ({ ...h, actor: `${h.actor} · ${tr.plate}` }))),
-          ].sort((a, b) => a.at.localeCompare(b.at));
-          return (
-            <>
-              <Header title={company.name} status={company.verification} />
-              <Panel>
-                <KV k={d.t("Contact", "المسؤول")} v={company.contactName} />
-                <KV k={d.t("Phone", "الهاتف")} v={company.phone ? ltr(company.phone) : ""} />
-                <KV k={d.t("Email", "البريد")} v={company.ownerEmail} />
-                <KV k={d.t("City", "المدينة")} v={cityLabel(company.city, d.ar)} />
-                <KV k={d.t("Address", "العنوان")} v={company.address} />
-                <KV k={d.t("Working hours", "ساعات العمل")} v={company.workingHours} />
-                <KV k={d.t("Service area", "منطقة الخدمة")} v={company.serviceCities.map((c) => cityLabel(c, d.ar)).join(d.ar ? "، " : ", ")} />
-                <KV k={d.t("Description", "الوصف")} v={company.description} />
-              </Panel>
-              <Docs title={d.t("Company documents", "مستندات الشركة")} docs={company.documents.map((x) => ({ label: x.kind, fileName: x.fileName, uri: x.uri }))} />
-              <Checklist items={checklists.company(d.t, company)} />
-              <DecisionPanel
-                title={d.t("Company decision", "قرار الشركة")}
-                note={d.t("This approves the company account only. Each truck is approved separately below.", "هذا اعتماد لحساب الشركة فقط. تُعتمد كل شاحنة على حدة أدناه.")}
-                status={company.verification}
-                rejectionReason={company.rejectionReason}
-                approveLabel={d.t("Approve company", "اعتماد الشركة")}
-                rejectLabel={d.t("Reject company", "رفض الشركة")}
-                onDecide={async (x) => {
-                  await towAdminService.decideCompany(NOACTOR, company.id, x);
-                  await state.reload();
-                }}
-              />
-              <Section title={`${d.t("Trucks", "الشاحنات")} (${trucks.length})`} />
-              {trucks.length === 0 ? <Empty icon="car-outline" text={d.t("This company has no trucks yet.", "لا توجد شاحنات لهذه الشركة بعد.")} /> : null}
-              {trucks.map((tr) => (
-                <TruckLine key={tr.id} truck={tr} />
-              ))}
-              <History items={history} />
-            </>
-          );
-        }}
-      </Load>
-    </DeptPage>
-  );
-}
-
-function TruckLine({ truck }: { truck: Truck }) {
-  const d = useDT();
-  return (
-    <InteractiveButton
-      accessibilityRole="button"
-      accessibilityLabel={truck.plate}
-      onPress={() => router.push(`/dept/review/truck/${truck.id}` as never)}
-      style={{ borderWidth: 1, borderRadius: 20, padding: 14, marginBottom: 10, backgroundColor: d.surface, borderColor: d.border, flexDirection: d.row, alignItems: "center", gap: 10 }}
-    >
-      <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
-        <Text numberOfLines={1} style={{ color: d.ink, fontSize: 14, fontWeight: "600", textAlign: d.align }}>{ltr(truck.plate)} · {[truck.make, truck.model, truck.year].filter(Boolean).join(" ")}</Text>
-        <StatusPill value={truck.verification} />
-      </View>
-      <Ionicons name={d.ar ? "chevron-back" : "chevron-forward"} size={19} color={d.accent} />
-    </InteractiveButton>
-  );
-}
-
 // ---------------------------------------------------------------- towing: truck
-function TruckReview({ id }: { id: string }) {
+export function TruckReview({ id }: { id: string }) {
   const d = useDT();
   const state = useLoad(async () => {
     const truck = (await towAdminService.listTrucks(NOACTOR)).find((x) => x.id === id);
@@ -305,8 +234,8 @@ function TruckReview({ id }: { id: string }) {
   );
 }
 
-// ---------------------------------------------------------------- parts: shop
-function ProductLine({ product: p, onDone }: { product: Product; onDone: () => void }) {
+// ---------------------------------------------------------------- parts: product moderation (hide / show)
+export function ProductLine({ product: p, onDone }: { product: Product; onDone: () => void }) {
   const d = useDT();
   const [hiding, setHiding] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -354,49 +283,6 @@ function ProductLine({ product: p, onDone }: { product: Product; onDone: () => v
   );
 }
 
-function ShopReview({ id }: { id: string }) {
-  const d = useDT();
-  const state = useLoad(() => partsAdminService.getShop(NOACTOR, id), [id]);
-  return (
-    <DeptPage back tabs={false} onRefresh={() => void state.reload()} refreshing={state.loading && !!state.data}>
-      <Load state={state}>
-        {(s) => (
-          <>
-            <Header title={s.name} status={s.verification} />
-            <Panel>
-              <KV k={d.t("Owner", "المالك")} v={s.ownerName} />
-              <KV k={d.t("Phone", "الهاتف")} v={s.phone ? ltr(s.phone) : ""} />
-              <KV k={d.t("Email", "البريد")} v={s.ownerEmail} />
-              <KV k={d.t("City", "المدينة")} v={cityLabel(s.city, d.ar)} />
-              <KV k={d.t("Address", "العنوان")} v={s.address} />
-            </Panel>
-            <Docs title={d.t("Verification documents", "مستندات التحقق")} docs={s.documents.map((x) => ({ label: x.kind, fileName: x.fileName, uri: x.uri }))} />
-            <Checklist items={checklists.shop(d.t, s)} />
-            <DecisionPanel
-              title={d.t("Shop decision", "قرار المتجر")}
-              note={d.t("This approves the shop account only. Product listings belong to the shop; you can only hide or show them.", "هذا اعتماد لحساب المتجر فقط. المنتجات يملكها المتجر ويمكنك إخفاؤها أو إظهارها فقط.")}
-              status={s.verification}
-              rejectionReason={s.rejectionReason}
-              approveLabel={d.t("Approve shop", "اعتماد المتجر")}
-              rejectLabel={d.t("Reject shop", "رفض المتجر")}
-              onDecide={async (x) => {
-                await partsAdminService.decideShop(NOACTOR, s.id, x);
-                await state.reload();
-              }}
-            />
-            <Section title={`${d.t("Products", "المنتجات")} (${s.products.length})`} />
-            {s.products.length === 0 ? <Empty icon="cube-outline" text={d.t("This shop has no products yet.", "لا توجد منتجات لهذا المتجر بعد.")} /> : null}
-            {s.products.map((p) => (
-              <ProductLine key={p.id} product={p} onDone={() => void state.reload()} />
-            ))}
-            <History items={s.history} />
-          </>
-        )}
-      </Load>
-    </DeptPage>
-  );
-}
-
 function Header({ title, status, sub }: { title: string; status: Status; sub?: string }) {
   const d = useDT();
   return (
@@ -408,13 +294,3 @@ function Header({ title, status, sub }: { title: string; status: Status; sub?: s
   );
 }
 
-/** The one review screen. `mechanic` has no screen of ours: Diala's review screen (Requests tab) handles it. */
-export function ReviewScreen({ kind, id }: { kind: ReviewKind; id: string }) {
-  useEffect(() => {
-    if (kind === "mechanic") router.replace("/dept/requests" as never);
-  }, [kind]);
-  if (kind === "company") return <CompanyReview id={id} />;
-  if (kind === "truck") return <TruckReview id={id} />;
-  if (kind === "shop") return <ShopReview id={id} />;
-  return null;
-}

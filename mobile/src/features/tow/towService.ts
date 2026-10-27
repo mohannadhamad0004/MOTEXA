@@ -8,7 +8,7 @@
 import { api } from "../shared/api";
 import { fileNameOf, isServerFile, localFileToBase64, publicImageUrl } from "../../core/constants/files";
 
-export type Verification = "PENDING" | "APPROVED" | "REJECTED";
+export type Verification = "PENDING" | "APPROVED" | "REJECTED" | "DRAFT" | "NEEDS_CHANGES";
 export type Operational = "AVAILABLE" | "BUSY" | "OUT_OF_SERVICE";
 export type TruckType = "FLATBED" | "HOOK_CHAIN" | "WHEEL_LIFT" | "HEAVY_DUTY";
 export const TRUCK_TYPES: TruckType[] = ["FLATBED", "HOOK_CHAIN", "WHEEL_LIFT", "HEAVY_DUTY"];

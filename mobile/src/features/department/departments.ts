@@ -9,12 +9,13 @@ import { partsAdminService } from "../parts/partsService";
 import type { Shop } from "../parts/partsService";
 import { towAdminService } from "../tow/towService";
 import type { TowCompany, Truck, TruckType } from "../tow/towService";
+import type { Kind as ProviderKind } from "../provider/api";
 
 type IconName = keyof typeof Ionicons.glyphMap;
 export type DeptKey = "MANAGE_TOWING" | "MANAGE_SPARE_PARTS" | "MANAGE_MECHANICS";
 /** What a review route can open. `mechanic` is handled by Diala's review screen (no route of ours). */
 export type ReviewKind = "company" | "truck" | "shop" | "mechanic";
-export type Status = "PENDING" | "APPROVED" | "REJECTED";
+export type Status = "DRAFT" | "PENDING" | "NEEDS_CHANGES" | "APPROVED" | "REJECTED";
 export type T = (en: string, ar: string) => string;
 
 /** One line of a list, already shaped for display. */
@@ -48,8 +49,10 @@ export type Dept = {
   endpoints: { stats: string; list: string[]; decide: string[] };
   stats: StatTile[];
   loadStats: () => Promise<Record<string, number>>;
-  /** null = this tab shows Diala's review screen instead (mechanics) */
-  requests: null | { titleEn: string; titleAr: string; emptyEn: string; emptyAr: string; load: (t: T) => Promise<Row[]> };
+  /** which provider applications this department reviews (tow / parts); null for mechanics */
+  provider: ProviderKind | null;
+  /** applications = the New / Needs changes / Approved / Rejected tabs; screen = Diala's review screen (mechanics) */
+  requests: { mode: "applications" } | { mode: "screen" };
   directory: { titleEn: string; titleAr: string; emptyEn: string; emptyAr: string; searchEn: string; searchAr: string; load: (t: T) => Promise<Row[]> };
   /** what the review route can open for this department, and the approval checklists */
   review: { kinds: ReviewKind[] };
@@ -106,25 +109,13 @@ const towing: Dept = {
     decide: ["PATCH /admin/tow/companies/:id/decision", "PATCH /admin/tow/trucks/:id/decision"],
   },
   stats: [
-    { key: "pendingCompanies", icon: "business-outline", en: "Companies pending", ar: "شركات قيد المراجعة", warn: true },
-    { key: "pendingTrucks", icon: "car-sport-outline", en: "Trucks pending", ar: "شاحنات قيد المراجعة", warn: true },
+    { key: "pendingCompanies", icon: "business-outline", en: "New applications", ar: "طلبات جديدة", warn: true },
+    { key: "needsChanges", icon: "create-outline", en: "Needs changes", ar: "بانتظار التعديل" },
     { key: "approvedCompanies", icon: "shield-checkmark-outline", en: "Approved companies", ar: "شركات معتمدة" },
   ],
   loadStats: async () => (await api<{ stats: Record<string, number> }>("GET", "/admin/tow/stats")).stats,
-  requests: {
-    titleEn: "Requests",
-    titleAr: "الطلبات",
-    emptyEn: "Nothing is waiting for review.",
-    emptyAr: "لا يوجد ما ينتظر المراجعة.",
-    load: async (t) => {
-      const [companies, trucks] = await Promise.all([towAdminService.listCompanies(NOACTOR), towAdminService.listTrucks(NOACTOR)]);
-      const name = new Map(companies.map((c) => [c.id, c.name]));
-      return [
-        ...companies.filter((c) => c.verification === "PENDING").map((c) => companyRow(t, c)),
-        ...trucks.filter((tr) => tr.verification === "PENDING").map((tr) => truckRow(t, tr, name.get(tr.companyId))),
-      ];
-    },
-  },
+  provider: "TOW",
+  requests: { mode: "applications" },
   directory: {
     titleEn: "Tow companies",
     titleAr: "شركات السحب",
@@ -139,7 +130,7 @@ const towing: Dept = {
   },
   review: { kinds: ["company", "truck"] },
   shortcuts: [
-    { id: "requests", en: "Review requests", ar: "مراجعة الطلبات", descEn: "Companies and trucks waiting for a decision", descAr: "شركات وشاحنات بانتظار القرار", icon: "clipboard-outline", photo: 3 },
+    { id: "requests", en: "Review requests", ar: "مراجعة الطلبات", descEn: "Applications waiting for a decision", descAr: "طلبات بانتظار القرار", icon: "clipboard-outline", photo: 3 },
     { id: "directory", en: "Tow companies", ar: "شركات السحب", descEn: "Every company with its trucks and documents", descAr: "كل شركة مع شاحناتها ومستنداتها", icon: "business-outline", photo: 1 },
   ],
 };
@@ -169,18 +160,13 @@ const parts: Dept = {
     decide: ["PATCH /admin/parts/shops/:id/decision", "PATCH /admin/parts/products/:id/visibility"],
   },
   stats: [
-    { key: "pendingShops", icon: "storefront-outline", en: "Shops pending", ar: "متاجر قيد المراجعة", warn: true },
+    { key: "pendingShops", icon: "storefront-outline", en: "New applications", ar: "طلبات جديدة", warn: true },
+    { key: "needsChanges", icon: "create-outline", en: "Needs changes", ar: "بانتظار التعديل" },
     { key: "approvedShops", icon: "shield-checkmark-outline", en: "Approved shops", ar: "متاجر معتمدة" },
-    { key: "hiddenProducts", icon: "eye-off-outline", en: "Hidden products", ar: "منتجات مخفية" },
   ],
   loadStats: async () => (await api<{ stats: Record<string, number> }>("GET", "/admin/parts/stats")).stats,
-  requests: {
-    titleEn: "Requests",
-    titleAr: "الطلبات",
-    emptyEn: "No shop is waiting for review.",
-    emptyAr: "لا يوجد متجر بانتظار المراجعة.",
-    load: async () => (await partsAdminService.listShops(NOACTOR)).filter((s) => s.verification === "PENDING").map(shopRow),
-  },
+  provider: "PARTS",
+  requests: { mode: "applications" },
   directory: {
     titleEn: "Parts shops",
     titleAr: "متاجر قطع الغيار",
@@ -192,13 +178,13 @@ const parts: Dept = {
   },
   review: { kinds: ["shop"] },
   shortcuts: [
-    { id: "requests", en: "Review requests", ar: "مراجعة الطلبات", descEn: "Shops waiting for a decision", descAr: "متاجر بانتظار القرار", icon: "clipboard-outline", photo: 2 },
+    { id: "requests", en: "Review requests", ar: "مراجعة الطلبات", descEn: "Applications waiting for a decision", descAr: "طلبات بانتظار القرار", icon: "clipboard-outline", photo: 2 },
     { id: "directory", en: "Parts shops", ar: "متاجر قطع الغيار", descEn: "Every shop with its products (hide or show)", descAr: "كل متجر مع منتجاته (إخفاء أو إظهار)", icon: "storefront-outline", photo: 1 },
   ],
 };
 
 // ---------- mechanics (Diala's review screen is shown for Requests) ----------
-type MechanicListItem = { id: string; city: string | null; specializations: string[]; user: { fullName: string; email: string } };
+type MechanicListItem = { id: string; userId: string; city: string | null; specializations: string[]; user: { fullName: string; email: string } };
 
 const mechanics: Dept = {
   key: "MANAGE_MECHANICS",
@@ -223,7 +209,8 @@ const mechanics: Dept = {
     const r = await api<{ counts: Record<string, number> }>("GET", "/mechanics/admin");
     return { PENDING: r.counts.PENDING ?? 0, NEEDS_COMPLETION: r.counts.NEEDS_COMPLETION ?? 0, VERIFIED: r.counts.VERIFIED ?? 0 };
   },
-  requests: null,
+  provider: null,
+  requests: { mode: "screen" },
   directory: {
     titleEn: "Verified mechanics",
     titleAr: "الميكانيكيون الموثّقون",
@@ -233,7 +220,7 @@ const mechanics: Dept = {
     searchAr: "الاسم أو البريد أو المدينة",
     load: async () => {
       const r = await api<{ profiles: MechanicListItem[] }>("GET", "/mechanics/admin?status=VERIFIED");
-      return r.profiles.map((p) => ({ id: p.id, kind: "mechanic" as const, title: p.user.fullName, subtitle: [p.user.email, p.city].filter(Boolean).join(" · "), meta: p.specializations.slice(0, 3), status: "APPROVED" as const }));
+      return r.profiles.map((p) => ({ id: p.userId, kind: "mechanic" as const, title: p.user.fullName, subtitle: [p.user.email, p.city].filter(Boolean).join(" · "), meta: p.specializations.slice(0, 3), status: "APPROVED" as const }));
     },
   },
   review: { kinds: [] },
@@ -250,13 +237,6 @@ export const DEPT_ORDER: DeptKey[] = ["MANAGE_TOWING", "MANAGE_SPARE_PARTS", "MA
 const expired = (iso?: string | null) => !!iso && new Date(iso).getTime() < Date.now();
 
 export const checklists = {
-  company: (t: T, c: TowCompany): CheckItem[] => [
-    { ok: !!c.contactName && !!c.phone, label: t("Contact person and phone", "المسؤول ورقم الهاتف") },
-    { ok: !!c.city && !!c.address, label: t("City and address", "المدينة والعنوان") },
-    { ok: c.serviceCities.length > 0, label: t("Service area chosen", "منطقة الخدمة محددة") },
-    { ok: !!c.workingHours, label: t("Working hours", "ساعات العمل") },
-    { ok: c.documents.length > 0, label: t("Company documents uploaded", "تم رفع مستندات الشركة") },
-  ],
   truck: (t: T, tr: Truck): CheckItem[] => {
     const reg = tr.documents.find((d) => d.kind === "REGISTRATION");
     const ins = tr.documents.find((d) => d.kind === "INSURANCE");
@@ -267,11 +247,6 @@ export const checklists = {
       { ok: !!tr.plate && !!tr.make && !!tr.model, label: t("Plate, make and model", "اللوحة والصنع والطراز") },
     ];
   },
-  shop: (t: T, s: Shop): CheckItem[] => [
-    { ok: !!s.ownerName && !!s.phone, label: t("Owner name and phone", "اسم المالك والهاتف") },
-    { ok: !!s.address && !!s.city, label: t("Shop address and city", "عنوان المتجر ومدينته") },
-    { ok: s.documents.length > 0, label: t("Verification documents uploaded", "تم رفع مستندات التحقق") },
-  ],
 };
 
 export const hasBlocking = (items: CheckItem[]) => items.some((i) => i.blocking && !i.ok);
