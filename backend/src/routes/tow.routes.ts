@@ -13,6 +13,8 @@ import {
   removeStoredFiles,
   storeFile,
 } from "../uploads/providerFiles.js";
+import { requireApprovedProvider } from "../services/provider-onboarding.js";
+import { checklist, loadApp } from "../services/provider-onboarding.js";
 
 // Tow companies + trucks. Mounted at /api, BEFORE the global JSON parser: the provider routes carry base64
 // images and parse their own (larger) body, and only after the caller has been authenticated.
@@ -279,6 +281,7 @@ const provider = [requireAuth, requireTowProvider, express.json({ limit: "25mb" 
 
 /** A rejected company can't create or edit trucks (a pending one can: it prepares its fleet before approval). */
 const REJECTED_MSG = "Your company application was rejected. You cannot add or edit trucks.";
+const REVIEW_MSG = "Your application is under review. You can edit it again if MOTEXA asks for changes.";
 
 async function myCompany(res: any) {
   const user = res.locals.authUser as { id: string };
@@ -394,6 +397,7 @@ router.post("/tow/me/trucks", ...provider, async (req, res) => {
     const c = await myCompany(res);
     if (!c) return;
     if (c.verificationStatus === "REJECTED") return bad(res, 403, REJECTED_MSG);
+    if (c.verificationStatus === "PENDING") return bad(res, 409, REVIEW_MSG);
     const parsed = parseVehicle(req.body, true);
     if ("error" in parsed) return bad(res, 400, parsed.error);
     const v = parsed.data as Vehicle;
@@ -447,6 +451,7 @@ router.patch("/tow/me/trucks/:id", ...provider, async (req, res) => {
     const own = await ownTruck(req, res);
     if (!own) return;
     if (own.company.verificationStatus === "REJECTED") return bad(res, 403, REJECTED_MSG);
+    if (own.company.verificationStatus === "PENDING") return bad(res, 409, REVIEW_MSG);
     const t = own.truck;
     if (t.towRequests.length) return bad(res, 409, "This truck is on an active job. It cannot be edited until the job ends.");
     const parsed = parseVehicle(req.body, false);
@@ -539,7 +544,7 @@ router.patch("/tow/me/trucks/:id", ...provider, async (req, res) => {
   }
 });
 
-router.patch("/tow/me/trucks/:id/status", ...provider, async (req, res) => {
+router.patch("/tow/me/trucks/:id/status", ...provider, requireApprovedProvider, async (req, res) => {
   try {
     const actor = res.locals.authUser as { id: string };
     const own = await ownTruck(req, res);
@@ -588,12 +593,13 @@ const admin = [requireAuth, requireTowAdmin, express.json()];
 // Counts only (department home screen).
 router.get("/admin/tow/stats", ...admin, async (_req, res) => {
   try {
-    const [pendingCompanies, approvedCompanies, pendingTrucks] = await Promise.all([
+    const [pendingCompanies, approvedCompanies, pendingTrucks, needsChanges] = await Promise.all([
       prisma.towCompanyProfile.count({ where: { verificationStatus: "PENDING" } }),
       prisma.towCompanyProfile.count({ where: { verificationStatus: "APPROVED" } }),
       prisma.truck.count({ where: { verificationStatus: "PENDING" } }),
+      prisma.towCompanyProfile.count({ where: { verificationStatus: "NEEDS_CHANGES" } }),
     ]);
-    return res.json({ success: true, stats: { pendingCompanies, approvedCompanies, pendingTrucks } });
+    return res.json({ success: true, stats: { pendingCompanies, approvedCompanies, pendingTrucks, needsChanges } });
   } catch (e) {
     return fail(res, "Tow stats error", e);
   }
@@ -680,6 +686,12 @@ router.patch("/admin/tow/companies/:id/decision", ...admin, async (req, res) => 
     if ("error" in parsed) return bad(res, 400, parsed.error);
     const c = await prisma.towCompanyProfile.findUnique({ where: { id: idParam(req.params.id) }, select: { id: true } });
     if (!c) return bad(res, 404, "Company not found.");
+    if (parsed.decision === "APPROVED") {
+      // same rule as the application review: the checklist must be complete
+      const app = await loadApp("TOW", { id: c.id });
+      const failing = app ? checklist(app).filter((x) => !x.ok) : [];
+      if (failing.length) return res.status(409).json({ success: false, message: "The approval checklist is not complete.", failing: failing.map((x) => x.key) });
+    }
 
     await prisma.$transaction([
       prisma.towCompanyProfile.update({

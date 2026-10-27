@@ -230,8 +230,10 @@ export function Pill({ label, tone = "neutral", icon }: { label: string; tone?: 
   );
 }
 
-export function StatusPill({ value }: { value: "PENDING" | "APPROVED" | "REJECTED" }) {
+export function StatusPill({ value }: { value: string }) {
   const d = useDT();
+  if (value === "NEEDS_CHANGES") return <Pill tone="warn" icon="create-outline" label={d.t("Needs changes", "مطلوب تعديلات")} />;
+  if (value === "DRAFT") return <Pill icon="document-outline" label={d.t("Draft", "مسودة")} />;
   if (value === "APPROVED") return <Pill tone="ok" icon="shield-checkmark-outline" label={d.t("Approved", "معتمد")} />;
   if (value === "REJECTED") return <Pill tone="bad" icon="close-circle-outline" label={d.t("Rejected", "مرفوض")} />;
   return <Pill tone="warn" icon="time-outline" label={d.t("Pending", "قيد المراجعة")} />;
@@ -378,6 +380,7 @@ export function DeptTabBar({ state, descriptors, navigation }: any) {
               selected={selected}
               label={label}
               icon={options.tabBarIcon?.({ focused: selected, color: selected ? (d.dark ? "#352216" : "#462E1C") : d.muted, size: 22 })}
+              badge={options.tabBarBadge}
               onPress={() => {
                 const e = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
                 if (!selected && !e.defaultPrevented) navigation.navigate(route.name);
@@ -390,7 +393,7 @@ export function DeptTabBar({ state, descriptors, navigation }: any) {
   );
 }
 
-function Tab({ selected, label, icon, onPress }: { selected: boolean; label: string; icon: ReactNode; onPress: () => void }) {
+function Tab({ selected, label, icon, badge, onPress }: { selected: boolean; label: string; icon: ReactNode; badge?: number | string; onPress: () => void }) {
   const d = useDT();
   const reduced = useReducedMotion();
   const flex = useRef(new Animated.Value(selected ? 2.5 : 1)).current;
@@ -404,12 +407,19 @@ function Tab({ selected, label, icon, onPress }: { selected: boolean; label: str
     <Animated.View style={{ flex, minWidth: 44 }}>
       <InteractiveButton
         accessibilityRole="tab"
-        accessibilityLabel={label}
+        accessibilityLabel={badge ? `${label} (${badge})` : label}
         accessibilityState={{ selected }}
         onPress={onPress}
         style={{ height: 52, borderRadius: 26, flexDirection: d.row, alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: selected ? (d.dark ? "#E0B67F" : "#704A2B") : "transparent" }}
       >
-        {icon}
+        <View>
+          {icon}
+          {badge ? (
+            <View style={{ position: "absolute", top: -6, [d.ar ? "left" : "right"]: -9, minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 4, backgroundColor: "#C0462F", alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: "#FFF", fontSize: 10, lineHeight: 14, fontWeight: "700" }}>{String(badge)}</Text>
+            </View>
+          ) : null}
+        </View>
         {selected ? <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: "700", color: d.dark ? "#352216" : "#FFF9F0", flexShrink: 1 }}>{label}</Text> : null}
       </InteractiveButton>
     </Animated.View>

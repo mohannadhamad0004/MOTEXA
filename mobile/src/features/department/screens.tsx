@@ -9,6 +9,7 @@ import { Text } from "../../components/MotexaVisual";
 import { useLoad } from "../../core/hooks/useLoad";
 import { useDepartment } from "./DepartmentContext";
 import { Row, Status } from "./departments";
+import { ApplicationsList } from "./applications";
 import { DeptHero, DeptPage, Empty, ItemCard, Load, MenuCard, Pill, Section, StatRow, StatTile, StatusPill, useDT } from "./ui";
 
 const go = (path: string) => router.push(path as Href);
@@ -75,41 +76,13 @@ function RowCard({ row, onPress, children }: { row: Row; onPress?: () => void; c
   );
 }
 
-const openRow = (r: Row) => (r.kind === "mechanic" ? undefined : () => go(`/dept/review/${r.kind}/${r.id}`));
+// a mechanic opens in Diala's review screen (the Requests tab); company / shop open the application review
+const openRow = (r: Row) => (r.kind === "mechanic" ? () => go("/dept/requests") : () => go(`/dept/review/${r.kind}/${r.id}`));
 
 export function DeptRequests() {
   const { active } = useDepartment();
-  // mechanics: Diala's review screen is the requests tab
-  return active.requests ? <RequestsList /> : <MechanicReviewScreen />;
-}
-
-function RequestsList() {
-  const { active } = useDepartment();
-  const d = useDT();
-  const cfg = active.requests!;
-  const state = useLoad(() => cfg.load(d.t), [active.key, d.ar]);
-  return (
-    <DeptPage onRefresh={() => void state.reload()} refreshing={state.loading && !!state.data}>
-      <Section title={d.t(cfg.titleEn, cfg.titleAr)} caption={d.t(active.en, active.ar)} />
-      <Load state={state}>
-        {(rows: Row[]) =>
-          rows.length === 0 ? (
-            <Empty icon="checkmark-done-outline" text={d.t(cfg.emptyEn, cfg.emptyAr)} />
-          ) : (
-            <>
-              {rows.map((r) => (
-                <RowCard key={`${r.kind}-${r.id}`} row={r} onPress={openRow(r)}>
-                  <Text style={{ color: d.muted, fontSize: 11, marginTop: 6, textAlign: d.align }}>
-                    {r.kind === "truck" ? d.t("Truck", "شاحنة") : r.kind === "company" ? d.t("Company", "شركة") : r.kind === "shop" ? d.t("Shop", "متجر") : ""}
-                  </Text>
-                </RowCard>
-              ))}
-            </>
-          )
-        }
-      </Load>
-    </DeptPage>
-  );
+  // towing / parts: the applications (New, Needs changes, Approved, Rejected); mechanics: Diala's review screen
+  return active.provider && active.requests.mode === "applications" ? <ApplicationsList kind={active.provider} /> : <MechanicReviewScreen />;
 }
 
 type Filter = "ALL" | Status;
@@ -126,7 +99,8 @@ export function DeptDirectory() {
   const text = (r: Row): string => [r.title, r.subtitle, ...r.meta, ...(r.children ?? []).map(text)].join(" ").toLowerCase();
   const filters: { k: Filter; en: string; ar: string }[] = [
     { k: "ALL", en: "All", ar: "الكل" },
-    { k: "PENDING", en: "Pending", ar: "قيد المراجعة" },
+    { k: "PENDING", en: "Submitted", ar: "مُرسل" },
+    { k: "NEEDS_CHANGES", en: "Needs changes", ar: "تعديلات" },
     { k: "APPROVED", en: "Approved", ar: "معتمد" },
     { k: "REJECTED", en: "Rejected", ar: "مرفوض" },
   ];

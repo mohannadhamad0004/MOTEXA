@@ -4,6 +4,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
 import { readPair } from "../geo.js";
 import { requireAuth, requireCustomer, requireTowProvider } from "../middleware/auth.middleware.js";
+import { requireApprovedProvider } from "../services/provider-onboarding.js";
 
 // Tow requests: a customer asks one approved tow company for a tow; the company accepts with one of its trucks.
 //  - /api/requests/tow/*     CUSTOMER, only their own requests.
@@ -49,7 +50,8 @@ const log = (tx: Prisma.TransactionClient, actorId: string, action: string, targ
   tx.auditLog.create({ data: { actorId, action, targetId, details } });
 
 const customerSide = [requireAuth, requireCustomer, express.json()];
-const companySide = [requireAuth, requireTowProvider, express.json()];
+// a company can work on requests only after MOTEXA approved its application
+const companySide = [requireAuth, requireTowProvider, requireApprovedProvider, express.json()];
 
 const include = {
   company: { select: { id: true, companyName: true, city: true, verificationStatus: true } },

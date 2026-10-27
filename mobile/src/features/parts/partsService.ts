@@ -8,7 +8,7 @@ import type { PartCondition, PartType } from "../catalog/partAttrs";
 import { api } from "../shared/api";
 import { fileNameOf, isServerFile, localFileToBase64, publicImageUrl } from "../../core/constants/files";
 
-export type Verification = "PENDING" | "APPROVED" | "REJECTED";
+export type Verification = "PENDING" | "APPROVED" | "REJECTED" | "DRAFT" | "NEEDS_CHANGES";
 
 export type Fitment = { make: string; model: string; yearFrom: number; yearTo: number; trim?: string };
 

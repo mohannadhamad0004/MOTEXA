@@ -13,6 +13,9 @@ import partInquiryRoutes from "./routes/part-inquiries.routes.js";
 import towRequestRoutes from "./routes/tow-requests.routes.js";
 import catalogMechanicRoutes from "./routes/catalog-mechanics.routes.js";
 import mechanicRequestRoutes from "./routes/mechanic-requests.routes.js";
+import providerRegistrationRoutes from "./routes/provider-registration.routes.js";
+import providerOnboardingRoutes, { notificationsRouter } from "./routes/provider-onboarding.routes.js";
+import { partsReviewRouter, towReviewRouter } from "./routes/provider-review.routes.js";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -36,6 +39,11 @@ app.use("/api/catalog", catalogMechanicRoutes);
 app.use("/api", partInquiryRoutes);
 app.use("/api", towRequestRoutes);
 app.use("/api", mechanicRequestRoutes);
+// Provider onboarding (documents arrive as base64, so these routers parse their own body after authentication)
+app.use("/api/provider", providerOnboardingRoutes);
+app.use("/api/notifications", notificationsRouter);
+app.use("/api/admin/providers/tow", towReviewRouter);
+app.use("/api/admin/providers/parts", partsReviewRouter);
 app.use(express.json({limit:'8mb'}));
 
 app.get("/api/health", (_req, res) => {
@@ -46,6 +54,7 @@ app.get("/api/health", (_req, res) => {
 });
 app.use("/api/auth", authRoutes);
 app.use("/api/auth/mechanic",mechanicRegistrationRoutes);
+app.use("/api/auth/provider", providerRegistrationRoutes);
 app.use("/api/mechanics",mechanicsRoutes);
 app.use("/api/auth/password-reset", passwordResetRoutes);
 app.use("/api/admin-management", adminRoutes);

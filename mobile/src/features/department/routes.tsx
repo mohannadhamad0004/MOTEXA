@@ -1,7 +1,7 @@
 // The old tow / shops admin routes keep working: they render the shared department screens, pinned to their own department.
 import { useLocalSearchParams } from "expo-router";
 import { DepartmentProvider } from "./DepartmentContext";
-import { ReviewScreen } from "./review";
+import { ReviewScreen } from "./applications";
 import { DeptDirectory } from "./screens";
 
 export const TowDirectoryRoute = () => (
