@@ -20,7 +20,7 @@ export type Doc = {
   createdAt: string;
 };
 
-export type TruckRow = { id: string; plate: string; type: string; make: string; model: string; year: number | null; verification: string; documents: Doc[] };
+export type TruckRow = { id: string; plate: string; type: string; make: string; model: string; year: number | null; baseLat?: number | null; baseLng?: number | null; locationAddress?: string | null; verification: string; documents: Doc[] };
 export type TimelineEntry = { at: string; action: string; actor: string; details: any };
 export type Info = Record<string, any>;
 

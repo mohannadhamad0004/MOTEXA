@@ -340,6 +340,12 @@ model Truck {
   truckType   TruckType
   maxWeightKg Int? // heaviest vehicle it can carry; vehicle data, so editing it sends the truck back to review
 
+  // Where this truck operates from (its own point, separate from the company base). Set at signup from the owner's confirmed location.
+  baseLat         Float?
+  baseLng         Float?
+  locationAddress String?
+  locationSource  String? // "current_location" | "manual"
+
   verificationStatus TruckVerificationStatus @default(PENDING)
   operationalStatus  TruckOperationalStatus  @default(OUT_OF_SERVICE)
   rejectionReason    String?
@@ -382,6 +388,11 @@ model PartsShopProfile {
   ownerName         String?
   baseLat           Float?
   baseLng           Float?
+  // signup: optional labels (one account = one physical shop, no company/branch hierarchy) and the confirmed location's readable label + source
+  brandName         String?
+  branchName        String?
+  locationAddress   String?
+  locationSource    String? // "current_location" | "manual"
   categories        String[]  @default([])
   brands            String[]  @default([])
   workingHours      String?
@@ -448,6 +459,7 @@ enum ProviderFilePurpose {
   TRUCK_PHOTO
   TRUCK_REGISTRATION
   TRUCK_INSURANCE
+  TRUCK_OPERATING_LICENSE
   TOW_COMPANY_DOCUMENT
   PRODUCT_IMAGE
   PARTS_SHOP_DOCUMENT

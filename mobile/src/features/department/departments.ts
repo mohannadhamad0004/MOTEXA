@@ -240,10 +240,12 @@ export const checklists = {
   truck: (t: T, tr: Truck): CheckItem[] => {
     const reg = tr.documents.find((d) => d.kind === "REGISTRATION");
     const ins = tr.documents.find((d) => d.kind === "INSURANCE");
+    const lic = tr.documents.find((d) => d.kind === "OPERATING_LICENSE");
+    const second = ins ?? lic; // a truck needs its insurance (older trucks) or its operating licence (signup)
     return [
       { ok: !!tr.photoUri, label: t("Truck photo", "صورة الشاحنة"), blocking: true },
       { ok: !!reg, label: t("Vehicle registration", "ترخيص المركبة"), blocking: true, hint: reg && expired(reg.expiresAt) ? t("Expired: flagged, does not block", "منتهٍ: للتنبيه ولا يمنع") : undefined },
-      { ok: !!ins, label: t("Insurance", "التأمين"), blocking: true, hint: ins && expired(ins.expiresAt) ? t("Expired: flagged, does not block", "منتهٍ: للتنبيه ولا يمنع") : undefined },
+      { ok: !!second, label: ins || !lic ? t("Insurance", "التأمين") : t("Operating licence", "رخصة التشغيل"), blocking: true, hint: second && expired(second.expiresAt) ? t("Expired: flagged, does not block", "منتهٍ: للتنبيه ولا يمنع") : undefined },
       { ok: !!tr.plate && !!tr.make && !!tr.model, label: t("Plate, make and model", "اللوحة والصنع والطراز") },
     ];
   },

@@ -18,6 +18,8 @@ const DOC: Record<string, [string, string]> = {
   TRUCK_PHOTO: ["Truck photo", "صورة الشاحنة"],
   TRUCK_REGISTRATION: ["Vehicle licence", "رخصة المركبة"],
   TRUCK_INSURANCE: ["Insurance", "التأمين"],
+  TRUCK_OPERATING_LICENSE: ["Tow truck operating licence", "رخصة تشغيل شاحنة السحب"],
+  OPERATING_LICENSE: ["Tow truck operating licence", "رخصة تشغيل شاحنة السحب"],
   REGISTRATION: ["Vehicle licence", "رخصة المركبة"],
   INSURANCE: ["Insurance", "التأمين"],
   TOW_COMPANY_DOCUMENT: ["Company document", "مستند الشركة"],

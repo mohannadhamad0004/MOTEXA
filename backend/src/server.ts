@@ -14,6 +14,7 @@ import towRequestRoutes from "./routes/tow-requests.routes.js";
 import catalogMechanicRoutes from "./routes/catalog-mechanics.routes.js";
 import mechanicRequestRoutes from "./routes/mechanic-requests.routes.js";
 import providerRegistrationRoutes from "./routes/provider-registration.routes.js";
+import providerSignupRoutes from "./routes/provider-signup.routes.js";
 import providerOnboardingRoutes, { notificationsRouter } from "./routes/provider-onboarding.routes.js";
 import { partsReviewRouter, towReviewRouter } from "./routes/provider-review.routes.js";
 import express from "express";
@@ -44,6 +45,8 @@ app.use("/api/provider", providerOnboardingRoutes);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/admin/providers/tow", towReviewRouter);
 app.use("/api/admin/providers/parts", partsReviewRouter);
+// Tow signup carries base64 files: it parses its own (larger) body after its rate limit
+app.use("/api/auth/provider", providerSignupRoutes);
 app.use(express.json({limit:'8mb'}));
 
 app.get("/api/health", (_req, res) => {

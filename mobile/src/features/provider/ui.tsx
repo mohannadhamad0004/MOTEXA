@@ -8,39 +8,49 @@ import { ReactNode, useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Modal, Platform, Pressable, SafeAreaView, View } from "react-native";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { MechanicButton, MechanicNote, useMechanicTheme } from "../../components/MechanicUI";
+import { MechanicNote, useMechanicTheme } from "../../components/MechanicUI";
 import { Text } from "../../components/MotexaVisual";
 import * as Store from "../../components/SessionStore";
 import { API_URL } from "../../core/config/api";
 import { privateImageSource } from "../shared/api";
-import type { Message } from "./api";
-import { bi, fmtTime } from "./labels";
+import { useDT } from "../department/ui";
 
 // ---------------------------------------------------------------- vertical stepper
 export type Step = { key: string; label: string; hint?: string; done: boolean };
 
-/** Numbered steps joined by a line; the active step opens its content right under its title. */
+/** Numbered steps joined by a line; the active step opens its content right under its title. Done = bronze with a check. */
 export function VerticalStepper({ steps, current, onSelect, children }: { steps: Step[]; current: string; onSelect?: (key: string) => void; children: (key: string) => ReactNode }) {
-  const m = useMechanicTheme();
+  const d = useDT();
+  const at = Math.max(0, steps.findIndex((x) => x.key === current));
+  const doneCount = steps.filter((x) => x.done).length;
   return (
     <View>
+      <View accessible accessibilityRole="progressbar" accessibilityLabel={d.t(`Step ${at + 1} of ${steps.length}`, `الخطوة ${at + 1} من ${steps.length}`)} style={{ marginBottom: 16, gap: 6 }}>
+        <View style={{ flexDirection: d.row, justifyContent: "space-between" }}>
+          <Text style={{ color: d.ink, fontSize: 12, fontWeight: "700" }}>{d.t(`Step ${at + 1} of ${steps.length}`, `الخطوة ${at + 1} من ${steps.length}`)}</Text>
+          <Text style={{ color: d.muted, fontSize: 12 }}>{d.t(`${doneCount} done`, `${doneCount} مكتملة`)}</Text>
+        </View>
+        <View style={{ height: 6, borderRadius: 3, backgroundColor: d.chip("neutral").bg, overflow: "hidden", flexDirection: d.row }}>
+          <View style={{ width: `${(Math.max(doneCount, at) / steps.length) * 100}%`, backgroundColor: d.fill, borderRadius: 3 }} />
+        </View>
+      </View>
       {steps.map((s, i) => {
         const active = s.key === current;
         const last = i === steps.length - 1;
         return (
-          <View key={s.key} style={{ flexDirection: m.row, gap: 12 }}>
-            <View style={{ alignItems: "center", width: 30 }}>
+          <View key={s.key} style={{ flexDirection: d.row, gap: 12 }}>
+            <View style={{ alignItems: "center", width: 34 }}>
               <View
-                style={{ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: active || s.done ? "#80502A" : "transparent", borderWidth: 1, borderColor: active || s.done ? "#80502A" : m.border }}
+                style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: s.done ? d.fill : active ? d.chip("bronze").bg : "transparent", borderWidth: 2, borderColor: s.done || active ? d.fill : d.border }}
               >
-                {s.done && !active ? <Ionicons name="checkmark" size={16} color="#FFF7E9" /> : <Text style={{ fontSize: 12, color: active ? "#FFF7E9" : m.muted }}>{i + 1}</Text>}
+                {s.done ? <Ionicons name="checkmark" size={18} color={d.fillInk} /> : <Text style={{ fontSize: 13, fontWeight: "800", color: active ? d.chip("bronze").fg : d.muted }}>{i + 1}</Text>}
               </View>
-              {!last ? <View style={{ flex: 1, width: 1, minHeight: 18, backgroundColor: s.done ? "#B38A5C" : m.border, marginVertical: 4 }} /> : null}
+              {!last ? <View style={{ flex: 1, width: 2, minHeight: 18, backgroundColor: s.done ? d.fill : d.border, marginVertical: 4, borderRadius: 1 }} /> : null}
             </View>
             <View style={{ flex: 1, minWidth: 0, paddingBottom: last ? 0 : 18 }}>
-              <Pressable accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={s.label} disabled={!onSelect} onPress={() => onSelect?.(s.key)} style={{ minHeight: 30, justifyContent: "center" }}>
-                <Text style={{ fontSize: 15, lineHeight: 24, fontWeight: "600", color: m.ink, textAlign: m.align }}>{s.label}</Text>
-                {s.hint ? <Text style={{ fontSize: 11, lineHeight: 18, color: m.muted, textAlign: m.align }}>{s.hint}</Text> : null}
+              <Pressable accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={s.label} disabled={!onSelect} onPress={() => onSelect?.(s.key)} style={{ minHeight: 34, justifyContent: "center" }}>
+                <Text style={{ fontSize: 16, lineHeight: 24, fontWeight: "700", color: active || s.done ? d.ink : d.muted, textAlign: d.align }}>{s.label}</Text>
+                {s.hint ? <Text style={{ fontSize: 12, lineHeight: 18, color: d.muted, textAlign: d.align }}>{s.hint}</Text> : null}
               </Pressable>
               {active ? <View style={{ marginTop: 10 }}>{children(s.key)}</View> : null}
             </View>
@@ -176,32 +186,3 @@ export function useDocViewer() {
   );
   return { open, element };
 }
-
-// ---------------------------------------------------------------- chat
-export function Bubble({ msg, mine, onOpen }: { msg: Message; mine: boolean; onOpen: (a: Message["attachments"][number]) => void }) {
-  const m = useMechanicTheme();
-  if (msg.from === "SYSTEM")
-    return (
-      <View style={{ alignItems: "center", marginVertical: 6 }}>
-        <Text style={{ color: m.muted, fontSize: 11, lineHeight: 18, textAlign: "center", paddingHorizontal: 18 }}>{bi(m.ar, msg.body)} · {fmtTime(msg.at)}</Text>
-      </View>
-    );
-  return (
-    <View style={{ alignItems: mine ? (m.ar ? "flex-start" : "flex-end") : m.ar ? "flex-end" : "flex-start", marginVertical: 4 }}>
-      <View
-        style={{ maxWidth: "86%", padding: 12, borderRadius: 18, gap: 6, borderWidth: 1, borderColor: m.border, backgroundColor: mine ? (m.dark ? "#5A3E2C" : "#F3DBBE") : m.surface }}
-      >
-        <Text style={{ fontSize: 11, color: m.muted, textAlign: m.align }}>{msg.author} · {fmtTime(msg.at)}</Text>
-        {msg.body && msg.body !== "📎" ? <Text style={{ fontSize: 14, lineHeight: 22, color: m.ink, textAlign: m.align }}>{msg.body}</Text> : null}
-        {msg.attachments.map((a) => (
-          <Pressable key={a.id} accessibilityRole="button" accessibilityLabel={a.fileName} onPress={() => onOpen(a)} style={{ flexDirection: m.row, alignItems: "center", gap: 8, minHeight: 36 }}>
-            <Ionicons name={a.mimeType === "application/pdf" ? "document-text-outline" : "image-outline"} size={20} color={m.muted} />
-            <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: m.ink, textAlign: m.align }}>{a.fileName}</Text>
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-export { MechanicButton };

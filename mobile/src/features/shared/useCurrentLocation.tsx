@@ -33,31 +33,33 @@ type Status = "idle" | "locating" | "ready" | "problem";
  * tracking, nothing stored. Before the system permission prompt it shows a short explanation. Put `{loc.dialog}` and
  * `<LocationProblem loc={loc} />` in the screen.
  */
-export function useCurrentLocation() {
+export function useCurrentLocation(purpose: "tow-request" | "signup" = "tow-request") {
   const { t } = useL();
   const [status, setStatus] = useState<Status>("idle");
-  const [message, setMessage] = useState<string | null>(null);
+  const [shown, setPair] = useState<readonly [string, string] | null>(null); // EN + AR, so a visible message follows a language switch
+  const message = shown ? t(shown[0], shown[1]) : null;
   const [blocked, setBlocked] = useState(false);
   const [explain, setExplain] = useState(false);
   const answer = useRef<((ok: boolean) => void) | null>(null);
 
-  const problem = (text: string, isBlocked = false) => {
+  const problem = (text: readonly [string, string], isBlocked = false) => {
     setStatus("problem");
-    setMessage(text);
+    setPair(text);
     setBlocked(isBlocked);
     return null;
   };
 
   const inflight = useRef<Promise<Point | null> | null>(null);
+  const pair = (en: string, ar: string) => [en, ar] as const;
   const doLocate = useCallback(async (): Promise<Point | null> => {
     setStatus("locating");
-    setMessage(null);
+    setPair(null);
     setBlocked(false);
     try {
       let perm = await Location.getForegroundPermissionsAsync();
       if (!perm.granted) {
         if (!perm.canAskAgain) {
-          return problem(t("Location is blocked for MOTEXA. Allow it in the phone settings, or choose the place yourself.", "الموقع محظور لتطبيق MOTEXA. اسمح به من إعدادات الهاتف، أو اختر المكان بنفسك."), true);
+          return problem(pair("Location is blocked for MOTEXA. Allow it in the phone settings, or choose the place yourself.", "الموقع محظور لتطبيق MOTEXA. اسمح به من إعدادات الهاتف، أو اختر المكان بنفسك."), true);
         }
         const agreed = await new Promise<boolean>((resolve) => {
           answer.current = resolve;
@@ -71,29 +73,29 @@ export function useCurrentLocation() {
         if (!perm.granted) {
           return problem(
             perm.canAskAgain
-              ? t("Location permission was not given. You can try again, or choose the place yourself.", "لم يتم منح إذن الموقع. يمكنك المحاولة مرة أخرى، أو اختيار المكان بنفسك.")
-              : t("Location is blocked for MOTEXA. Allow it in the phone settings, or choose the place yourself.", "الموقع محظور لتطبيق MOTEXA. اسمح به من إعدادات الهاتف، أو اختر المكان بنفسك."),
+              ? pair("Location permission was not given. You can try again, or choose the place yourself.", "لم يتم منح إذن الموقع. يمكنك المحاولة مرة أخرى، أو اختيار المكان بنفسك.")
+              : pair("Location is blocked for MOTEXA. Allow it in the phone settings, or choose the place yourself.", "الموقع محظور لتطبيق MOTEXA. اسمح به من إعدادات الهاتف، أو اختر المكان بنفسك."),
             !perm.canAskAgain
           );
         }
       }
       if (!(await Location.hasServicesEnabledAsync())) {
-        return problem(t("Location services are off. Turn them on in the phone settings and try again.", "خدمات الموقع متوقفة. شغّلها من إعدادات الهاتف ثم حاول مرة أخرى."));
+        return problem(pair("Location services are off. Turn them on in the phone settings and try again.", "خدمات الموقع متوقفة. شغّلها من إعدادات الهاتف ثم حاول مرة أخرى."));
       }
       setStatus("locating");
       const pos = await Promise.race([
         Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), TIMEOUT_MS)),
       ]);
-      if (!pos) return problem(t("Finding your location took too long. Try again, or choose the place yourself.", "استغرق تحديد موقعك وقتًا طويلًا. حاول مرة أخرى، أو اختر المكان بنفسك."));
+      if (!pos) return problem(pair("Finding your location took too long. Try again, or choose the place yourself.", "استغرق تحديد موقعك وقتًا طويلًا. حاول مرة أخرى، أو اختر المكان بنفسك."));
       const p = roundPoint({ lat: pos.coords.latitude, lng: pos.coords.longitude });
       locationMemory.current = p;
       setStatus("ready");
       return p;
     } catch {
-      return problem(t("We could not get your location. Check that location is on, or choose the place yourself.", "تعذّر الحصول على موقعك. تأكد من تشغيل الموقع، أو اختر المكان بنفسك."));
+      return problem(pair("We could not get your location. Check that location is on, or choose the place yourself.", "تعذّر الحصول على موقعك. تأكد من تشغيل الموقع، أو اختر المكان بنفسك."));
     }
-  }, [t]);
+  }, []);
 
   // One request at a time: a second tap while one is running gets the same answer. The whole operation counts as busy.
   const locate = useCallback((): Promise<Point | null> => {
@@ -119,10 +121,17 @@ export function useCurrentLocation() {
       visible={explain}
       type="confirm"
       title={t("Use your location?", "استخدام موقعك؟")}
-      message={t(
-        "MOTEXA reads your location once, only now, to find tow companies near you or to mark where your car is. It is not tracked in the background. It is saved only if you send a tow request.",
-        "يقرأ MOTEXA موقعك مرة واحدة فقط الآن، للعثور على شركات السحب القريبة منك أو لتحديد مكان سيارتك. لا يتم تتبعه في الخلفية. ولا يُحفظ إلا إذا أرسلت طلب سحب."
-      )}
+      message={
+        purpose === "signup"
+          ? t(
+              "MOTEXA needs a location to register where your business operates. It reads your location once, only now. It is not tracked in the background.",
+              "يحتاج MOTEXA إلى موقع لتسجيل المكان الذي يعمل منه نشاطك. يقرأ موقعك مرة واحدة فقط الآن. ولا يتم تتبعه في الخلفية."
+            )
+          : t(
+              "MOTEXA reads your location once, only now, to find tow companies near you or to mark where your car is. It is not tracked in the background. It is saved only if you send a tow request.",
+              "يقرأ MOTEXA موقعك مرة واحدة فقط الآن، للعثور على شركات السحب القريبة منك أو لتحديد مكان سيارتك. لا يتم تتبعه في الخلفية. ولا يُحفظ إلا إذا أرسلت طلب سحب."
+            )
+      }
       confirmText={t("Continue", "متابعة")}
       cancelText={t("Not now", "ليس الآن")}
       onConfirm={() => reply(true)}

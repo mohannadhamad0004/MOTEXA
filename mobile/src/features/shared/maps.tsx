@@ -17,7 +17,7 @@ export const MAPS_AVAILABLE = true;
 
 export type Pin = { id: string; name: string; lat: number; lng: number; free: boolean };
 
-type Kind = "free" | "busy" | "selected" | "pin" | "a" | "b" | "tow" | "mech";
+type Kind = "free" | "busy" | "selected" | "pin" | "a" | "b" | "tow" | "mech" | "hq" | "shop";
 type MapData = {
   mode: "companies" | "pin" | "trip" | "service";
   pins: { id: string; name: string; lat: number; lng: number; kind: Kind; dim?: boolean }[];
@@ -120,10 +120,10 @@ function icon(kind,t,label){
   var html='<div class="pin" style="width:'+size+'px;height:'+size+'px;background:'+bg+'">'+(label||"")+'</div>';
   return L.divIcon({html:html,className:"",iconSize:[size,size],iconAnchor:[size/2,size/2]});
 }
-var GLYPH={tow:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16V11H8L10 7H14V16M14 13H22V16"/><circle cx="7" cy="17" r="2"/><circle cx="18" cy="17" r="2"/></svg>',mech:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6a4 4 0 0 0 5 5L11 19a2 2 0 0 1-3-3Z"/></svg>'};
+var GLYPH={tow:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16V11H8L10 7H14V16M14 13H22V16"/><circle cx="7" cy="17" r="2"/><circle cx="18" cy="17" r="2"/></svg>',mech:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6a4 4 0 0 0 5 5L11 19a2 2 0 0 1-3-3Z"/></svg>',shop:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9M3 9h18M3 9v1a3 3 0 0 0 6 0M9 10a3 3 0 0 0 6 0M15 10a3 3 0 0 0 6 0M5 12v8h14v-8M10 20v-5h4v5"/></svg>',hq:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V4h10v17M14 9h6v12M8 8h2M8 12h2M8 16h2M2 21h20"/></svg>'};
 var MINI=false;
 function svcIcon(p,sel,t,cls,delay){
-  var bg=p.dim?t.busy:t.accent,size=MINI?(sel?30:24):(sel?44:36);
+  var bg=p.kind==="hq"?"#5B3C26":p.dim?t.busy:t.accent,size=MINI?(sel?30:24):(sel?44:36);
   return L.divIcon({html:'<div class="svc'+(sel?' sel':'')+(cls||'')+'" style="background:'+bg+(delay!=null?';animation-delay:'+delay+'ms':'')+'">'+GLYPH[p.kind]+'</div>',className:"",iconSize:[size,size],iconAnchor:[size/2,size]});
 }
 var lastFocus="",seen={},lastHlKey="",lastRouteKey="",miniDone=false;
@@ -417,7 +417,7 @@ export function TripMap({ pickup, dropoff, height = 200, bare, bottomInset }: { 
   return <LeafletMap height={height} data={data} bare={bare} bottomInset={bottomInset} />;
 }
 
-export type ServicePin = { id: string; name: string; lat: number; lng: number; kind: "tow" | "mech"; dim: boolean };
+export type ServicePin = { id: string; name: string; lat: number; lng: number; kind: "tow" | "mech" | "hq" | "shop"; dim: boolean };
 
 /**
  * The full-screen Tow / Mechanics map: provider pins (a truck or wrench glyph, greyed when unavailable), the selected

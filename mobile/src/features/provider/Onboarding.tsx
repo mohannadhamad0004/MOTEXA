@@ -8,34 +8,36 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { ReactNode, useCallback, useRef, useState } from "react";
 import { View } from "react-native";
-import { MechanicButton, MechanicCard, MechanicChoice, MechanicField, MechanicNote, MechanicPage, useMechanicTheme } from "../../components/MechanicUI";
+import { MechanicField, MechanicPage, useMechanicTheme } from "../../components/MechanicUI";
+import { ProviderButton, ProviderCard, ProviderChoice, ProviderNote } from "./kit";
 import { pickMechanicDocument } from "../../components/MechanicDocuments";
 import { Text } from "../../components/MotexaVisual";
 import { CATALOG_GROUPS } from "../../core/constants/categories";
 import { CITIES, MAX_SERVICE_CITIES, cityCentre, cityLabel } from "../../core/constants/cities";
 import { localFileToBase64, fileNameOf } from "../../core/constants/files";
 import { pickImage } from "../../core/hooks/nav";
-import { MAPS_AVAILABLE, PinMap } from "../shared/maps";
-import { useCurrentLocation } from "../shared/useCurrentLocation";
+import { LocationRow } from "../department/LocationRow";
+import { takePickedLocation } from "./LocationPicker";
 import { TRUCK_TYPES, towFleetService } from "../tow/towService";
 import type { TruckType } from "../tow/towService";
 import { Application, Doc, Info, TruckRow, onboarding } from "./api";
 import { actionLabel, appStatusLabel, bi, docLabel, docStatusLabel, fmtDay, fmtTime, keyLabel, truckTypeLabel } from "./labels";
 import { VerticalStepper, useDocViewer } from "./ui";
-import { Pill } from "../department/ui";
+import { DButton, Panel, Pill, StatusChip, cardStyle, useDT } from "../department/ui";
 
 const ACTOR = { id: "", email: "", fullName: "" };
 const err = (e: unknown, fallback: string) => (e instanceof Error ? e.message : fallback);
 const iso = /^\d{4}-\d{2}-\d{2}$/;
 
-/** A small red note under a field the reviewer flagged. */
+/** A tinted note under a field the reviewer flagged. */
 function Flag({ show }: { show: boolean }) {
-  const m = useMechanicTheme();
+  const d = useDT();
   if (!show) return null;
+  const c = d.chip("amber");
   return (
-    <View style={{ flexDirection: m.row, alignItems: "center", gap: 6 }}>
-      <Ionicons name="flag" size={13} color={m.dark ? "#F1B8A0" : "#A24930"} />
-      <Text style={{ fontSize: 11, color: m.dark ? "#F1B8A0" : "#A24930", textAlign: m.align }}>{m.t("MOTEXA asked you to fix this", "طلبت MOTEXA تصحيح هذا")}</Text>
+    <View style={{ flexDirection: d.row, alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, borderWidth: 1, borderColor: c.border, backgroundColor: c.bg }}>
+      <Ionicons name="flag" size={14} color={c.fg} />
+      <Text style={{ flex: 1, fontSize: 12, lineHeight: 18, fontWeight: "600", color: c.fg, textAlign: d.align }}>{d.t("MOTEXA asked you to fix this", "طلبت MOTEXA تصحيح هذا")}</Text>
     </View>
   );
 }
@@ -74,8 +76,16 @@ function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: App
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(i.baseLat != null && i.baseLng != null ? { lat: i.baseLat, lng: i.baseLng } : null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const loc = useCurrentLocation();
   const set = (k: keyof typeof f) => (v: string) => setF((cur) => ({ ...cur, [k]: v }));
+  // coming back from the full-screen picker: it already saved the point on the draft, the form just shows it
+  useFocusEffect(
+    useCallback(() => {
+      const p = takePickedLocation();
+      if (p) setPin(p);
+    }, []),
+  );
+  const openPicker = () =>
+    router.push({ pathname: "/provider/onboarding/location", params: { ...(pin ? { lat: String(pin.lat), lng: String(pin.lng) } : {}), city: f.city } } as never);
   const toggle = (list: string[], v: string, max = 99) => (list.includes(v) ? list.filter((x) => x !== v) : list.length >= max ? list : [...list, v]);
 
   async function save() {
@@ -95,16 +105,11 @@ function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: App
     }
   }
 
-  async function useMyLocation() {
-    const p = await loc.locate();
-    if (p) setPin({ lat: p.lat, lng: p.lng });
-  }
 
   return (
-    <MechanicCard>
+    <ProviderCard>
       <View style={{ gap: 13 }}>
-        {loc.dialog}
-        {error ? <MechanicNote error>{error}</MechanicNote> : null}
+        {error ? <ProviderNote error>{error}</ProviderNote> : null}
         <MechanicField label={tow ? m.t("Company name", "اسم الشركة") : m.t("Shop name", "اسم المتجر")} icon="business-outline" value={f.name} onChangeText={set("name")} maxLength={120} />
         <MechanicField label={tow ? m.t("Company name in Arabic", "اسم الشركة بالعربية") : m.t("Shop name in Arabic", "اسم المتجر بالعربية")} icon="text-outline" value={f.nameAr} onChangeText={set("nameAr")} maxLength={120} />
         <MechanicField label={m.t("Owner name", "اسم المالك")} icon="person-outline" value={f.ownerName} onChangeText={set("ownerName")} maxLength={120} />
@@ -114,7 +119,7 @@ function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: App
         <Label>{m.t("City", "المدينة")}</Label>
         <Wrap>
           {CITIES.map((c) => (
-            <MechanicChoice key={c.name} label={cityLabel(c.name, m.ar)} selected={f.city === c.name} onPress={() => set("city")(c.name)} />
+            <ProviderChoice key={c.name} label={cityLabel(c.name, m.ar)} selected={f.city === c.name} onPress={() => set("city")(c.name)} />
           ))}
         </Wrap>
         <Flag show={flagged.has("city")} />
@@ -122,22 +127,7 @@ function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: App
         <Flag show={flagged.has("address")} />
 
         <Label>{m.t("Location on the map", "الموقع على الخريطة")}</Label>
-        {MAPS_AVAILABLE && pin ? <PinMap point={pin} onChange={setPin} height={200} /> : null}
-        <Text style={{ fontSize: 11, lineHeight: 18, color: m.muted, textAlign: m.align }}>
-          {pin ? m.t("Tap the map or drag the pin to move it.", "المس الخريطة أو اسحب الدبوس لتحريكه.") : m.t("Use your current location once, or pick your city and move the pin.", "استخدم موقعك الحالي مرة واحدة، أو اختر مدينتك وحرّك الدبوس.")}
-        </Text>
-        {loc.message ? <MechanicNote error>{loc.message}</MechanicNote> : null}
-        <MechanicButton secondary label={loc.locating ? m.t("Finding your location…", "جارٍ تحديد موقعك…") : m.t("Use my current location", "استخدم موقعي الحالي")} onPress={useMyLocation} disabled={loc.locating} />
-        {!pin && f.city ? (
-          <MechanicButton
-            secondary
-            label={m.t("Place the pin in my city", "ضع الدبوس في مدينتي")}
-            onPress={() => {
-              const c = cityCentre(f.city);
-              if (c) setPin({ lat: c.lat, lng: c.lng });
-            }}
-          />
-        ) : null}
+        <LocationRow point={pin} city={f.city} address={f.address} buttonLabel={pin ? m.t("Change", "تغيير") : m.t("Pick location on map", "اختر الموقع على الخريطة")} flagged={flagged.has("location")} onPress={openPicker} />
         <Flag show={flagged.has("location")} />
 
         {tow ? (
@@ -145,18 +135,18 @@ function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: App
             <Label>{m.t("Cities you cover", "المدن التي تغطيها")} ({cities.length}/{MAX_SERVICE_CITIES})</Label>
             <Wrap>
               {CITIES.map((c) => (
-                <MechanicChoice key={c.name} label={cityLabel(c.name, m.ar)} selected={cities.includes(c.name)} onPress={() => setCities(toggle(cities, c.name, MAX_SERVICE_CITIES))} />
+                <ProviderChoice key={c.name} label={cityLabel(c.name, m.ar)} selected={cities.includes(c.name)} onPress={() => setCities(toggle(cities, c.name, MAX_SERVICE_CITIES))} />
               ))}
             </Wrap>
             <Flag show={flagged.has("serviceCities")} />
             <Label>{m.t("Working hours", "ساعات العمل")}</Label>
-            <MechanicChoice label={m.t("Open 24/7", "يعمل على مدار الساعة")} selected={open24} onPress={() => setOpen24(!open24)} icon={open24 ? "checkmark-circle" : "ellipse-outline"} />
+            <ProviderChoice label={m.t("Open 24/7", "يعمل على مدار الساعة")} selected={open24} onPress={() => setOpen24(!open24)} icon={open24 ? "checkmark-circle" : "ellipse-outline"} />
             {!open24 ? <MechanicField label={m.t("Hours (for example Sat-Thu 08:00-18:00)", "الساعات (مثال: السبت-الخميس 08:00-18:00)")} icon="time-outline" value={f.workingHours} onChangeText={set("workingHours")} maxLength={100} /> : null}
             <Flag show={flagged.has("workingHours")} />
             <Label>{m.t("Truck types you operate", "أنواع الشاحنات لديك")}</Label>
             <Wrap>
               {TRUCK_TYPES.map((k) => (
-                <MechanicChoice key={k} label={truckTypeLabel(m.t, k)} selected={truckTypes.includes(k)} onPress={() => setTruckTypes(toggle(truckTypes, k))} />
+                <ProviderChoice key={k} label={truckTypeLabel(m.t, k)} selected={truckTypes.includes(k)} onPress={() => setTruckTypes(toggle(truckTypes, k))} />
               ))}
             </Wrap>
             <Flag show={flagged.has("truckTypes")} />
@@ -172,7 +162,7 @@ function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: App
                 <Text style={{ fontSize: 11, color: m.muted, textAlign: m.align }}>{m.t(g.en, g.ar)}</Text>
                 <Wrap>
                   {g.categories.map((c) => (
-                    <MechanicChoice key={c.key} label={m.t(c.en, c.ar)} selected={cats.includes(c.key)} onPress={() => setCats(toggle(cats, c.key))} />
+                    <ProviderChoice key={c.key} label={m.t(c.en, c.ar)} selected={cats.includes(c.key)} onPress={() => setCats(toggle(cats, c.key))} />
                   ))}
                 </Wrap>
               </View>
@@ -184,9 +174,9 @@ function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: App
             <Flag show={flagged.has("workingHours")} />
           </>
         )}
-        <MechanicButton label={m.t("Save and continue", "حفظ ومتابعة")} onPress={save} busy={busy} disabled={busy} />
+        <ProviderButton label={m.t("Save and continue", "حفظ ومتابعة")} onPress={save} busy={busy} disabled={busy} />
       </View>
-    </MechanicCard>
+    </ProviderCard>
   );
 }
 
@@ -239,47 +229,57 @@ function TrucksEditor({ app, onChanged }: { app: Application; onChanged: (a: App
       ))}
       {adding ? (
         <View style={{ gap: 12, padding: 12, borderRadius: 20, borderWidth: 1, borderColor: m.border }}>
-          {error ? <MechanicNote error>{error}</MechanicNote> : null}
+          {error ? <ProviderNote error>{error}</ProviderNote> : null}
           <MechanicField label={m.t("Plate number", "رقم اللوحة")} icon="reader-outline" value={plate} onChangeText={setPlate} maxLength={20} autoCapitalize="characters" />
           <Wrap>
             {TRUCK_TYPES.map((k) => (
-              <MechanicChoice key={k} label={truckTypeLabel(m.t, k)} selected={type === k} onPress={() => setType(k)} />
+              <ProviderChoice key={k} label={truckTypeLabel(m.t, k)} selected={type === k} onPress={() => setType(k)} />
             ))}
           </Wrap>
           <MechanicField label={m.t("Make", "الصنع")} icon="car-outline" value={make} onChangeText={setMake} maxLength={60} />
           <MechanicField label={m.t("Model", "الطراز")} icon="car-outline" value={model} onChangeText={setModel} maxLength={60} />
           <MechanicField label={m.t("Year (optional)", "السنة (اختياري)")} icon="calendar-outline" value={year} onChangeText={(v) => setYear(v.replace(/[^0-9]/g, ""))} keyboardType="number-pad" maxLength={4} />
-          <MechanicButton secondary label={photo ? m.t("Photo chosen · change", "تم اختيار صورة · تغيير") : m.t("Add a truck photo", "أضف صورة الشاحنة")} onPress={async () => setPhoto((await pickImage()) ?? photo)} />
-          <MechanicButton label={m.t("Add this truck", "إضافة هذه الشاحنة")} onPress={add} busy={busy} disabled={busy} />
-          <MechanicButton secondary label={m.t("Cancel", "إلغاء")} onPress={() => setAdding(false)} />
+          <ProviderButton secondary label={photo ? m.t("Photo chosen · change", "تم اختيار صورة · تغيير") : m.t("Add a truck photo", "أضف صورة الشاحنة")} onPress={async () => setPhoto((await pickImage()) ?? photo)} />
+          <ProviderButton label={m.t("Add this truck", "إضافة هذه الشاحنة")} onPress={add} busy={busy} disabled={busy} />
+          <ProviderButton secondary label={m.t("Cancel", "إلغاء")} onPress={() => setAdding(false)} />
         </View>
       ) : (
-        <MechanicButton secondary label={m.t("Add a truck", "إضافة شاحنة")} onPress={() => setAdding(true)} />
+        <ProviderButton secondary label={m.t("Add a truck", "إضافة شاحنة")} onPress={() => setAdding(true)} />
       )}
     </View>
   );
 }
 
 // ================================================================= step 2: documents
-function statusTone(s: string) {
-  return s === "ACCEPTED" ? "ok" : s === "REJECTED" ? "bad" : "warn";
-}
-
+/** One document: icon, translated kind, status chip, the file, the reviewer's reason when rejected, and Upload / Replace. */
 function DocCard({ title, doc, flagged, busy, onPick, expiry, setExpiry }: { title: string; doc?: Doc; flagged: boolean; busy: boolean; onPick: () => void; expiry?: string; setExpiry?: (v: string) => void }) {
-  const m = useMechanicTheme();
-  const bad = doc?.status === "REJECTED" || flagged;
+  const d = useDT();
+  const rejected = doc?.status === "REJECTED";
+  const tone = rejected ? "bad" : doc ? (doc.status === "ACCEPTED" ? "ok" : "amber") : "neutral";
+  const c = d.chip(tone);
   return (
-    <View style={{ gap: 8, padding: 14, borderRadius: 22, borderWidth: 1, borderColor: bad ? (m.dark ? "#F1B8A0" : "#A24930") : m.border, backgroundColor: m.dark ? "#30241C" : "#FFFCF7" }}>
-      <View style={{ flexDirection: m.row, alignItems: "center", gap: 10 }}>
-        <Ionicons name={doc ? "document-attach-outline" : "cloud-upload-outline"} size={22} color={m.muted} />
-        <Text style={{ flex: 1, fontSize: 14, fontWeight: "600", color: m.ink, textAlign: m.align }}>{title}</Text>
-        {doc ? <Pill tone={statusTone(doc.status) as any} label={docStatusLabel(m.t, doc.status)} /> : null}
+    <View style={{ ...cardStyle(d, rejected || (flagged && !doc) ? "bad" : undefined), padding: 14, gap: 10 }}>
+      <View style={{ flexDirection: d.row, alignItems: "center", gap: 12 }}>
+        <View style={{ width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: c.bg, borderWidth: 1, borderColor: c.border }}>
+          <Ionicons name={doc ? "document-attach-outline" : "cloud-upload-outline"} size={22} color={c.fg} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+          <Text style={{ fontSize: 14, lineHeight: 21, fontWeight: "700", color: d.ink, textAlign: d.align }}>{title}</Text>
+          <Text numberOfLines={1} style={{ fontSize: 11, lineHeight: 17, color: d.muted, textAlign: d.align }}>
+            {doc ? `${doc.fileName}${doc.expiresAt ? ` · ${d.t("expires", "ينتهي")} ${fmtDay(doc.expiresAt)}` : ""}` : d.t("Not uploaded yet", "لم يُرفع بعد")}
+          </Text>
+        </View>
+        {doc ? <StatusChip kind="doc" status={doc.status} /> : null}
       </View>
-      {doc ? <Text numberOfLines={1} style={{ fontSize: 11, color: m.muted, textAlign: m.align }}>{doc.fileName}{doc.expiresAt ? ` · ${m.t("expires", "ينتهي")} ${fmtDay(doc.expiresAt)}` : ""}</Text> : null}
-      {doc?.status === "REJECTED" && doc.reason ? <Text style={{ fontSize: 12, lineHeight: 19, color: m.dark ? "#F1B8A0" : "#A24930", textAlign: m.align }}>{doc.reason}</Text> : null}
-      <Flag show={flagged && doc?.status !== "REJECTED"} />
-      {setExpiry ? <MechanicField label={m.t("Expiry date (optional, YYYY-MM-DD)", "تاريخ الانتهاء (اختياري، YYYY-MM-DD)")} icon="calendar-outline" value={expiry ?? ""} onChangeText={setExpiry} maxLength={10} keyboardType="numbers-and-punctuation" /> : null}
-      <MechanicButton secondary label={doc ? m.t("Replace file", "استبدال الملف") : m.t("Choose a photo or PDF", "اختر صورة أو PDF")} onPress={onPick} disabled={busy} busy={busy} />
+      {rejected && doc?.reason ? (
+        <View style={{ flexDirection: d.row, gap: 8, padding: 10, borderRadius: 14, borderWidth: 1, borderColor: d.chip("bad").border, backgroundColor: d.chip("bad").bg }}>
+          <Ionicons name="alert-circle" size={18} color={d.chip("bad").fg} />
+          <Text style={{ flex: 1, fontSize: 12, lineHeight: 19, color: d.chip("bad").fg, fontWeight: "600", textAlign: d.align }}>{doc.reason}</Text>
+        </View>
+      ) : null}
+      <Flag show={flagged && !rejected} />
+      {setExpiry ? <MechanicField label={d.t("Expiry date (optional, YYYY-MM-DD)", "تاريخ الانتهاء (اختياري، YYYY-MM-DD)")} icon="calendar-outline" value={expiry ?? ""} onChangeText={setExpiry} maxLength={10} keyboardType="numbers-and-punctuation" /> : null}
+      <DButton variant={doc && !rejected ? "ghost" : "primary"} icon="cloud-upload-outline" label={busy ? d.t("Uploading…", "جارٍ الرفع…") : doc ? d.t("Replace file", "استبدال الملف") : d.t("Upload photo or PDF", "رفع صورة أو PDF")} onPress={onPick} disabled={busy} />
     </View>
   );
 }
@@ -326,7 +326,7 @@ function DocumentsStep({ app, onSaved, onNext }: { app: Application; onSaved: (a
       if (f) await onboarding.upload({ kind, name: f.fileName, dataBase64: f.base64, expiresAt });
     });
 
-  const pickTruck = (t: TruckRow, kind: "REGISTRATION" | "INSURANCE" | "PHOTO") =>
+  const pickTruck = (t: TruckRow, kind: "REGISTRATION" | "INSURANCE" | "OPERATING_LICENSE" | "PHOTO") =>
     run(`${t.id}:${kind}`, async () => {
       const uri = await pickImage();
       if (!uri) return;
@@ -346,7 +346,7 @@ function DocumentsStep({ app, onSaved, onNext }: { app: Application; onSaved: (a
 
   return (
     <View style={{ gap: 12 }}>
-      {error ? <MechanicNote error>{error}</MechanicNote> : null}
+      {error ? <ProviderNote error>{error}</ProviderNote> : null}
       <Text style={{ fontSize: 12, lineHeight: 20, color: m.muted, textAlign: m.align }}>
         {m.t("JPEG, PNG or PDF, up to 5 MB. Documents are private: only you and the MOTEXA team can open them.", "JPEG أو PNG أو PDF حتى 5 ميغابايت. المستندات خاصة: لا يفتحها إلا أنت وفريق MOTEXA.")}
       </Text>
@@ -358,7 +358,8 @@ function DocumentsStep({ app, onSaved, onNext }: { app: Application; onSaved: (a
             <View key={t.id} style={{ gap: 10 }}>
               <Text style={{ fontSize: 14, fontWeight: "600", color: m.ink, textAlign: m.align, marginTop: 6 }}>{truckTypeLabel(m.t, t.type)} · {"⁦" + t.plate + "⁩"}</Text>
               <DocCard title={docLabel(m.t, "TRUCK_PHOTO")} doc={t.documents.find((d) => d.purpose === "TRUCK_PHOTO")} flagged={flagged.has("doc:TRUCK_PHOTO")} busy={busyKey === `${t.id}:PHOTO`} onPick={() => pickTruck(t, "PHOTO")} />
-              {(["REGISTRATION", "INSURANCE"] as const).map((k) => (
+              {/* trucks from the new signup carry an operating licence; older trucks keep their insurance document */}
+              {(t.documents.some((x) => x.purpose === "TRUCK_OPERATING_LICENSE") ? (["REGISTRATION", "OPERATING_LICENSE"] as const) : (["REGISTRATION", "INSURANCE"] as const)).map((k) => (
                 <DocCard
                   key={k}
                   title={docLabel(m.t, k)}
@@ -373,8 +374,8 @@ function DocumentsStep({ app, onSaved, onNext }: { app: Application; onSaved: (a
             </View>
           ))
         : null}
-      {tow && app.trucks.length === 0 ? <MechanicNote>{m.t("Add at least one truck in step 1 to upload its documents.", "أضف شاحنة واحدة على الأقل في الخطوة 1 لرفع مستنداتها.")}</MechanicNote> : null}
-      <MechanicButton label={m.t("Continue", "متابعة")} onPress={onNext} />
+      {tow && app.trucks.length === 0 ? <ProviderNote>{m.t("Add at least one truck in step 1 to upload its documents.", "أضف شاحنة واحدة على الأقل في الخطوة 1 لرفع مستنداتها.")}</ProviderNote> : null}
+      <ProviderButton label={m.t("Continue", "متابعة")} onPress={onNext} />
     </View>
   );
 }
@@ -406,8 +407,8 @@ function ReviewStep({ app, onEdit, onSubmitted }: { app: Application; onEdit: (s
   ) : null);
   return (
     <View style={{ gap: 12 }}>
-      {error ? <MechanicNote error>{error}</MechanicNote> : null}
-      <MechanicCard>
+      {error ? <ProviderNote error>{error}</ProviderNote> : null}
+      <ProviderCard>
         <View style={{ gap: 2 }}>
           {row(m.t("Name", "الاسم"), i.name)}
           {row(m.t("Arabic name", "الاسم بالعربية"), i.nameAr)}
@@ -419,9 +420,9 @@ function ReviewStep({ app, onEdit, onSubmitted }: { app: Application; onEdit: (s
           {row(m.t("Working hours", "ساعات العمل"), i.open24h ? m.t("Open 24/7", "على مدار الساعة") : i.workingHours)}
           {app.kind === "TOW" ? row(m.t("Trucks", "الشاحنات"), String(app.trucks.length)) : row(m.t("Categories", "الفئات"), String((i.categories ?? []).length))}
         </View>
-        <MechanicButton secondary label={m.t("Edit information", "تعديل البيانات")} onPress={() => onEdit("info")} />
-      </MechanicCard>
-      <MechanicCard>
+        <ProviderButton secondary label={m.t("Edit information", "تعديل البيانات")} onPress={() => onEdit("info")} />
+      </ProviderCard>
+      <ProviderCard>
         {[...app.requiredDocuments, ...(app.kind === "PARTS" ? ["STOREFRONT_PHOTO"] : [])].map((k) => {
           const d = app.documents.find((x) => x.kind === k);
           return (
@@ -431,17 +432,17 @@ function ReviewStep({ app, onEdit, onSubmitted }: { app: Application; onEdit: (s
             </View>
           );
         })}
-        <MechanicButton secondary label={m.t("Edit documents", "تعديل المستندات")} onPress={() => onEdit("documents")} />
-      </MechanicCard>
+        <ProviderButton secondary label={m.t("Edit documents", "تعديل المستندات")} onPress={() => onEdit("documents")} />
+      </ProviderCard>
       {missing.length ? (
-        <MechanicNote error>
+        <ProviderNote error>
           {m.t("Still missing: ", "ما زال ناقصًا: ")}
           {missing.map((k) => keyLabel(m.t, k)).join(m.ar ? "، " : ", ")}
-        </MechanicNote>
+        </ProviderNote>
       ) : (
-        <MechanicNote>{m.t("Everything is in place. MOTEXA will review your application.", "كل شيء جاهز. ستراجع MOTEXA طلبك.")}</MechanicNote>
+        <ProviderNote>{m.t("Everything is in place. MOTEXA will review your application.", "كل شيء جاهز. ستراجع MOTEXA طلبك.")}</ProviderNote>
       )}
-      <MechanicButton label={app.status === "NEEDS_CHANGES" ? m.t("Resubmit for review", "أعد الإرسال للمراجعة") : m.t("Submit for review", "أرسل للمراجعة")} onPress={submit} busy={busy} disabled={busy || missing.length > 0} />
+      <ProviderButton label={app.status === "NEEDS_CHANGES" ? m.t("Resubmit for review", "أعد الإرسال للمراجعة") : m.t("Submit for review", "أرسل للمراجعة")} onPress={submit} busy={busy} disabled={busy || missing.length > 0} />
     </View>
   );
 }
@@ -471,63 +472,104 @@ function Timeline({ app }: { app: Application }) {
 
 function StatusView({ app, onFix }: { app: Application; onFix: () => void }) {
   const m = useMechanicTheme();
+  const d = useDT();
   const viewer = useDocViewer();
-  const tone = app.status === "APPROVED" ? "ok" : app.status === "REJECTED" ? "bad" : app.status === "NEEDS_CHANGES" ? "warn" : "neutral";
-  const flaggedDocs = [...app.documents, ...app.trucks.flatMap((t) => t.documents)].filter((d) => d.status === "REJECTED");
+  const companyFlagged = app.documents.filter((x) => x.status === "REJECTED");
+  // a truck's problem is shown under that truck's plate, never as a problem of the whole company
+  const truckFlagged = app.trucks.map((t) => ({ t, docs: t.documents.filter((x) => x.status === "REJECTED") })).filter((x) => x.docs.length);
+  // the admin's own words: the latest "changes requested" message from the history, shown as written
+  const adminMessage = [...app.timeline].reverse().find((e) => e.action === "CHANGES_REQUESTED")?.details?.message as string | undefined;
+  const tone = { PENDING: "bronze", NEEDS_CHANGES: "amber", APPROVED: "ok", REJECTED: "bad", DRAFT: "neutral" }[app.status] as "bronze" | "amber" | "ok" | "bad" | "neutral";
+  const c = d.chip(tone);
+  const headline =
+    app.status === "PENDING"
+      ? m.t("Application under review", "الطلب قيد المراجعة")
+      : app.status === "NEEDS_CHANGES"
+        ? m.t("Changes requested", "مطلوب تعديلات")
+        : app.status === "APPROVED"
+          ? m.t("Application approved", "تمت الموافقة على الطلب")
+          : app.status === "REJECTED"
+            ? m.t("Application rejected", "تم رفض الطلب")
+            : "";
   const flagged = app.flaggedFields.filter((k) => !k.startsWith("doc:"));
   const home = app.kind === "TOW" ? "/provider/tow" : "/provider/parts";
+  const next =
+    app.status === "PENDING"
+      ? m.t("MOTEXA is reviewing your application. Until it is approved you cannot use the provider features that need approval. You will see the result here and get a notification.", "تراجع MOTEXA طلبك. إلى أن تتم الموافقة لا يمكنك استخدام ميزات المزوّد التي تتطلب الاعتماد. ستظهر النتيجة هنا وسيصلك إشعار.")
+      : app.status === "NEEDS_CHANGES"
+        ? m.t("MOTEXA asked for changes. Fix the items below and resubmit: you keep your application and do not need a new account.", "طلبت MOTEXA تعديلات. صحّح العناصر أدناه ثم أعد الإرسال: يبقى طلبك كما هو ولا تحتاج إلى حساب جديد.")
+        : app.status === "APPROVED"
+          ? m.t("You are approved. Customers can find you and you can receive requests now.", "تمت الموافقة عليك. يمكن للعملاء إيجادك ويمكنك استقبال الطلبات الآن.")
+          : m.t("This application was rejected and cannot be resubmitted in the app. You can contact MOTEXA if you think this is a mistake.", "تم رفض هذا الطلب ولا يمكن إعادة إرساله من التطبيق. يمكنك التواصل مع MOTEXA إن رأيت أن ذلك خطأ.");
   return (
     <View style={{ gap: 12 }}>
       {viewer.element}
-      <MechanicCard>
-        <View style={{ gap: 10 }}>
-          <View style={{ flexDirection: m.row, alignItems: "center", gap: 10 }}>
-            <Text style={{ flex: 1, fontSize: 18, fontWeight: "600", color: m.ink, textAlign: m.align }}>{app.info.name}</Text>
-            <Pill tone={tone as any} label={appStatusLabel(m.t, app.status)} />
+      <Panel>
+        <View style={{ alignItems: "center", gap: 10, paddingVertical: 6 }}>
+          <StatusChip status={app.status} size="l" />
+          {headline ? <Text accessibilityRole="header" style={{ fontSize: 19, lineHeight: 28, fontWeight: "800", color: c.fg, textAlign: "center" }}>{headline}</Text> : null}
+          <Text style={{ fontSize: 15, lineHeight: 22, fontWeight: "700", color: d.ink, textAlign: "center" }}>{app.info.name}</Text>
+          <Text style={{ fontSize: 14, lineHeight: 23, color: d.muted, textAlign: "center" }}>{next}</Text>
+        </View>
+        {app.status === "REJECTED" ? (
+          <View style={{ gap: 6, marginTop: 4 }}>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: d.ink, textAlign: d.align }}>{m.t("Reason from MOTEXA", "السبب من MOTEXA")}</Text>
+            <ProviderNote error>{app.rejectionReason || m.t("No reason was given. Contact MOTEXA.", "لم يُذكر سبب. تواصل مع MOTEXA.")}</ProviderNote>
           </View>
-          <Text style={{ fontSize: 13, lineHeight: 22, color: m.muted, textAlign: m.align }}>
-            {app.status === "PENDING"
-              ? m.t("Your application is with the MOTEXA team. We will tell you here and by notification when something changes.", "طلبك لدى فريق MOTEXA. سنخبرك هنا وبإشعار عند أي تغيير.")
-              : app.status === "NEEDS_CHANGES"
-                ? m.t("MOTEXA asked for changes. Fix the flagged items and resubmit.", "طلبت MOTEXA تعديلات. صحّح العناصر المحددة ثم أعد الإرسال.")
-                : app.status === "APPROVED"
-                  ? m.t("Your application is approved. You can receive requests now.", "تمت الموافقة على طلبك. يمكنك الآن استقبال الطلبات.")
-                  : m.t("Your application was rejected.", "تم رفض طلبك.")}
-          </Text>
-          {app.status === "REJECTED" && app.rejectionReason ? <MechanicNote error>{app.rejectionReason}</MechanicNote> : null}
-          {app.status === "NEEDS_CHANGES" ? (
-            <View style={{ gap: 6 }}>
-              {flagged.map((k) => (
-                <Flagged key={k} text={keyLabel(m.t, k)} />
-              ))}
-              {flaggedDocs.map((d) => (
-                <Flagged key={d.id} text={`${docLabel(m.t, d.kind)}${d.reason ? `: ${d.reason}` : ""}`} />
-              ))}
-            </View>
-          ) : null}
-          {app.status === "NEEDS_CHANGES" ? <MechanicButton label={m.t("Fix and resubmit", "صحّح وأعد الإرسال")} onPress={onFix} /> : null}
-          {app.status === "APPROVED" ? <MechanicButton label={m.t("Open my dashboard", "افتح لوحتي")} onPress={() => router.replace(home as never)} /> : null}
-          <MechanicButton
-            secondary
+        ) : null}
+        {app.status === "NEEDS_CHANGES" ? (
+          <View style={{ gap: 8, marginTop: 8 }}>
+            {adminMessage ? (
+              <>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: d.ink, textAlign: d.align }}>{m.t("Message from MOTEXA", "رسالة من MOTEXA")}</Text>
+                <ProviderNote>{adminMessage}</ProviderNote>
+              </>
+            ) : null}
+            <Text style={{ fontSize: 13, fontWeight: "700", color: d.ink, textAlign: d.align }}>{m.t("To fix", "المطلوب تصحيحه")}</Text>
+            {flagged.map((k) => (
+              <Flagged key={k} text={keyLabel(m.t, k)} />
+            ))}
+            {companyFlagged.map((x) => (
+              <Flagged key={x.id} text={docLabel(m.t, x.kind)} reason={x.reason} />
+            ))}
+            {truckFlagged.map(({ t, docs }) => (
+              <View key={t.id} style={{ gap: 6 }}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: d.muted, textAlign: d.align }}>{m.t("Truck", "الشاحنة")} {"⁦" + t.plate + "⁩"}</Text>
+                {docs.map((x) => (
+                  <Flagged key={x.id} text={docLabel(m.t, x.kind)} reason={x.reason} />
+                ))}
+              </View>
+            ))}
+          </View>
+        ) : null}
+        <View style={{ gap: 10, marginTop: 14 }}>
+          {app.status === "NEEDS_CHANGES" ? <DButton label={m.t("Update application", "تحديث الطلب")} icon="create-outline" onPress={onFix} /> : null}
+          {app.status === "APPROVED" ? <DButton variant="success" icon="speedometer-outline" label={m.t("Open my dashboard", "افتح لوحتي")} onPress={() => router.replace(home as never)} /> : null}
+          <DButton
+            variant="ghost"
+            icon="chatbubbles-outline"
             label={`${app.status === "APPROVED" ? m.t("Contact MOTEXA", "تواصل مع MOTEXA") : m.t("Messages", "الرسائل")}${app.unreadMessages ? ` (${app.unreadMessages})` : ""}`}
             onPress={() => router.push("/provider/onboarding/messages" as never)}
           />
         </View>
-      </MechanicCard>
-      <MechanicCard>
-        <Text style={{ fontSize: 14, fontWeight: "600", color: m.ink, textAlign: m.align, marginBottom: 10 }}>{m.t("What happened", "ما الذي حدث")}</Text>
+      </Panel>
+      <Panel title={m.t("What happened", "ما الذي حدث")} icon="time-outline">
         <Timeline app={app} />
-      </MechanicCard>
+      </Panel>
     </View>
   );
 }
 
-function Flagged({ text }: { text: string }) {
-  const m = useMechanicTheme();
+function Flagged({ text, reason }: { text: string; reason?: string | null }) {
+  const d = useDT();
+  const c = d.chip("amber");
   return (
-    <View style={{ flexDirection: m.row, alignItems: "flex-start", gap: 8 }}>
-      <Ionicons name="flag" size={15} color={m.dark ? "#F1B8A0" : "#A24930"} style={{ marginTop: 3 }} />
-      <Text style={{ flex: 1, fontSize: 13, lineHeight: 21, color: m.ink, textAlign: m.align }}>{text}</Text>
+    <View style={{ flexDirection: d.row, alignItems: "flex-start", gap: 10, padding: 12, borderRadius: 16, borderWidth: 1, borderColor: c.border, backgroundColor: c.bg }}>
+      <Ionicons name="flag" size={16} color={c.fg} style={{ marginTop: 2 }} />
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 13, lineHeight: 20, fontWeight: "700", color: c.fg, textAlign: d.align }}>{text}</Text>
+        {reason ? <Text style={{ fontSize: 12, lineHeight: 19, color: c.fg, textAlign: d.align }}>{reason}</Text> : null}
+      </View>
     </View>
   );
 }
@@ -565,7 +607,7 @@ export default function Onboarding() {
   if (!app)
     return (
       <MechanicPage title={m.t("Your application", "طلبك")}>
-        {error ? <MechanicNote error>{error}</MechanicNote> : <Text style={{ color: m.muted, textAlign: "center" }}>{m.t("Loading…", "جارٍ التحميل…")}</Text>}
+        {error ? <ProviderNote error>{error}</ProviderNote> : <Text style={{ color: m.muted, textAlign: "center" }}>{m.t("Loading…", "جارٍ التحميل…")}</Text>}
       </MechanicPage>
     );
 
@@ -589,15 +631,15 @@ export default function Onboarding() {
 
   return (
     <MechanicPage title={title} subtitle={m.t("Your progress is saved on the server after each step. You can come back any time.", "يُحفظ تقدمك على الخادم بعد كل خطوة. يمكنك العودة في أي وقت.")}>
-      {app.status === "NEEDS_CHANGES" ? <MechanicNote>{m.t("Items flagged by MOTEXA are marked in red.", "العناصر التي حددتها MOTEXA مُعلَّمة بالأحمر.")}</MechanicNote> : null}
+      {app.status === "NEEDS_CHANGES" ? <ProviderNote>{m.t("Items flagged by MOTEXA are marked in red.", "العناصر التي حددتها MOTEXA مُعلَّمة بالأحمر.")}</ProviderNote> : null}
       <View style={{ height: 12 }} />
       <VerticalStepper
         current={step}
         onSelect={(k) => setStep(k as typeof step)}
         steps={[
-          { key: "info", label: m.t("Information", "المعلومات"), hint: m.t("Business details and location", "بيانات النشاط والموقع"), done: !missing.has("info") },
-          { key: "documents", label: m.t("Documents", "المستندات"), hint: m.t("Private, reviewed by MOTEXA", "خاصة وتراجعها MOTEXA"), done: !missing.has("documents") },
-          { key: "review", label: m.t("Review and submit", "المراجعة والإرسال"), done: false },
+          { key: "info", label: m.t("Information", "المعلومات"), hint: m.t("Who you are, where you work and what you offer", "من أنت وأين تعمل وماذا تقدم"), done: !missing.has("info") },
+          { key: "documents", label: m.t("Documents", "المستندات"), hint: m.t("Upload each document. Only you and MOTEXA can see them", "ارفع كل مستند. لا يراها إلا أنت وMOTEXA"), done: !missing.has("documents") },
+          { key: "review", label: m.t("Review and submit", "المراجعة والإرسال"), hint: m.t("Check everything, then send it to MOTEXA", "راجع كل شيء ثم أرسله إلى MOTEXA"), done: false },
         ]}
       >
         {(k) =>

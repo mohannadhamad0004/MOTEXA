@@ -7,10 +7,6 @@ import {
   BlueprintSurface,
   CarTop,
   TowHero,
-  MascotMo,
-  MO,
-  HOME_MO,
-  HomeMo,
   CompactHero,
   CategoryAssembly,
   CrossFade,
@@ -231,86 +227,6 @@ function RadarDemo({ n }: { n: number }) {
   );
 }
 
-/** One tunable number: label, value and - / + steppers. */
-function Stepper({ label, value, step, onChange }: { label: string; value: number; step: number; onChange: (v: number) => void }) {
-  const { c, row } = useTheme();
-  const round = (v: number) => Math.round(v * 1000) / 1000;
-  return (
-    <View style={[row, { alignItems: "center", gap: 8, marginTop: 6 }]}>
-      <Text style={{ flex: 1, color: c.ink, fontSize: 13 }}>{label}</Text>
-      <PrimaryButton variant="outline" label="-" style={{ height: 36, paddingHorizontal: 14 }} onPress={() => onChange(round(value - step))} />
-      <Text style={{ width: 56, textAlign: "center", color: c.ink, fontWeight: "700" }}>{String(value)}</Text>
-      <PrimaryButton variant="outline" label="+" style={{ height: 36, paddingHorizontal: 14 }} onPress={() => onChange(round(value + step))} />
-    </View>
-  );
-}
-
-/** Mo (experiment): replay + steppers for every alignment number; copy the values you like into mascot/moConfig.ts. */
-function MoDemo({ n }: { n: number }) {
-  const { c } = useTheme();
-  const [k, setK] = useState(0);
-  const [v, setV] = useState({
-    px: MO.pivot.x, py: MO.pivot.y, ox: MO.armOffset.x, oy: MO.armOffset.y, rest: MO.restAngle, peak: MO.peakAngle, end: MO.endAngle,
-    scale: MO.armScale, cx: MO.check.x, cy: MO.check.y, size: MO.size,
-  });
-  const set = (key: keyof typeof v) => (x: number) => setV((cur) => ({ ...cur, [key]: x }));
-  return (
-    <View>
-      <BlueprintSurface style={{ borderRadius: 20, height: v.size + 60, alignItems: "center", justifyContent: "flex-end", paddingBottom: 24 }}>
-        <MascotMo
-          key={n}
-          size={v.size}
-          pivot={{ x: v.px, y: v.py }}
-          armOffset={{ x: v.ox, y: v.oy }}
-          armScale={v.scale}
-          restAngle={v.rest}
-          peakAngle={v.peak}
-          endAngle={v.end}
-          check={{ x: v.cx, y: v.cy }}
-          playKey={k}
-          onPress={() => setK(k + 1)}
-        />
-      </BlueprintSurface>
-      <PrimaryButton style={{ marginTop: 10 }} label="Replay" onPress={() => setK(k + 1)} />
-      <Text style={{ color: c.soft, fontSize: 12, marginTop: 10 }}>Pivot = shoulder joint in the ARM image; offset = where it sits on the BODY.</Text>
-      <Stepper label="pivot x" value={v.px} step={0.01} onChange={set("px")} />
-      <Stepper label="pivot y" value={v.py} step={0.01} onChange={set("py")} />
-      <Stepper label="armOffset x" value={v.ox} step={0.01} onChange={set("ox")} />
-      <Stepper label="armOffset y" value={v.oy} step={0.01} onChange={set("oy")} />
-      <Stepper label="armScale" value={v.scale} step={0.01} onChange={set("scale")} />
-      <Stepper label="restAngle" value={v.rest} step={1} onChange={set("rest")} />
-      <Stepper label="peakAngle" value={v.peak} step={1} onChange={set("peak")} />
-      <Stepper label="endAngle" value={v.end} step={1} onChange={set("end")} />
-      <Stepper label="check x" value={v.cx} step={0.02} onChange={set("cx")} />
-      <Stepper label="check y" value={v.cy} step={0.02} onChange={set("cy")} />
-      <Stepper label="size (px)" value={v.size} step={10} onChange={set("size")} />
-    </View>
-  );
-}
-
-/** Mo at his desk (Home): the one-shot entrance with a Replay button and a size stepper. */
-function HomeMoDemo({ n }: { n: number }) {
-  const { c } = useTheme();
-  const [k, setK] = useState(0);
-  const [size, setSize] = useState(170);
-  const [arm, setArm] = useState({ dx: HOME_MO.restArm.dx, dy: HOME_MO.restArm.dy, scale: HOME_MO.restArm.scale });
-  return (
-    <View>
-      <BlueprintSurface style={{ borderRadius: 20, height: size + 40, alignItems: "center", justifyContent: "flex-end", paddingBottom: 14 }}>
-        <HomeMo key={n} size={size} playKey={k} delay={0} sipDelay={400} restArm={arm} />
-      </BlueprintSurface>
-      <PrimaryButton style={{ marginTop: 10 }} label="Replay" onPress={() => setK(k + 1)} />
-      <Text style={{ color: c.soft, fontSize: 12, marginTop: 10 }}>Fade in, rise 10 px, settle 0.98 to 1; then one sip (arm crossfade 350 ms, hold 0.9 s, back) with steam over the mug. Tap Mo or Replay to sip again. Arabic keeps the artwork unflipped.</Text>
-      <Stepper label="size (px)" value={size} step={10} onChange={setSize} />
-      <Text style={{ color: c.ink, fontSize: 13, fontWeight: "700", marginTop: 14 }}>Resting arm: sleeve cap fit</Text>
-      <Stepper label="offset x (frame px)" value={arm.dx} step={2} onChange={(v) => setArm((a) => ({ ...a, dx: v }))} />
-      <Stepper label="offset y (frame px)" value={arm.dy} step={2} onChange={(v) => setArm((a) => ({ ...a, dy: v }))} />
-      <Stepper label="scale" value={arm.scale} step={0.02} onChange={(v) => setArm((a) => ({ ...a, scale: v }))} />
-      <Text style={{ color: c.soft, fontSize: 12, marginTop: 8 }}>{`Copy into moConfig.ts HOME_MO.restArm: { dx: ${arm.dx}, dy: ${arm.dy}, scale: ${arm.scale} }`}</Text>
-    </View>
-  );
-}
-
 export default function MotionLab() {
   if (!__DEV__) return <Redirect href="/" />;
   return <Lab />;
@@ -404,14 +320,6 @@ function Lab() {
             <CarTop animate headlights />
           </BlueprintSurface>
         )}
-      </Demo>
-
-      <Demo title="Mo — Home (desk scene)" note="Tap Mo or Replay: fade in and settle.">
-        {(n) => <HomeMoDemo n={n} />}
-      </Demo>
-
-      <Demo title="Mo (mascot experiment)" note="Tap Mo or Replay. Steppers align the arm: set pivot / offset until the cuff hides the seam.">
-        {(n) => <MoDemo n={n} />}
       </Demo>
 
       <Demo title="Tow Discovery hero (Ignition)" note="Road draws, truck settles in, availability dot resolves; then still. Tap the scene to replay it.">

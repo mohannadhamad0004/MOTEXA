@@ -494,14 +494,14 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
           <Icon name="back" size={16} color={c.bronze} />
           <Text style={{ color: c.bronze, fontSize: 13, fontWeight: "700" }}>{isTow ? t("Nearby towing", "سحب قريب") : t("Nearby mechanics", "ميكانيكيون قريبون")}</Text>
         </Pressable>
-        nameBlock(
+        {nameBlock(
         selected,
         <Stamp label={t("Verified", "موثّق")} />,
         <>
           {km ? <Mono color={c.ink} size={13} bold>{`· ${km}`}</Mono> : null}
           {km ? <Text style={{ color: c.soft, fontSize: 11 }}>{t("straight line", "خط مستقيم")}</Text> : null}
         </>
-      )
+      )}
       </View>
     );
     body = (

@@ -10,6 +10,10 @@ import {
   Animated,
   ImageBackground,
   ImageSourcePropType,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
   RefreshControl,
   ScrollView,
   StatusBar,
@@ -43,9 +47,12 @@ export function useDT() {
     ar,
     t: (en: string, arabic: string) => (ar ? arabic : en),
     ink: dark ? "#FFF1DF" : "#432D1E",
-    muted: dark ? "#D0B99C" : "#806044",
-    surface: dark ? "#3B2C22" : "#FFF9EF",
-    border: dark ? "#816044" : "#D9B991",
+    muted: dark ? "#DCC7A8" : "#6B4E34",
+    surface: dark ? "#3F2F24" : "#FFFCF6",
+    border: dark ? "#7A5B40" : "#DDC39E",
+    /** solid bronze for primary actions and active states, and the ink that sits on it */
+    fill: dark ? "#D9A066" : "#8E5A2B",
+    fillInk: dark ? "#2A1A0E" : "#FFF8EE",
     soft: dark ? "#60432E" : "#F3D8B7",
     accent: dark ? "#F1C68F" : "#80522F",
     paper: dark ? "#30231B" : "#FFF9EF",
@@ -54,8 +61,28 @@ export function useDT() {
     bad: dark ? "#F1B8A0" : "#A24930",
     row: (ar ? "row-reverse" : "row") as "row" | "row-reverse",
     align: (ar ? "right" : "left") as "right" | "left",
+    chip: (tone: Tone) => CHIP[dark ? "dark" : "light"][tone],
   };
 }
+
+export type Tone = "neutral" | "bronze" | "amber" | "ok" | "bad";
+type ChipColors = { fg: string; bg: string; border: string };
+const CHIP: Record<"dark" | "light", Record<Tone, ChipColors>> = {
+  dark: {
+    neutral: { fg: "#E3D3BC", bg: "#4A3A2E", border: "#6A5442" },
+    bronze: { fg: "#F5C990", bg: "#5E4026", border: "#8E6438" },
+    amber: { fg: "#F7D26E", bg: "#5A4513", border: "#8C6D1E" },
+    ok: { fg: "#B2E3BA", bg: "#27452F", border: "#3E7049" },
+    bad: { fg: "#FAB9AA", bg: "#5E2B23", border: "#92463A" },
+  },
+  light: {
+    neutral: { fg: "#5A4533", bg: "#EFE3D2", border: "#D8C3A5" },
+    bronze: { fg: "#7A4818", bg: "#F6DFC2", border: "#E0B98A" },
+    amber: { fg: "#734E00", bg: "#FBE9B5", border: "#E6CB74" },
+    ok: { fg: "#215A33", bg: "#D5EBD7", border: "#9CCBA3" },
+    bad: { fg: "#8A2B1B", bg: "#F8D6CD", border: "#E3A99C" },
+  },
+};
 
 /** Brand + department switcher + language/theme switch, as in the super admin top bar. */
 function TopBar({ back }: { back?: boolean }) {
@@ -132,6 +159,7 @@ export function DeptPage({
   refreshing,
   onRefresh,
   tabs = true,
+  footer,
 }: {
   hero?: ReactNode;
   back?: boolean;
@@ -139,8 +167,12 @@ export function DeptPage({
   refreshing?: boolean;
   onRefresh?: () => void;
   tabs?: boolean;
+  /** sticky bar pinned to the bottom (for pages without the tab bar) */
+  footer?: ReactNode;
 }) {
   const d = useDT();
+  const insets = useSafeAreaInsets();
+  const { height: winH } = useWindowDimensions();
   return (
     <VisualProvider>
       <View style={{ flex: 1 }}>
@@ -149,15 +181,20 @@ export function DeptPage({
         <ScrollView
           showsVerticalScrollIndicator={false}
           refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} /> : undefined}
-          contentContainerStyle={{ width: "100%", maxWidth: 680, alignSelf: "center", flexGrow: 1, paddingBottom: tabs ? 120 : 40 }}
+          contentContainerStyle={{ width: "100%", maxWidth: 680, alignSelf: "center", flexGrow: 1, paddingBottom: footer ? 170 : tabs ? 120 : 40 }}
         >
           <TopBar back={back} />
           <Switcher />
           {hero}
-          <LinearGradient colors={d.dark ? ["#30231B", "#33271E", "#39281D"] : ["#FFF9EF", "#FBF0E0", "#F3DFC4"]} style={{ flexGrow: 1, paddingTop: hero ? 19 : 12, paddingHorizontal: 18, minHeight: 360 }}>
+          <LinearGradient colors={d.dark ? ["#30231B", "#33271E", "#39281D"] : ["#FFF9EF", "#FBF0E0", "#F3DFC4"]} style={{ flexGrow: 1, paddingTop: hero ? 19 : 12, paddingHorizontal: 18, minHeight: Math.max(360, winH - 150) }}>
             {children}
           </LinearGradient>
         </ScrollView>
+        {footer ? (
+          <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12), backgroundColor: d.dark ? "#241C16" : "#FBF1E2", borderTopWidth: 1, borderTopColor: d.border }}>
+            <View style={{ width: "100%", maxWidth: 680, alignSelf: "center" }}>{footer}</View>
+          </View>
+        ) : null}
       </View>
     </VisualProvider>
   );
@@ -219,25 +256,52 @@ export function MenuCard({ title, description, icon, photo, badge, onPress }: { 
   );
 }
 
-export function Pill({ label, tone = "neutral", icon }: { label: string; tone?: "warn" | "ok" | "bad" | "neutral"; icon?: IconName }) {
+/** The one chip of the admin area: tinted background, border and text in the same hue. */
+export function Pill({ label, tone = "neutral", icon, size = "s" }: { label: string; tone?: Tone | "warn"; icon?: IconName; size?: "s" | "l" }) {
   const d = useDT();
-  const color = tone === "warn" ? d.warn : tone === "ok" ? d.ok : tone === "bad" ? d.bad : d.muted;
+  const c = d.chip(tone === "warn" ? "amber" : tone);
+  const big = size === "l";
   return (
-    <View style={{ flexDirection: d.row, alignItems: "center", gap: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 14, borderWidth: 1, borderColor: color, alignSelf: "flex-start" }}>
-      {icon ? <Ionicons name={icon} size={12} color={color} /> : null}
-      <Text style={{ fontSize: 11, lineHeight: 17, color, fontWeight: "600" }}>{label}</Text>
+    <View style={{ flexDirection: d.row, alignItems: "center", gap: big ? 6 : 4, paddingHorizontal: big ? 14 : 9, paddingVertical: big ? 7 : 3, borderRadius: 16, borderWidth: 1, borderColor: c.border, backgroundColor: c.bg, alignSelf: "flex-start" }}>
+      {icon ? <Ionicons name={icon} size={big ? 16 : 12} color={c.fg} /> : null}
+      <Text style={{ fontSize: big ? 14 : 11, lineHeight: big ? 21 : 17, color: c.fg, fontWeight: "700" }}>{label}</Text>
     </View>
   );
 }
 
-export function StatusPill({ value }: { value: string }) {
+const STATUS: Record<string, { tone: Tone; icon: IconName; en: string; ar: string }> = {
+  DRAFT: { tone: "neutral", icon: "document-outline", en: "Draft", ar: "مسودة" },
+  PENDING: { tone: "bronze", icon: "paper-plane-outline", en: "Submitted", ar: "تم الإرسال" },
+  NEEDS_CHANGES: { tone: "amber", icon: "create-outline", en: "Needs changes", ar: "مطلوب تعديلات" },
+  APPROVED: { tone: "ok", icon: "shield-checkmark-outline", en: "Approved", ar: "معتمد" },
+  REJECTED: { tone: "bad", icon: "close-circle-outline", en: "Rejected", ar: "مرفوض" },
+};
+const DOC_STATUS: Record<string, { tone: Tone; icon: IconName; en: string; ar: string }> = {
+  PENDING: { tone: "amber", icon: "time-outline", en: "Waiting", ar: "بانتظار المراجعة" },
+  ACCEPTED: { tone: "ok", icon: "checkmark-circle-outline", en: "Accepted", ar: "مقبول" },
+  REJECTED: { tone: "bad", icon: "close-circle-outline", en: "Rejected", ar: "مرفوض" },
+};
+
+/** Application / company / shop / truck status (kind app) or document status (kind doc). Same colours on every screen. */
+export function StatusChip({ status, kind = "app", size = "s" }: { status: string; kind?: "app" | "doc"; size?: "s" | "l" }) {
   const d = useDT();
-  if (value === "NEEDS_CHANGES") return <Pill tone="warn" icon="create-outline" label={d.t("Needs changes", "مطلوب تعديلات")} />;
-  if (value === "DRAFT") return <Pill icon="document-outline" label={d.t("Draft", "مسودة")} />;
-  if (value === "APPROVED") return <Pill tone="ok" icon="shield-checkmark-outline" label={d.t("Approved", "معتمد")} />;
-  if (value === "REJECTED") return <Pill tone="bad" icon="close-circle-outline" label={d.t("Rejected", "مرفوض")} />;
-  return <Pill tone="warn" icon="time-outline" label={d.t("Pending", "قيد المراجعة")} />;
+  const m = (kind === "doc" ? DOC_STATUS : STATUS)[status] ?? STATUS.DRAFT;
+  return <Pill size={size} tone={m.tone} icon={m.icon} label={d.t(m.en, m.ar)} />;
 }
+export const StatusPill = ({ value }: { value: string }) => <StatusChip status={value} />;
+
+/** The one card look: radius 22, subtle border, soft shadow. */
+export const cardStyle = (d: ReturnType<typeof useDT>, tone?: "warn" | "bad"): ViewStyle => ({
+  borderWidth: 1,
+  borderRadius: 22,
+  backgroundColor: d.surface,
+  borderColor: tone === "bad" ? d.bad : tone === "warn" ? d.warn : d.border,
+  shadowColor: "#4F2D17",
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: d.dark ? 0.35 : 0.1,
+  shadowRadius: 10,
+  elevation: 2,
+});
 
 /** A tappable list card (request / directory row). */
 export function ItemCard({ children, onPress, label }: { children: ReactNode; onPress?: () => void; label: string }) {
@@ -248,7 +312,7 @@ export function ItemCard({ children, onPress, label }: { children: ReactNode; on
       {onPress ? <Ionicons name={d.ar ? "chevron-back" : "chevron-forward"} size={19} color={d.accent} /> : null}
     </View>
   );
-  const box: ViewStyle = { borderWidth: 1, borderRadius: 20, padding: 14, marginBottom: 10, backgroundColor: d.surface, borderColor: d.border };
+  const box: ViewStyle = { ...cardStyle(d), padding: 14, marginBottom: 10 };
   return onPress ? (
     <InteractiveButton accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={box}>{body}</InteractiveButton>
   ) : (
@@ -256,11 +320,41 @@ export function ItemCard({ children, onPress, label }: { children: ReactNode; on
   );
 }
 
-export function Panel({ children, tone }: { children: ReactNode; tone?: "warn" | "bad" }) {
+/** Card with an optional title row (icon + title) so every card reads title, then meta, then action. */
+export function Panel({ children, tone, title, icon }: { children: ReactNode; tone?: "warn" | "bad"; title?: string; icon?: IconName }) {
   const d = useDT();
   return (
-    <View style={{ borderWidth: 1, borderRadius: 22, padding: 16, marginBottom: 14, gap: 4, backgroundColor: d.surface, borderColor: tone === "bad" ? d.bad : tone === "warn" ? d.warn : d.border }}>
+    <View style={{ ...cardStyle(d, tone), padding: 16, marginBottom: 14, gap: 4 }}>
+      {title ? (
+        <View style={{ flexDirection: d.row, alignItems: "center", gap: 8, marginBottom: 6 }}>
+          {icon ? <Ionicons name={icon} size={18} color={d.accent} /> : null}
+          <Text style={{ flex: 1, color: d.ink, fontSize: 15, lineHeight: 23, fontWeight: "700", textAlign: d.align }}>{title}</Text>
+        </View>
+      ) : null}
       {children}
+    </View>
+  );
+}
+
+/** Initial in a tinted circle: the avatar of a business or a person. */
+export function Avatar({ name, size = 44, tone = "bronze" }: { name: string; size?: number; tone?: Tone }) {
+  const d = useDT();
+  const c = d.chip(tone);
+  const initial = (name.trim().match(/[\p{L}\p{N}]/u)?.[0] ?? "?").toUpperCase();
+  return (
+    <View style={{ width: size, height: size, borderRadius: size / 2, alignItems: "center", justifyContent: "center", backgroundColor: c.bg, borderWidth: 1, borderColor: c.border }}>
+      <Text style={{ color: c.fg, fontSize: size * 0.42, lineHeight: size * 0.6, fontWeight: "700" }}>{initial}</Text>
+    </View>
+  );
+}
+
+/** Round count badge in bronze. */
+export function CountBadge({ n }: { n: number }) {
+  const d = useDT();
+  if (!n) return null;
+  return (
+    <View style={{ minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, backgroundColor: d.fill, alignItems: "center", justifyContent: "center" }}>
+      <Text style={{ color: d.fillInk, fontSize: 12, lineHeight: 16, fontWeight: "800" }}>{n > 99 ? "99+" : n}</Text>
     </View>
   );
 }
@@ -280,19 +374,20 @@ export function Check({ ok, label, hint }: { ok: boolean; label: string; hint?: 
   const d = useDT();
   return (
     <View style={{ flexDirection: d.row, alignItems: "center", gap: 10, paddingVertical: 6 }}>
-      <Ionicons name={ok ? "checkmark-circle" : "alert-circle-outline"} size={20} color={ok ? d.ok : d.warn} />
+      <Ionicons name={ok ? "checkmark-circle" : "close-circle"} size={22} color={ok ? d.ok : d.bad} />
       <View style={{ flex: 1 }}>
-        <Text style={{ color: d.ink, fontSize: 13, lineHeight: 20, textAlign: d.align }}>{label}</Text>
+        <Text style={{ color: d.ink, fontSize: 13, lineHeight: 20, fontWeight: "600", textAlign: d.align }}>{label}</Text>
         {hint ? <Text style={{ color: d.muted, fontSize: 11, lineHeight: 17, textAlign: d.align }}>{hint}</Text> : null}
       </View>
     </View>
   );
 }
 
-export function DButton({ label, icon, onPress, variant = "primary", disabled }: { label: string; icon?: IconName; onPress: () => void; variant?: "primary" | "ghost" | "danger"; disabled?: boolean }) {
+export function DButton({ label, icon, onPress, variant = "primary", disabled, compact }: { label: string; icon?: IconName; onPress: () => void; variant?: "primary" | "success" | "warn" | "ghost" | "danger"; disabled?: boolean; compact?: boolean }) {
   const d = useDT();
-  const bg = variant === "primary" ? "#704A2B" : variant === "danger" ? (d.dark ? "#56372A" : "#F7E3D4") : "transparent";
-  const fg = variant === "primary" ? "#FFF1DF" : variant === "danger" ? d.bad : d.ink;
+  const solid = { primary: [d.fill, d.fillInk], success: [d.dark ? "#4E9A60" : "#2F7A45", "#FFFFFF"], warn: [d.dark ? "#E8B24A" : "#B97A12", d.dark ? "#2B1D00" : "#FFFFFF"] } as Record<string, [string, string]>;
+  const [bg, fg] = solid[variant] ?? ["transparent", variant === "danger" ? d.bad : d.accent];
+  const border = variant === "danger" ? d.bad : variant === "ghost" ? d.border : bg;
   return (
     <InteractiveButton
       accessibilityRole="button"
@@ -300,10 +395,10 @@ export function DButton({ label, icon, onPress, variant = "primary", disabled }:
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={{ minHeight: 48, borderRadius: 24, borderWidth: 1, borderColor: variant === "primary" ? "#E2BF8D" : variant === "danger" ? d.bad : d.border, backgroundColor: bg, flexDirection: d.row, alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: 18, opacity: disabled ? 0.5 : 1 }}
+      style={{ minHeight: compact ? 40 : 50, borderRadius: 26, borderWidth: 1.5, borderColor: border, backgroundColor: bg, flexDirection: d.row, alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: compact ? 12 : 18, opacity: disabled ? 0.45 : 1 }}
     >
       {icon ? <Ionicons name={icon} size={18} color={fg} /> : null}
-      <Text style={{ color: fg, fontSize: 14, lineHeight: 22, fontWeight: "600", flexShrink: 1, textAlign: "center" }}>{label}</Text>
+      <Text style={{ color: fg, fontSize: compact ? 13 : 14, lineHeight: 22, fontWeight: "700", flexShrink: 1, textAlign: "center" }}>{label}</Text>
     </InteractiveButton>
   );
 }
@@ -333,14 +428,15 @@ export function ReasonBox({ title, confirmLabel, busy, onCancel, onConfirm }: { 
   );
 }
 
-export function Empty({ icon, text }: { icon: IconName; text: string }) {
+export function Empty({ icon, text, hint }: { icon: IconName; text: string; hint?: string }) {
   const d = useDT();
   return (
-    <View style={{ alignItems: "center", gap: 10, padding: 28 }}>
-      <View style={[s.metricIcon, { backgroundColor: d.soft, width: 52, height: 52, borderRadius: 26 }]}>
-        <Ionicons name={icon} size={26} color={d.accent} />
+    <View style={{ ...cardStyle(d), alignItems: "center", gap: 10, padding: 28, marginTop: 4 }}>
+      <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: d.soft, alignItems: "center", justifyContent: "center" }}>
+        <Ionicons name={icon} size={28} color={d.accent} />
       </View>
-      <Text style={{ color: d.muted, fontSize: 13, lineHeight: 21, textAlign: "center" }}>{text}</Text>
+      <Text style={{ color: d.ink, fontSize: 14, lineHeight: 22, fontWeight: "600", textAlign: "center" }}>{text}</Text>
+      {hint ? <Text style={{ color: d.muted, fontSize: 12, lineHeight: 19, textAlign: "center" }}>{hint}</Text> : null}
     </View>
   );
 }
@@ -439,3 +535,23 @@ const s = StyleSheet.create({
   menu: { height: 108, minHeight: 108, borderRadius: 19, overflow: "hidden", alignItems: "center", marginBottom: 12, borderWidth: 1 },
   menuArrow: { position: "absolute", bottom: 9, width: 28, height: 28, borderRadius: 14, backgroundColor: "#573C29D9", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#E6C6A17A" },
 });
+
+/** Bottom sheet (reason boxes, request-changes form). Tap outside or the handle area to close. */
+export function Sheet({ visible, title, onClose, children }: { visible: boolean; title: string; onClose: () => void; children: ReactNode }) {
+  const d = useDT();
+  const insets = useSafeAreaInsets();
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "#000000AA" }}>
+        <Pressable accessibilityRole="button" accessibilityLabel={d.t("Close", "إغلاق")} style={{ flex: 1 }} onPress={onClose} />
+        <View style={{ maxHeight: "88%", borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: d.dark ? "#2D221A" : "#FFFCF6", borderTopWidth: 1, borderColor: d.border, paddingBottom: Math.max(insets.bottom, 14) }}>
+          <View style={{ alignItems: "center", paddingTop: 10 }}>
+            <View style={{ width: 44, height: 5, borderRadius: 3, backgroundColor: d.border }} />
+          </View>
+          <Text style={{ color: d.ink, fontSize: 17, lineHeight: 26, fontWeight: "800", paddingHorizontal: 20, paddingTop: 10, paddingBottom: 6, textAlign: d.align }}>{title}</Text>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 12 }}>{children}</ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}

@@ -207,10 +207,11 @@ export function TruckReview({ id }: { id: string }) {
                 <KV k={d.t("Vehicle", "المركبة")} v={[truck.make, truck.model, truck.year].filter(Boolean).join(" ")} />
                 {truck.maxWeightKg ? <KV k={d.t("Max load", "الحمل الأقصى")} v={`${truck.maxWeightKg} ${d.t("kg", "كغ")}`} /> : null}
                 <KV k={d.t("Company", "الشركة")} v={company.name} />
+                {truck.baseLat != null && truck.baseLng != null ? <KV k={d.t("Operates from", "تعمل من")} v={[truck.locationAddress, `${truck.baseLat.toFixed(4)}, ${truck.baseLng.toFixed(4)}`].filter(Boolean).join(" · ")} /> : null}
               </Panel>
               <Docs
                 title={d.t("Documents", "المستندات")}
-                docs={truck.documents.map((x) => ({ label: x.kind === "REGISTRATION" ? d.t("Vehicle registration", "ترخيص المركبة") : d.t("Insurance", "التأمين"), fileName: x.fileName, expiresAt: x.expiresAt, uri: x.uri }))}
+                docs={truck.documents.map((x) => ({ label: x.kind === "REGISTRATION" ? d.t("Vehicle registration", "ترخيص المركبة") : x.kind === "OPERATING_LICENSE" ? d.t("Operating licence", "رخصة التشغيل") : d.t("Insurance", "التأمين"), fileName: x.fileName, expiresAt: x.expiresAt, uri: x.uri }))}
               />
               <Checklist items={items} />
               <DecisionPanel

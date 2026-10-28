@@ -78,7 +78,7 @@ export const shapeFile = (f: FileRow) => ({
 
 const companyDocs = (app: App) => app.row.files.filter((f) => f.purpose === PURPOSE_OF[app.kind] && !f.messageId);
 
-const truckDocFiles = (t: TowApp["trucks"][number]) => t.files.filter((f) => ["TRUCK_PHOTO", "TRUCK_REGISTRATION", "TRUCK_INSURANCE"].includes(f.purpose));
+const truckDocFiles = (t: TowApp["trucks"][number]) => t.files.filter((f) => ["TRUCK_PHOTO", "TRUCK_REGISTRATION", "TRUCK_INSURANCE", "TRUCK_OPERATING_LICENSE"].includes(f.purpose));
 
 export function shapeTrucks(app: TowApp) {
   return app.trucks.map((t) => ({
@@ -88,6 +88,9 @@ export function shapeTrucks(app: TowApp) {
     make: t.make,
     model: t.model,
     year: t.year,
+    baseLat: t.baseLat,
+    baseLng: t.baseLng,
+    locationAddress: t.locationAddress,
     verification: t.verificationStatus,
     documents: truckDocFiles(t).map(shapeFile),
   }));
@@ -123,6 +126,10 @@ export function shapeInfo(app: App) {
     address: s.address,
     baseLat: s.baseLat,
     baseLng: s.baseLng,
+    brandName: s.brandName,
+    branchName: s.branchName,
+    locationAddress: s.locationAddress,
+    locationSource: s.locationSource,
     categories: s.categories,
     brands: s.brands,
     workingHours: s.workingHours,
@@ -151,10 +158,10 @@ export function checklist(app: App): CheckItem[] {
   return items;
 }
 
-/** A truck counts when its photo, vehicle licence and insurance are all ACCEPTED. */
+/** A truck counts when its photo and vehicle licence are ACCEPTED, plus its insurance or (new signup) its operating licence. */
 export function truckQualifies(t: TowApp["trucks"][number]) {
   const ok = (purpose: string) => t.files.some((f) => f.purpose === purpose && f.reviewStatus === "ACCEPTED");
-  return ok("TRUCK_PHOTO") && ok("TRUCK_REGISTRATION") && ok("TRUCK_INSURANCE");
+  return ok("TRUCK_PHOTO") && ok("TRUCK_REGISTRATION") && (ok("TRUCK_INSURANCE") || ok("TRUCK_OPERATING_LICENSE"));
 }
 
 /** What the owner still has to provide before submitting (completeness, not the admin's judgement). */
@@ -172,7 +179,8 @@ export function missingForSubmit(app: App): string[] {
     if (!t.open24h && !t.workingHours) out.push("workingHours");
     if (!t.serviceCities.length) out.push("serviceCities");
     if (!t.truckTypes.length) out.push("truckTypes");
-    const complete = t.trucks.filter((x) => ["TRUCK_PHOTO", "TRUCK_REGISTRATION", "TRUCK_INSURANCE"].every((p) => x.files.some((f) => f.purpose === p)));
+    const has = (x: TowApp["trucks"][number], p: string) => x.files.some((f) => f.purpose === p);
+    const complete = t.trucks.filter((x) => has(x, "TRUCK_PHOTO") && has(x, "TRUCK_REGISTRATION") && (has(x, "TRUCK_INSURANCE") || has(x, "TRUCK_OPERATING_LICENSE")));
     if (!complete.length) out.push("truck");
   } else {
     const s = app.row as ShopApp;

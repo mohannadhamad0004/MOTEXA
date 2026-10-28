@@ -1,5 +1,5 @@
-import { ReactNode, useState } from "react";
-import { View, useWindowDimensions } from "react-native";
+import { ReactNode } from "react";
+import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { alpha } from "../../../theme/tokens";
 import { useTheme } from "../../../theme/useTheme";
@@ -11,8 +11,6 @@ import { RoadLoader } from "../RoadLoader";
 import { InspectionCheck } from "../InspectionCheck";
 import { BlueprintSurface, useHeroStatusBar } from "../Surface";
 import { useDelayed } from "../../../motion/useDelayed";
-import { MascotMo } from "./MascotMo";
-import { MO } from "./moConfig";
 
 export const MO_HERO_HEIGHT = 192;
 export const MO_HERO_OVERLAP = 24;
@@ -20,8 +18,7 @@ export const MO_HERO_OVERLAP = 24;
 type Cta = { label: string; icon?: IconName; onPress: () => void; loading?: boolean; active?: boolean };
 
 /**
- * Mechanics hero with Mo (EXPERIMENT): real data and the actions on the start side, Mo standing on the bottom edge of the
- * hero on the end side (mirrored to the left in Arabic). Dark in both modes. Tap Mo to replay him.
+ * Mechanics hero: real data and the actions. The old Mo artwork is retired for now. Dark in both modes.
  */
 export function MoHero({
   tag,
@@ -42,13 +39,9 @@ export function MoHero({
   verified: boolean;
 }) {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
   const { c, row, isArabic, align } = useTheme();
   useHeroStatusBar();
-  const [replay, setReplay] = useState(0);
   const busy = useDelayed(!!primary.loading, 300);
-  const size = width < 380 ? MO.sizeSmall : MO.size;
-  const moW = size * MO.ratio;
 
   const button = (cta: Cta, main: boolean) => (
     <Press
@@ -87,8 +80,7 @@ export function MoHero({
   return (
     <BlueprintSurface gridFade={play} style={{ height: insets.top + MO_HERO_HEIGHT }}>
       <View style={{ position: "absolute", left: 20, right: 20, top: insets.top + 10, bottom: MO_HERO_OVERLAP + 8 }}>
-        {/* the text column leaves room for Mo on the end side */}
-        <View style={[{ flex: 1, justifyContent: "space-between" }, isArabic ? { paddingLeft: moW + 40 } : { paddingRight: moW + 40 }]}>
+        <View style={{ flex: 1, justifyContent: "space-between" }}>
           <View>
             <Tag color={alpha(c.cream, 0.6)} align={isArabic ? "right" : "left"}>{tag}</Tag>
             <Text numberOfLines={1} style={[{ color: c.cream, fontSize: 28, fontWeight: "700", lineHeight: isArabic ? 38 : 33, marginTop: 4 }, align]}>
@@ -101,10 +93,6 @@ export function MoHero({
             {button(secondary, false)}
           </View>
         </View>
-      </View>
-      {/* Mo stands on the visible bottom edge (the sheet overlaps the last 24 px) */}
-      <View style={{ position: "absolute", bottom: MO_HERO_OVERLAP + 5, ...(isArabic ? { left: 28 } : { right: 28 }) }}>
-        <MascotMo size={size} play={play || replay > 0} playKey={replay} mirrored={isArabic} showCheck={verified} onPress={() => setReplay((n) => n + 1)} />
       </View>
     </BlueprintSurface>
   );

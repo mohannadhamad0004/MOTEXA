@@ -81,5 +81,5 @@ export const removeStoredFiles = (keys: string[]) => Promise.all(keys.map(remove
 export const filePath = (f: { id: string; visibility: "PUBLIC" | "PRIVATE" }) =>
   `/files/${f.visibility === "PUBLIC" ? "public" : "private"}/${f.id}`;
 
-export const TOW_PURPOSES = ["TRUCK_PHOTO", "TRUCK_REGISTRATION", "TRUCK_INSURANCE", "TOW_COMPANY_DOCUMENT"] as const;
+export const TOW_PURPOSES = ["TRUCK_PHOTO", "TRUCK_REGISTRATION", "TRUCK_INSURANCE", "TRUCK_OPERATING_LICENSE", "TOW_COMPANY_DOCUMENT"] as const;
 export const PARTS_PURPOSES = ["PRODUCT_IMAGE", "PARTS_SHOP_DOCUMENT"] as const;
