@@ -22,7 +22,7 @@ export default function DeptTabs() {
     <Tabs tabBar={(p) => <DeptTabBar {...p} />} screenOptions={{ headerShown: false }}>
       {tab("index", "Home", "الرئيسية", "home-outline", "home")}
       {tab("requests", "Requests", "الطلبات", "clipboard-outline", "clipboard")}
-      {tab("directory", "Directory", "الدليل", "albums-outline", "albums")}
+      {active.key === "MANAGE_TOWING" ? tab("directory", "Companies", "الشركات", "business-outline", "business") : active.key === "MANAGE_SPARE_PARTS" ? tab("directory", "Shops", "المتاجر", "storefront-outline", "storefront") : tab("directory", "Directory", "الدليل", "albums-outline", "albums")}
       {tab("messages", "Messages", "الرسائل", "chatbubbles-outline", "chatbubbles", unread.data ?? 0)}
       {tab("profile", "Profile", "الملف", "person-outline", "person")}
     </Tabs>

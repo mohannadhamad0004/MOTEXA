@@ -10,12 +10,24 @@ import { useLoad } from "../../core/hooks/useLoad";
 import { useDepartment } from "./DepartmentContext";
 import { Row, Status } from "./departments";
 import { ApplicationsList } from "./applications";
-import { DeptHero, DeptPage, Empty, ItemCard, Load, MenuCard, Pill, Section, StatRow, StatTile, StatusPill, useDT } from "./ui";
+import { TowAdminHome } from "./TowAdminHome";
+import { PartsAdminHome } from "./PartsAdminHome";
+import { TowCompaniesPage } from "./TowCompaniesPage";
+import { PartsShopsPage } from "./PartsShopsPage";
+import { Avatar, DeptHero, DeptPage, Empty, ItemCard, Load, MenuCard, Pill, Section, StatRow, StatTile, StatusChip, useDT } from "./ui";
 
 const go = (path: string) => router.push(path as Href);
 
 // ---------------------------------------------------------------- Home
 export function DeptHome() {
+  const { active } = useDepartment();
+  // the Tow and Parts admins have their own dashboards; Mechanics keeps this one
+  if (active.key === "MANAGE_TOWING") return <TowAdminHome />;
+  if (active.key === "MANAGE_SPARE_PARTS") return <PartsAdminHome />;
+  return <DeptHomeDefault />;
+}
+
+function DeptHomeDefault() {
   const { active } = useDepartment();
   const d = useDT();
   const stats = useLoad(() => active.loadStats(), [active.key]);
@@ -63,12 +75,17 @@ function RowCard({ row, onPress, children }: { row: Row; onPress?: () => void; c
   const d = useDT();
   return (
     <ItemCard label={row.title} onPress={onPress}>
-      <Text numberOfLines={2} style={{ color: d.ink, fontSize: 15, lineHeight: 22, fontWeight: "600", textAlign: d.align }}>{row.title}</Text>
-      {row.subtitle ? <Text numberOfLines={2} style={{ color: d.muted, fontSize: 12, lineHeight: 19, textAlign: d.align }}>{row.subtitle}</Text> : null}
-      <View style={{ flexDirection: d.row, flexWrap: "wrap", gap: 6, marginTop: 8 }}>
-        {row.status ? <StatusPill value={row.status} /> : null}
+      <View style={{ flexDirection: d.row, alignItems: "center", gap: 12 }}>
+        <Avatar name={row.title} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text numberOfLines={2} style={{ color: d.ink, fontSize: 15, lineHeight: 22, fontWeight: "800", textAlign: d.align }}>{row.title}</Text>
+          {row.subtitle ? <Text numberOfLines={2} style={{ color: d.muted, fontSize: 12, lineHeight: 19, textAlign: d.align }}>{row.subtitle}</Text> : null}
+        </View>
+      </View>
+      <View style={{ flexDirection: d.row, flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+        {row.status ? <StatusChip status={row.status} /> : null}
         {row.meta.map((m, i) => (
-          <Pill key={i} label={m} tone={/pending|قيد/.test(m) ? "warn" : "neutral"} />
+          <Pill key={i} label={m} tone={/pending|قيد/.test(m) ? "amber" : "neutral"} />
         ))}
       </View>
       {children}
@@ -88,6 +105,14 @@ export function DeptRequests() {
 type Filter = "ALL" | Status;
 
 export function DeptDirectory() {
+  const { active } = useDepartment();
+  // the Tow and Parts admins have their own Companies / Shops pages (list + map); Mechanics keeps this directory
+  if (active.key === "MANAGE_TOWING") return <TowCompaniesPage />;
+  if (active.key === "MANAGE_SPARE_PARTS") return <PartsShopsPage />;
+  return <DeptDirectoryDefault />;
+}
+
+function DeptDirectoryDefault() {
   const { active } = useDepartment();
   const d = useDT();
   const cfg = active.directory;
@@ -168,7 +193,7 @@ export function DeptDirectory() {
                             >
                               <Text numberOfLines={1} style={{ color: d.ink, fontSize: 13, fontWeight: "600", textAlign: d.align }}>{c.title}</Text>
                               <View style={{ flexDirection: d.row, flexWrap: "wrap", gap: 6 }}>
-                                {c.status ? <StatusPill value={c.status} /> : null}
+                                {c.status ? <StatusChip status={c.status} /> : null}
                                 {c.meta.map((m, i) => (
                                   <Pill key={i} label={m} />
                                 ))}

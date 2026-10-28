@@ -53,5 +53,5 @@ export function TruckSummary({ truck }: { truck: Truck }) {
   );
 }
 
-export const docLabel = (t: (en: string, ar: string) => string, k: "REGISTRATION" | "INSURANCE") =>
-  k === "REGISTRATION" ? t("Vehicle registration", "ترخيص المركبة") : t("Insurance", "التأمين");
+export const docLabel = (t: (en: string, ar: string) => string, k: "REGISTRATION" | "INSURANCE" | "OPERATING_LICENSE") =>
+  k === "REGISTRATION" ? t("Vehicle registration", "ترخيص المركبة") : k === "OPERATING_LICENSE" ? t("Operating licence", "رخصة التشغيل") : t("Insurance", "التأمين");

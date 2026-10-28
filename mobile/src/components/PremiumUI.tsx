@@ -11,7 +11,7 @@ export function EditorialTitle({style,children,accent=true,...props}:TextProps &
 }
 export function SectionCaption({index,title,trailing}:{index?:string;title:string;trailing?:string}){
  const {dark}=useAppearance();const {isArabic}=useLanguage();const muted=dark?'#C9A77E':'#8A6545';
- return <View style={{flexDirection:isArabic?'row-reverse':'row',alignItems:'center',gap:10,paddingBottom:12,borderBottomWidth:1,borderBottomColor:dark?'#705238':'#D8BC98'}}>{index&&<Text style={{fontSize:10,color:muted}}>{index}</Text>}<Text style={{flex:1,fontSize:10,lineHeight:20,letterSpacing:isArabic?0:1.5,color:muted,textAlign:isArabic?'right':'left'}}>{title}</Text>{trailing&&<Text style={{fontSize:8,lineHeight:18,color:muted}}>{trailing}</Text>}</View>;
+ return <View style={{flexDirection:isArabic?'row-reverse':'row',alignItems:'center',gap:10,paddingBottom:12,borderBottomWidth:1,borderBottomColor:dark?'#705238':'#D8BC98'}}>{!!index&&<Text style={{fontSize:10,color:muted}}>{index}</Text>}<Text style={{flex:1,fontSize:10,lineHeight:20,letterSpacing:isArabic?0:1.5,color:muted,textAlign:isArabic?'right':'left'}}>{title}</Text>{!!trailing&&<Text style={{fontSize:8,lineHeight:18,color:muted}}>{trailing}</Text>}</View>;
 }
 export function CommandDial({value,label,index=0}:{value:string;label:string;index?:number}){
  const {dark}=useAppearance();const reduced=useReducedMotion();const rotation=useRef(new Animated.Value(0)).current;

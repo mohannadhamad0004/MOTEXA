@@ -11,15 +11,14 @@
       "icon": "./assets/expo.icon"
     },
     "android": {
-      "package": "com.motexa.app",
+      "package": "com.anonymous.motexa",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.motexa"
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
@@ -42,7 +41,8 @@
           "locationWhenInUsePermission": "MOTEXA uses your location only when you tap a button, to find tow companies near you and to mark where your car is. It is not tracked in the background."
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true,

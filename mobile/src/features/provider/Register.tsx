@@ -3,7 +3,8 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
-import { MechanicButton, MechanicCard, MechanicChoice, MechanicField, MechanicNote, MechanicPage, useMechanicTheme } from "../../components/MechanicUI";
+import { MechanicField, MechanicPage, useMechanicTheme } from "../../components/MechanicUI";
+import { ProviderButton, ProviderCard, ProviderChoice, ProviderNote } from "./kit";
 import { Text } from "../../components/MotexaVisual";
 import { CITIES, cityLabel } from "../../core/constants/cities";
 import { Kind, register } from "./api";
@@ -43,7 +44,7 @@ export default function ProviderRegister({ kind }: { kind: Kind }) {
   if (done)
     return (
       <MechanicPage photo title={m.t("Your account is created", "تم إنشاء حسابك")}>
-        <MechanicCard>
+        <ProviderCard>
           <Text style={{ fontSize: 17, lineHeight: 28, fontWeight: "600", color: m.ink, textAlign: m.align }}>
             {tow ? m.t("Continue your tow company application", "تابع طلب شركة السحب") : m.t("Continue your parts shop application", "تابع طلب متجر قطع الغيار")}
           </Text>
@@ -53,8 +54,8 @@ export default function ProviderRegister({ kind }: { kind: Kind }) {
               "سجّل الدخول لإضافة بيانات نشاطك ومستنداتك. تراجع MOTEXA كل طلب قبل أن تتمكن من استقبال الطلبات.",
             )}
           </Text>
-          <MechanicButton label={m.t("Sign in", "تسجيل الدخول")} onPress={signIn} />
-        </MechanicCard>
+          <ProviderButton label={m.t("Sign in", "تسجيل الدخول")} onPress={signIn} />
+        </ProviderCard>
       </MechanicPage>
     );
 
@@ -64,9 +65,9 @@ export default function ProviderRegister({ kind }: { kind: Kind }) {
       title={tow ? m.t("Register your tow company", "سجّل شركة السحب") : m.t("Register your parts shop", "سجّل متجر قطع الغيار")}
       subtitle={m.t("Step 1 of 2: create your account. Next you add your business details and documents.", "الخطوة 1 من 2: أنشئ حسابك. بعدها تضيف بيانات نشاطك ومستنداتك.")}
     >
-      <MechanicCard>
+      <ProviderCard>
         <View style={{ gap: 13 }}>
-          {error ? <MechanicNote error>{error}</MechanicNote> : null}
+          {error ? <ProviderNote error>{error}</ProviderNote> : null}
           <MechanicField label={tow ? m.t("Company name", "اسم الشركة") : m.t("Shop name", "اسم المتجر")} icon="business-outline" value={businessName} onChangeText={setBusinessName} maxLength={120} />
           <MechanicField label={m.t("Owner full name", "الاسم الكامل للمالك")} icon="person-outline" value={fullName} onChangeText={setFullName} maxLength={120} autoComplete="name" />
           <MechanicField label={m.t("Email address", "البريد الإلكتروني")} icon="mail-outline" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" maxLength={254} />
@@ -74,7 +75,7 @@ export default function ProviderRegister({ kind }: { kind: Kind }) {
           <Text style={{ fontSize: 12, lineHeight: 19, fontWeight: "600", color: m.ink, textAlign: m.align }}>{m.t("City", "المدينة")}</Text>
           <View style={{ flexDirection: m.row, flexWrap: "wrap", gap: 8 }}>
             {CITIES.map((c) => (
-              <MechanicChoice key={c.name} label={cityLabel(c.name, m.ar)} selected={city === c.name} onPress={() => setCity(c.name)} />
+              <ProviderChoice key={c.name} label={cityLabel(c.name, m.ar)} selected={city === c.name} onPress={() => setCity(c.name)} />
             ))}
           </View>
           <MechanicField label={m.t("Password", "كلمة المرور")} icon="lock-closed-outline" value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" maxLength={128} />
@@ -82,16 +83,16 @@ export default function ProviderRegister({ kind }: { kind: Kind }) {
           <Text style={{ fontSize: 11, lineHeight: 18, color: m.muted, textAlign: m.align }}>
             {m.t("Password: 8 to 128 characters with uppercase, lowercase, a number and a symbol.", "كلمة المرور: من 8 إلى 128 حرفًا مع حرف كبير وصغير ورقم ورمز.")}
           </Text>
-          <MechanicChoice
+          <ProviderChoice
             label={m.t("I accept the MOTEXA terms for service providers", "أوافق على شروط MOTEXA لمزودي الخدمة")}
             selected={accept}
             onPress={() => setAccept(!accept)}
             icon={accept ? "checkmark-circle" : "ellipse-outline"}
           />
-          <MechanicButton label={m.t("Create account", "إنشاء الحساب")} onPress={submit} busy={busy} disabled={busy} />
-          <MechanicButton secondary label={m.t("I already have an account", "لدي حساب بالفعل")} onPress={signIn} />
+          <ProviderButton label={m.t("Create account", "إنشاء الحساب")} onPress={submit} busy={busy} disabled={busy} />
+          <ProviderButton secondary label={m.t("I already have an account", "لدي حساب بالفعل")} onPress={signIn} />
         </View>
-      </MechanicCard>
+      </ProviderCard>
     </MechanicPage>
   );
 }

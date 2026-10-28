@@ -82,6 +82,12 @@ const shapeShop = (s: ShopRow, history: HistoryItem[]) => ({
   city: s.city,
   address: s.address,
   licenceNumber: s.licenceNumber,
+  baseLat: s.baseLat, // exact: only the shop itself and admins get this shape
+  baseLng: s.baseLng,
+  locationAddress: s.locationAddress,
+  brandName: s.brandName,
+  branchName: s.branchName,
+  categories: s.categories,
   verificationStatus: s.verificationStatus,
   rejectionReason: s.rejectionReason,
   documents: s.files.map((f) => ({ kind: f.label ?? "Document", fileName: f.originalName, uri: filePath(f) })),

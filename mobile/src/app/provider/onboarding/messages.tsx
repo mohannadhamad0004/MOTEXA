@@ -1,14 +1,10 @@
-import { MechanicPage, useMechanicTheme } from "../../../components/MechanicUI";
+import { useCallback } from "react";
+import { ChatScreen } from "../../../features/provider/Chat";
 import { onboarding } from "../../../features/provider/api";
-import { ThreadView } from "../../../features/provider/Thread";
-
-const load = () => onboarding.messages().then((r) => r.messages);
+import { useDT } from "../../../features/department/ui";
 
 export default function ProviderMessagesRoute() {
-  const m = useMechanicTheme();
-  return (
-    <MechanicPage back title={m.t("Messages", "الرسائل")} subtitle={m.t("Your conversation with the MOTEXA team.", "محادثتك مع فريق MOTEXA.")}>
-      <ThreadView mine="PROVIDER" load={load} markRead={onboarding.markRead} send={onboarding.send} />
-    </MechanicPage>
-  );
+  const d = useDT();
+  const load = useCallback(() => onboarding.messages(), []);
+  return <ChatScreen title="MOTEXA" subtitle={d.t("Your conversation with the MOTEXA team", "محادثتك مع فريق MOTEXA")} mine="PROVIDER" names={{ me: d.t("You", "أنت"), other: "MOTEXA" }} load={load} markRead={onboarding.markRead} send={onboarding.send} />;
 }

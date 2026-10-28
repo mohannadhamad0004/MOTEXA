@@ -13,7 +13,7 @@ export type Operational = "AVAILABLE" | "BUSY" | "OUT_OF_SERVICE";
 export type TruckType = "FLATBED" | "HOOK_CHAIN" | "WHEEL_LIFT" | "HEAVY_DUTY";
 export const TRUCK_TYPES: TruckType[] = ["FLATBED", "HOOK_CHAIN", "WHEEL_LIFT", "HEAVY_DUTY"];
 
-export type DocKind = "REGISTRATION" | "INSURANCE";
+export type DocKind = "REGISTRATION" | "INSURANCE" | "OPERATING_LICENSE";
 export type TruckDocument = {
   kind: DocKind;
   fileName: string;
@@ -38,6 +38,10 @@ export type Truck = {
   model: string;
   year: number | null;
   maxWeightKg: number | null;
+  /** the truck's own operating point (set at signup); null on older trucks */
+  baseLat?: number | null;
+  baseLng?: number | null;
+  locationAddress?: string | null;
   verification: Verification;
   operational: Operational;
   hasActiveJob: boolean;
@@ -80,6 +84,9 @@ type ApiTruck = {
   model: string;
   year: number | null;
   maxWeightKg: number | null;
+  baseLat?: number | null;
+  baseLng?: number | null;
+  locationAddress?: string | null;
   truckType: TruckType;
   verificationStatus: Verification;
   operationalStatus: Operational;
@@ -119,6 +126,9 @@ const toTruck = (t: ApiTruck): Truck => ({
   model: t.model,
   year: t.year,
   maxWeightKg: t.maxWeightKg ?? null,
+  baseLat: t.baseLat ?? null,
+  baseLng: t.baseLng ?? null,
+  locationAddress: t.locationAddress ?? null,
   verification: t.verificationStatus,
   operational: t.operationalStatus,
   hasActiveJob: t.hasActiveJob,

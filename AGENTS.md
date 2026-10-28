@@ -49,3 +49,20 @@ Currency: ILS, shown as "₪ 120.00". Languages: English + Arabic (full RTL). Ci
 Done: tow fleet + company profile, parts shops + products (condition/type/fitment/categories/filters), provider files, requests (part inquiries, tow requests with state machine), customer storefront home, mechanics for customers (public catalog, profile, service requests, mechanic inbox), GPS nearest companies + OSM maps (Leaflet WebView), login per role, merge of Diala's admin OTP + fonts + admin tabs, theme tokens + shared UI kit on ALL of Mohannad's screens (customer, provider, tow/parts admin), 14 Codex review fixes. Diala's screens (auth, onboarding, admin tabs, mechanics admin) are NOT yet on the theme tokens.
 In progress: UI direction agreement (ChatGPT + Claude review → final design spec), then UI polish phases.
 Next: Emergency (one-tap tow request), ratings/reviews, orders (cash only), My Cars, AI diagnosis.
+
+8. Proposal first for anything non-trivial:
+   read the relevant files, propose the files and implementation plan, then STOP
+   and wait for "approved".
+
+   Once the human says "approved", that approval covers the entire proposed scope.
+   Continue autonomously through implementation, edits, local commands, tests,
+   visual validation, and fixes required to satisfy the approved acceptance criteria.
+
+   Do not repeatedly ask for permission for normal actions inside the approved scope.
+   Ask again only if:
+  - the scope must materially expand,
+  - a destructive operation is required,
+  - another owner's files must be changed,
+  - a new native dependency is required,
+  - database/schema work not included in the proposal becomes necessary,
+  - or a commit/push/deployment is requested.

@@ -10,8 +10,7 @@ import { Icon, IconName } from "../Icon";
 import { CrossFade } from "../FadeSwitch";
 import { Press } from "../motion";
 import { BlueprintSurface, useHeroStatusBar } from "../Surface";
-import { HomeMo } from "./HomeMo";
-import { HOME_MO } from "./moConfig";
+import { MoHomeVideo, moVideoHeight } from "./MoHomeVideo";
 
 export const HOME_HERO_HEIGHT = 200;
 export const HOME_HERO_OVERLAP = 24;
@@ -99,8 +98,7 @@ function StepLine({ k, prog, track, color, rtl }: { k: number; prog: SharedValue
 
 /**
  * Home hero (about 198 px, dark in both modes): a time-based greeting, the customer's real car (tap to change), then ONE
- * context line - the real active request with its progress (tap opens it), or the two everyday actions. Mo drinks his
- * coffee on the end side (left in Arabic); tapping him replays the sip.
+ * context line - the real active request with its progress (tap opens it), or the two everyday actions.
  */
 export function HomeHero({
   greeting,
@@ -123,11 +121,9 @@ export function HomeHero({
   const { width } = useWindowDimensions();
   const { c, row, isArabic, align } = useTheme();
   useHeroStatusBar();
-  // Mo is decorative: about a third of the hero width (a little smaller on narrow phones, a little larger on wide ones), never wider than 150
-  const moW = Math.round(Math.min(140, Math.max(100, width * 0.3)));
-  const size = moW / HOME_MO.ratio;
+  // Mo is decorative and secondary: about a third of the width (112-140 dp), on the end side; the text zone is an explicit width so nothing runs under him
+  const moW = Math.round(Math.min(140, Math.max(112, width * 0.33)));
   const edge = 8;
-  // the text zone is an explicit width (about 59%), so nothing can run under Mo
   const textW = width - 40 - (moW + edge) - 4;
   const t0 = useRef(Date.now());
   const reqDelay = play ? Math.max(0, 600 - (Date.now() - t0.current)) : 0;
@@ -168,7 +164,7 @@ export function HomeHero({
           isArabic ? { right: 20 } : { left: 20 },
         ]}
       >
-        {/* first visit order: grid -> greeting (120 ms) -> car chip (+50) -> Mo (260) -> request / actions (600) */}
+        {/* first visit order: grid -> greeting (120 ms) -> car chip (+50) -> request / actions (600) */}
         <View>
           <Resolve delay={120} play={play}>
             <Text numberOfLines={2} style={[{ color: c.cream, fontSize: 20, fontWeight: "700", lineHeight: isArabic ? 29 : 25 }, align]}>
@@ -210,9 +206,9 @@ export function HomeHero({
           </Resolve>
         )}
       </View>
-      {/* Mo is hero artwork, not a card: bottom aligned on the end side, cropped by the sheet (head, torso, arms and the top of the desk stay visible) */}
-      <View pointerEvents="box-none" style={{ position: "absolute", bottom: HOME_HERO_OVERLAP - 6, ...(isArabic ? { left: edge } : { right: edge }) }}>
-        <HomeMo size={size} play={play} delay={260} />
+      {/* Mo's scene is hero artwork, not a card: bottom aligned on the end side (left in Arabic). The artwork is never mirrored, so the M stays readable. First Home entry of the session plays the wake-up video; every later visit shows its last frame (Mo already working). */}
+      <View pointerEvents="none" style={{ position: "absolute", bottom: HOME_HERO_OVERLAP - 8, width: moW, height: moVideoHeight(moW), ...(isArabic ? { left: edge } : { right: edge }) }}>
+        <MoHomeVideo width={moW} play={play} />
       </View>
     </BlueprintSurface>
   );

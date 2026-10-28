@@ -29,9 +29,9 @@ const DECISIONS = ["APPROVED", "REJECTED"] as const;
 const FILTERS = ["PENDING", "APPROVED", "REJECTED"] as const;
 type Decision = (typeof DECISIONS)[number];
 
-const DOC_KINDS = { REGISTRATION: "TRUCK_REGISTRATION", INSURANCE: "TRUCK_INSURANCE" } as const;
+const DOC_KINDS = { REGISTRATION: "TRUCK_REGISTRATION", INSURANCE: "TRUCK_INSURANCE", OPERATING_LICENSE: "TRUCK_OPERATING_LICENSE" } as const;
 type DocKind = keyof typeof DOC_KINDS;
-const PURPOSE_KIND: Record<string, DocKind> = { TRUCK_REGISTRATION: "REGISTRATION", TRUCK_INSURANCE: "INSURANCE" };
+const PURPOSE_KIND: Record<string, DocKind> = { TRUCK_REGISTRATION: "REGISTRATION", TRUCK_INSURANCE: "INSURANCE", TRUCK_OPERATING_LICENSE: "OPERATING_LICENSE" };
 
 const text = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 const idParam = (v: unknown) => String(v);
@@ -91,7 +91,7 @@ const missingFor = (t: TruckRow) => {
   const out: string[] = [];
   if (!have.has("TRUCK_PHOTO")) out.push("truck photo");
   if (!have.has("TRUCK_REGISTRATION")) out.push("registration document");
-  if (!have.has("TRUCK_INSURANCE")) out.push("insurance document");
+  if (!have.has("TRUCK_INSURANCE") && !have.has("TRUCK_OPERATING_LICENSE")) out.push("insurance or operating licence document");
   return out;
 };
 
@@ -105,6 +105,9 @@ const shapeTruck = (t: TruckRow, history: unknown[] = []) => {
     make: t.make,
     model: t.model,
     year: t.year,
+    baseLat: t.baseLat,
+    baseLng: t.baseLng,
+    locationAddress: t.locationAddress,
     truckType: t.truckType,
     maxWeightKg: t.maxWeightKg,
     verificationStatus: t.verificationStatus,
@@ -253,10 +256,10 @@ function parseFiles(body: any): FileInput | { error: string } {
     out.photo = p.file;
   }
   if (body?.documents !== undefined) {
-    if (!Array.isArray(body.documents) || body.documents.length > 2) return { error: "Documents are invalid." };
+    if (!Array.isArray(body.documents) || body.documents.length > 3) return { error: "Documents are invalid." };
     for (const d of body.documents as any[]) {
       const kind = d?.kind as DocKind;
-      if (!(kind in DOC_KINDS)) return { error: "Document kind must be REGISTRATION or INSURANCE." };
+      if (!(kind in DOC_KINDS)) return { error: "Document kind must be REGISTRATION, INSURANCE or OPERATING_LICENSE." };
       if (out.docs.some((x) => x.kind === kind)) return { error: `Duplicate ${kind} document.` };
       let file: ParsedUpload | null = null;
       if (d.dataBase64 !== undefined && d.dataBase64 !== null) {
@@ -408,7 +411,7 @@ router.post("/tow/me/trucks", ...provider, async (req, res) => {
 
     // Write the files first; the rows are created in one transaction with the truck.
     const rows: Prisma.ProviderFileCreateWithoutTruckInput[] = [];
-    const add = async (purpose: "TRUCK_PHOTO" | "TRUCK_REGISTRATION" | "TRUCK_INSURANCE", f: ParsedUpload, expiresAt: Date | null) => {
+    const add = async (purpose: "TRUCK_PHOTO" | (typeof DOC_KINDS)[DocKind], f: ParsedUpload, expiresAt: Date | null) => {
       const storageKey = await storeFile(f);
       written.push(storageKey);
       rows.push({
@@ -468,7 +471,7 @@ router.patch("/tow/me/trucks/:id", ...provider, async (req, res) => {
     // Work out which files really change. An expiry sent without a file only counts when the date differs.
     const byPurpose = new Map(t.files.map((f) => [f.purpose, f]));
     const day = (d: Date | null | undefined) => (d ? d.toISOString().slice(0, 10) : null);
-    type Op = { purpose: "TRUCK_PHOTO" | "TRUCK_REGISTRATION" | "TRUCK_INSURANCE"; file: ParsedUpload | null; expiresAt: Date | null; storageKey?: string };
+    type Op = { purpose: "TRUCK_PHOTO" | (typeof DOC_KINDS)[DocKind]; file: ParsedUpload | null; expiresAt: Date | null; storageKey?: string };
     const ops: Op[] = [];
     if (files.photo) ops.push({ purpose: "TRUCK_PHOTO", file: files.photo, expiresAt: null });
     for (const d of files.docs) {
