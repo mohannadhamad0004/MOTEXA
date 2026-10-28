@@ -37,3 +37,18 @@ Desktop.ini
 # Private uploads and local test artifacts
 **/.private/
 **/test-results/
+
+# IDE
+.idea/
+
+# Playwright / browser test artifacts
+.playwright-mcp/
+
+# Local test account notes
+TEST_ACCOUNTS.md
+
+# Local screenshots
+a-light-1280.png
+b-light-1280.png
+c-drawer.png
+d-dark-menu.png
