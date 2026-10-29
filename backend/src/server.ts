@@ -1,3 +1,4 @@
+import mechanicWorkflowRoutes from './routes/mechanic-workflow.routes.js';
 import mechanicRegistrationRoutes from './routes/mechanic-registration.routes.js';
 import mechanicsRoutes from './routes/mechanics.routes.js';
 import passwordResetRoutes from "./routes/password-reset.routes.js";
@@ -25,6 +26,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/auth/mechanic",mechanicRegistrationRoutes);
 app.use("/api/mechanics",mechanicsRoutes);
+app.use("/api/mechanic-workflow",mechanicWorkflowRoutes);
 app.use("/api/auth/password-reset", passwordResetRoutes);
 app.use("/api/admin-management", adminRoutes);
 app.use("/api/admin-invitations", adminInvitationRoutes);

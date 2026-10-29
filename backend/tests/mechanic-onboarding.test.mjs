@@ -46,7 +46,11 @@ test('mechanic registration without email, private documents, review, resubmissi
   r=await api('/api/mechanics/me/documents','POST',{kind:'IDENTITY',base64:png,mimeType:'image/png',fileName:'identity.png'},mt);assert.equal(r.status,201);const documentId=r.body.profile.documents[0].id;assert.equal(r.body.profile.documents[0].storageKey,undefined);
   assert.equal((await api('/api/mechanics/documents/'+documentId,'GET',undefined,token(other))).status,403);
   assert.equal((await api('/api/mechanics/documents/'+documentId,'GET',undefined,token(wrong))).status,403);
-  assert.equal((await api('/api/mechanics/documents/'+documentId,'GET',undefined,rt)).status,200);
+  assert.equal((await api('/api/mechanics/me/submit','POST',{acceptPrivacy:true},mt)).status,400);
+  assert.equal((await api('/api/mechanics/me/documents','POST',{kind:'CERTIFICATE',base64:png,mimeType:'image/png',fileName:'certificate.png'},mt)).status,201);
+  assert.equal((await api('/api/mechanics/me/submit','POST',{acceptPrivacy:true},mt)).status,400);
+  assert.equal((await api('/api/mechanics/me/documents','POST',{kind:'WORKSHOP_PROOF',base64:png,mimeType:'image/png',fileName:'workshop.png'},mt)).status,201);
+  assert.equal(await prisma.auditLog.count({where:{actorId:reviewer.id,targetId:profiles[0],action:'MECHANIC_DOCUMENT_VIEWED'}}),0);
   r=await api('/api/mechanics/me/submit','POST',{acceptPrivacy:true},mt);assert.equal(r.status,200);let version=r.body.profile.submissionVersion;assert.equal(r.body.profile.verificationStatus,'PENDING');
   assert.equal((await api('/api/mechanics/me','PUT',professional,mt)).status,409);
   assert.equal((await api('/api/mechanics/admin/'+mechanic.id+'/decision','POST',{action:'APPROVE',submissionVersion:version},rt)).status,400);
@@ -63,8 +67,10 @@ test('mechanic registration without email, private documents, review, resubmissi
   assert.equal((await api('/api/mechanics/me','GET',undefined,mt)).status,200);
   r=await api('/api/mechanics/notifications','GET',undefined,mt);assert.ok(r.body.notifications.length>=4);
   assert.ok((await prisma.auditLog.count({where:{targetId:profiles[0]}}))>=8);
+  assert.equal(await prisma.auditLog.count({where:{actorId:reviewer.id,targetId:profiles[0],action:'MECHANIC_DOCUMENT_VIEWED'}}),0);
  }finally{
   fileKeys=(await prisma.mechanicDocument.findMany({where:{profileId:{in:profiles}},select:{storageKey:true}})).map(d=>d.storageKey);
+  await prisma.notification.deleteMany({where:{OR:[{userId:{in:ids}},{relatedUserId:{in:ids}}]}});
   await prisma.auditLog.deleteMany({where:{OR:[{actorId:{in:ids}},{targetId:{in:[...ids,...profiles]}}]}});
   await prisma.user.deleteMany({where:{id:{in:ids}}});
   const dir=path.resolve('.private/mechanic-documents');for(const k of fileKeys){const f=path.resolve(dir,k);if(f.startsWith(dir+path.sep))await unlink(f).catch(()=>{});}

@@ -1,3 +1,4 @@
+import { notifyAdmins } from "./mechanic-workflow.routes.js";
 import {
   Router,
   type Request,
@@ -13,6 +14,7 @@ import { requireAuth } from "../middleware/auth.middleware.js";
 import {
   SPECIALIZATIONS,
   completeProfile,
+  completeDocuments,
   fail,
   MechanicError,
   text,
@@ -116,6 +118,10 @@ async function event(
   });
 }
 router.use(requireAuth);
+router.use((_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 router.get("/options", (_req, res) =>
   res.json({
     success: true,
@@ -178,8 +184,8 @@ router.post("/me/documents", async (req, res) => {
   const userId = own(res),
     b = req.body ?? {},
     kind = text(b.kind, 30);
-  if (!["IDENTITY", "CERTIFICATE"].includes(kind))
-    fail(400, "Choose identity or certificate.");
+  if (!["IDENTITY", "CERTIFICATE", "WORKSHOP_PROOF"].includes(kind))
+    fail(400, "Choose identity, certificate or workshop proof.");
   const base64 = typeof b.base64 === "string" ? b.base64 : "";
   if (
     base64.length > 7 * 1024 * 1024 ||
@@ -234,6 +240,19 @@ router.post("/me/documents", async (req, res) => {
         },
       });
       await event(tx, userId, p.id, "MECHANIC_DOCUMENT_UPLOADED", kind);
+      if (p.submittedAt) {
+        const applicant = await tx.user.findUniqueOrThrow({
+          where: { id: userId },
+          select: { fullName: true },
+        });
+        await notifyAdmins(
+          tx,
+          userId,
+          "DOCUMENT_UPDATED",
+          "Mechanic document updated",
+          applicant.fullName + " updated an application document.",
+        );
+      }
     });
   } catch (e) {
     await unlink(path.join(privateRoot, key)).catch(() => {});
@@ -249,10 +268,10 @@ router.post("/me/submit", async (req, res) => {
   await prisma.$transaction(async (tx) => {
     const p = await locked(tx, userId);
     editable(p.verificationStatus);
-    if (!completeProfile(p) || !p.documents.some((d) => d.kind === "IDENTITY"))
+    if (!completeProfile(p) || !completeDocuments(p))
       fail(
         400,
-        "Complete your professional information, service options and identity document first.",
+        "Complete your professional information, service options, identity, certificate and workshop proof (if applicable) first.",
       );
     await tx.mechanicProfile.update({
       where: { id: p.id },
@@ -269,6 +288,17 @@ router.post("/me/submit", async (req, res) => {
         interviewedById: null,
       },
     });
+    const applicant = await tx.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { fullName: true },
+    });
+    await notifyAdmins(
+      tx,
+      userId,
+      "APPLICATION_SUBMITTED",
+      "New mechanic application",
+      applicant.fullName + " submitted an application for professional review.",
+    );
     await event(
       tx,
       userId,
@@ -279,6 +309,7 @@ router.post("/me/submit", async (req, res) => {
     await tx.notification.create({
       data: {
         userId,
+        relatedUserId: userId,
         title: "Application submitted",
         body: "Your mechanic application is under review. You cannot receive services until it is approved.",
       },
@@ -351,6 +382,15 @@ router.get("/admin", reviewer, async (req, res) => {
   ];
   if (status && !allowed.includes(status))
     fail(400, "Invalid application status.");
+  const cursor =
+    typeof req.query.cursor === "string" ? req.query.cursor : undefined;
+  if (
+    cursor &&
+    !(await prisma.mechanicProfile.findFirst({
+      where: { id: cursor, submittedAt: { not: null } },
+    }))
+  )
+    fail(400, "Invalid application cursor.");
   const profiles = await prisma.mechanicProfile.findMany({
     where: {
       submittedAt: { not: null },
@@ -364,19 +404,60 @@ router.get("/admin", reviewer, async (req, res) => {
       verificationStatus: true,
       submittedAt: true,
       interviewResult: true,
+      yearsOfExperience: true,
+      offersWorkshop: true,
+      offersOnSite: true,
+      offersOnline: true,
+      submissionVersion: true,
+      documents: { select: { id: true, kind: true } },
+      tests: {
+        orderBy: [{ submissionVersion: "desc" }, { attempt: "desc" }],
+        take: 1,
+        select: {
+          id: true,
+          submissionVersion: true,
+          submittedAt: true,
+          reviewedAt: true,
+          score: true,
+          assessment: true,
+        },
+      },
       user: { select: ownerSelect },
     },
-    orderBy: { submittedAt: "desc" },
-    take: 100,
+    orderBy: [{ submittedAt: "desc" }, { id: "desc" }],
+    take: 101,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
   });
   const counts = await prisma.mechanicProfile.groupBy({
     by: ["verificationStatus"],
     where: { submittedAt: { not: null } },
     _count: { _all: true },
   });
+  const pendingSummaries = await prisma.mechanicProfile.findMany({
+    where: { verificationStatus: "PENDING", submittedAt: { not: null } },
+    select: {
+      submissionVersion: true,
+      tests: {
+        orderBy: [{ submissionVersion: "desc" }, { attempt: "desc" }],
+        take: 1,
+        select: { submissionVersion: true, submittedAt: true },
+      },
+    },
+  });
+  const workflowCounts = { NEW: 0, AWAITING_TEST: 0, READY: 0 };
+  for (const profile of pendingSummaries) {
+    const test = profile.tests.find(
+      (t) => t.submissionVersion === profile.submissionVersion,
+    );
+    workflowCounts[
+      test?.submittedAt ? "READY" : test ? "AWAITING_TEST" : "NEW"
+    ]++;
+  }
   res.json({
     success: true,
-    profiles,
+    workflowCounts,
+    profiles: profiles.slice(0, 100),
+    nextCursor: profiles.length > 100 ? profiles[99].id : null,
     counts: Object.fromEntries(
       counts.map((c) => [c.verificationStatus, c._count._all]),
     ),
@@ -446,28 +527,50 @@ router.post("/admin/:userId/decision", reviewer, async (req, res) => {
     if (
       action === "APPROVE" &&
       (!completeProfile(p) ||
-        !p.documents.some((d) => d.kind === "IDENTITY") ||
+        !completeDocuments(p) ||
         p.interviewResult !== "PASSED")
     )
       fail(
         400,
-        "Complete the document review and a passed professional interview first.",
+        "Complete all required information, upload the required documents and pass the professional interview first.",
       );
+    // New test-based reviews must be complete and refer to the current submission.
+    // Existing interview-based applications remain compatible.
     if (action === "APPROVE") {
-      const identity = p.documents.find((d) => d.kind === "IDENTITY");
-      const viewed = await tx.auditLog.count({
-        where: {
-          actorId: res.locals.authUser.id,
-          targetId: p.id,
-          action: "MECHANIC_DOCUMENT_VIEWED",
-          details: { path: ["documentId"], equals: identity?.id || "" },
-        },
+      const latest = await tx.mechanicTest.findFirst({
+        where: { profileId: p.id, submissionVersion: p.submissionVersion },
+        orderBy: { attempt: "desc" },
       });
-      if (!viewed)
-        fail(
-          400,
-          "Open and review the current identity document before approving.",
-        );
+      if (latest) {
+        if (
+          !latest.submittedAt ||
+          !latest.reviewedAt ||
+          latest.assessment !== "PASSED"
+        )
+          fail(400, "Review the current professional test before approving.");
+        const reviews = await tx.mechanicDocumentReview.findMany({
+          where: { profileId: p.id },
+        });
+        const required = [
+          "IDENTITY",
+          "CERTIFICATE",
+          ...(p.offersWorkshop ? ["WORKSHOP_PROOF"] : []),
+        ];
+        if (
+          required.some(
+            (kind) =>
+              !p.documents.some(
+                (d) =>
+                  d.kind === kind &&
+                  reviews.some(
+                    (r) =>
+                      r.documentId === d.id && r.storageKey === d.storageKey,
+                  ),
+              ),
+          )
+        )
+          fail(400, "Review all current required documents before approving.");
+      }
     }
     const status =
       action === "APPROVE" || action === "REACTIVATE"
@@ -490,6 +593,8 @@ router.post("/admin/:userId/decision", reviewer, async (req, res) => {
     await tx.notification.create({
       data: {
         userId: p.userId,
+        relatedUserId: p.userId,
+        kind: "DECISION",
         title:
           status === "VERIFIED"
             ? "Mechanic account approved"

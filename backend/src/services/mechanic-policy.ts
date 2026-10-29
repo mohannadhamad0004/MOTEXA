@@ -75,3 +75,9 @@ export async function requireVerifiedMechanic(
   }
   next();
 }
+
+/** Checks upload presence only; opening or interpreting documents is not required. */
+export function completeDocuments(p: { offersWorkshop: boolean; documents: { kind: string }[] }) {
+  const required = ["IDENTITY", "CERTIFICATE", ...(p.offersWorkshop ? ["WORKSHOP_PROOF"] : [])];
+  return required.every(kind => p.documents.some(document => document.kind === kind));
+}

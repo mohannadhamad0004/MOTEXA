@@ -1,54 +1,128 @@
-import {MechanicPage,MechanicCard,MechanicButton,useMechanicTheme} from '../../components/MechanicUI';
-import MechanicRegistration from '../../components/MechanicRegistration';
-import BrandWordmark from '../../components/BrandWordmark';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {EditorialTitle} from '../../components/PremiumUI';
-import {useAppearance,useAppearanceStyles} from "../../components/Appearance";
-import {useReducedMotion} from "../../components/MotexaVisual";
-import {palette} from "../../components/DesignTokens";
+import {
+  MechanicPage,
+  MechanicCard,
+  MechanicButton,
+  useMechanicTheme,
+} from "../../components/MechanicUI";
+import MechanicRegistration from "../../components/MechanicRegistration";
+import BrandWordmark from "../../components/BrandWordmark";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { EditorialTitle } from "../../components/PremiumUI";
+import {
+  useAppearance,
+  useAppearanceStyles,
+} from "../../components/Appearance";
+import { useReducedMotion } from "../../components/MotexaVisual";
+import { palette } from "../../components/DesignTokens";
 import { PanelFill, CanvasFill } from "../../components/BrandSurfaces";
 import { Text } from "../../components/MotexaVisual";
 import LanguageSwitch from "../../components/LanguageSwitch";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { useLanguage } from "../../i18n/LanguageContext";
 
-export default function SignUpScreen(){const {selectedRole}=useLocalSearchParams<{selectedRole?:string}>();const [ready,setReady]=useState(false);useEffect(()=>setReady(true),[]);if(!ready)return <View style={{flex:1}}><CanvasFill/></View>;if(!selectedRole)return <ChooseRegistrationRole/>;return selectedRole==='mechanic'?<MechanicRegistration/>:<ExistingSignUpScreen/>;}
-function ChooseRegistrationRole(){const m=useMechanicTheme();return <MechanicPage back title={m.t('Create an account','إنشاء حساب جديد')} subtitle={m.t('Choose the account you want to create.','اختر نوع الحساب الذي تريد إنشاءه.')}><MechanicCard>{[['customer','Car owner','مالك مركبة'],['mechanic','Mechanic','ميكانيكي'],['parts','Spare parts provider','مزود قطع غيار'],['towing','Towing provider','مزود سحب']].map(([role,en,ar])=><MechanicButton key={role} secondary label={m.t(en,ar)} onPress={()=>router.setParams({selectedRole:role})}/>)}</MechanicCard></MechanicPage>;}
+export default function SignUpScreen() {
+  const { selectedRole } = useLocalSearchParams<{ selectedRole?: string }>();
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
+  if (!ready)
+    return (
+      <View style={{ flex: 1 }}>
+        <CanvasFill />
+      </View>
+    );
+  if (!selectedRole) return <ChooseRegistrationRole />;
+  return selectedRole === "mechanic" ? (
+    <MechanicRegistration />
+  ) : (
+    <ExistingSignUpScreen />
+  );
+}
+function ChooseRegistrationRole() {
+  const m = useMechanicTheme();
+  return (
+    <MechanicPage
+      back
+      title={m.t("Create an account", "إنشاء حساب جديد")}
+      subtitle={m.t(
+        "Choose the account you want to create.",
+        "اختر نوع الحساب الذي تريد إنشاءه.",
+      )}
+    >
+      <MechanicCard>
+        {[
+          ["customer", "Car owner", "مالك مركبة"],
+          ["mechanic", "Mechanic", "ميكانيكي"],
+          ["parts", "Spare parts provider", "مزود قطع غيار"],
+          ["towing", "Towing provider", "مزود سحب"],
+        ].map(([role, en, ar]) => (
+          <MechanicButton
+            key={role}
+            secondary
+            label={m.t(en, ar)}
+            onPress={() => router.setParams({ selectedRole: role })}
+          />
+        ))}
+      </MechanicCard>
+    </MechanicPage>
+  );
+}
 function ExistingSignUpScreen() {
- const {selectedRole}=useLocalSearchParams<{selectedRole?:string}>();
- const role=typeof selectedRole==='string'?selectedRole:'';
- const isAdminRole=['super-admin','mechanics-admin','parts-admin','towing-admin'].includes(role);
- useEffect(()=>{if(isAdminRole)router.replace({pathname:'/auth/login',params:{selectedRole:role}});},[isAdminRole,role]);
+  const { selectedRole } = useLocalSearchParams<{ selectedRole?: string }>();
+  const role = typeof selectedRole === "string" ? selectedRole : "";
+  const isAdminRole = [
+    "super-admin",
+    "mechanics-admin",
+    "parts-admin",
+    "towing-admin",
+  ].includes(role);
+  useEffect(() => {
+    if (isAdminRole)
+      router.replace({
+        pathname: "/auth/login",
+        params: { selectedRole: role },
+      });
+  }, [isAdminRole, role]);
 
- const insets=useSafeAreaInsets();
- const [focusedField,setFocusedField]=useState<string|null>(null);
-  const styles=useAppearanceStyles(baseStyles);
-  const {dark}=useAppearance();
-  const reduced=useReducedMotion();
+  const insets = useSafeAreaInsets();
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const styles = useAppearanceStyles(baseStyles);
+  const { dark } = useAppearance();
+  const reduced = useReducedMotion();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] =
-    useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const { language, toggleLanguage, t, isArabic } =
-    useLanguage();
+  const { language, toggleLanguage, t, isArabic } = useLanguage();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
-    if(reduced){fadeAnim.setValue(1);slideAnim.setValue(0);return;}
-    const animation=Animated.parallel([
+    if (reduced) {
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      return;
+    }
+    const animation = Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 700,
@@ -62,13 +136,13 @@ function ExistingSignUpScreen() {
       }),
     ]);
     animation.start();
-    return()=>animation.stop();
+    return () => animation.stop();
   }, [reduced]);
 
   return (
     <LinearGradient
-      colors={dark?palette.canvasDark:palette.canvas}
-      style={[styles.background,{overflow:"hidden"}]}
+      colors={dark ? palette.canvasDark : palette.canvas}
+      style={[styles.background, { overflow: "hidden" }]}
     >
       <View style={styles.glowTop} />
       <View style={styles.glowBottom} />
@@ -78,7 +152,10 @@ function ExistingSignUpScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
-          contentContainerStyle={[styles.scrollContainer,{paddingTop:insets.top+14,paddingBottom:insets.bottom+24}]}
+          contentContainerStyle={[
+            styles.scrollContainer,
+            { paddingTop: insets.top + 14, paddingBottom: insets.bottom + 24 },
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -87,7 +164,6 @@ function ExistingSignUpScreen() {
               styles.content,
               {
                 opacity: fadeAnim,
-
               },
             ]}
           >
@@ -99,17 +175,13 @@ function ExistingSignUpScreen() {
                 activeOpacity={0.7}
               >
                 <Ionicons
-                  name={
-                    isArabic
-                      ? "arrow-forward"
-                      : "arrow-back"
-                  }
+                  name={isArabic ? "arrow-forward" : "arrow-back"}
                   size={21}
                   color="#A27140"
                 />
               </TouchableOpacity>
 
-              <LanguageSwitch light compact unified/>
+              <LanguageSwitch light compact unified />
             </View>
 
             {/* Logo */}
@@ -120,42 +192,25 @@ function ExistingSignUpScreen() {
                 end={{ x: 1, y: 1 }}
                 style={styles.logoCircle}
               >
-                <Ionicons
-                  name="person-add-outline"
-                  size={31}
-                  color="#1B100B"
-                />
+                <Ionicons name="person-add-outline" size={31} color="#1B100B" />
               </LinearGradient>
             </View>
 
             <BrandWordmark style={styles.brandName} />
 
-            <Text
-              style={[
-                styles.tagline,
-                isArabic && styles.arabicTagline,
-              ]}
-            >
+            <Text style={[styles.tagline, isArabic && styles.arabicTagline]}>
               {t.signup.system}
             </Text>
 
             {/* Heading */}
             <View style={styles.headingSection}>
               <EditorialTitle
-                style={[
-                  styles.heading,
-                  isArabic && styles.arabicText,
-                ]}
+                style={[styles.heading, isArabic && styles.arabicText]}
               >
                 {t.signup.title}
               </EditorialTitle>
 
-              <Text
-                style={[
-                  styles.description,
-                  isArabic && styles.arabicText,
-                ]}
-              >
+              <Text style={[styles.description, isArabic && styles.arabicText]}>
                 {t.signup.description}
               </Text>
             </View>
@@ -163,72 +218,61 @@ function ExistingSignUpScreen() {
             {/* Form */}
             <View style={styles.card}>
               {/* Full Name */}
-              <Text
-                style={[
-                  styles.label,
-                  isArabic && styles.arabicLabel,
-                ]}
-              >
+              <Text style={[styles.label, isArabic && styles.arabicLabel]}>
                 {t.signup.fullName}
               </Text>
 
               <View
-                style={[[
-                  styles.inputContainer,
-                  isArabic && styles.inputContainerArabic,
-                ],focusedField==='fullName'&&{borderColor:dark?'#E2BA80':'#9D6530',backgroundColor:dark?'#423225':'#FFFCF6'}]}
+                style={[
+                  [
+                    styles.inputContainer,
+                    isArabic && styles.inputContainerArabic,
+                  ],
+                  focusedField === "fullName" && {
+                    borderColor: dark ? "#E2BA80" : "#9D6530",
+                    backgroundColor: dark ? "#423225" : "#FFFCF6",
+                  },
+                ]}
               >
                 <View style={styles.inputIcon}>
-                  <Ionicons
-                    name="person-outline"
-                    size={20}
-                    color="#A27140"
-                  />
+                  <Ionicons name="person-outline" size={20} color="#A27140" />
                 </View>
 
                 <TextInput
-                  style={[
-                    styles.input,
-                    isArabic && styles.arabicInput,
-                  ]}
-                  placeholder={
-                    t.signup.fullNamePlaceholder
-                  }
+                  style={[styles.input, isArabic && styles.arabicInput]}
+                  placeholder={t.signup.fullNamePlaceholder}
                   placeholderTextColor="#9C836B"
                   value={fullName}
                   onChangeText={setFullName}
-                 onFocus={()=>setFocusedField('fullName')} onBlur={()=>setFocusedField(null)} accessibilityLabel={isArabic?'الاسم الكامل':'Full name'} />
+                  onFocus={() => setFocusedField("fullName")}
+                  onBlur={() => setFocusedField(null)}
+                  accessibilityLabel={isArabic ? "الاسم الكامل" : "Full name"}
+                />
               </View>
 
               {/* Email */}
-              <Text
-                style={[
-                  styles.label,
-                  isArabic && styles.arabicLabel,
-                ]}
-              >
+              <Text style={[styles.label, isArabic && styles.arabicLabel]}>
                 {t.common.email}
               </Text>
 
               <View
-                style={[[
-                  styles.inputContainer,
-                  isArabic && styles.inputContainerArabic,
-                ],focusedField==='email'&&{borderColor:dark?'#E2BA80':'#9D6530',backgroundColor:dark?'#423225':'#FFFCF6'}]}
+                style={[
+                  [
+                    styles.inputContainer,
+                    isArabic && styles.inputContainerArabic,
+                  ],
+                  focusedField === "email" && {
+                    borderColor: dark ? "#E2BA80" : "#9D6530",
+                    backgroundColor: dark ? "#423225" : "#FFFCF6",
+                  },
+                ]}
               >
                 <View style={styles.inputIcon}>
-                  <Ionicons
-                    name="mail-outline"
-                    size={20}
-                    color="#A27140"
-                  />
+                  <Ionicons name="mail-outline" size={20} color="#A27140" />
                 </View>
 
                 <TextInput
-                  style={[
-                    styles.input,
-                    isArabic && styles.arabicInput,
-                  ]}
+                  style={[styles.input, isArabic && styles.arabicInput]}
                   placeholder={t.common.emailPlaceholder}
                   placeholderTextColor="#9C836B"
                   value={email}
@@ -236,24 +280,30 @@ function ExistingSignUpScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
-                 onFocus={()=>setFocusedField('email')} onBlur={()=>setFocusedField(null)} accessibilityLabel={isArabic?'البريد الإلكتروني':'Email address'} />
+                  onFocus={() => setFocusedField("email")}
+                  onBlur={() => setFocusedField(null)}
+                  accessibilityLabel={
+                    isArabic ? "البريد الإلكتروني" : "Email address"
+                  }
+                />
               </View>
 
               {/* Password */}
-              <Text
-                style={[
-                  styles.label,
-                  isArabic && styles.arabicLabel,
-                ]}
-              >
+              <Text style={[styles.label, isArabic && styles.arabicLabel]}>
                 {t.common.password}
               </Text>
 
               <View
-                style={[[
-                  styles.inputContainer,
-                  isArabic && styles.inputContainerArabic,
-                ],focusedField==='password'&&{borderColor:dark?'#E2BA80':'#9D6530',backgroundColor:dark?'#423225':'#FFFCF6'}]}
+                style={[
+                  [
+                    styles.inputContainer,
+                    isArabic && styles.inputContainerArabic,
+                  ],
+                  focusedField === "password" && {
+                    borderColor: dark ? "#E2BA80" : "#9D6530",
+                    backgroundColor: dark ? "#423225" : "#FFFCF6",
+                  },
+                ]}
               >
                 <View style={styles.inputIcon}>
                   <Ionicons
@@ -264,31 +314,23 @@ function ExistingSignUpScreen() {
                 </View>
 
                 <TextInput
-                  style={[
-                    styles.passwordInput,
-                    isArabic && styles.arabicInput,
-                  ]}
-                  placeholder={
-                    t.signup.passwordPlaceholder
-                  }
+                  style={[styles.passwordInput, isArabic && styles.arabicInput]}
+                  placeholder={t.signup.passwordPlaceholder}
                   placeholderTextColor="#9C836B"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
-                 onFocus={()=>setFocusedField('password')} onBlur={()=>setFocusedField(null)} accessibilityLabel={isArabic?'كلمة المرور':'Password'} />
+                  onFocus={() => setFocusedField("password")}
+                  onBlur={() => setFocusedField(null)}
+                  accessibilityLabel={isArabic ? "كلمة المرور" : "Password"}
+                />
 
                 <TouchableOpacity
                   style={styles.eyeButton}
-                  onPress={() =>
-                    setShowPassword(!showPassword)
-                  }
+                  onPress={() => setShowPassword(!showPassword)}
                 >
                   <Ionicons
-                    name={
-                      showPassword
-                        ? "eye-outline"
-                        : "eye-off-outline"
-                    }
+                    name={showPassword ? "eye-outline" : "eye-off-outline"}
                     size={21}
                     color="#A27140"
                   />
@@ -296,20 +338,21 @@ function ExistingSignUpScreen() {
               </View>
 
               {/* Confirm Password */}
-              <Text
-                style={[
-                  styles.label,
-                  isArabic && styles.arabicLabel,
-                ]}
-              >
+              <Text style={[styles.label, isArabic && styles.arabicLabel]}>
                 {t.signup.confirmPassword}
               </Text>
 
               <View
-                style={[[
-                  styles.inputContainer,
-                  isArabic && styles.inputContainerArabic,
-                ],focusedField==='confirmPassword'&&{borderColor:dark?'#E2BA80':'#9D6530',backgroundColor:dark?'#423225':'#FFFCF6'}]}
+                style={[
+                  [
+                    styles.inputContainer,
+                    isArabic && styles.inputContainerArabic,
+                  ],
+                  focusedField === "confirmPassword" && {
+                    borderColor: dark ? "#E2BA80" : "#9D6530",
+                    backgroundColor: dark ? "#423225" : "#FFFCF6",
+                  },
+                ]}
               >
                 <View style={styles.inputIcon}>
                   <Ionicons
@@ -320,32 +363,26 @@ function ExistingSignUpScreen() {
                 </View>
 
                 <TextInput
-                  style={[
-                    styles.passwordInput,
-                    isArabic && styles.arabicInput,
-                  ]}
-                  placeholder={
-                    t.signup.confirmPasswordPlaceholder
-                  }
+                  style={[styles.passwordInput, isArabic && styles.arabicInput]}
+                  placeholder={t.signup.confirmPasswordPlaceholder}
                   placeholderTextColor="#9C836B"
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showConfirmPassword}
-                 onFocus={()=>setFocusedField('confirmPassword')} onBlur={()=>setFocusedField(null)} accessibilityLabel={isArabic?'تأكيد كلمة المرور':'Confirm password'} />
+                  onFocus={() => setFocusedField("confirmPassword")}
+                  onBlur={() => setFocusedField(null)}
+                  accessibilityLabel={
+                    isArabic ? "تأكيد كلمة المرور" : "Confirm password"
+                  }
+                />
 
                 <TouchableOpacity
                   style={styles.eyeButton}
-                  onPress={() =>
-                    setShowConfirmPassword(
-                      !showConfirmPassword
-                    )
-                  }
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   <Ionicons
                     name={
-                      showConfirmPassword
-                        ? "eye-outline"
-                        : "eye-off-outline"
+                      showConfirmPassword ? "eye-outline" : "eye-off-outline"
                     }
                     size={21}
                     color="#A27140"
@@ -371,16 +408,11 @@ function ExistingSignUpScreen() {
                   <View
                     style={[
                       styles.arrowCircle,
-                      isArabic &&
-                        styles.arrowCircleArabic,
+                      isArabic && styles.arrowCircleArabic,
                     ]}
                   >
                     <Ionicons
-                      name={
-                        isArabic
-                          ? "arrow-back"
-                          : "arrow-forward"
-                      }
+                      name={isArabic ? "arrow-back" : "arrow-forward"}
                       size={18}
                       color="#A27140"
                     />
@@ -391,10 +423,7 @@ function ExistingSignUpScreen() {
 
             {/* Login */}
             <View
-              style={[
-                styles.loginContainer,
-                isArabic && styles.rowReverse,
-              ]}
+              style={[styles.loginContainer, isArabic && styles.rowReverse]}
             >
               <Text style={styles.loginQuestion}>
                 {t.signup.alreadyHaveAccount}
@@ -402,22 +431,18 @@ function ExistingSignUpScreen() {
 
               <TouchableOpacity
                 onPress={() =>
-                  router.replace({pathname:'/auth/login',params:role?{selectedRole:role}:{}})
+                  router.replace({
+                    pathname: "/auth/login",
+                    params: role ? { selectedRole: role } : {},
+                  })
                 }
               >
-                <Text style={styles.loginText}>
-                  {t.signup.signIn}
-                </Text>
+                <Text style={styles.loginText}>{t.signup.signIn}</Text>
               </TouchableOpacity>
             </View>
 
             {/* Footer */}
-            <View
-              style={[
-                styles.footer,
-                isArabic && styles.rowReverse,
-              ]}
-            >
+            <View style={[styles.footer, isArabic && styles.rowReverse]}>
               <Ionicons
                 name="shield-checkmark-outline"
                 size={14}
@@ -425,11 +450,7 @@ function ExistingSignUpScreen() {
               />
 
               <Text
-                style={[
-                  styles.footerText,
-                  isArabic &&
-                    styles.arabicFooterText,
-                ]}
+                style={[styles.footerText, isArabic && styles.arabicFooterText]}
               >
                 {t.signup.secureRegistration}
               </Text>
@@ -441,7 +462,7 @@ function ExistingSignUpScreen() {
   );
 }
 
-;const baseStyles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   background: {
     flex: 1,
   },
@@ -457,7 +478,7 @@ function ExistingSignUpScreen() {
     paddingBottom: 100,
   },
 
-  content: {width:'100%',maxWidth:520,alignSelf:'center'},
+  content: { width: "100%", maxWidth: 520, alignSelf: "center" },
 
   glowTop: {
     position: "absolute",
@@ -524,14 +545,44 @@ function ExistingSignUpScreen() {
     marginBottom: 12,
   },
 
-  logoCircle: {width:48,height:48,borderRadius:16,justifyContent:"center",alignItems:"center",shadowColor:"#D28B57",shadowOffset:{
+  logoCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#D28B57",
+    shadowOffset: {
       width: 0,
       height: 7,
-    },shadowOpacity:0.25,shadowRadius:13,elevation:8},
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 13,
+    elevation: 8,
+  },
 
-  brandName: {color:"#A27140",fontSize:14,fontWeight:"800",letterSpacing:3,textAlign:'left',marginLeft:7,lineHeight:24,alignSelf:'flex-start',marginBottom:4},
+  brandName: {
+    color: "#A27140",
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 3,
+    textAlign: "left",
+    marginLeft: 7,
+    lineHeight: 24,
+    alignSelf: "flex-start",
+    marginBottom: 4,
+  },
 
-  tagline: {color:"#493321",fontSize:11,fontWeight:"600",letterSpacing:2,textAlign:'left',marginTop:6,lineHeight:20,alignSelf:'flex-start'},
+  tagline: {
+    color: "#493321",
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 2,
+    textAlign: "left",
+    marginTop: 6,
+    lineHeight: 20,
+    alignSelf: "flex-start",
+  },
 
   arabicTagline: {
     letterSpacing: 0,
@@ -540,11 +591,23 @@ function ExistingSignUpScreen() {
 
   /* Heading */
 
-  headingSection: {marginTop:18,marginBottom:22,alignItems:'stretch'},
+  headingSection: { marginTop: 18, marginBottom: 22, alignItems: "stretch" },
 
-  heading: {color:"#493321",fontSize:28,fontWeight:'600',marginBottom:6,lineHeight:39,textAlign:'left'},
+  heading: {
+    color: "#493321",
+    fontSize: 28,
+    fontWeight: "600",
+    marginBottom: 6,
+    lineHeight: 39,
+    textAlign: "left",
+  },
 
-  description: {color:"#92765B",fontSize:13,lineHeight:23,textAlign:'left'},
+  description: {
+    color: "#92765B",
+    fontSize: 13,
+    lineHeight: 23,
+    textAlign: "left",
+  },
 
   arabicText: {
     textAlign: "right",
@@ -553,10 +616,24 @@ function ExistingSignUpScreen() {
 
   /* Card */
 
-  card: {backgroundColor:'transparent',borderWidth:0,borderColor:"#D5BFA1",borderRadius:0,padding:22,shadowColor:"#000000",shadowOffset:{
+  card: {
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    borderColor: "#D5BFA1",
+    borderRadius: 0,
+    padding: 22,
+    shadowColor: "#000000",
+    shadowOffset: {
       width: 0,
       height: 12,
-    },shadowOpacity:0,shadowRadius:20,elevation:0,paddingHorizontal:0,paddingTop:0,marginTop:0},
+    },
+    shadowOpacity: 0,
+    shadowRadius: 20,
+    elevation: 0,
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    marginTop: 0,
+  },
 
   label: {
     color: "#92765B",
@@ -576,7 +653,18 @@ function ExistingSignUpScreen() {
     marginRight: 2,
   },
 
-  inputContainer: {height:58,flexDirection:"row",alignItems:"center",backgroundColor:"#F7EDDD",borderWidth:1,borderColor:'#D4BB99',borderRadius:29,marginBottom:17,borderBottomWidth:1,minHeight:58},
+  inputContainer: {
+    height: 58,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F7EDDD",
+    borderWidth: 1,
+    borderColor: "#D4BB99",
+    borderRadius: 29,
+    marginBottom: 17,
+    borderBottomWidth: 1,
+    minHeight: 58,
+  },
 
   inputContainerArabic: {
     flexDirection: "row-reverse",
