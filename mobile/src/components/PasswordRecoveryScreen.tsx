@@ -1,63 +1,1017 @@
-import {CanvasFill} from './BrandSurfaces';
-import BrandWordmark from './BrandWordmark';
-import React,{useEffect,useRef,useState} from 'react';
-import {ActivityIndicator,Image,ImageBackground,KeyboardAvoidingView,Platform,Pressable,ScrollView,StatusBar,StyleSheet,TextInput,View} from 'react-native';
-import {Ionicons} from '@expo/vector-icons';
-import {LinearGradient} from 'expo-linear-gradient';
-import {router} from 'expo-router';
-import * as SecureStore from './SessionStore';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useAppearance} from './Appearance';
-import {useLanguage} from '../i18n/LanguageContext';
-import {Text,VisualProvider} from './MotexaVisual';
-import {EditorialTitle} from './PremiumUI';
-import LanguageSwitch from './LanguageSwitch';
-import {ManagementBanner} from './ManagementBanner';
+import { CanvasFill } from "./BrandSurfaces";
+import BrandWordmark from "./BrandWordmark";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  ImageBackground,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  TextInput,
+  View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
+import * as SecureStore from "./SessionStore";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAppearance } from "./Appearance";
+import { useLanguage } from "../i18n/LanguageContext";
+import { Text, VisualProvider } from "./MotexaVisual";
+import { EditorialTitle } from "./PremiumUI";
+import LanguageSwitch from "./LanguageSwitch";
+import { ManagementBanner } from "./ManagementBanner";
 
-type Step='email'|'code'|'password'|'complete';
-const API=process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/,'');
-export default function PasswordRecoveryScreen(){
- const {dark}=useAppearance();const {isArabic:ar}=useLanguage();const insets=useSafeAreaInsets();
- const [step,setStep]=useState<Step>('email'),[email,setEmail]=useState(''),[otp,setOtp]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState(''),[resetToken,setResetToken]=useState('');
- const [show,setShow]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[focused,setFocused]=useState(''),[lastSent,setLastSent]=useState(0),[now,setNow]=useState(Date.now());
- const busy=useRef(false),alive=useRef(true),controller=useRef<AbortController|null>(null),codeInput=useRef<TextInput>(null);
- useEffect(()=>{alive.current=true;return()=>{alive.current=false;controller.current?.abort();};},[]);
- useEffect(()=>{if(step!=='code'||!lastSent)return;const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer);},[step,lastSent]);
- const t=(en:string,arabic:string)=>ar?arabic:en;
- const ink=dark?'#FFF2DE':'#432D1E',muted=dark?'#D5BA97':'#80654C',paper=dark?'#30231B':'#FFF9EF',surface=dark?'#3A2B21':'#FFFAF1',border=dark?'#977047':'#D9B68B';
- const row=ar?'row-reverse' as const:'row' as const,align=ar?'right' as const:'left' as const;
- const cooldown=Math.max(0,60-Math.floor((now-lastSent)/1000));
- const cleanEmail=email.trim().toLowerCase();const at=cleanEmail.lastIndexOf('@');const masked=at>0?cleanEmail[0]+'***'+cleanEmail.slice(at):cleanEmail;
- const requirements=[{ok:password.length>=12&&password.length<=256,en:'12 to 256 characters',ar:'من 12 إلى 256 حرفًا'},{ok:/[A-Z]/.test(password),en:'One uppercase letter',ar:'حرف إنجليزي كبير'},{ok:/[a-z]/.test(password),en:'One lowercase letter',ar:'حرف إنجليزي صغير'},{ok:/[0-9]/.test(password),en:'One number',ar:'رقم واحد'},{ok:/[^A-Za-z0-9]/.test(password),en:'One symbol',ar:'رمز خاص'}];
- const resetInputs=()=>{setOtp('');setPassword('');setConfirm('');setResetToken('');setError('');};
- const back=()=>{if(loading)return;if(step==='email'||step==='complete'){router.replace('/auth/login');return;}resetInputs();setStep('email');};
- const errorText=(code:string)=>({
-  INVALID_EMAIL:t('Enter a valid email address.','أدخل بريدًا إلكترونيًا صحيحًا.'),
-  INVALID_REQUEST:t('Enter the six-digit code.','أدخل رمز التحقق من ستة أرقام.'),
-  RESET_CODE_INVALID:t('The code is incorrect or expired. Check it or request a new code.','الرمز غير صحيح أو منتهي الصلاحية. تحقق منه أو اطلب رمزًا جديدًا.'),
-  RESET_TOKEN_INVALID:t('Verification expired. Request a new code to continue.','انتهت صلاحية التحقق. اطلب رمزًا جديدًا للمتابعة.'),
-  PASSWORD_POLICY:t('Your password must meet all requirements below.','يجب أن تحقق كلمة المرور جميع الشروط الموضحة.'),
-  RATE_LIMITED:t('Too many attempts. Please try again later.','محاولات كثيرة. يرجى المحاولة لاحقًا.'),
-  RECOVERY_BUSY:t('Recovery is temporarily unavailable. Please try again shortly.','استعادة الحساب غير متاحة مؤقتًا. حاول مجددًا بعد قليل.'),
- }[code]||t('Could not connect. Check your connection and try again.','تعذّر الاتصال. تحقق من الشبكة وحاول مجددًا.'));
- const post=async(endpoint:string,body:Record<string,string>)=>{
-  if(!API)throw Error('NETWORK');controller.current=new AbortController();const timer=setTimeout(()=>controller.current?.abort(),20000);
-  try{const response=await fetch(`${API}/api/auth/password-reset/${endpoint}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.current.signal});let result;try{result=await response.json();}catch{throw Error('RECOVERY_BUSY');}if(!response.ok||!result.success)throw Error(result.code||'RECOVERY_BUSY');return result;}finally{clearTimeout(timer);}
- };
- const perform=async(work:()=>Promise<void>)=>{if(busy.current)return;busy.current=true;setLoading(true);setError('');try{await work();}catch(e){if(alive.current){const code=e instanceof Error?e.message:'NETWORK';setError(errorText(code));if(code==='RESET_TOKEN_INVALID'){setResetToken('');setPassword('');setConfirm('');setStep('code');}}}finally{busy.current=false;if(alive.current)setLoading(false);}};
- const request=()=>{if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)||cleanEmail.length>254){setError(errorText('INVALID_EMAIL'));return;}if(step==='code'&&cooldown>0)return;void perform(async()=>{await post('request-otp',{email:cleanEmail});if(!alive.current)return;resetInputs();setEmail(cleanEmail);setLastSent(Date.now());setNow(Date.now());setStep('code');});};
- const verify=()=>{if(!/^\d{6}$/.test(otp)){setError(errorText('INVALID_REQUEST'));return;}void perform(async()=>{const result=await post('verify-otp',{email:cleanEmail,otp});if(typeof result.resetToken!=='string'||!/^[a-f0-9]{64}$/i.test(result.resetToken))throw Error('RECOVERY_BUSY');if(!alive.current)return;setResetToken(result.resetToken);setOtp('');setStep('password');});};
- const update=()=>{if(!requirements.every(r=>r.ok)){setError(errorText('PASSWORD_POLICY'));return;}if(password!==confirm){setError(t('Passwords do not match.','كلمتا المرور غير متطابقتين.'));return;}void perform(async()=>{await post('reset',{resetToken,password});await SecureStore.deleteItemAsync('motexa_access_token').catch(()=>{});if(!alive.current)return;resetInputs();setStep('complete');});};
- const button=(label:string,action:()=>void)=><Pressable accessibilityRole="button" disabled={loading} onPress={action} style={({pressed})=>[s.primary,{opacity:loading?.6:pressed?.8:1}]}><LinearGradient colors={['#72492B','#422918']} style={[s.primaryFill,{flexDirection:row}]}>{loading?<ActivityIndicator color="#FFF1DE"/>:<><Text style={s.primaryText}>{label}</Text><Ionicons name={ar?'arrow-back':'arrow-forward'} size={19} color="#EECDA2"/></>}</LinearGradient></Pressable>;
- const heading=(title:string,sub:string)=><View style={s.heading}><EditorialTitle accent style={{fontSize:32,lineHeight:43,color:ink,textAlign:align}}>{title}</EditorialTitle><Text style={{fontSize:13,lineHeight:22,color:muted,textAlign:align,marginTop:8}}>{sub}</Text></View>;
- const passwordField=(isConfirm=false)=>{const label=isConfirm?t('Confirm new password','تأكيد كلمة المرور الجديدة'):t('New password','كلمة المرور الجديدة');return <View style={{marginTop:16}}><Text style={{fontSize:12,lineHeight:20,color:muted,textAlign:align,marginBottom:7}}>{label}</Text><View style={[s.inputRow,{backgroundColor:surface,borderColor:focused===(isConfirm?'confirm':'password')?'#B17D43':border,flexDirection:row}]}><Ionicons name="lock-closed-outline" size={19} color={muted}/><TextInput accessibilityLabel={label} value={isConfirm?confirm:password} onChangeText={isConfirm?setConfirm:setPassword} editable={!loading} maxLength={256} secureTextEntry={!show} autoCapitalize="none" autoCorrect={false} textContentType="newPassword" onFocus={()=>setFocused(isConfirm?'confirm':'password')} onBlur={()=>setFocused('')} placeholder={label} placeholderTextColor={muted} style={[s.input,{color:ink,textAlign:align}]}/><Pressable accessibilityRole="button" accessibilityLabel={show?t('Hide passwords','إخفاء كلمات المرور'):t('Show passwords','إظهار كلمات المرور')} onPress={()=>setShow(v=>!v)} style={s.eye}><Ionicons name={show?'eye-off-outline':'eye-outline'} size={20} color={muted}/></Pressable></View></View>;};
- return <VisualProvider><View style={{flex:1,backgroundColor:paper}}><StatusBar barStyle={dark?'light-content':'dark-content'}/><KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==='ios'?'padding':undefined}><ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{flexGrow:1,paddingBottom:insets.bottom}}><View style={[s.frame,{backgroundColor:paper}]}><CanvasFill/>
- <View style={[s.top,{paddingTop:insets.top+12,flexDirection:row}]}><Pressable accessibilityRole="button" accessibilityLabel={t('Back','رجوع')} disabled={loading} onPress={back} style={s.back}><Ionicons name={ar?'arrow-forward':'arrow-back'} size={23} color={ink}/></Pressable><View style={{flex:1,minWidth:68}}><BrandWordmark style={{color:ink,fontSize:15,fontWeight:'600',letterSpacing:2}} /><Text style={{fontSize:6,lineHeight:12,letterSpacing:1.3,color:muted}}>SMART AUTO CARE</Text></View><LanguageSwitch compact light unified/></View>
- {step==='email'&&<><ImageBackground source={require('../../assets/images/motexa-admin-coastal-hero.png')} style={s.hero}><View style={[s.heroPaper,{backgroundColor:paper,[ar?'left':'right']:undefined,[ar?'right':'left']:0,[ar?'borderBottomLeftRadius':'borderBottomRightRadius']:110}]}><EditorialTitle accent style={{fontSize:37,lineHeight:48,color:ink,textAlign:align}}>{t('Reset\npassword.','استعادة\nكلمة المرور.')}</EditorialTitle><Text style={{fontSize:13,lineHeight:22,color:muted,textAlign:align,marginTop:12}}>{t("Don't worry. We will help you regain access.",'لا تقلق، سنساعدك على استعادة الوصول لحسابك.')}</Text></View></ImageBackground><View style={[s.panel,s.roundPanel,{backgroundColor:paper,marginTop:-25}]}><View style={[s.badge,{backgroundColor:dark?'#69472B':'#EDD1A9'}]}><Ionicons name="mail-outline" size={28} color={muted}/></View><EditorialTitle accent style={{fontSize:25,lineHeight:35,color:ink,textAlign:'center',marginTop:13}}>{t('Enter your email','أدخل بريدك الإلكتروني')}</EditorialTitle><Text style={{fontSize:12,lineHeight:21,color:muted,textAlign:'center',marginTop:7,marginBottom:19}}>{t('If your email is registered, we will send a verification code.','إذا كان بريدك مسجّلًا، سنرسل لك رمز تحقق.')}</Text><View style={[s.inputRow,{backgroundColor:surface,borderColor:focused==='email'?'#B17D43':border,flexDirection:row}]}><Ionicons name="mail-outline" size={19} color={muted}/><TextInput accessibilityLabel={t('Registered email address','البريد الإلكتروني المسجّل')} value={email} onChangeText={setEmail} editable={!loading} maxLength={254} onFocus={()=>setFocused('email')} onBlur={()=>setFocused('')} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} textContentType="emailAddress" placeholder={t('Email address','البريد الإلكتروني')} placeholderTextColor={muted} style={[s.input,{color:ink,textAlign:align,writingDirection:'ltr'}]}/></View>{error?<Text accessibilityRole="alert" style={s.error}>{error}</Text>:null}{button(t('Send code','إرسال الرمز'),request)}<Pressable accessibilityRole="button" disabled={loading} onPress={()=>router.replace('/auth/login')} style={s.textLink}><Text style={{color:muted,fontSize:12}}>{t('Back to sign in','العودة لتسجيل الدخول')}</Text></Pressable></View></>}
- {step==='code'&&<View style={[s.panel,s.roundPanel,{backgroundColor:paper}]}>{heading(t('Check your email','تحقق من بريدك'),t('If this address is registered, your six-digit code will arrive shortly.','إذا كان هذا البريد مسجّلًا، سيصلك رمز من ستة أرقام قريبًا.'))}<Text style={{color:'#A6713A',fontSize:14,lineHeight:24,writingDirection:'ltr',textAlign:align}}>{masked}</Text><Image source={require('../../assets/images/motexa-activation-envelope.png')} accessible={false} resizeMode="contain" style={s.envelope}/><Pressable accessibilityRole="button" accessibilityLabel={t('Enter six-digit code','إدخال رمز التحقق')} onPress={()=>codeInput.current?.focus()} style={s.codeArea}><View pointerEvents="none" style={s.codeCells}>{Array.from({length:6},(_,i)=><View key={i} style={[s.codeCell,{backgroundColor:surface,borderColor:focused==='otp'&&i===Math.min(otp.length,5)?'#A6713A':border}]}><Text style={{fontSize:24,lineHeight:34,color:ink}}>{otp[i]||''}</Text></View>)}</View><TextInput ref={codeInput} accessibilityLabel={t('Verification code','رمز التحقق')} value={otp} onChangeText={value=>setOtp(value.replace(/\D/g,'').slice(0,6))} editable={!loading} maxLength={6} keyboardType="number-pad" textContentType="oneTimeCode" autoComplete="one-time-code" caretHidden onFocus={()=>setFocused('otp')} onBlur={()=>setFocused('')} style={s.codeInput}/></Pressable><Text style={[s.centerNote,{color:muted}]}>{t('The code expires five minutes after it is issued.','تنتهي صلاحية الرمز بعد خمس دقائق من إصداره.')}</Text>{error?<Text accessibilityRole="alert" style={s.error}>{error}</Text>:null}{button(t('Verify code','التحقق من الرمز'),verify)}<Pressable accessibilityRole="button" disabled={loading||cooldown>0} onPress={request} style={[s.outline,{borderColor:border,flexDirection:row,opacity:cooldown>0?.55:1}]}><Ionicons name="refresh-outline" size={20} color={muted}/><Text style={{fontSize:13,color:ink}}>{t('Resend code','إعادة إرسال الرمز')}{cooldown>0?' ('+cooldown+'s)':''}</Text></Pressable><Pressable accessibilityRole="button" disabled={loading} onPress={back} style={s.textLink}><Text style={{fontSize:12,color:muted}}>{t('Use a different email','استخدام بريد إلكتروني آخر')}</Text></Pressable></View>}
- {step==='password'&&<View style={[s.panel,s.roundPanel,{backgroundColor:paper}]}>{heading(t('Set new password','تعيين كلمة مرور جديدة'),t('Choose a strong password to secure your account.','اختر كلمة مرور قوية لحماية حسابك.'))}<View style={[s.medallion,{backgroundColor:dark?'#69472B':'#EDD1A9'}]}><Ionicons name="lock-closed" size={42} color={muted}/></View>{passwordField()}{passwordField(true)}<View style={[s.requirements,{backgroundColor:dark?'#493323':'#F5E5CD'}]}><Text style={{color:ink,fontSize:12,lineHeight:21,marginBottom:6,textAlign:align}}>{t('Password requirements','شروط كلمة المرور')}</Text>{requirements.map(item=><View key={item.en} style={{flexDirection:row,gap:8,alignItems:'center',marginVertical:2}}><Ionicons name={item.ok?'checkmark-circle':'ellipse-outline'} size={15} color={item.ok?(dark?'#C0D19D':'#68753A'):muted}/><Text style={{fontSize:11,lineHeight:19,color:muted}}>{ar?item.ar:item.en}</Text></View>)}</View>{error?<Text accessibilityRole="alert" style={s.error}>{error}</Text>:null}{button(t('Update password','تحديث كلمة المرور'),update)}</View>}
- {step==='complete'&&<><ManagementBanner index={2} style={{height:235}}/><View style={[s.panel,s.roundPanel,{backgroundColor:paper,marginTop:-28}]}><View style={s.successBadge}><Ionicons name="checkmark" size={50} color="#FFF2DD"/></View><EditorialTitle accent style={{fontSize:32,lineHeight:43,color:ink,textAlign:'center',marginTop:25}}>{t('Password updated!','تم تحديث كلمة المرور!')}</EditorialTitle><Text style={{fontSize:14,lineHeight:24,color:muted,textAlign:'center',marginTop:10}}>{t('Your password has been changed. Sign in with your new password.','تم تغيير كلمة المرور. سجّل الدخول بكلمة المرور الجديدة.')}</Text><View style={[s.requirements,{backgroundColor:dark?'#493323':'#F5E5CD'}]}><Text style={{fontSize:12,lineHeight:21,color:muted,textAlign:align}}>{t('Your account details and department access are unchanged.','معلومات حسابك وصلاحيات قسمك محفوظة كما هي.')}</Text></View>{button(t('Go to sign in','الانتقال لتسجيل الدخول'),()=>router.replace('/auth/login'))}</View></>}
- <ImageBackground accessible={false} source={require('../../assets/images/motexa-admin-coastal-hero.png')} style={s.footer}><LinearGradient colors={['rgba(35,23,14,.1)','rgba(35,23,14,.8)']} style={StyleSheet.absoluteFill}/><BrandWordmark style={{fontSize:20,letterSpacing:3,color:'#FFF2DE'}} light /><Text style={{fontSize:8,lineHeight:15,color:'#F1D9B8',marginTop:4}}>{t('PEOPLE. VEHICLES.\nSERVICES. ALWAYS AHEAD.','الأشخاص. المركبات.\nالخدمات. دائمًا للأمام.')}</Text></ImageBackground>
- </View></ScrollView></KeyboardAvoidingView></View></VisualProvider>;
+type Step = "email" | "code" | "password" | "complete";
+const API = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "");
+export default function PasswordRecoveryScreen() {
+  const { dark } = useAppearance();
+  const { isArabic: ar } = useLanguage();
+  const insets = useSafeAreaInsets();
+  const [step, setStep] = useState<Step>("email"),
+    [email, setEmail] = useState(""),
+    [otp, setOtp] = useState(""),
+    [password, setPassword] = useState(""),
+    [confirm, setConfirm] = useState(""),
+    [resetToken, setResetToken] = useState("");
+  const [show, setShow] = useState(false),
+    [loading, setLoading] = useState(false),
+    [error, setError] = useState(""),
+    [focused, setFocused] = useState(""),
+    [lastSent, setLastSent] = useState(0),
+    [now, setNow] = useState(Date.now());
+  const busy = useRef(false),
+    alive = useRef(true),
+    controller = useRef<AbortController | null>(null),
+    codeInput = useRef<TextInput>(null);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      controller.current?.abort();
+    };
+  }, []);
+  useEffect(() => {
+    if (step !== "code" || !lastSent) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [step, lastSent]);
+  const t = (en: string, arabic: string) => (ar ? arabic : en);
+  const ink = dark ? "#FFF2DE" : "#432D1E",
+    muted = dark ? "#D5BA97" : "#80654C",
+    paper = dark ? "#30231B" : "#FFF9EF",
+    surface = dark ? "#3A2B21" : "#FFFAF1",
+    border = dark ? "#977047" : "#D9B68B";
+  const row = ar ? ("row-reverse" as const) : ("row" as const),
+    align = ar ? ("right" as const) : ("left" as const);
+  const cooldown = Math.max(0, 60 - Math.floor((now - lastSent) / 1000));
+  const cleanEmail = email.trim().toLowerCase();
+  const at = cleanEmail.lastIndexOf("@");
+  const masked =
+    at > 0 ? cleanEmail[0] + "***" + cleanEmail.slice(at) : cleanEmail;
+  const requirements = [
+    {
+      ok: password.length >= 12 && password.length <= 256,
+      en: "12 to 256 characters",
+      ar: "من 12 إلى 256 حرفًا",
+    },
+    {
+      ok: /[A-Z]/.test(password),
+      en: "One uppercase letter",
+      ar: "حرف إنجليزي كبير",
+    },
+    {
+      ok: /[a-z]/.test(password),
+      en: "One lowercase letter",
+      ar: "حرف إنجليزي صغير",
+    },
+    { ok: /[0-9]/.test(password), en: "One number", ar: "رقم واحد" },
+    { ok: /[^A-Za-z0-9]/.test(password), en: "One symbol", ar: "رمز خاص" },
+  ];
+  const resetInputs = () => {
+    setOtp("");
+    setPassword("");
+    setConfirm("");
+    setResetToken("");
+    setError("");
+  };
+  const back = () => {
+    if (loading) return;
+    if (step === "email" || step === "complete") {
+      router.replace("/auth/login");
+      return;
+    }
+    resetInputs();
+    setStep("email");
+  };
+  const errorText = (code: string) =>
+    ({
+      INVALID_EMAIL: t(
+        "Enter a valid email address.",
+        "أدخل بريدًا إلكترونيًا صحيحًا.",
+      ),
+      INVALID_REQUEST: t(
+        "Enter the six-digit code.",
+        "أدخل رمز التحقق من ستة أرقام.",
+      ),
+      RESET_CODE_INVALID: t(
+        "The code is incorrect or expired. Check it or request a new code.",
+        "الرمز غير صحيح أو منتهي الصلاحية. تحقق منه أو اطلب رمزًا جديدًا.",
+      ),
+      RESET_TOKEN_INVALID: t(
+        "Verification expired. Request a new code to continue.",
+        "انتهت صلاحية التحقق. اطلب رمزًا جديدًا للمتابعة.",
+      ),
+      PASSWORD_POLICY: t(
+        "Your password must meet all requirements below.",
+        "يجب أن تحقق كلمة المرور جميع الشروط الموضحة.",
+      ),
+      RATE_LIMITED: t(
+        "Too many attempts. Please try again later.",
+        "محاولات كثيرة. يرجى المحاولة لاحقًا.",
+      ),
+      RECOVERY_BUSY: t(
+        "Recovery is temporarily unavailable. Please try again shortly.",
+        "استعادة الحساب غير متاحة مؤقتًا. حاول مجددًا بعد قليل.",
+      ),
+    })[code] ||
+    t(
+      "Could not connect. Check your connection and try again.",
+      "تعذّر الاتصال. تحقق من الشبكة وحاول مجددًا.",
+    );
+  const post = async (endpoint: string, body: Record<string, string>) => {
+    if (!API) throw Error("NETWORK");
+    controller.current = new AbortController();
+    const timer = setTimeout(() => controller.current?.abort(), 20000);
+    try {
+      const response = await fetch(
+        `${API}/api/auth/password-reset/${endpoint}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: controller.current.signal,
+        },
+      );
+      let result;
+      try {
+        result = await response.json();
+      } catch {
+        throw Error("RECOVERY_BUSY");
+      }
+      if (!response.ok || !result.success)
+        throw Error(result.code || "RECOVERY_BUSY");
+      return result;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  const perform = async (work: () => Promise<void>) => {
+    if (busy.current) return;
+    busy.current = true;
+    setLoading(true);
+    setError("");
+    try {
+      await work();
+    } catch (e) {
+      if (alive.current) {
+        const code = e instanceof Error ? e.message : "NETWORK";
+        setError(errorText(code));
+        if (code === "RESET_TOKEN_INVALID") {
+          setResetToken("");
+          setPassword("");
+          setConfirm("");
+          setStep("code");
+        }
+      }
+    } finally {
+      busy.current = false;
+      if (alive.current) setLoading(false);
+    }
+  };
+  const request = () => {
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) ||
+      cleanEmail.length > 254
+    ) {
+      setError(errorText("INVALID_EMAIL"));
+      return;
+    }
+    if (step === "code" && cooldown > 0) return;
+    void perform(async () => {
+      await post("request-otp", { email: cleanEmail });
+      if (!alive.current) return;
+      resetInputs();
+      setEmail(cleanEmail);
+      setLastSent(Date.now());
+      setNow(Date.now());
+      setStep("code");
+    });
+  };
+  const verify = () => {
+    if (!/^\d{6}$/.test(otp)) {
+      setError(errorText("INVALID_REQUEST"));
+      return;
+    }
+    void perform(async () => {
+      const result = await post("verify-otp", { email: cleanEmail, otp });
+      if (
+        typeof result.resetToken !== "string" ||
+        !/^[a-f0-9]{64}$/i.test(result.resetToken)
+      )
+        throw Error("RECOVERY_BUSY");
+      if (!alive.current) return;
+      setResetToken(result.resetToken);
+      setOtp("");
+      setStep("password");
+    });
+  };
+  const update = () => {
+    if (!requirements.every((r) => r.ok)) {
+      setError(errorText("PASSWORD_POLICY"));
+      return;
+    }
+    if (password !== confirm) {
+      setError(t("Passwords do not match.", "كلمتا المرور غير متطابقتين."));
+      return;
+    }
+    void perform(async () => {
+      await post("reset", { resetToken, password });
+      await SecureStore.deleteItemAsync("motexa_access_token").catch(() => {});
+      if (!alive.current) return;
+      resetInputs();
+      setStep("complete");
+    });
+  };
+  const button = (label: string, action: () => void) => (
+    <Pressable
+      accessibilityRole="button"
+      disabled={loading}
+      onPress={action}
+      style={({ pressed }) => [
+        s.primary,
+        { opacity: loading ? 0.6 : pressed ? 0.8 : 1 },
+      ]}
+    >
+      <LinearGradient
+        colors={["#72492B", "#422918"]}
+        style={[s.primaryFill, { flexDirection: row }]}
+      >
+        {loading ? (
+          <ActivityIndicator color="#FFF1DE" />
+        ) : (
+          <>
+            <Text style={s.primaryText}>{label}</Text>
+            <Ionicons
+              name={ar ? "arrow-back" : "arrow-forward"}
+              size={19}
+              color="#EECDA2"
+            />
+          </>
+        )}
+      </LinearGradient>
+    </Pressable>
+  );
+  const heading = (title: string, sub: string) => (
+    <View style={s.heading}>
+      <EditorialTitle
+        accent
+        style={{ fontSize: 32, lineHeight: 43, color: ink, textAlign: align }}
+      >
+        {title}
+      </EditorialTitle>
+      <Text
+        style={{
+          fontSize: 13,
+          lineHeight: 22,
+          color: muted,
+          textAlign: align,
+          marginTop: 8,
+        }}
+      >
+        {sub}
+      </Text>
+    </View>
+  );
+  const passwordField = (isConfirm = false) => {
+    const label = isConfirm
+      ? t("Confirm new password", "تأكيد كلمة المرور الجديدة")
+      : t("New password", "كلمة المرور الجديدة");
+    return (
+      <View style={{ marginTop: 16 }}>
+        <Text
+          style={{
+            fontSize: 12,
+            lineHeight: 20,
+            color: muted,
+            textAlign: align,
+            marginBottom: 7,
+          }}
+        >
+          {label}
+        </Text>
+        <View
+          style={[
+            s.inputRow,
+            {
+              backgroundColor: surface,
+              borderColor:
+                focused === (isConfirm ? "confirm" : "password")
+                  ? "#B17D43"
+                  : border,
+              flexDirection: row,
+            },
+          ]}
+        >
+          <Ionicons name="lock-closed-outline" size={19} color={muted} />
+          <TextInput
+            accessibilityLabel={label}
+            value={isConfirm ? confirm : password}
+            onChangeText={isConfirm ? setConfirm : setPassword}
+            editable={!loading}
+            maxLength={256}
+            secureTextEntry={!show}
+            autoCapitalize="none"
+            autoCorrect={false}
+            textContentType="newPassword"
+            onFocus={() => setFocused(isConfirm ? "confirm" : "password")}
+            onBlur={() => setFocused("")}
+            placeholder={label}
+            placeholderTextColor={muted}
+            style={[s.input, { color: ink, textAlign: align }]}
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              show
+                ? t("Hide passwords", "إخفاء كلمات المرور")
+                : t("Show passwords", "إظهار كلمات المرور")
+            }
+            onPress={() => setShow((v) => !v)}
+            style={s.eye}
+          >
+            <Ionicons
+              name={show ? "eye-off-outline" : "eye-outline"}
+              size={20}
+              color={muted}
+            />
+          </Pressable>
+        </View>
+      </View>
+    );
+  };
+  return (
+    <VisualProvider>
+      <View style={{ flex: 1, backgroundColor: paper }}>
+        <StatusBar barStyle={dark ? "light-content" : "dark-content"} />
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+              flexGrow: 1,
+              paddingBottom: insets.bottom,
+            }}
+          >
+            <View style={[s.frame, { backgroundColor: paper }]}>
+              <CanvasFill />
+              <View
+                style={[
+                  s.top,
+                  { paddingTop: insets.top + 12, flexDirection: row },
+                ]}
+              >
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t("Back", "رجوع")}
+                  disabled={loading}
+                  onPress={back}
+                  style={s.back}
+                >
+                  <Ionicons
+                    name={ar ? "arrow-forward" : "arrow-back"}
+                    size={23}
+                    color={ink}
+                  />
+                </Pressable>
+                <View style={{ flex: 1, minWidth: 68 }}>
+                  <BrandWordmark
+                    style={{
+                      color: ink,
+                      fontSize: 15,
+                      fontWeight: "600",
+                      letterSpacing: 2,
+                    }}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 6,
+                      lineHeight: 12,
+                      letterSpacing: 1.3,
+                      color: muted,
+                    }}
+                  >
+                    SMART AUTO CARE
+                  </Text>
+                </View>
+                <LanguageSwitch compact light unified />
+              </View>
+              {step === "email" && (
+                <>
+                  <ImageBackground
+                    source={require("../../assets/images/motexa-admin-coastal-hero.png")}
+                    style={s.hero}
+                  >
+                    <View
+                      style={[
+                        s.heroPaper,
+                        {
+                          backgroundColor: paper,
+                          [ar ? "left" : "right"]: undefined,
+                          [ar ? "right" : "left"]: 0,
+                          [ar
+                            ? "borderBottomLeftRadius"
+                            : "borderBottomRightRadius"]: 110,
+                        },
+                      ]}
+                    >
+                      <EditorialTitle
+                        accent
+                        style={{
+                          fontSize: 37,
+                          lineHeight: 48,
+                          color: ink,
+                          textAlign: align,
+                        }}
+                      >
+                        {t("Reset\npassword.", "استعادة\nكلمة المرور.")}
+                      </EditorialTitle>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          lineHeight: 22,
+                          color: muted,
+                          textAlign: align,
+                          marginTop: 12,
+                        }}
+                      >
+                        {t(
+                          "Don't worry. We will help you regain access.",
+                          "لا تقلق، سنساعدك على استعادة الوصول لحسابك.",
+                        )}
+                      </Text>
+                    </View>
+                  </ImageBackground>
+                  <View
+                    style={[
+                      s.panel,
+                      s.roundPanel,
+                      { backgroundColor: paper, marginTop: -25 },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        s.badge,
+                        { backgroundColor: dark ? "#69472B" : "#EDD1A9" },
+                      ]}
+                    >
+                      <Ionicons name="mail-outline" size={28} color={muted} />
+                    </View>
+                    <EditorialTitle
+                      accent
+                      style={{
+                        fontSize: 25,
+                        lineHeight: 35,
+                        color: ink,
+                        textAlign: "center",
+                        marginTop: 13,
+                      }}
+                    >
+                      {t("Enter your email", "أدخل بريدك الإلكتروني")}
+                    </EditorialTitle>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        lineHeight: 21,
+                        color: muted,
+                        textAlign: "center",
+                        marginTop: 7,
+                        marginBottom: 19,
+                      }}
+                    >
+                      {t(
+                        "If your email is registered, we will send a verification code.",
+                        "إذا كان بريدك مسجّلًا، سنرسل لك رمز تحقق.",
+                      )}
+                    </Text>
+                    <View
+                      style={[
+                        s.inputRow,
+                        {
+                          backgroundColor: surface,
+                          borderColor: focused === "email" ? "#B17D43" : border,
+                          flexDirection: row,
+                        },
+                      ]}
+                    >
+                      <Ionicons name="mail-outline" size={19} color={muted} />
+                      <TextInput
+                        accessibilityLabel={t(
+                          "Registered email address",
+                          "البريد الإلكتروني المسجّل",
+                        )}
+                        value={email}
+                        onChangeText={setEmail}
+                        editable={!loading}
+                        maxLength={254}
+                        onFocus={() => setFocused("email")}
+                        onBlur={() => setFocused("")}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        textContentType="emailAddress"
+                        placeholder={t("Email address", "البريد الإلكتروني")}
+                        placeholderTextColor={muted}
+                        style={[
+                          s.input,
+                          {
+                            color: ink,
+                            textAlign: align,
+                            writingDirection: "ltr",
+                          },
+                        ]}
+                      />
+                    </View>
+                    {error ? (
+                      <Text accessibilityRole="alert" style={s.error}>
+                        {error}
+                      </Text>
+                    ) : null}
+                    {button(t("Send code", "إرسال الرمز"), request)}
+                    <Pressable
+                      accessibilityRole="button"
+                      disabled={loading}
+                      onPress={() => router.replace("/auth/login")}
+                      style={s.textLink}
+                    >
+                      <Text style={{ color: muted, fontSize: 12 }}>
+                        {t("Back to sign in", "العودة لتسجيل الدخول")}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </>
+              )}
+              {step === "code" && (
+                <View
+                  style={[s.panel, s.roundPanel, { backgroundColor: paper }]}
+                >
+                  {heading(
+                    t("Check your email", "تحقق من بريدك"),
+                    t(
+                      "If this address is registered, your six-digit code will arrive shortly.",
+                      "إذا كان هذا البريد مسجّلًا، سيصلك رمز من ستة أرقام قريبًا.",
+                    ),
+                  )}
+                  <Text
+                    style={{
+                      color: "#A6713A",
+                      fontSize: 14,
+                      lineHeight: 24,
+                      writingDirection: "ltr",
+                      textAlign: align,
+                    }}
+                  >
+                    {masked}
+                  </Text>
+                  <Image
+                    source={require("../../assets/images/motexa-activation-envelope.png")}
+                    accessible={false}
+                    resizeMode="contain"
+                    style={s.envelope}
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t(
+                      "Enter six-digit code",
+                      "إدخال رمز التحقق",
+                    )}
+                    onPress={() => codeInput.current?.focus()}
+                    style={s.codeArea}
+                  >
+                    <View pointerEvents="none" style={s.codeCells}>
+                      {Array.from({ length: 6 }, (_, i) => (
+                        <View
+                          key={i}
+                          style={[
+                            s.codeCell,
+                            {
+                              backgroundColor: surface,
+                              borderColor:
+                                focused === "otp" &&
+                                i === Math.min(otp.length, 5)
+                                  ? "#A6713A"
+                                  : border,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={{ fontSize: 24, lineHeight: 34, color: ink }}
+                          >
+                            {otp[i] || ""}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                    <TextInput
+                      ref={codeInput}
+                      accessibilityLabel={t("Verification code", "رمز التحقق")}
+                      value={otp}
+                      onChangeText={(value) =>
+                        setOtp(value.replace(/\D/g, "").slice(0, 6))
+                      }
+                      editable={!loading}
+                      maxLength={6}
+                      keyboardType="number-pad"
+                      textContentType="oneTimeCode"
+                      autoComplete="one-time-code"
+                      caretHidden
+                      onFocus={() => setFocused("otp")}
+                      onBlur={() => setFocused("")}
+                      style={s.codeInput}
+                    />
+                  </Pressable>
+                  <Text style={[s.centerNote, { color: muted }]}>
+                    {t(
+                      "The code expires five minutes after it is issued.",
+                      "تنتهي صلاحية الرمز بعد خمس دقائق من إصداره.",
+                    )}
+                  </Text>
+                  {error ? (
+                    <Text accessibilityRole="alert" style={s.error}>
+                      {error}
+                    </Text>
+                  ) : null}
+                  {button(t("Verify code", "التحقق من الرمز"), verify)}
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={loading || cooldown > 0}
+                    onPress={request}
+                    style={[
+                      s.outline,
+                      {
+                        borderColor: border,
+                        flexDirection: row,
+                        opacity: cooldown > 0 ? 0.55 : 1,
+                      },
+                    ]}
+                  >
+                    <Ionicons name="refresh-outline" size={20} color={muted} />
+                    <Text style={{ fontSize: 13, color: ink }}>
+                      {t("Resend code", "إعادة إرسال الرمز")}
+                      {cooldown > 0 ? " (" + cooldown + "s)" : ""}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={loading}
+                    onPress={back}
+                    style={s.textLink}
+                  >
+                    <Text style={{ fontSize: 12, color: muted }}>
+                      {t("Use a different email", "استخدام بريد إلكتروني آخر")}
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
+              {step === "password" && (
+                <View
+                  style={[s.panel, s.roundPanel, { backgroundColor: paper }]}
+                >
+                  {heading(
+                    t("Set new password", "تعيين كلمة مرور جديدة"),
+                    t(
+                      "Choose a strong password to secure your account.",
+                      "اختر كلمة مرور قوية لحماية حسابك.",
+                    ),
+                  )}
+                  <View
+                    style={[
+                      s.medallion,
+                      { backgroundColor: dark ? "#69472B" : "#EDD1A9" },
+                    ]}
+                  >
+                    <Ionicons name="lock-closed" size={42} color={muted} />
+                  </View>
+                  {passwordField()}
+                  {passwordField(true)}
+                  <View
+                    style={[
+                      s.requirements,
+                      { backgroundColor: dark ? "#493323" : "#F5E5CD" },
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        color: ink,
+                        fontSize: 12,
+                        lineHeight: 21,
+                        marginBottom: 6,
+                        textAlign: align,
+                      }}
+                    >
+                      {t("Password requirements", "شروط كلمة المرور")}
+                    </Text>
+                    {requirements.map((item) => (
+                      <View
+                        key={item.en}
+                        style={{
+                          flexDirection: row,
+                          gap: 8,
+                          alignItems: "center",
+                          marginVertical: 2,
+                        }}
+                      >
+                        <Ionicons
+                          name={
+                            item.ok ? "checkmark-circle" : "ellipse-outline"
+                          }
+                          size={15}
+                          color={
+                            item.ok ? (dark ? "#C0D19D" : "#68753A") : muted
+                          }
+                        />
+                        <Text
+                          style={{ fontSize: 11, lineHeight: 19, color: muted }}
+                        >
+                          {ar ? item.ar : item.en}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                  {error ? (
+                    <Text accessibilityRole="alert" style={s.error}>
+                      {error}
+                    </Text>
+                  ) : null}
+                  {button(t("Update password", "تحديث كلمة المرور"), update)}
+                </View>
+              )}
+              {step === "complete" && (
+                <>
+                  <ManagementBanner index={2} style={{ height: 235 }} />
+                  <View
+                    style={[
+                      s.panel,
+                      s.roundPanel,
+                      { backgroundColor: paper, marginTop: -28 },
+                    ]}
+                  >
+                    <View style={s.successBadge}>
+                      <Ionicons name="checkmark" size={50} color="#FFF2DD" />
+                    </View>
+                    <EditorialTitle
+                      accent
+                      style={{
+                        fontSize: 32,
+                        lineHeight: 43,
+                        color: ink,
+                        textAlign: "center",
+                        marginTop: 25,
+                      }}
+                    >
+                      {t("Password updated!", "تم تحديث كلمة المرور!")}
+                    </EditorialTitle>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        lineHeight: 24,
+                        color: muted,
+                        textAlign: "center",
+                        marginTop: 10,
+                      }}
+                    >
+                      {t(
+                        "Your password has been changed. Sign in with your new password.",
+                        "تم تغيير كلمة المرور. سجّل الدخول بكلمة المرور الجديدة.",
+                      )}
+                    </Text>
+                    <View
+                      style={[
+                        s.requirements,
+                        { backgroundColor: dark ? "#493323" : "#F5E5CD" },
+                      ]}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          lineHeight: 21,
+                          color: muted,
+                          textAlign: align,
+                        }}
+                      >
+                        {t(
+                          "Your account details and department access are unchanged.",
+                          "معلومات حسابك وصلاحيات قسمك محفوظة كما هي.",
+                        )}
+                      </Text>
+                    </View>
+                    {button(t("Go to sign in", "الانتقال لتسجيل الدخول"), () =>
+                      router.replace("/auth/login"),
+                    )}
+                  </View>
+                </>
+              )}
+              <ImageBackground
+                accessible={false}
+                source={require("../../assets/images/motexa-admin-coastal-hero.png")}
+                style={s.footer}
+              >
+                <LinearGradient
+                  colors={["rgba(35,23,14,.1)", "rgba(35,23,14,.8)"]}
+                  style={StyleSheet.absoluteFill}
+                />
+                <BrandWordmark
+                  style={{ fontSize: 20, letterSpacing: 3, color: "#FFF2DE" }}
+                  light
+                />
+                <Text
+                  style={{
+                    fontSize: 8,
+                    lineHeight: 15,
+                    color: "#F1D9B8",
+                    marginTop: 4,
+                  }}
+                >
+                  {t(
+                    "PEOPLE. VEHICLES.\nSERVICES. ALWAYS AHEAD.",
+                    "الأشخاص. المركبات.\nالخدمات. دائمًا للأمام.",
+                  )}
+                </Text>
+              </ImageBackground>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
+    </VisualProvider>
+  );
 }
-const s=StyleSheet.create({frame:{width:'100%',maxWidth:560,alignSelf:'center',flex:1},top:{paddingHorizontal:16,paddingBottom:15,alignItems:'center',gap:7,flexWrap:'wrap'},back:{width:34,height:44,alignItems:'center',justifyContent:'center'},hero:{height:285},heroPaper:{position:'absolute',top:0,bottom:0,width:'70%',paddingHorizontal:24,paddingVertical:27},panel:{paddingHorizontal:24,paddingTop:24,paddingBottom:29},roundPanel:{borderTopLeftRadius:49,borderTopRightRadius:49,borderBottomLeftRadius:45,borderBottomRightRadius:45,zIndex:1},badge:{width:64,height:64,borderRadius:33,alignSelf:'center',alignItems:'center',justifyContent:'center',marginTop:-51},heading:{marginTop:13,marginBottom:18},inputRow:{borderWidth:1,borderRadius:28,paddingHorizontal:14,gap:9,alignItems:'center'},input:{flex:1,minWidth:0,minHeight:53,fontSize:14},eye:{width:38,height:45,alignItems:'center',justifyContent:'center'},primary:{borderRadius:27,overflow:'hidden',marginTop:21},primaryFill:{minHeight:53,paddingVertical:13,paddingHorizontal:19,gap:12,alignItems:'center',justifyContent:'center'},primaryText:{color:'#FFF1DE',fontSize:14,lineHeight:23,flexShrink:1,textAlign:'center'},textLink:{minHeight:42,alignItems:'center',justifyContent:'center',marginTop:9},error:{color:'#B4543A',fontSize:12,lineHeight:21,marginTop:13},envelope:{width:190,height:162,alignSelf:'center',marginTop:18,marginBottom:20},codeArea:{height:61,position:'relative'},codeCells:{flexDirection:'row',gap:7,flex:1},codeCell:{flex:1,borderRadius:12,borderWidth:1,alignItems:'center',justifyContent:'center'},codeInput:{position:'absolute',top:0,bottom:0,left:0,right:0,opacity:.015,fontSize:1,color:'transparent'},centerNote:{fontSize:11,lineHeight:20,textAlign:'center',marginTop:14},outline:{borderWidth:1,borderRadius:25,minHeight:50,alignItems:'center',justifyContent:'center',gap:9,padding:12,marginTop:16},medallion:{width:92,height:92,borderRadius:47,alignItems:'center',justifyContent:'center',alignSelf:'center',marginTop:3,marginBottom:8},requirements:{borderRadius:22,padding:15,marginTop:20},successBadge:{width:92,height:92,borderRadius:47,borderWidth:4,borderColor:'#E8C38E',backgroundColor:'#82552B',alignSelf:'center',alignItems:'center',justifyContent:'center',marginTop:-64},footer:{height:150,marginTop:-22,paddingHorizontal:23,paddingBottom:18,paddingTop:40,justifyContent:'flex-end'}});
+const s = StyleSheet.create({
+  frame: { width: "100%", maxWidth: 560, alignSelf: "center", flex: 1 },
+  top: {
+    paddingHorizontal: 16,
+    paddingBottom: 15,
+    alignItems: "center",
+    gap: 7,
+    flexWrap: "wrap",
+  },
+  back: {
+    width: 34,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  hero: { height: 285 },
+  heroPaper: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: "70%",
+    paddingHorizontal: 24,
+    paddingVertical: 27,
+  },
+  panel: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 29 },
+  roundPanel: {
+    borderTopLeftRadius: 49,
+    borderTopRightRadius: 49,
+    borderBottomLeftRadius: 45,
+    borderBottomRightRadius: 45,
+    zIndex: 1,
+  },
+  badge: {
+    width: 64,
+    height: 64,
+    borderRadius: 33,
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -51,
+  },
+  heading: { marginTop: 13, marginBottom: 18 },
+  inputRow: {
+    borderWidth: 1,
+    borderRadius: 28,
+    paddingHorizontal: 14,
+    gap: 9,
+    alignItems: "center",
+  },
+  input: { flex: 1, minWidth: 0, minHeight: 53, fontSize: 14 },
+  eye: {
+    width: 38,
+    height: 45,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  primary: { borderRadius: 27, overflow: "hidden", marginTop: 21 },
+  primaryFill: {
+    minHeight: 53,
+    paddingVertical: 13,
+    paddingHorizontal: 19,
+    gap: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  primaryText: {
+    color: "#FFF1DE",
+    fontSize: 14,
+    lineHeight: 23,
+    flexShrink: 1,
+    textAlign: "center",
+  },
+  textLink: {
+    minHeight: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 9,
+  },
+  error: { color: "#B4543A", fontSize: 12, lineHeight: 21, marginTop: 13 },
+  envelope: {
+    width: 190,
+    height: 162,
+    alignSelf: "center",
+    marginTop: 18,
+    marginBottom: 20,
+  },
+  codeArea: { height: 61, position: "relative" },
+  codeCells: { flexDirection: "row", gap: 7, flex: 1 },
+  codeCell: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  codeInput: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    opacity: 0.015,
+    fontSize: 1,
+    color: "transparent",
+  },
+  centerNote: {
+    fontSize: 11,
+    lineHeight: 20,
+    textAlign: "center",
+    marginTop: 14,
+  },
+  outline: {
+    borderWidth: 1,
+    borderRadius: 25,
+    minHeight: 50,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 9,
+    padding: 12,
+    marginTop: 16,
+  },
+  medallion: {
+    width: 92,
+    height: 92,
+    borderRadius: 47,
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "center",
+    marginTop: 3,
+    marginBottom: 8,
+  },
+  requirements: { borderRadius: 22, padding: 15, marginTop: 20 },
+  successBadge: {
+    width: 92,
+    height: 92,
+    borderRadius: 47,
+    borderWidth: 4,
+    borderColor: "#E8C38E",
+    backgroundColor: "#82552B",
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -64,
+  },
+  footer: {
+    height: 150,
+    marginTop: -22,
+    paddingHorizontal: 23,
+    paddingBottom: 18,
+    paddingTop: 40,
+    justifyContent: "flex-end",
+  },
+});

@@ -259,6 +259,7 @@ export default function MechanicApplication({
       )}
       {error && <MechanicNote error>{error}</MechanicNote>}
       {message && <MechanicNote>{message}</MechanicNote>}
+        {!previewOnly && !editing && profile?.submittedAt && <MechanicCard><Text style={{fontSize:17,fontWeight:'600',color:m.ink}}>{m.t('Professional review','المراجعة المهنية')}</Text><Text style={{fontSize:12,lineHeight:22,color:m.muted}}>{m.t('Receive your two-question test, follow application updates and contact your Mechanics Admin.','استقبل اختبار السؤالين، وتابع التحديثات وتواصل مع أدمن الميكانيك.')}</Text><MechanicButton label={m.t('Open test & administrator conversation','فتح الاختبار ومحادثة الأدمن')} onPress={()=>router.push('/mechanic/review' as import('expo-router').Href)}/></MechanicCard>}
       {!profile ? (
         <MechanicCard>
           <MechanicButton
@@ -1168,7 +1169,7 @@ function ApplicationChecklist({ profile }: { profile: MechanicProfile }) {
         m.t("Identity & documents", "الهوية والوثائق"),
         m.t("Private professional verification", "وثائق التحقق الخاصة"),
       ],
-      profile.documents.some((d) => d.kind === "IDENTITY"),
+      ["IDENTITY", "CERTIFICATE", ...(profile.offersWorkshop ? ["WORKSHOP_PROOF"] : [])].every(kind => profile.documents.some(d => d.kind === kind)),
     ],
     [
       [

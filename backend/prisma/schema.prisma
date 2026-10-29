@@ -46,6 +46,7 @@ model User {
   passwordHash        String
   role                UserRole
   status              AccountStatus        @default(PENDING)
+  mechanicMessages    MechanicMessage[]
   mechanicProfile     MechanicProfile?
   emailVerifiedAt     DateTime?
   mechanicEmailChecks MechanicEmailCheck[]
@@ -116,15 +117,18 @@ model MechanicProfile {
   city              String?
   experienceSummary String?
   workshopAddress   String?
-  coverageAreas     String[]           @default([])
+  coverageAreas     String[]                 @default([])
   termsAcceptedAt   DateTime?
   submittedAt       DateTime?
-  submissionVersion Int                @default(0)
+  submissionVersion Int                      @default(0)
   interviewResult   String?
   interviewNotes    String?
   interviewedAt     DateTime?
   interviewedById   String?
-  ministryStatus    String             @default("NOT_REQUESTED")
+  ministryStatus    String                   @default("NOT_REQUESTED")
+  tests             MechanicTest[]
+  messages          MechanicMessage[]
+  documentReviews   MechanicDocumentReview[]
   documents         MechanicDocument[]
   phoneNumber       String?
   nationalId        String?
@@ -223,13 +227,99 @@ model MechanicDocument {
 }
 
 model Notification {
-  id        String    @id @default(uuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String
-  body      String
-  readAt    DateTime?
-  createdAt DateTime  @default(now())
+  relatedUserId String?
+  kind          String    @default("APPLICATION")
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  body          String
+  readAt        DateTime?
+  createdAt     DateTime  @default(now())
 
   @@index([userId, createdAt])
+}
+
+model MechanicQuestion {
+  code            String?   @unique
+  explanation     String    @default("")
+  sourceUrl       String    @default("")
+  sourceReference String    @default("")
+  difficulty      String    @default("INTERMEDIATE")
+  reviewStatus    String    @default("DRAFT")
+  reviewerName    String?
+  reviewNotes     String?
+  reviewedById    String?
+  reviewedAt      DateTime?
+  id              String    @id @default(uuid())
+  specialization  String
+  prompt          String
+  options         String[]
+  correctIndex    Int
+  active          Boolean   @default(false)
+  createdById     String
+  revision        Int       @default(1)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([specialization, active])
+}
+
+model MechanicTest {
+  id                String             @id @default(uuid())
+  profileId         String
+  profile           MechanicProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  submissionVersion Int
+  attempt           Int
+  assignedById      String
+  assignedAt        DateTime           @default(now())
+  submittedAt       DateTime?
+  score             Int?
+  reviewedAt        DateTime?
+  reviewedById      String?
+  assessment        String?
+  reviewNotes       String?
+  items             MechanicTestItem[]
+
+  @@unique([profileId, submissionVersion, attempt])
+  @@index([profileId, assignedAt])
+}
+
+model MechanicTestItem {
+  id           String       @id @default(uuid())
+  testId       String
+  test         MechanicTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+  questionId   String
+  revision     Int
+  position     Int
+  prompt       String
+  options      String[]
+  correctIndex Int
+  answerIndex  Int?
+
+  @@unique([testId, position])
+}
+
+model MechanicMessage {
+  id        String          @id @default(uuid())
+  profileId String
+  profile   MechanicProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User            @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime        @default(now())
+
+  @@index([profileId, createdAt, id])
+}
+
+model MechanicDocumentReview {
+  id         String          @id @default(uuid())
+  profileId  String
+  profile    MechanicProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  documentId String
+  storageKey String
+  reviewerId String
+  reviewedAt DateTime        @default(now())
+
+  @@unique([profileId, documentId])
 }

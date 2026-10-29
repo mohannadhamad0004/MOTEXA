@@ -1,0 +1,194 @@
+[
+  {
+    "code": "MOTEXA-V3-01",
+    "specialization": "PETROL_ENGINES",
+    "prompt": "محرك يسجّل تقطيعًا بالأسطوانة الثانية. وفق إجراء يسمح به المصنع، نُقل الكويل فقط إلى الأسطوانة الثالثة. بعد إعادة الاختبار في الظروف نفسها، انتقل التقطيع للثالثة، وبقيت الشمعة والبخاخ بمكانيهما. ما الاستنتاج الأقوى؟",
+    "options": [
+      "بخاخ الأسطوانة الثانية هو المسبب.",
+      "الكويل المنقول أصبح المشتبه الأول، ويُستكمل التحقق قبل الاستبدال.",
+      "يلزم فحص ضغط الأسطوانة الثانية قبل النظر في نتيجة النقل.",
+      "النتيجة تثبت وجود عطل مشترك بتغذية جميع الكويلات."
+    ],
+    "correctIndex": 1,
+    "explanation": "انتقال التقطيع مع الكويل يدعم الاشتباه بالكويل المنقول. هذه قرينة تشخيصية تستلزم تأكيد النتيجة وفق إجراء المصنع، وليست إثباتًا لجميع أعطال المنظومة.",
+    "sourceUrl": "https://www.tekniwiki.com/fileadmin/emea/how_to_check/diagnosis_of_direct_ignition_coils_en.pdf",
+    "sourceReference": "NGK — Diagnosis of direct ignition coils, diagnostics p. 8; supply/control checks pp. 4–6",
+    "difficulty": "INTERMEDIATE"
+  },
+  {
+    "code": "MOTEXA-V3-02",
+    "specialization": "PETROL_ENGINES",
+    "prompt": "محرك بنزين يعاني من تقطيع بالأسطوانة الثانية. نُقل الكويل إلى أسطوانة أخرى وفق إجراء المصنع، لكن بقي التقطيع بالأسطوانة الثانية بعد إعادة الاختبار. أي تصرف هو الأنسب؟",
+    "options": [
+      "استبدال الكويل المنقول رغم عدم انتقال العطل.",
+      "استبدال وحدة التحكم لأن الكويل استُبعد تمامًا.",
+      "استكمال تسلسل التشخيص، بما يشمل الشمعة والوقود والحالة الميكانيكية، والأسلاك وإشارات التحكم عند الحاجة.",
+      "استبدال البخاخ مباشرة؛ لأن ثبات موقع التقطيع يثبت تلفه."
+    ],
+    "correctIndex": 2,
+    "explanation": "عدم انتقال العطل يقلل الاشتباه بالكويل المنقول، لكنه لا يستبعد الأسلاك أو التحكم أو الأعطال المتقطعة. يجب متابعة التشخيص لتحديد السبب قبل استبدال القطع.",
+    "sourceUrl": "https://www.tekniwiki.com/fileadmin/emea/how_to_check/diagnosis_of_direct_ignition_coils_en.pdf",
+    "sourceReference": "NGK — Diagnosis of direct ignition coils, diagnostics p. 8; supply/control checks pp. 4–6",
+    "difficulty": "INTERMEDIATE"
+  },
+  {
+    "code": "MOTEXA-V3-03",
+    "specialization": "DIESEL_ENGINES",
+    "prompt": "أمام الفني شمعة تسخين حديثة مجهولة المواصفات، ويقترح زميل اختبارها مباشرة ببطارية المركبة حتى يظهر توهج. ما القرار المهني الأنسب؟",
+    "options": [
+      "تنفيذ الاختبار؛ لأن جميع شمعات التسخين تتحمل جهد البطارية مباشرة.",
+      "استخدام زمن توصيل قصير باعتباره مناسبًا لجميع الأنواع.",
+      "تحديد نوع الشمعة ومواصفاتها، ثم اختيار إجراء الفحص المناسب لها.",
+      "الحكم عليها من زمن ظهور التوهج فقط، دون معرفة مواصفاتها."
+    ],
+    "correctIndex": 2,
+    "explanation": "تختلف تقنيات شمعات التسخين وجهود تشغيلها. التوصيل المباشر ببطارية قد يتلف بعض الأنواع قبل ظهور توهج؛ لذلك يحدد الفني النوع ثم يتبع إجراء الفحص المناسب.",
+    "sourceUrl": "https://www.ngkntk.com/fileadmin/uk/media_library/ngk_glow_plugs_20_q_a.pdf",
+    "sourceReference": "NGK — Glow plugs: 20 questions & answers, section 19: How do I test glow plugs?",
+    "difficulty": "INTERMEDIATE"
+  },
+  {
+    "code": "MOTEXA-V3-04",
+    "specialization": "DIESEL_ENGINES",
+    "prompt": "بعد تشغيل محرك ديزل بارد، أظهرت أداة الفحص أن وحدة التحكم تطلب تشغيل Post-glow، وأن المنظومة تنفذ الطلب. ما التصرف الأنسب قبل اعتبار استمرار التسخين عطلًا؟",
+    "options": [
+      "استبدال وحدة التسخين؛ لأن أي تشغيل بعد بدء المحرك غير طبيعي.",
+      "مقارنة طلب التشغيل وظروف المحرك باستراتيجية المصنع؛ فقد يكون تسخينًا لاحقًا طبيعيًا.",
+      "استبدال الشمعات؛ لأن استمرار تشغيلها يثبت ارتفاع مقاومتها.",
+      "اعتبار تطابق الطلب والتنفيذ إثباتًا لسلامة المنظومة تحت جميع الظروف."
+    ],
+    "correctIndex": 1,
+    "explanation": "قد يستمر التسخين بعد بدء المحرك ضمن استراتيجية الإحماء وخفض الانبعاثات، تبعًا لظروف التشغيل. توافق الطلب والتنفيذ لا يثبت سلامة المنظومة في جميع الظروف.",
+    "sourceUrl": "https://www.bosch-mobility.com/en/solutions/glow/",
+    "sourceReference": "Bosch Mobility — Glow: operating principle and warm-up/post-glow",
+    "difficulty": "INTERMEDIATE"
+  },
+  {
+    "code": "MOTEXA-V3-05",
+    "specialization": "ELECTRIC_VEHICLES",
+    "prompt": "في منظومة من الأنواع الموصوفة بمرجع ASE، بطارية الجر مشحونة، لكن المركبة لا تدخل وضع الجاهزية، ووحدة تحكم مجموعة الدفع لا تصلها تغذية الجهد المنخفض المطلوبة. أي اتجاه تشخيصي هو الأنسب؟",
+    "options": [
+      "استبدال بطارية الجر لأن شحنها لا يكفي لإثبات سلامتها.",
+      "البدء باختبار محرك الجر قبل معالجة تغذية وحدة التحكم.",
+      "فحص منظومة الجهد المنخفض ومسار تغذية وحدة التحكم وفق دليل المصنع وإجراءات السلامة المعتمدة.",
+      "استبدال العاكس اعتمادًا على عدم دخول وضع الجاهزية وحده."
+    ],
+    "correctIndex": 2,
+    "explanation": "غياب تغذية وحدة التحكم يوجه بداية التشخيص إلى مسار الجهد المنخفض. لا يعني ذلك إثبات سلامة بطارية الجر أو محوّل DC/DC. تنفذ الفحوصات وفق دليل المصنع وبواسطة فني مؤهل وإجراءات السلامة المعتمدة.",
+    "sourceUrl": "https://www.ase.com/uploads/ASE_L3_Study_Guide_2026.pdf",
+    "sourceReference": "ASE L3 Study Guide 2026, p. 7 DC/DC converter; p. 12 sample question explanation",
+    "difficulty": "INTERMEDIATE"
+  },
+  {
+    "code": "MOTEXA-V3-06",
+    "specialization": "ELECTRIC_VEHICLES",
+    "prompt": "أثناء تتبّع مخطط منظومة دفع كهربائي، وجد الفني وحدة تستقبل جهدًا مستمرًا عاليًا وتزوّد منظومة المركبة بجهد مستمر منخفض، بدل استخدام مولّد تقليدي. ما الوحدة المقصودة؟",
+    "options": [
+      "محوّل DC/DC الخافض للجهد.",
+      "عاكس DC/AC الخاص بمحرك الجر.",
+      "وحدة إدارة خلايا البطارية فقط.",
+      "الشاحن الذي يحوّل تغذية الشبكة المتناوبة إلى مستمرة فقط."
+    ],
+    "correctIndex": 0,
+    "explanation": "يخفض محوّل DC/DC جهدًا مستمرًا إلى جهد مستمر أقل لتغذية منظومة الجهد المنخفض. تختلف هذه الوظيفة عن تحويل DC إلى AC أو تحويل تغذية الشبكة إلى DC.",
+    "sourceUrl": "https://www.ase.com/uploads/ASE_L3_Study_Guide_2026.pdf",
+    "sourceReference": "ASE L3 Study Guide 2026, p. 7 DC/DC converter; p. 12 sample question explanation",
+    "difficulty": "FOUNDATION"
+  },
+  {
+    "code": "MOTEXA-V3-07",
+    "specialization": "TRANSMISSION",
+    "prompt": "متوفر زيتان لهما درجة اللزوجة نفسها. الزيت الأول موثّق ضمن الموافقة المطلوبة لناقل ZF المحدد، والثاني يحمل عبارة «مناسب لنواقل ZF» دون توثيق تلك الموافقة. ما القرار الأنسب؟",
+    "options": [
+      "اعتبارهما متكافئين لأن اللزوجة متطابقة.",
+      "اختيار الثاني إذا كانت عبوته تذكر عددًا أكبر من المركبات.",
+      "اختيار الزيت ذي المواصفة والموافقة المطابقتين للوحدة وتعليمات المصنع.",
+      "خلط الزيتين للحصول على خصائص متوازنة."
+    ],
+    "correctIndex": 2,
+    "explanation": "تطابق اللزوجة أو الادعاء التجاري بالتوافق لا يعوض الموافقة والمواصفة المطلوبة للوحدة المحددة. يرجع الفني إلى قائمة الاعتمادات وتعليمات الخدمة الخاصة بالناقل.",
+    "sourceUrl": "https://aftermarket.zf.com/en/aftermarket-portal/faq/faq-oils/",
+    "sourceReference": "ZF Aftermarket — FAQ oils: approvals and viscosity",
+    "difficulty": "INTERMEDIATE"
+  },
+  {
+    "code": "MOTEXA-V3-08",
+    "specialization": "TRANSMISSION",
+    "prompt": "أوصى فني بإضافة زيت بعد فحص المستوى خارج نطاق حرارة الزيت المحدد بإجراء الخدمة. لا توجد قراءة أُخذت ضمن الشروط الصحيحة. ما الخطوة التالية الأنسب؟",
+    "options": [
+      "إضافة كمية صغيرة ثم اعتماد تحسن تبديل السرعات معيارًا للمستوى.",
+      "إعادة الفحص ضمن الحرارة ووضع المركبة والتشغيل المحددين بإجراء هذا الناقل.",
+      "اعتماد قراءة حرارة سائل تبريد المحرك بدل حرارة زيت الناقل.",
+      "اعتماد القراءة الحالية ما دام الناقل لا يسجّل رمز عطل."
+    ],
+    "correctIndex": 1,
+    "explanation": "لا يمكن تقرير إضافة الزيت اعتمادًا على قياس خارج شروط الخدمة. يعاد القياس وفق حرارة الزيت ووضع المركبة والتشغيل المحددين لهذا الناقل؛ لا توجد درجة واحدة تصلح لجميع النواقل.",
+    "sourceUrl": "https://aftermarket.zf.com/sg/aftermarket-portal/for-workshops/useful-tips/transmission-oil-change-pc/",
+    "sourceReference": "ZF Aftermarket — Transmission oil change, level-check procedure steps 6–9",
+    "difficulty": "INTERMEDIATE"
+  },
+  {
+    "code": "MOTEXA-V3-09",
+    "specialization": "AUTO_ELECTRICAL",
+    "prompt": "جهد تغذية حمل كهربائي قريب من جهد البطارية عند فصل الحمل، لكنه ينخفض عند تشغيله. ما الفحص الأنسب للتحقق من مقاومة زائدة بالأسلاك أو الوصلات؟",
+    "options": [
+      "إعادة القياس والحمل مفصول، والاكتفاء بتكرار القراءة.",
+      "استبدال الحمل؛ لأن وجود الجهد دون حمل يثبت سلامة المسار.",
+      "الاكتفاء بفحص الاستمرارية دون تشغيل الحمل.",
+      "قياس هبوط الجهد عبر أجزاء المسار أثناء مرور التيار."
+    ],
+    "correctIndex": 3,
+    "explanation": "قد يظهر جهد طبيعي دون حمل رغم وجود مقاومة زائدة. قياس هبوط الجهد أثناء مرور التيار يساعد في تحديد موضع الفقد في الوصلات والأسلاك ومقارنته بمواصفة المصنع.",
+    "sourceUrl": "https://www.fluke.com/en-au/learn/blog/automotive/electrical-automotive-troubleshooting",
+    "sourceReference": "Fluke — Electrical automotive troubleshooting: voltage drop under load",
+    "difficulty": "INTERMEDIATE"
+  },
+  {
+    "code": "MOTEXA-V3-10",
+    "specialization": "AUTO_ELECTRICAL",
+    "prompt": "أثناء تشغيل حمل، تجاوز هبوط الجهد مواصفة المصنع عبر وصلة أرضي محددة. بقية أجزاء المسار المقاسة ضمن المواصفة. ما الإجراء الأكثر ارتباطًا بنتائج القياس؟",
+    "options": [
+      "التحقق من الوصلة وتلامسها وتثبيتها، ثم إعادة القياس بعد المعالجة.",
+      "استبدال البطارية أولًا دون فحص إضافي.",
+      "استبدال الحمل قبل معالجة موضع الفقد المحدد.",
+      "استبدال وحدة التحكم لأن انخفاض الجهد يعني تلفها."
+    ],
+    "correctIndex": 0,
+    "explanation": "حدد القياس موضع فقد يتجاوز المواصفة في وصلة معينة. يعالج الفني تلامسها وتثبيتها وفق إجراء الإصلاح ثم يعيد القياس تحت الحمل للتأكد من زوال الفقد.",
+    "sourceUrl": "https://www.fluke.com/en-au/learn/blog/automotive/electrical-automotive-troubleshooting",
+    "sourceReference": "Fluke — Electrical automotive troubleshooting: voltage drop under load",
+    "difficulty": "INTERMEDIATE"
+  },
+  {
+    "code": "MOTEXA-V3-11",
+    "specialization": "SUSPENSION",
+    "prompt": "بعد استبدال دعامة أمامية، أظهر تقرير الفحص أن كامبر العجلة الأمامية اليمنى خارج مواصفة المصنع، بينما كامبر اليسرى والتقارب الأمامي Toe ضمن المواصفة. يوجد تآكل بالجهة الداخلية للإطار الأيمن. ما الاتجاه الأنسب؟",
+    "options": [
+      "تعديل التقارب رغم مطابقته للمواصفة لمعالجة التآكل.",
+      "تغيير ضبط الجهة اليسرى لمعادلة قراءة اليمنى دون الرجوع للمواصفات.",
+      "التحقق من تركيب ومكونات الجهة اليمنى ومعالجة انحراف الكامبر وفق إجراء المصنع.",
+      "استبدال الإطار فقط؛ لأن ضبط الزوايا أُجري بعد الإصلاح."
+    ],
+    "correctIndex": 2,
+    "explanation": "القراءات توجه الفحص إلى تركيب ومكونات الجهة اليمنى ومعالجة الكامبر وفق تصميم المركبة. لا يثبت تقرير الزوايا وحده السبب النهائي للتآكل، ولا يعالج بتغيير زاوية مطابقة للمواصفة دون مبرر.",
+    "sourceUrl": "https://www.monroe.com/technical-resources/tech-tips/importance-of-alignment-shock-strut-replacement.html",
+    "sourceReference": "Monroe — Importance of alignment after shock/strut replacement",
+    "difficulty": "INTERMEDIATE"
+  },
+  {
+    "code": "MOTEXA-V3-12",
+    "specialization": "SUSPENSION",
+    "prompt": "توجد شكوى من ارتداد زائد وتآكل متدرج Cupping بالإطارات، لكن لم يُستكمل فحص التعليق والتوجيه والعجلات. أي توصية هي الأكثر مهنية؟",
+    "options": [
+      "استبدال المساعدات لأن نمط التآكل يحددها وحدها.",
+      "استكمال فحص المنظومة والعجلات لتحديد السبب قبل تحديد القطع المطلوبة.",
+      "استبدال الإطارات ثم إغلاق الشكوى دون فحص سبب التآكل.",
+      "استبعاد المساعدات إذا لم يظهر تسرب زيت خارجي."
+    ],
+    "correctIndex": 1,
+    "explanation": "قد يسهم تآكل مكونات التعليق أو التوجيه وعدم اتزان العجلات في التآكل غير المنتظم. لا يكفي نمط التآكل وحده لتحديد قطعة، ولا غياب تسرب الزيت لاستبعاد ضعف التخميد.",
+    "sourceUrl": "https://www.monroe.com/technical-resources/shocks-101/why-do-tires-wear-unevenly.html",
+    "sourceReference": "Monroe — Why do tires wear unevenly? Cupping and suspension/wheel causes",
+    "difficulty": "INTERMEDIATE"
+  }
+]
