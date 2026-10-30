@@ -1,11 +1,12 @@
 import { ReactNode } from "react";
 import { View } from "react-native";
-import { HScroll, Icon, Ltr, PartThumb, Press, RoundIcon } from "../../components/blueprint";
+import { HScroll, Icon, Ltr, Press, RoundIcon } from "../../components/blueprint";
 import { Text } from "../../components/ui/Text";
 import { formatPrice } from "../../core/constants/money";
 import { useL } from "../../core/hooks/useL";
 import { useTheme } from "../../theme/useTheme";
 import { carName } from "./catalogBits";
+import { PartPhoto } from "./PartPhoto";
 import type { CatalogProduct, CatalogShopRow } from "./catalogService";
 
 export { carName };
@@ -21,7 +22,7 @@ export function MiniProductCard({ p, onPress }: { p: CatalogProduct; car?: unkno
   const { align } = useL();
   return (
     <Press accessibilityLabel={p.name} onPress={onPress} style={{ width: 160, borderRadius: 20, borderWidth: 1, borderColor: c.line, backgroundColor: c.field, padding: 10 }}>
-      <PartThumb category={p.category} uri={p.imageUri} />
+      <PartPhoto uri={p.imageUri} />
       <Text numberOfLines={1} style={[{ color: c.ink, fontSize: 13, fontWeight: "600", marginTop: 10 }, align]}>{p.name}</Text>
       <Ltr style={{ fontSize: 15, fontWeight: "700", marginTop: 2 }}>{formatPrice(p.price)}</Ltr>
     </Press>

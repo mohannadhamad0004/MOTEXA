@@ -1,26 +1,26 @@
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
-import { Avatar, BlueprintPage, CrossFade, FadeSwitch, Hero, LiveNote, MapFrame, Mono, PrimaryButton, Row, VerticalTimeline, Wrench } from "../../../components/blueprint";
-import { Async, Notice } from "../../../components/ui/Feedback";
-import { Text } from "../../../components/ui/Text";
+import { Card, ErrorState, GarageHero, GaragePage, GButton, GText, ListRow, Note, Section, SkeletonBlock, StatusChip, Timeline } from "../../../components/garage";
 import { cityCentre, cityLabel } from "../../../core/constants/cities";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
-import { MechanicStatusBadge, useMechanicStatusLabels, useSkillLabel } from "../../../features/mechanics/mechanicBits";
+import { useMechanicStatusLabels, useSkillLabel } from "../../../features/mechanics/mechanicBits";
 import { MechanicRequestStatus, REFRESH_MS, customerMechanicRequests } from "../../../features/mechanics/mechanicsService";
 import { shortId } from "../../../features/requests/activeRequest";
+import { InitialBubble, mechTone, toSteps } from "../../../features/requests/garageBits";
 import { buildTimeline } from "../../../features/requests/requestBits";
 import { RequestRouteMap } from "../../../features/shared/RequestRouteMap";
 import { MAPS_AVAILABLE } from "../../../features/shared/maps";
 import { RouteSummary, useRoute } from "../../../features/shared/useRoute";
-import { useTheme } from "../../../theme/useTheme";
+import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 
 const PATH: MechanicRequestStatus[] = ["REQUESTED", "ACCEPTED", "IN_PROGRESS", "COMPLETED"];
 
-// The customer's view of one service request. Re-reads the server every 15 s while this screen is open.
+// The customer's view of one service request. Re-reads the server every 15 s while this screen is open; the page is never
+// remounted by that (same keys), so the status simply changes in place.
 export default function MechanicRequestScreen() {
-  const { c, row, align } = useTheme();
+  const { row, align } = useGarageTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, isArabic } = useL();
   const skillLabel = useSkillLabel();
@@ -30,6 +30,7 @@ export default function MechanicRequestScreen() {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [mapOpen, setMapOpen] = useState(false);
 
   const cancel = async () => {
     setBusy(true);
@@ -50,18 +51,7 @@ export default function MechanicRequestScreen() {
   // MOTEXA stores no workshop coordinates yet: the other end of the route is the mechanic's city centre (approximate)
   const provider = r?.mechanic.city ? cityCentre(r.mechanic.city) : null;
   const { route, loading: routing } = useRoute(r?.id ?? null, r?.location.point ?? null, provider);
-  const top =
-    MAPS_AVAILABLE && r?.location.point && provider ? (
-      <MapFrame height={320} back="/customer/requests" tr="SERVICE / 04">
-        <RequestRouteMap reqId={r.id} kind="mech" height={320} provider={{ ...provider, name: r.mechanic.name }} pickup={r.location.point} route={route} />
-      </MapFrame>
-    ) : (
-      <Hero height={200} back="/customer/requests" tl="MECHANICS / 04" tr="SERVICE / 04">
-        <View style={{ height: "100%", aspectRatio: 1.6 }}>
-          <Wrench />
-        </View>
-      </Hero>
-    );
+  const canMap = MAPS_AVAILABLE && !!r?.location.point && !!provider;
 
   const headline = (name: string, status: MechanicRequestStatus) =>
     ({
@@ -74,84 +64,92 @@ export default function MechanicRequestScreen() {
     })[status];
 
   return (
-    <BlueprintPage
-      top={top}
+    <GaragePage
       onRefresh={() => {
         setPulling(true);
         state.reload().finally(() => setPulling(false));
       }}
       refreshing={pulling}
+      hero={
+        <GarageHero
+          variant="detail"
+          onBack={() => (router.canGoBack() ? router.back() : router.navigate("/customer/requests"))}
+          title={r ? headline(r.mechanic.name, r.status) : t("Service request", "طلب خدمة")}
+          line={shortId(id)}
+        >
+          {r ? <StatusChip tone={mechTone(r.status)} label={statusLabel[r.status]} /> : null}
+        </GarageHero>
+      }
     >
-      <Async state={state}>
-        {(r) => (
-          <>
-            <View style={[row, { alignItems: "center", justifyContent: "space-between", gap: 10 }]}>
-              <Mono>{shortId(r.id)}</Mono>
-              <CrossFade k={r.status}><MechanicStatusBadge value={r.status} /></CrossFade>
-            </View>
-            <CrossFade k={r.status}>
-              <Text style={[{ color: c.ink, fontSize: 30, fontWeight: "700", lineHeight: isArabic ? 40 : 34, marginTop: 16 }, align]}>{headline(r.mechanic.name, r.status)}</Text>
-            </CrossFade>
-            <View style={[row, { alignItems: "center", gap: 12, marginTop: 12 }]}>
-              <Avatar name={r.mechanic.name} size={40} />
-              <Text numberOfLines={2} style={[{ flex: 1, color: c.soft, fontSize: 13 }, align]}>
-                {[r.mechanic.workshopName, r.mechanic.city ? cityLabel(r.mechanic.city, isArabic) : null].filter(Boolean).join(" · ")}
-              </Text>
-            </View>
-
-            {r.status === "DECLINED" ? (
-              <View style={{ marginTop: 16 }}>
-                <Notice tone="danger" icon="close-circle-outline">
-                  {t("Declined by the mechanic", "رفضه الميكانيكي")}
-                  {r.declineReason ? `\n${r.declineReason}` : ""}
-                </Notice>
+      {state.error && !r ? (
+        <ErrorState text={state.error} onRetry={state.reload} retryLabel={t("Retry", "إعادة المحاولة")} />
+      ) : !r ? (
+        <SkeletonBlock height={220} radius={gShape.card} />
+      ) : (
+        <View>
+          <Card pad={12}>
+            <View style={[row, { alignItems: "center", gap: 12, paddingVertical: 4 }]}>
+              <InitialBubble name={r.mechanic.name} size={44} />
+              <View style={{ flex: 1 }}>
+                <GText numberOfLines={1} style={[gType.label, { fontWeight: "800" }, align]}>{r.mechanic.name}</GText>
+                <GText soft numberOfLines={2} style={[gType.caption, align]}>{[r.mechanic.workshopName, r.mechanic.city ? cityLabel(r.mechanic.city, isArabic) : null].filter(Boolean).join(" · ")}</GText>
               </View>
-            ) : null}
-
-            <View style={{ marginTop: 32 }}>
-              <VerticalTimeline items={buildTimeline(PATH, r.timeline, r.status, statusLabel)} />
             </View>
+            {canMap ? <ListRow divider icon="map-outline" title={mapOpen ? t("Hide map", "إخفاء الخريطة") : t("View on map", "عرض على الخريطة")} onPress={() => setMapOpen(!mapOpen)} /> : null}
+          </Card>
 
-            <View style={{ marginTop: 24 }}>
-              {r.skill ? <Row label={t("Skill", "المهارة")} value={skillLabel(r.skill)} /> : null}
-              <Row label={t("Car", "السيارة")} value={[r.vehicle.make, r.vehicle.model, r.vehicle.year].filter(Boolean).join(" ")} />
-              <Row label={t("Problem", "المشكلة")} value={r.problemDescription} />
-              <Row label={t("Location", "الموقع")} value={r.location.text} />
-              {r.preferredTime ? <Row label={t("Preferred time", "الوقت المفضل")} value={r.preferredTime} /> : null}
-              {r.contactPhone ? <Row label={t("Your phone", "هاتفك")} value={r.contactPhone} mono /> : null}
-            </View>
-            {r.contactPhone ? <Text style={[{ color: c.soft, fontSize: 11, marginTop: 8 }, align]}>{t("Shared only with this mechanic.", "يُشارك مع هذا الميكانيكي فقط.")}</Text> : null}
-
-            {r.location.point && provider ? (
-              <View style={{ marginTop: 16 }}>
+          {canMap && mapOpen ? (
+            <View style={{ marginTop: 12, borderRadius: gShape.card, overflow: "hidden" }}>
+              <RequestRouteMap reqId={r.id} kind="mech" height={280} provider={{ ...provider!, name: r.mechanic.name }} pickup={r.location.point!} route={route} />
+              <View style={{ paddingTop: 8 }}>
                 <RouteSummary route={route} loading={routing} />
-                <Text style={[{ color: c.soft, fontSize: 11, marginTop: 4 }, align]}>{t("The mechanic pin is approximate (city centre).", "دبوس الميكانيكي تقريبي (مركز المدينة).")}</Text>
+                <GText soft style={[gType.tiny, align, { marginTop: 4 }]}>{t("The mechanic pin is approximate (city centre).", "دبوس الميكانيكي تقريبي (مركز المدينة).")}</GText>
               </View>
-            ) : null}
+            </View>
+          ) : null}
 
-            {["REQUESTED", "ACCEPTED", "IN_PROGRESS"].includes(r.status) ? <LiveNote label={t("Updates automatically", "يتحدّث تلقائياً")} /> : null}
+          {r.status === "DECLINED" ? (
+            <View style={{ marginTop: 12 }}>
+              <Note tone="danger" icon="close-circle-outline">{`${t("Declined by the mechanic", "رفضه الميكانيكي")}${r.declineReason ? `\n${r.declineReason}` : ""}`}</Note>
+            </View>
+          ) : null}
 
-            {err ? (
-              <View style={{ marginTop: 16 }}>
-                <Notice tone="danger" icon="alert-circle-outline">{err}</Notice>
-              </View>
-            ) : null}
-            <FadeSwitch show={r.canCancel}>
-              <View style={{ marginTop: 40, borderTopWidth: 1, borderTopColor: c.line, paddingTop: 24, gap: 8 }}>
-                {!confirming ? (
-                  <PrimaryButton variant="danger" label={t("Cancel request", "إلغاء الطلب")} disabled={busy} onPress={() => setConfirming(true)} />
-                ) : (
-                  <>
-                    <Text style={[{ color: c.ink, fontSize: 14, fontWeight: "700", marginBottom: 4 }, align]}>{t("Cancel this request?", "هل تريد إلغاء هذا الطلب؟")}</Text>
-                    <PrimaryButton variant="danger" label={t("Yes, cancel it", "نعم، ألغِه")} loading={busy} onPress={cancel} />
-                    <PrimaryButton variant="outline" label={t("Keep the request", "إبقاء الطلب")} disabled={busy} onPress={() => setConfirming(false)} />
-                  </>
-                )}
-              </View>
-            </FadeSwitch>
-          </>
-        )}
-      </Async>
-    </BlueprintPage>
+          <Section title={t("Status", "الحالة")}>
+            <Card>
+              <Timeline steps={toSteps(buildTimeline(PATH, r.timeline, r.status, statusLabel))} />
+              {["REQUESTED", "ACCEPTED", "IN_PROGRESS"].includes(r.status) ? <GText soft style={[gType.tiny, align, { marginTop: 12 }]}>{t("Updates automatically", "يتحدّث تلقائياً")}</GText> : null}
+            </Card>
+          </Section>
+
+          <Section title={t("Details", "التفاصيل")}>
+            <Card pad={12}>
+              {r.skill ? <ListRow icon="construct-outline" title={t("Skill", "المهارة")} sub={skillLabel(r.skill)} /> : null}
+              <ListRow divider={!!r.skill} icon="car-sport-outline" title={t("Car", "السيارة")} sub={[r.vehicle.make, r.vehicle.model, r.vehicle.year].filter(Boolean).join(" ")} />
+              <ListRow divider icon="alert-circle-outline" title={t("Problem", "المشكلة")} sub={r.problemDescription} />
+              <ListRow divider icon="location-outline" title={t("Location", "الموقع")} sub={r.location.text} />
+              {r.preferredTime ? <ListRow divider icon="time-outline" title={t("Preferred time", "الوقت المفضل")} sub={r.preferredTime} /> : null}
+              {r.contactPhone ? <ListRow divider icon="call-outline" title={t("Your phone", "هاتفك")} sub={`${r.contactPhone} · ${t("Shared only with this mechanic.", "يُشارك مع هذا الميكانيكي فقط.")}`} /> : null}
+            </Card>
+          </Section>
+
+          {err ? <View style={{ marginTop: 12 }}><Note tone="danger" icon="alert-circle-outline">{err}</Note></View> : null}
+          {r.canCancel ? (
+            <View style={{ marginTop: 24, gap: 8 }}>
+              {!confirming ? (
+                <GButton variant="danger" label={t("Cancel request", "إلغاء الطلب")} disabled={busy} onPress={() => setConfirming(true)} />
+              ) : (
+                <>
+                  <GText style={[gType.label, { fontWeight: "800" }, align]}>{t("Cancel this request?", "هل تريد إلغاء هذا الطلب؟")}</GText>
+                  <View style={[row, { gap: 10 }]}>
+                    <GButton flex variant="secondary" label={t("Keep the request", "إبقاء الطلب")} disabled={busy} onPress={() => setConfirming(false)} />
+                    <GButton flex variant="danger" label={t("Yes, cancel it", "نعم، ألغِه")} busy={busy} onPress={cancel} />
+                  </View>
+                </>
+              )}
+            </View>
+          ) : null}
+        </View>
+      )}
+    </GaragePage>
   );
 }

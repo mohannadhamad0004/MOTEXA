@@ -5,8 +5,8 @@ import { access, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { deflateSync } from "node:zlib";
 import { prisma } from "../prisma.js";
-import { CATALOG_GROUPS } from "../catalogCategories.js";
 import { PROVIDER_STORAGE_DIR } from "../uploads/providerFiles.js";
+import { seedPartsPhoto } from "./parts-photos.js";
 
 // DEV ONLY. Refuses to run in production or without ALLOW_DEV_SEED=true.
 // Only ever touches users whose email ends with @motexa.test.
@@ -62,23 +62,9 @@ const pngChunk = (type: string, data: Buffer) => {
   out.writeUInt32BE(crc32(body), 4 + body.length);
   return out;
 };
-// 5x7 font, one byte per column (bit 0 = top row). Only used for the product placeholder tiles.
-const GLYPHS: Record<string, number[]> = {
-  "0": [0x3e, 0x51, 0x49, 0x45, 0x3e], "1": [0x00, 0x42, 0x7f, 0x40, 0x00], "2": [0x42, 0x61, 0x51, 0x49, 0x46], "3": [0x21, 0x41, 0x45, 0x4b, 0x31],
-  "4": [0x18, 0x14, 0x12, 0x7f, 0x10], "5": [0x27, 0x45, 0x45, 0x45, 0x39], "6": [0x3c, 0x4a, 0x49, 0x49, 0x30], "7": [0x01, 0x71, 0x09, 0x05, 0x03],
-  "8": [0x36, 0x49, 0x49, 0x49, 0x36], "9": [0x06, 0x49, 0x49, 0x29, 0x1e],
-  A: [0x7e, 0x11, 0x11, 0x11, 0x7e], B: [0x7f, 0x49, 0x49, 0x49, 0x36], C: [0x3e, 0x41, 0x41, 0x41, 0x22], D: [0x7f, 0x41, 0x41, 0x22, 0x1c],
-  E: [0x7f, 0x49, 0x49, 0x49, 0x41], F: [0x7f, 0x09, 0x09, 0x09, 0x01], G: [0x3e, 0x41, 0x49, 0x49, 0x7a], H: [0x7f, 0x08, 0x08, 0x08, 0x7f],
-  I: [0x00, 0x41, 0x7f, 0x41, 0x00], J: [0x20, 0x40, 0x41, 0x3f, 0x01], K: [0x7f, 0x08, 0x14, 0x22, 0x41], L: [0x7f, 0x40, 0x40, 0x40, 0x40],
-  M: [0x7f, 0x02, 0x0c, 0x02, 0x7f], N: [0x7f, 0x04, 0x08, 0x10, 0x7f], O: [0x3e, 0x41, 0x41, 0x41, 0x3e], P: [0x7f, 0x09, 0x09, 0x09, 0x06],
-  Q: [0x3e, 0x41, 0x51, 0x21, 0x5e], R: [0x7f, 0x09, 0x19, 0x29, 0x46], S: [0x46, 0x49, 0x49, 0x49, 0x31], T: [0x01, 0x01, 0x7f, 0x01, 0x01],
-  U: [0x3f, 0x40, 0x40, 0x40, 0x3f], V: [0x1f, 0x20, 0x40, 0x20, 0x1f], W: [0x3f, 0x40, 0x38, 0x40, 0x3f], X: [0x63, 0x14, 0x08, 0x14, 0x63],
-  Y: [0x07, 0x08, 0x70, 0x08, 0x07], Z: [0x61, 0x51, 0x49, 0x45, 0x43],
-};
 
-/** A 96x96 solid-colour PNG with a lighter border, so each placeholder is visibly distinct. `initial` adds a big letter. */
-function placeholderPng([r, g, b]: [number, number, number], initial?: string): Buffer {
-  const glyph = initial ? GLYPHS[initial.toUpperCase()] : undefined;
+/** A 96x96 solid-colour PNG with a lighter border: a dev placeholder for tow and shop DOCUMENTS only, never a product photo. */
+function placeholderPng([r, g, b]: [number, number, number]): Buffer {
   const size = 96;
   const row = Buffer.alloc(1 + size * 3);
   const raw = Buffer.alloc(row.length * size);
@@ -88,14 +74,6 @@ function placeholderPng([r, g, b]: [number, number, number], initial?: string): 
     for (let x = 0; x < size; x++) {
       const light = edge || x < 4 || x >= size - 4;
       const o = y * row.length + 1 + x * 3;
-      // the letter: 5x7 cells drawn 8 pixels big, centred
-      const gx = Math.floor((x - 28) / 8);
-      const gy = Math.floor((y - 20) / 8);
-      const ink = !!glyph && gx >= 0 && gx < 5 && gy >= 0 && gy < 7 && (glyph[gx] >> gy) & 1;
-      if (ink) {
-        raw[o] = raw[o + 1] = raw[o + 2] = 245;
-        continue;
-      }
       raw[o] = light ? Math.min(255, r + 70) : r;
       raw[o + 1] = light ? Math.min(255, g + 70) : g;
       raw[o + 2] = light ? Math.min(255, b + 70) : b;
@@ -123,22 +101,21 @@ type FileTarget =
 /** Idempotent: one row per (target, purpose[, label]). Existing rows keep their file; a missing file is rewritten. */
 async function seedFile(opts: {
   ownerUserId: string;
-  purpose: "TRUCK_PHOTO" | "TRUCK_REGISTRATION" | "TRUCK_INSURANCE" | "TOW_COMPANY_DOCUMENT" | "PRODUCT_IMAGE" | "PARTS_SHOP_DOCUMENT";
+  purpose: "TRUCK_PHOTO" | "TRUCK_REGISTRATION" | "TRUCK_INSURANCE" | "TOW_COMPANY_DOCUMENT" | "PARTS_SHOP_DOCUMENT";
   target: FileTarget;
   originalName: string;
   color: [number, number, number];
   label?: string;
   expiresAt?: string | null;
-  initial?: string; // product placeholders: the first letter of the name
 }) {
   const { ownerUserId, purpose, target, originalName, color, label } = opts;
   const expiresAt = opts.expiresAt ? new Date(`${opts.expiresAt}T00:00:00.000Z`) : null;
   const existing = await prisma.providerFile.findFirst({ where: { ...target, purpose, ...(label ? { label } : {}) } });
-  const png = placeholderPng(color, opts.initial);
+  const png = placeholderPng(color);
   await mkdir(PROVIDER_STORAGE_DIR, { recursive: true });
   if (existing) {
     const onDisk = await access(path.join(PROVIDER_STORAGE_DIR, existing.storageKey)).then(() => true, () => false);
-    if (!onDisk || opts.initial) await writeFile(path.join(PROVIDER_STORAGE_DIR, existing.storageKey), png);
+    if (!onDisk) await writeFile(path.join(PROVIDER_STORAGE_DIR, existing.storageKey), png);
     await prisma.providerFile.update({ where: { id: existing.id }, data: { expiresAt } });
     return;
   }
@@ -148,7 +125,7 @@ async function seedFile(opts: {
     data: {
       ownerUserId,
       purpose,
-      visibility: purpose === "TRUCK_PHOTO" || purpose === "PRODUCT_IMAGE" ? "PUBLIC" : "PRIVATE",
+      visibility: purpose === "TRUCK_PHOTO" ? "PUBLIC" : "PRIVATE",
       ...target,
       label: label ?? null,
       originalName,
@@ -261,6 +238,15 @@ type ProductSeed = {
   daysAgo?: number; // createdAt = now - daysAgo days, so "Recently added" has a real order
   hiddenReason?: string; // set = hidden by MOTEXA
   fitments?: [make: string, model: string, yearFrom: number, yearTo: number, trim?: string][];
+  // The product's fixed seed identity. Defaults to the part number; when a part number is CORRECTED, set this to the
+  // number it was first seeded with, so the existing row is updated instead of a duplicate being created.
+  seedKey?: string;
+};
+
+/** Deterministic product id from the shop's email + seed key: the same seeded product gets the same id on every database. */
+const seedProductId = (email: string, seedKey: string) => {
+  const h = createHash("sha256").update(`motexa-seed-product:${email}:${seedKey}`).digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
 };
 
 const partsShops: {
@@ -281,8 +267,8 @@ const partsShops: {
       { name: "Alternator 120A", category: "ELECTRICAL", condition: "REFURBISHED", partType: "AFTERMARKET", brand: "Denso", partNumber: "DAN-1211", daysAgo: 35, description: "Remanufactured alternator, 12V 120A.", price: 145, stock: 0, fitments: [["Kia", "Sportage", 2016, 2021]] },
       { name: "Brake Disc Front (Genuine)", category: "BRAKE_SYSTEM", partType: "OEM", brand: "Toyota", partNumber: "43512-02220", daysAgo: 33, description: "Genuine front brake disc.", price: 55, stock: 6, fitments: [["Toyota", "Corolla", 2014, 2019]] },
       { name: 'Alloy Wheel 16" (Used)', category: "WHEELS", condition: "USED", brand: "OZ", partNumber: "OZ-16-USED-01", daysAgo: 30, description: "Used 16-inch alloy wheel, good condition.", price: 80, stock: 2 },
-      { name: "Roof Rack Cross Bars", category: "EXTERIOR_ACCESSORIES", partType: "AFTERMARKET", brand: "Thule", partNumber: "TH-711200", description: "Aluminium roof bars with locks.", price: 520, stock: 3, daysAgo: 17 },
-      { name: "Dash Camera Full HD", category: "CAR_ELECTRONICS", brand: "70mai", partNumber: "70MAI-A400", description: "Full HD dash camera with night mode.", price: 189, stock: 11, daysAgo: 2 },
+      { name: "Roof Rack Cross Bars", category: "EXTERIOR_ACCESSORIES", partType: "AFTERMARKET", brand: "Thule", partNumber: "TH-711200", description: "Aluminium roof bars.", price: 520, stock: 3, daysAgo: 17 },
+      { name: "Dash Camera A400 1440P", category: "CAR_ELECTRONICS", brand: "70mai", partNumber: "70MAI-A400", description: "1440P (2560x1440) dash camera with night mode.", price: 189, stock: 11, daysAgo: 2 },
       { name: "Socket Wrench Set 46 pcs", category: "HAND_TOOLS", brand: "Stanley", partNumber: "STMT74393", description: "Metric socket and ratchet set in a case.", price: 120, stock: 0, daysAgo: 22 },
       { name: "Hydraulic Floor Jack 2T (Used)", category: "JACKS_STANDS", condition: "USED", brand: "Sealey", partNumber: "SEAL-1050CX-U", description: "Used 2-tonne trolley jack, works well.", price: 95, stock: 1, daysAgo: 24 },
       { name: "OBD2 Diagnostic Scanner", category: "DIAGNOSTICS", brand: "Launch", partNumber: "CRP123", description: "OBD2 scanner for engine, ABS and airbag codes.", price: 260, stock: 6, daysAgo: 5 },
@@ -315,9 +301,9 @@ const partsShops: {
     products: [
       { name: "Edge 5W-30 Engine Oil 4L", category: "ENGINE_OIL", brand: "Castrol", partNumber: "EDGE-5W30-4L", description: "Fully synthetic engine oil, 4 litres.", price: 135, stock: 30, daysAgo: 3 },
       { name: "Quartz 7000 10W-40 Engine Oil 5L", category: "ENGINE_OIL", partType: "AFTERMARKET", brand: "Total", partNumber: "QUARTZ7000-10W40-5L", description: "Semi-synthetic engine oil, 5 litres.", price: 110, stock: 14, daysAgo: 23 },
-      { name: "ATF Dexron III Transmission Fluid 1L", category: "TRANSMISSION_FLUID", partType: "OEM", brand: "Mobil", partNumber: "ATF-220-1L", description: "Automatic transmission fluid, 1 litre.", price: 42, stock: 5, daysAgo: 9 },
+      { name: "ATF 220 Dexron IID Transmission Fluid 1L", category: "TRANSMISSION_FLUID", partType: "OEM", brand: "Mobil", partNumber: "ATF-220-1L", description: "Automatic transmission fluid, 1 litre.", price: 42, stock: 5, daysAgo: 9 },
       { name: "Coolant Antifreeze 5L", category: "COOLANT", brand: "Total", partNumber: "COOLELF-5L", description: "Ready-to-use long-life coolant, 5 litres.", price: 48, stock: 0, daysAgo: 19 },
-      { name: "Brake Fluid DOT 4 (500 ml)", category: "BRAKE_FLUID", partType: "AFTERMARKET", brand: "Bosch", partNumber: "1987479107", description: "DOT 4 brake fluid, 500 ml.", price: 19, stock: 2, daysAgo: 15 },
+      { name: "Brake Fluid DOT 4 (500 ml)", category: "BRAKE_FLUID", partType: "AFTERMARKET", brand: "Bosch", partNumber: "1987479106", seedKey: "1987479107", description: "DOT 4 brake fluid, 500 ml.", price: 19, stock: 2, daysAgo: 15 },
       { name: "Tire 195/65 R15 Energy Saver", category: "TIRES", partType: "OEM", brand: "Michelin", partNumber: "ENERGY-195-65-R15", description: "Summer tire 195/65 R15 91H.", price: 285, stock: 12, daysAgo: 6, fitments: [["Toyota", "Corolla", 2010, 2018]] },
       { name: "Tire 205/55 R16 Turanza", category: "TIRES", partType: "AFTERMARKET", brand: "Bridgestone", partNumber: "TURANZA-205-55-R16", description: "Summer tire 205/55 R16 91V.", price: 340, stock: 8, daysAgo: 12 },
       { name: "Alloy Wheel 15-inch (Refurbished)", category: "WHEELS", condition: "REFURBISHED", partType: "AFTERMARKET", brand: "Enkei", partNumber: "ENK-15-4X100-RF", description: "Refurbished 15-inch alloy wheel, 4x100.", price: 120, stock: 4, daysAgo: 11 },
@@ -335,12 +321,6 @@ const partsShops: {
   },
 ];
 
-// Placeholder tile colour per catalogue group (matches backend/src/catalogCategories.ts).
-const GROUP_COLOR: Record<string, [number, number, number]> = {
-  CAR_PARTS: [176, 112, 64], OILS_FLUIDS: [60, 110, 150], TIRES_WHEELS: [96, 96, 106], ACCESSORIES: [120, 84, 150], TOOLS: [70, 130, 90],
-};
-const groupOf = (category: string) => CATALOG_GROUPS.find((g) => (g.categories as readonly string[]).includes(category))?.key ?? "CAR_PARTS";
-
 // Idempotent: shops keyed by owner, products by (shop, part number); every run resets them to the states above.
 async function seedPartsShops() {
   const admin = await prisma.user.findUniqueOrThrow({ where: { email: "superadmin@motexa.test" } });
@@ -355,7 +335,7 @@ async function seedPartsShops() {
       await seedFile({ ownerUserId: user.id, purpose: "PARTS_SHOP_DOCUMENT", target: { partsShopId: shop.id }, label, originalName: `${label.toLowerCase().replace(/\W+/g, "-")}.png`, color: [90, 90, 150] });
     }
     for (const p of f.products) {
-      const { hiddenReason, fitments, daysAgo, ...fields } = p;
+      const { hiddenReason, fitments, daysAgo, seedKey = p.partNumber, ...fields } = p;
       const data = {
         ...fields,
         condition: p.condition ?? ("NEW" as const),
@@ -368,10 +348,14 @@ async function seedPartsShops() {
         hiddenById: hiddenReason ? admin.id : null,
         hiddenAt: hiddenReason ? new Date() : null,
       };
-      const existing = await prisma.partsProduct.findFirst({ where: { shopId: shop.id, partNumber: p.partNumber }, select: { id: true } });
+      // By the deterministic id; databases seeded before ids were deterministic: by the current or the original part number.
+      const id = seedProductId(f.email, seedKey);
+      const existing =
+        (await prisma.partsProduct.findUnique({ where: { id }, select: { id: true } })) ??
+        (await prisma.partsProduct.findFirst({ where: { shopId: shop.id, partNumber: { in: [p.partNumber, seedKey] } }, select: { id: true } }));
       const product = existing
         ? await prisma.partsProduct.update({ where: { id: existing.id }, data })
-        : await prisma.partsProduct.create({ data: { ...data, shopId: shop.id } });
+        : await prisma.partsProduct.create({ data: { ...data, id, shopId: shop.id } });
       // Fitments are replaced as a set on every run (idempotent).
       await prisma.partsFitment.deleteMany({ where: { productId: product.id } });
       if (fitments?.length) {
@@ -381,7 +365,9 @@ async function seedPartsShops() {
           })),
         });
       }
-      await seedFile({ ownerUserId: user.id, purpose: "PRODUCT_IMAGE", target: { productId: product.id }, originalName: `${p.partNumber.replace(/\W+/g, "-")}.png`, color: GROUP_COLOR[groupOf(p.category)], initial: p.name[0] });
+      // Missing tracked photos are fine. Preserve ALL existing images; size does not prove seed ownership.
+      const photo = await seedPartsPhoto(prisma, { email: f.email, seedKey, productId: product.id, ownerUserId: user.id });
+      if (photo !== "unmapped") console.log(`  Product photo ${p.partNumber}: ${photo}`);
     }
     console.log(`${f.email.padEnd(32)} parts shop "${f.shop.shopName}" (${f.shop.verificationStatus}), ${f.products.length} product(s)`);
   }

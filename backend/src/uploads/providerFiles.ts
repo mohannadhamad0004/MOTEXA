@@ -81,5 +81,11 @@ export const removeStoredFiles = (keys: string[]) => Promise.all(keys.map(remove
 export const filePath = (f: { id: string; visibility: "PUBLIC" | "PRIVATE" }) =>
   `/files/${f.visibility === "PUBLIC" ? "public" : "private"}/${f.id}`;
 
+/** A product photo smaller than this is not a real photo (a 1 px or tile placeholder): not accepted, and a product whose only image is that small is not shown to customers. */
+export const MIN_PHOTO_BYTES = 2048;
+
+/** Prisma filter for "has a real, public product photo": every customer-facing product query includes it. */
+export const hasPhoto = { files: { some: { purpose: "PRODUCT_IMAGE", visibility: "PUBLIC", mimeType: { startsWith: "image/" }, sizeBytes: { gte: MIN_PHOTO_BYTES } } } } as const;
+
 export const TOW_PURPOSES = ["TRUCK_PHOTO", "TRUCK_REGISTRATION", "TRUCK_INSURANCE", "TRUCK_OPERATING_LICENSE", "TOW_COMPANY_DOCUMENT"] as const;
 export const PARTS_PURPOSES = ["PRODUCT_IMAGE", "PARTS_SHOP_DOCUMENT"] as const;

@@ -1,3 +1,4 @@
+import { DOCUMENTS_EXPIRED_MESSAGE, expiredDocuments, startOfToday } from "../services/truck-eligibility.js";
 import { canonicalCity } from "../cities.js";
 import { readPair } from "../geo.js";
 import { Router } from "express";
@@ -113,6 +114,11 @@ const shapeTruck = (t: TruckRow, history: unknown[] = []) => {
     verificationStatus: t.verificationStatus,
     operationalStatus: t.operationalStatus,
     rejectionReason: t.rejectionReason,
+    // New-work eligibility (MOTEXA rule): an expired required document stops THIS truck taking new work; nothing else changes.
+    expiredDocuments: expiredDocuments(t.files).map((f) => ({ kind: PURPOSE_KIND[f.purpose], expiresAt: f.expiresAt!.toISOString() })),
+    canTakeNewWork: t.verificationStatus === "APPROVED" && !t.archivedAt && expiredDocuments(t.files).length === 0,
+    archivedAt: t.archivedAt ? t.archivedAt.toISOString() : null,
+    archiveReason: t.archiveReason,
     hasActiveJob: t.towRequests.length > 0,
     photoUri: photo ? filePath(photo) : null,
     documents: t.files
@@ -122,7 +128,7 @@ const shapeTruck = (t: TruckRow, history: unknown[] = []) => {
         fileName: f.originalName,
         uri: filePath(f),
         expiresAt: f.expiresAt ? f.expiresAt.toISOString() : null,
-        expired: !!f.expiresAt && f.expiresAt.getTime() < now, // flagged only; never auto-rejects
+        expired: !!f.expiresAt && f.expiresAt < startOfToday(), // also enforced: see canTakeNewWork
       })),
     missingForApproval: missingFor(t),
     history,
@@ -237,6 +243,29 @@ function parseVehicle(body: any, full: boolean): { data: Partial<Vehicle> } | { 
   return { data };
 }
 
+/** Admin only: the truck's own operating point ({ baseLat, baseLng } both numbers or both null, optional locationAddress). */
+function adminTruckLocation(body: any): { loc: { baseLat?: number | null; baseLng?: number | null; locationAddress?: string | null; locationSource?: string | null } } | { error: string } {
+  const has = (k: string) => body && Object.prototype.hasOwnProperty.call(body, k);
+  const loc: { baseLat?: number | null; baseLng?: number | null; locationAddress?: string | null; locationSource?: string | null } = {};
+  if (has("baseLat") || has("baseLng")) {
+    const { baseLat: lat, baseLng: lng } = body;
+    if (lat === null && lng === null) {
+      loc.baseLat = null;
+      loc.baseLng = null;
+    } else if (typeof lat === "number" && typeof lng === "number" && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+      loc.baseLat = lat;
+      loc.baseLng = lng;
+      loc.locationSource = "manual";
+    } else return { error: "Truck location needs both a latitude and a longitude (or both empty)." };
+  }
+  if (has("locationAddress")) {
+    const v = body.locationAddress;
+    if (v !== null && typeof v !== "string") return { error: "Location address must be text." };
+    loc.locationAddress = typeof v === "string" && v.trim() ? v.trim().slice(0, 300) : null;
+  }
+  return { loc };
+}
+
 const plateTaken = async (plate: string, exceptId?: string) =>
   !!(await prisma.truck.findFirst({
     where: { plateNumber: { equals: plate, mode: "insensitive" }, ...(exceptId ? { id: { not: exceptId } } : {}) },
@@ -286,9 +315,14 @@ const provider = [requireAuth, requireTowProvider, express.json({ limit: "25mb" 
 const REJECTED_MSG = "Your company application was rejected. You cannot add or edit trucks.";
 const REVIEW_MSG = "Your application is under review. You can edit it again if MOTEXA asks for changes.";
 
-async function myCompany(res: any) {
+/**
+ * The company a request works on: a provider always gets the company linked to their own login. The admin routes below reuse
+ * the same handlers with res.locals.asAdmin = true (set only AFTER requireTowAdmin passed) and then the company named in the
+ * URL is used, so a Tow Admin can act on any tow company while a provider can never reach another one.
+ */
+async function myCompany(res: any, req?: any) {
   const user = res.locals.authUser as { id: string };
-  const c = await loadCompany({ userId: user.id });
+  const c = res.locals.asAdmin && req ? await loadCompany({ id: idParam(req.params.id) }) : await loadCompany({ userId: user.id });
   if (!c) bad(res, 404, "No tow company is linked to this account.");
   return c;
 }
@@ -373,6 +407,15 @@ router.get("/tow/me/trucks", ...provider, async (_req, res) => {
 
 /** 404 (not 403) for a truck that belongs to another company, so ids can't be probed. */
 async function ownTruck(req: any, res: any) {
+  if (res.locals.asAdmin) {
+    const [found] = await loadTrucks({ id: idParam(req.params.id) });
+    if (!found) {
+      bad(res, 404, "Truck not found.");
+      return null;
+    }
+    const company = await loadCompany({ id: found.companyId });
+    return company ? { company, truck: found } : null;
+  }
   const c = await myCompany(res);
   if (!c) return null;
   const [t] = await loadTrucks({ id: idParam(req.params.id), companyId: c.id });
@@ -393,17 +436,21 @@ router.get("/tow/me/trucks/:id", ...provider, async (req, res) => {
   }
 });
 
-router.post("/tow/me/trucks", ...provider, async (req, res) => {
+const createTruck = async (req: any, res: any) => {
   const written: string[] = [];
   try {
     const actor = res.locals.authUser as { id: string };
-    const c = await myCompany(res);
+    const c = await myCompany(res, req);
     if (!c) return;
-    if (c.verificationStatus === "REJECTED") return bad(res, 403, REJECTED_MSG);
-    if (c.verificationStatus === "PENDING") return bad(res, 409, REVIEW_MSG);
+    const asAdmin = !!res.locals.asAdmin;
+    if (!asAdmin && c.verificationStatus === "REJECTED") return bad(res, 403, REJECTED_MSG);
+    if (!asAdmin && c.verificationStatus === "PENDING") return bad(res, 409, REVIEW_MSG);
+    const ownerId = asAdmin ? c.userId : actor.id; // files belong to the company's account, not to the admin
     const parsed = parseVehicle(req.body, true);
     if ("error" in parsed) return bad(res, 400, parsed.error);
     const v = parsed.data as Vehicle;
+    const locIn = asAdmin ? adminTruckLocation(req.body) : { loc: {} };
+    if ("error" in locIn) return bad(res, 400, locIn.error);
     const files = parseFiles(req.body);
     if ("error" in files) return bad(res, 400, files.error);
     for (const d of files.docs) if (!d.file) return bad(res, 400, `A new truck needs the ${d.kind} file, not only a date.`);
@@ -415,7 +462,7 @@ router.post("/tow/me/trucks", ...provider, async (req, res) => {
       const storageKey = await storeFile(f);
       written.push(storageKey);
       rows.push({
-        owner: { connect: { id: actor.id } },
+        owner: { connect: { id: ownerId } },
         purpose,
         visibility: purpose === "TRUCK_PHOTO" ? "PUBLIC" : "PRIVATE",
         originalName: f.originalName,
@@ -432,10 +479,10 @@ router.post("/tow/me/trucks", ...provider, async (req, res) => {
     // Status fields are never taken from the body: always PENDING / OUT_OF_SERVICE.
     const truck = await prisma.$transaction(async (tx) => {
       const created = await tx.truck.create({
-        data: { ...v, companyId: c.id, verificationStatus: "PENDING", operationalStatus: "OUT_OF_SERVICE", files: { create: rows } },
+        data: { ...v, ...locIn.loc, companyId: c.id, verificationStatus: "PENDING", operationalStatus: "OUT_OF_SERVICE", files: { create: rows } },
       });
       await tx.auditLog.create({
-        data: { actorId: actor.id, action: "TOW_TRUCK_CREATED", targetId: created.id, details: { plateNumber: created.plateNumber, files: rows.length } },
+        data: { actorId: actor.id, action: asAdmin ? "ADMIN_TOW_TRUCK_CREATED" : "TOW_TRUCK_CREATED", targetId: created.id, details: { plateNumber: created.plateNumber, files: rows.length, companyId: c.id, ...(asAdmin ? { byAdmin: true } : {}) } },
       });
       return created;
     });
@@ -445,24 +492,38 @@ router.post("/tow/me/trucks", ...provider, async (req, res) => {
     if ((e as { code?: string })?.code === "P2002") return bad(res, 409, "A truck with this plate already exists.");
     return fail(res, "Tow truck create error", e);
   }
-});
+};
+router.post("/tow/me/trucks", ...provider, createTruck);
 
-router.patch("/tow/me/trucks/:id", ...provider, async (req, res) => {
+const editTruck = async (req: any, res: any) => {
   const written: string[] = [];
   try {
     const actor = res.locals.authUser as { id: string };
     const own = await ownTruck(req, res);
     if (!own) return;
-    if (own.company.verificationStatus === "REJECTED") return bad(res, 403, REJECTED_MSG);
-    if (own.company.verificationStatus === "PENDING") return bad(res, 409, REVIEW_MSG);
+    const asAdmin = !!res.locals.asAdmin;
+    if (!asAdmin && own.company.verificationStatus === "REJECTED") return bad(res, 403, REJECTED_MSG);
+    if (!asAdmin && own.company.verificationStatus === "PENDING") return bad(res, 409, REVIEW_MSG);
+    const ownerId = asAdmin ? own.company.userId : actor.id;
     const t = own.truck;
     if (t.towRequests.length) return bad(res, 409, "This truck is on an active job. It cannot be edited until the job ends.");
     const parsed = parseVehicle(req.body, false);
     if ("error" in parsed) return bad(res, 400, parsed.error);
     const data = parsed.data;
+    const locIn = asAdmin ? adminTruckLocation(req.body) : { loc: {} };
+    if ("error" in locIn) return bad(res, 400, locIn.error);
+    // only what really differs from the stored truck counts as a change (an unchanged point keeps its original source)
+    const L = locIn.loc as Record<string, unknown>;
+    if (L.baseLat !== undefined && L.baseLat === t.baseLat && L.baseLng === t.baseLng) {
+      delete L.baseLat;
+      delete L.baseLng;
+      delete L.locationSource;
+    }
+    if (L.locationAddress !== undefined && L.locationAddress === t.locationAddress) delete L.locationAddress;
+    const locKeys = Object.keys(locIn.loc);
     const files = parseFiles(req.body);
     if ("error" in files) return bad(res, 400, files.error);
-    if (!Object.keys(data).length && !files.photo && !files.docs.length) return bad(res, 400, "Nothing to update.");
+    if (!Object.keys(data).length && !files.photo && !files.docs.length && !locKeys.length) return bad(res, 400, "Nothing to update.");
 
     const changedVehicle = (Object.keys(data) as (keyof Vehicle)[]).filter((k) => data[k] !== t[k]);
     if (data.plateNumber && data.plateNumber.toLowerCase() !== t.plateNumber.toLowerCase() && (await plateTaken(data.plateNumber, t.id)))
@@ -484,7 +545,7 @@ router.patch("/tow/me/trucks/:id", ...provider, async (req, res) => {
       }
     }
 
-    if (!changedVehicle.length && !ops.length) return res.json({ success: true, truck: (await trucksWithHistory([t]))[0] });
+    if (!changedVehicle.length && !ops.length && !locKeys.length) return res.json({ success: true, truck: (await trucksWithHistory([t]))[0] });
 
     for (const op of ops) {
       if (!op.file) continue;
@@ -494,7 +555,8 @@ router.patch("/tow/me/trucks/:id", ...provider, async (req, res) => {
     }
 
     // Changing vehicle details, the photo or a document sends an approved/rejected truck back to review.
-    const resubmit = t.verificationStatus !== "PENDING";
+    // (An admin fixing data does not push the truck back to review: the admin decides its status themself.)
+    const resubmit = !asAdmin && t.verificationStatus !== "PENDING";
     const oldKeys: string[] = [];
     await prisma.$transaction(async (tx) => {
       for (const op of ops) {
@@ -506,7 +568,7 @@ router.patch("/tow/me/trucks/:id", ...provider, async (req, res) => {
           }
           await tx.providerFile.create({
             data: {
-              ownerUserId: actor.id,
+              ownerUserId: ownerId,
               truckId: t.id,
               purpose: op.purpose,
               visibility: op.purpose === "TRUCK_PHOTO" ? "PUBLIC" : "PRIVATE",
@@ -526,15 +588,16 @@ router.patch("/tow/me/trucks/:id", ...provider, async (req, res) => {
         where: { id: t.id },
         data: {
           ...data,
+          ...locIn.loc,
           ...(resubmit ? { verificationStatus: "PENDING" as const, rejectionReason: null, reviewedById: null, reviewedAt: null } : {}),
         },
       });
       await tx.auditLog.create({
         data: {
           actorId: actor.id,
-          action: "TOW_TRUCK_EDITED",
+          action: asAdmin ? "ADMIN_TOW_TRUCK_EDITED" : "TOW_TRUCK_EDITED",
           targetId: t.id,
-          details: { fields: [...changedVehicle, ...ops.map((o) => (o.file ? `file:${o.purpose}` : `expiry:${o.purpose}`))], resubmitted: resubmit },
+          details: { fields: [...changedVehicle, ...(locKeys.length ? ["location"] : []), ...ops.map((o) => (o.file ? `file:${o.purpose}` : `expiry:${o.purpose}`))], resubmitted: resubmit, companyId: t.companyId, ...(asAdmin ? { byAdmin: true } : {}) },
         },
       });
     });
@@ -545,7 +608,8 @@ router.patch("/tow/me/trucks/:id", ...provider, async (req, res) => {
     if ((e as { code?: string })?.code === "P2002") return bad(res, 409, "A truck with this plate already exists.");
     return fail(res, "Tow truck update error", e);
   }
-});
+};
+router.patch("/tow/me/trucks/:id", ...provider, editTruck);
 
 router.patch("/tow/me/trucks/:id/status", ...provider, requireApprovedProvider, async (req, res) => {
   try {
@@ -555,7 +619,9 @@ router.patch("/tow/me/trucks/:id/status", ...provider, requireApprovedProvider, 
     const t = own.truck;
     const next = req.body?.operationalStatus;
     if (!OPERATIONAL.includes(next)) return bad(res, 400, "Operational status is invalid.");
+    if (t.archivedAt) return bad(res, 409, "This truck was taken out of service by MOTEXA. Contact MOTEXA to restore it.");
     if (t.verificationStatus !== "APPROVED") return bad(res, 409, "Only an approved truck can change its operational status.");
+    if (next === "AVAILABLE" && expiredDocuments(t.files).length) return res.status(409).json({ success: false, message: DOCUMENTS_EXPIRED_MESSAGE, reason: "DOCUMENTS_EXPIRED" });
     if (t.towRequests.length) return bad(res, 409, "This truck is on an active job. Its status changes when the job ends.");
 
     await prisma.$transaction([
@@ -741,6 +807,114 @@ router.patch("/admin/tow/trucks/:id/decision", ...admin, async (req, res) => {
     return res.json({ success: true, truck: await oneTruck(t.id) });
   } catch (e) {
     return fail(res, "Tow truck decision error", e);
+  }
+});
+
+// =====================================================================
+// Admin full control of the TOWING domain (SUPER_ADMIN or ADMIN + MANAGE_TOWING). Nothing here touches parts, mechanics, other
+// admins or permissions. No hard delete: a truck is archived (taken out of service, documents kept) and can be restored; one
+// bad truck never affects its company. Truck writes reuse the provider handlers (same validation, plate uniqueness, file
+// rules); every change is audited with an ADMIN_ action and details.byAdmin. Approval still needs the real checklist.
+// =====================================================================
+const adminAsAdmin = (_req: any, res: any, next: any) => {
+  res.locals.asAdmin = true;
+  next();
+};
+const adminWrite = [requireAuth, requireTowAdmin, express.json({ limit: "25mb" }), adminAsAdmin];
+
+router.post("/admin/tow/companies/:id/trucks", ...adminWrite, createTruck);
+router.patch("/admin/tow/trucks/:id", ...adminWrite, editTruck);
+
+// Archive / restore a truck. { archived: true, reason } takes it out of service (and keeps it out until restored);
+// { archived: false } lifts the archive (the truck stays OUT_OF_SERVICE until it is set available again).
+router.patch("/admin/tow/trucks/:id/archive", ...admin, async (req, res) => {
+  try {
+    const actor = res.locals.authUser as { id: string };
+    const archived = req.body?.archived;
+    if (typeof archived !== "boolean") return bad(res, 400, "archived must be true or false.");
+    const reason = text(req.body?.reason, 500);
+    if (archived && !reason) return bad(res, 400, "A reason is required to archive a truck.");
+    const [t] = await loadTrucks({ id: idParam(req.params.id) });
+    if (!t) return bad(res, 404, "Truck not found.");
+    if (archived && (t.operationalStatus === "BUSY" || t.towRequests.length)) return bad(res, 409, "This truck is on an active job. Archive it when the job ends.");
+    await prisma.$transaction([
+      prisma.truck.update({
+        where: { id: t.id },
+        data: archived
+          ? { archivedAt: new Date(), archivedById: actor.id, archiveReason: reason, operationalStatus: "OUT_OF_SERVICE" }
+          : { archivedAt: null, archivedById: null, archiveReason: null },
+      }),
+      log(actor.id, archived ? "ADMIN_TOW_TRUCK_ARCHIVED" : "ADMIN_TOW_TRUCK_RESTORED", t.id, { reason: archived ? reason : null, companyId: t.companyId, byAdmin: true }),
+    ]);
+    return res.json({ success: true, truck: await oneTruck(t.id) });
+  } catch (e) {
+    return fail(res, "Tow admin truck archive error", e);
+  }
+});
+
+// Company profile edit (everything a company profile has, except the login account and the approval status, which only
+// /decision changes, so editing never approves or rejects anything).
+router.patch("/admin/tow/companies/:id", ...admin, async (req, res) => {
+  try {
+    const actor = res.locals.authUser as { id: string };
+    const c = await loadCompany({ id: idParam(req.params.id) });
+    if (!c) return bad(res, 404, "Company not found.");
+    const b = req.body ?? {};
+    const has = (k: string) => Object.prototype.hasOwnProperty.call(b, k);
+    const data: Prisma.TowCompanyProfileUpdateInput = {};
+    const need = (k: "companyName" | "phone" | "city", max: number, label: string) => {
+      const v = text(b[k], max);
+      if (!v) throw new Error(`${label} is required.`);
+      data[k] = v;
+    };
+    const opt = (k: "companyNameAr" | "ownerName" | "address" | "licenceNumber" | "description" | "workingHours", max: number) => {
+      const v = b[k];
+      if (v === null || v === "") data[k] = null;
+      else if (typeof v === "string") data[k] = v.trim().slice(0, max) || null;
+      else throw new Error(`${k} must be text.`);
+    };
+    try {
+      if (has("companyName")) need("companyName", 200, "Company name");
+      if (has("phone")) {
+        need("phone", 24, "Phone");
+        if (!/^\+?[0-9 ()-]{8,24}$/.test(String(data.phone))) throw new Error("Phone number is not valid.");
+      }
+      if (has("city")) {
+        const city = canonicalCity(b.city);
+        if (!city) throw new Error("Unknown city. Choose from the city list.");
+        data.city = city;
+      }
+      for (const k of ["companyNameAr", "ownerName", "address", "licenceNumber", "description", "workingHours"] as const) if (has(k)) opt(k, k === "description" ? 600 : 200);
+      if (has("open24h")) {
+        if (typeof b.open24h !== "boolean") throw new Error("open24h must be true or false.");
+        data.open24h = b.open24h;
+      }
+    } catch (e) {
+      return bad(res, 400, (e as Error).message);
+    }
+    if (has("serviceCities")) {
+      if (!Array.isArray(b.serviceCities)) return bad(res, 400, "serviceCities must be a list.");
+      const cities: string[] = [];
+      for (const v of b.serviceCities) {
+        const name = canonicalCity(v);
+        if (!name) return bad(res, 400, "Unknown city in serviceCities. Choose from the list.");
+        if (!cities.includes(name)) cities.push(name);
+      }
+      if (cities.length > 10) return bad(res, 400, "Choose at most 10 service cities.");
+      data.serviceCities = cities;
+    }
+    if (has("baseLat") || has("baseLng")) {
+      const pair = readPair(b, "baseLat", "baseLng", "Company location");
+      if ("error" in pair) return bad(res, 400, pair.error);
+      data.baseLat = pair.lat;
+      data.baseLng = pair.lng;
+    }
+    const fields = [...new Set(Object.keys(data).map((k) => (k === "baseLat" || k === "baseLng" ? "location" : k)))];
+    if (!fields.length) return bad(res, 400, "Nothing to update.");
+    await prisma.$transaction([prisma.towCompanyProfile.update({ where: { id: c.id }, data }), log(actor.id, "ADMIN_TOW_COMPANY_EDITED", c.id, { fields, byAdmin: true })]);
+    return res.json({ success: true, company: shapeCompany((await loadCompany({ id: c.id }))!) });
+  } catch (e) {
+    return fail(res, "Tow admin company edit error", e);
   }
 });
 

@@ -352,6 +352,11 @@ model Truck {
   reviewedById       String?
   reviewedAt         DateTime?
 
+  // Admin archive (Tow admin): the truck is taken out of service without deleting it or its documents; only restoring clears it.
+  archivedAt    DateTime?
+  archivedById  String?
+  archiveReason String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -432,6 +437,12 @@ model PartsProduct {
   condition            PartCondition @default(NEW)
   partType             PartType? // null = not specified
   category             String? // key from src/catalogCategories.ts; null only for products made before categories existed
+
+  // Sale: the "was" price. Customers only see it while the optional window is open and it is higher than price.
+  compareAtPrice Decimal?  @db.Decimal(12, 2)
+  saleStartsAt   DateTime?
+  saleEndsAt     DateTime?
+  warrantyMonths Int? // null = not stated
 
   // MOTEXA moderation: only admins write these.
   isHidden     Boolean   @default(false)

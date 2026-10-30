@@ -1,45 +1,32 @@
 import { router } from "expo-router";
 import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, View } from "react-native";
-import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
-import {
-  BlueprintPage,
-  BottomSheet,
-  Chip,
-  HeroConfig,
-  Icon,
-  Odometer,
-  OptionSheet,
-  PartsScene,
-  PrimaryButton,
-  Press,
-  SearchField,
-  TOW_HERO_OVERLAP,
-  TowHero,
-} from "../../components/blueprint";
-import { Button } from "../../components/ui/Button";
-import { EmptyState, Notice } from "../../components/ui/Feedback";
-import { Input } from "../../components/ui/Input";
-import { SkeletonList } from "../../components/ui/Skeleton";
-import { Text } from "../../components/ui/Text";
+import { View } from "react-native";
+import { Chip, EmptyState, ErrorState, GaragePage, GButton, GIcon, GText, Grid, IconButton, Note, OptionSheet, ProductCard, SearchBar, Sheet, SkeletonCards, Tap } from "../../components/garage";
 import { useL } from "../../core/hooks/useL";
-import { closeMs, M } from "../../motion";
-import { alpha } from "../../theme/tokens";
-import { useTheme } from "../../theme/useTheme";
-import { ProductCard, carName } from "./catalogBits";
+import { gType, useGarageTheme } from "../../theme/garage";
+import { carName } from "./catalogBits";
 import { CatalogProduct, PartSort, catalogService, fitMemory } from "./catalogService";
 import { ActiveFilters, FilterSheet } from "./FilterSheet";
-import { PartFilters, countFilters, filterMemory, filterParams } from "./filters";
+import { VehiclePicker } from "./VehiclePicker";
+import { EMPTY_FILTERS, PartFilters, countFilters, filterMemory, filterParams } from "./filters";
+
+/** What a page hero may show: the real result count, the car, and the "Fits my car" switch. */
+export type BrowserState = {
+  total: number | null;
+  car: { make: string; model: string; year: string; trim: string } | null;
+  fitOn: boolean;
+  /** turn "Fits my car" on / off (opens the car sheet when no car is set) */
+  setFit: (on: boolean) => void;
+  openCar: () => void;
+};
 
 /**
- * The customer's product list: search, filters (bottom sheet), sort, "Fits my car", Load more and pull-to-refresh. Used by
- * the Parts tab (with the compact Parts hero), a category screen and a shop page, which only differ in the hero, the
- * title and what the list is limited to.
+ * The customer product list: search, filters (bottom sheet), sort, "Fits my car", Load more and pull-to-refresh. Used by
+ * the Parts tab and a category screen, which only differ in the hero and what the list is limited to.
  */
 export function ProductBrowser({
   hero,
-  partsHero,
-  title,
+  footerExtra,
   topExtra,
   afterSearch,
   category,
@@ -49,17 +36,16 @@ export function ProductBrowser({
   initialSort,
   initialFit,
   tabs = false,
-  ignition = false,
+  entry,
   emptyText,
 }: {
-  /** hero of a category / shop page (the Parts tab uses `partsHero`) */
-  hero?: HeroConfig;
-  /** the compact Parts hero (tab) */
-  partsHero?: boolean;
-  title?: ReactNode;
-  /** shown between the title and the search box (a shop's details) */
+  /** the page hero, given the live list state */
+  hero?: (s: BrowserState) => ReactNode;
+  /** shown after the product list */
+  footerExtra?: ReactNode;
+  /** shown above the search row */
   topExtra?: ReactNode;
-  /** shown under the search row (the Parts tab puts its category tabs here) */
+  /** shown under the search row (the Parts tab puts its category groups here) */
   afterSearch?: ReactNode;
   category?: string | null;
   group?: string | null;
@@ -70,20 +56,21 @@ export function ProductBrowser({
   /** from the Home link "Set your car": open the car sheet (or switch the fit on) */
   initialFit?: boolean;
   tabs?: boolean;
-  /** first entry of the Parts tab (see useIgnition) */
-  ignition?: boolean;
+  /** main tab key for the first-visit entrance */
+  entry?: string;
   emptyText?: string;
 }) {
-  const { t, isArabic, row, align } = useL();
-  const { c } = useTheme();
+  const { t, row } = useL();
+  const { g } = useGarageTheme();
   const [q, setQ] = useState(initialQ ?? "");
   // "Fits my car" values live in memory for the app session, so they survive leaving this screen.
   const [make, setMake] = useState(fitMemory.make);
   const [model, setModel] = useState(fitMemory.model);
   const [year, setYear] = useState(fitMemory.year);
+  const [trim, setTrim] = useState(fitMemory.trim);
   const [fitEnabled, setFitEnabled] = useState(true);
   const [carOpen, setCarOpen] = useState(false);
-  const [draft, setDraft] = useState({ make: "", model: "", year: "" });
+  const [draft, setDraft] = useState({ make: "", model: "", year: "", trim: "" });
   const [sort, setSort] = useState<PartSort>("relevance");
   const [sortOpen, setSortOpen] = useState(false);
   const [filters, setFilters] = useState<PartFilters>(filterMemory.current);
@@ -96,6 +83,9 @@ export function ProductBrowser({
   const activeCount = countFilters(filters);
 
   const [items, setItems] = useState<CatalogProduct[]>([]);
+  // products whose photo could not be shown are dropped from the list (never replaced by a drawing)
+  const [broken, setBroken] = useState<string[]>([]);
+  const dropBroken = useCallback((id: string) => setBroken((b) => (b.includes(id) ? b : [...b, id])), []);
   const [total, setTotal] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -116,10 +106,10 @@ export function ProductBrowser({
   const yearOk = year.trim() === "" || /^\d{4}$/.test(year.trim());
   const carSet = !!make.trim() && yearOk;
   const fitOn = fitEnabled && carSet;
-  const car = carSet ? { make, model, year } : null;
+  const car = carSet ? { make, model, year, trim } : null;
 
   const openCar = () => {
-    setDraft({ make, model, year });
+    setDraft({ make, model, year, trim });
     setCarOpen(true);
   };
   useEffect(() => {
@@ -137,6 +127,7 @@ export function ProductBrowser({
     setMake(draft.make);
     setModel(draft.model);
     setYear(draft.year);
+    setTrim(draft.trim);
     setFitEnabled(!!draft.make.trim());
     setCarOpen(false);
   };
@@ -144,6 +135,7 @@ export function ProductBrowser({
     setMake("");
     setModel("");
     setYear("");
+    setTrim("");
     setCarOpen(false);
   };
   const onFitPress = () => {
@@ -161,7 +153,7 @@ export function ProductBrowser({
       try {
         const r = await catalogService.searchParts({
           q,
-          ...(fitOn ? { make, model, year: year.trim() } : {}),
+          ...(fitOn ? { make, model, year: year.trim(), trim: trim.trim() } : {}),
           ...(category ? { category } : {}),
           ...(group ? { group } : {}),
           ...(shopId ? { shopId } : {}),
@@ -184,7 +176,7 @@ export function ProductBrowser({
         }
       }
     },
-    [q, make, model, year, fitOn, sort, category, group, shopId, filters]
+    [q, make, model, year, trim, fitOn, sort, category, group, shopId, filters]
   );
 
   // Search as the user types, after a short pause.
@@ -192,185 +184,110 @@ export function ProductBrowser({
     fitMemory.make = make;
     fitMemory.model = model;
     fitMemory.year = year;
+    fitMemory.trim = trim;
     const h = setTimeout(() => run(1, "replace"), 350);
     return () => clearTimeout(h);
-  }, [run, make, model, year]);
+  }, [run, make, model, year, trim]);
 
   const SORTS: { key: PartSort; label: string }[] = [
     { key: "relevance", label: t("Relevance", "الأكثر صلة") },
     { key: "price_asc", label: t("Price: low to high", "السعر: من الأقل إلى الأعلى") },
     { key: "price_desc", label: t("Price: high to low", "السعر: من الأعلى إلى الأقل") },
     { key: "newest", label: t("Newest", "الأحدث") },
+    { key: "discount", label: t("Biggest discount", "أكبر خصم") },
   ];
   const sortLabel = SORTS.find((s) => s.key === sort)!.label;
 
-  // first results ever shown cascade in; later result sets crossfade and reposition
-  const firstBatch = useRef(true);
-  useEffect(() => {
-    if (items.length) firstBatch.current = false;
-  }, [items.length]);
-  // "Fits my car" just switched on: the check sweeps in row by row for a moment
-  const prevFit = useRef(false);
-  const sweepUntil = useRef(0);
-  if (fitOn && !prevFit.current) sweepUntil.current = Date.now() + 1500;
-  prevFit.current = fitOn;
-  const sweeping = fitOn && Date.now() < sweepUntil.current;
-
-  // ---- Parts hero: REAL values only ----
-  const soft = alpha(c.cream, 0.82);
-  const lineText = { color: soft, fontSize: 14 } as const;
-  const heroLine = (
-    <View style={[row, { alignItems: "center", flexWrap: "wrap", columnGap: 5 }]}>
-      {total === null ? (
-        <Text style={lineText}>{t("Looking for parts…", "جارٍ البحث عن قطع…")}</Text>
-      ) : total === 0 ? (
-        <Text style={lineText}>{fitOn && !q.trim() && !activeCount && !category && !group && !shopId ? t("No parts fit your car yet", "لا توجد قطع تناسب سيارتك بعد") : t("No parts found", "لا توجد قطع")}</Text>
-      ) : (
-        <>
-          <Odometer value={total} size={14} color={c.cream} />
-          <Text style={lineText}>
-            {fitOn && car ? `${total === 1 ? t("part fits your", "قطعة تناسب") : t("parts fit your", "قطع تناسب")} ${carName(car)}` : total === 1 ? t("part available", "قطعة متاحة") : t("parts available", "قطع متاحة")}
-          </Text>
-        </>
-      )}
-    </View>
-  );
-  const top = partsHero ? (
-    <TowHero
-      play={ignition}
-      tag="PARTS / 03"
-      title={t("Parts", "القطع")}
-      line={heroLine}
-      hint={carSet ? undefined : t("Set your car to see what fits it", "حدّد سيارتك لترى ما يناسبها")}
-      primary={carSet ? { label: t("Fits my car", "تناسب سيارتي"), icon: "car", active: fitOn, onPress: onFitPress } : { label: t("Set your car", "حدّد سيارتك"), icon: "car", onPress: openCar }}
-      secondary={carSet ? { label: t("Change car", "تغيير السيارة"), onPress: openCar } : undefined}
-      scene={(k, p) => <PartsScene key={k} play={p} />}
-    />
-  ) : undefined;
-
-  const filterButton = (
-    <Press
-      accessibilityLabel={t("Filters", "التصفية")}
-      onPress={() => setSheetOpen(true)}
-      style={{ width: 46, height: 46, borderRadius: 14, borderWidth: 1, borderColor: activeCount ? c.btn : c.line, backgroundColor: activeCount ? c.btn : "transparent", alignItems: "center", justifyContent: "center" }}
-    >
-      <Icon name="filter" size={20} color={activeCount ? c.btnFg : c.ink} />
-      {activeCount ? (
-        <View style={{ position: "absolute", top: -6, end: -6, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, backgroundColor: c.bronze, alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>{String(activeCount)}</Text>
-        </View>
-      ) : null}
-    </Press>
-  );
+  const visibleItems = items.filter((p) => !broken.includes(p.id));
 
   return (
-    <BlueprintPage
+    <GaragePage
       tabs={tabs}
-      ignition={ignition}
-      overlap={partsHero ? TOW_HERO_OVERLAP : undefined}
+      entry={entry}
       refreshing={refreshing}
       onRefresh={() => run(1, "refresh")}
-      top={top}
-      hero={partsHero ? undefined : hero}
+      hero={hero?.({ total, car, fitOn, setFit: (on) => (on && !carSet ? openCar() : setFitEnabled(on)), openCar })}
     >
-      {!partsHero && typeof title === "string" ? <Text style={[{ color: c.ink, fontSize: 30, fontWeight: "700", lineHeight: isArabic ? 40 : 34 }, align]}>{title}</Text> : !partsHero ? title : null}
       {topExtra}
-      <View style={[row, { alignItems: "center", gap: 10, marginTop: partsHero ? 0 : 16 }]}>
+      <View style={[row, { alignItems: "center", gap: 10 }]}>
         <View style={{ flex: 1 }}>
-          <SearchField compact style={{ height: 46, borderRadius: 14, backgroundColor: "transparent" }} value={q} onChangeText={setQ} placeholder={t("Name, brand or part number", "الاسم أو الماركة أو رقم القطعة")} />
+          <SearchBar value={q} onChangeText={setQ} placeholder={t("Search parts, OEM, brand", "ابحث عن قطعة أو رقم أو ماركة")} />
         </View>
-        {filterButton}
+        <IconButton icon="options-outline" label={t("Filters", "التصفية")} onPress={() => setSheetOpen(true)} tone={activeCount ? "accent" : "card"} badge={activeCount || undefined} />
       </View>
-      {!partsHero ? (
-        <View style={[row, { marginTop: 10 }]}>
-          <Chip check icon="car" label={carSet ? t("Fits my car", "تناسب سيارتي") : t("Set your car", "حدّد سيارتك")} on={fitOn} onPress={onFitPress} />
-        </View>
-      ) : null}
+      <View style={[row, { marginTop: 12, alignItems: "center", gap: 8, flexWrap: "wrap" }]}>
+        {fitOn && car ? (
+          <>
+            <View style={{ flexShrink: 1 }}>
+              <Chip icon="car-sport" label={`${t("Parts for", "قطع تناسب")} ${carName(car)}`} on onPress={openCar} />
+            </View>
+            <Tap label={t("Clear vehicle", "إزالة المركبة")} onPress={clearCar} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+              <GIcon name="close" size={18} color={g.soft} />
+            </Tap>
+          </>
+        ) : (
+          <Chip icon="car-sport-outline" label={carSet ? `${t("Show parts for", "عرض قطع")} ${carName(car!)}` : t("Find parts for your car", "ابحث عن قطع لسيارتك")} onPress={carSet ? onFitPress : openCar} />
+        )}
+      </View>
 
-      {afterSearch ? <View style={{ marginTop: 10 }}>{afterSearch}</View> : null}
+      {afterSearch ? <View style={{ marginTop: 8 }}>{afterSearch}</View> : null}
 
-      <View style={[row, { marginTop: 12, alignItems: "center", justifyContent: "space-between" }]}>
-        <View style={[row, { alignItems: "center", gap: 4 }]}>
-          {total !== null ? <Odometer value={total} size={13} color={c.soft} /> : null}
-          <Text style={{ color: c.soft, fontSize: 13 }}>{total === 1 ? t("part", "قطعة") : t("parts", "قطع")}</Text>
-        </View>
-        <Press accessibilityLabel={t("Sort", "ترتيب")} onPress={() => setSortOpen(true)} style={[row, { minHeight: 40, alignItems: "center", gap: 4, paddingHorizontal: 4 }]}>
-          <Text style={{ color: c.ink, fontSize: 13, fontWeight: "600" }}>{sort === "relevance" ? t("Sort", "ترتيب") : sortLabel}</Text>
-          <Icon name="down" size={14} color={c.soft} />
-        </Press>
+      <View style={[row, { marginTop: 18, alignItems: "center", justifyContent: "space-between" }]}>
+        <GText soft style={[gType.caption, { fontWeight: "700" }]}>{total !== null ? `${total} ${total === 1 ? t("part", "قطعة") : t("parts", "قطع")}` : " "}</GText>
+        <Tap label={t("Sort", "ترتيب")} onPress={() => setSortOpen(true)} style={[row, { minHeight: 44, alignItems: "center", gap: 4, paddingHorizontal: 4 }]}>
+          <GIcon name="swap-vertical-outline" size={16} />
+          <GText style={[gType.caption, { fontWeight: "800", color: g.accentText }]}>{sort === "relevance" ? t("Sort", "ترتيب") : sortLabel}</GText>
+        </Tap>
       </View>
       <ActiveFilters value={filters} onChange={applyFilters} />
 
-      <View style={{ marginTop: 2 }}>
+      <View style={{ marginTop: 10 }}>
         {loading && !items.length ? (
-          <SkeletonList />
+          <SkeletonCards />
         ) : error && !items.length ? (
-          <View style={{ alignItems: "center", paddingVertical: 30, gap: 14 }}>
-            <Notice tone="danger" icon="alert-circle-outline">{error}</Notice>
-            <Button label={t("Retry", "إعادة المحاولة")} variant="ghost" icon="refresh-outline" onPress={() => run(1, "replace")} />
-          </View>
-        ) : !items.length ? (
+          <ErrorState text={error} onRetry={() => run(1, "replace")} retryLabel={t("Retry", "إعادة المحاولة")} />
+        ) : !visibleItems.length ? (
           <EmptyState
-            icon="cube-outline"
-            text={fitOn || q.trim() || activeCount ? t("No parts match your current search, filters or car.", "لا توجد قطع مطابقة للبحث أو التصفية أو السيارة الحالية.") : (emptyText ?? t("No parts are available yet.", "لا توجد قطع متاحة بعد."))}
+            photo="empty.search"
+            text={fitOn && car && !q.trim() && !activeCount && !category && !group && !shopId ? `${t("No compatible parts found for", "لا توجد قطع متوافقة مع")} ${carName(car)}.` : fitOn || q.trim() || activeCount ? t("No parts match your current search, filters or car.", "لا توجد قطع مطابقة للبحث أو التصفية أو السيارة الحالية.") : (emptyText ?? t("No parts are available yet.", "لا توجد قطع متاحة بعد."))}
+            action={activeCount ? { label: t("Clear filters", "مسح التصفية"), onPress: () => applyFilters(EMPTY_FILTERS) } : undefined}
           />
         ) : (
           <>
-            {error ? <Notice tone="danger" icon="alert-circle-outline">{error}</Notice> : null}
-            {items.map((p, k) => {
-              const early = k < 8;
-              const cascading = early && firstBatch.current;
-              return (
-                <Animated.View
-                  key={p.id}
-                  entering={early && !firstBatch.current ? FadeIn.duration(M.chip) : undefined}
-                  exiting={early ? FadeOut.duration(closeMs(M.chip)) : undefined}
-                  layout={early ? LinearTransition.duration(M.detail) : undefined}
-                >
-                  <ProductCard
-                    p={p}
-                    showShop={!shopId}
-                    car={fitOn ? car : null}
-                    cascade={cascading ? k : undefined}
-                    sweep={early && sweeping ? k : undefined}
-                    onPress={() => router.push(`/customer/parts/${p.id}`)}
-                  />
-                </Animated.View>
-              );
-            })}
+            {error ? <Note tone="danger" icon="alert-circle-outline">{error}</Note> : null}
+            <Grid>
+              {visibleItems.map((p) => (
+                <ProductCard key={p.id} p={p} car={fitOn ? car : null} onBroken={dropBroken} onPress={() => router.push(`/customer/parts/${p.id}`)} />
+              ))}
+            </Grid>
             {hasMore && (
               <View style={{ marginTop: 16 }}>
-                <Button label={loadingMore ? t("Loading…", "جارٍ التحميل…") : t("Load more", "تحميل المزيد")} variant="ghost" icon="chevron-down-outline" disabled={loadingMore} onPress={() => run(page + 1, "more")} />
+                <GButton variant="secondary" icon="chevron-down-outline" label={loadingMore ? t("Loading…", "جارٍ التحميل…") : t("Load more", "تحميل المزيد")} disabled={loadingMore} onPress={() => run(page + 1, "more")} />
               </View>
             )}
           </>
         )}
       </View>
 
+      {footerExtra}
+
       <FilterSheet visible={sheetOpen} value={filters} category={category} group={group} onApply={applyFilters} onClose={() => setSheetOpen(false)} />
-      <OptionSheet visible={sortOpen} onClose={() => setSortOpen(false)} title={t("Sort by", "ترتيب حسب")} value={sort} options={SORTS} onSelect={(k) => { setSort(k); setSortOpen(false); }} />
-      <BottomSheet
+      <OptionSheet visible={sortOpen} onClose={() => setSortOpen(false)} closeLabel={t("Close", "إغلاق")} title={t("Sort by", "ترتيب حسب")} value={sort} options={SORTS} onSelect={(k) => { setSort(k); setSortOpen(false); }} />
+      <Sheet
         visible={carOpen}
         onClose={() => setCarOpen(false)}
+        closeLabel={t("Close", "إغلاق")}
         title={t("Your car", "سيارتك")}
         footer={
           <View style={[row, { gap: 12 }]}>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton variant="outline" label={t("Clear", "مسح")} disabled={!carSet && !draft.make && !draft.model && !draft.year} onPress={clearCar} />
-            </View>
-            <View style={{ flex: 1.4 }}>
-              <PrimaryButton label={t("Show parts that fit", "عرض القطع المناسبة")} disabled={!draft.make.trim() || !!dHint} onPress={saveCar} />
-            </View>
+            <GButton flex variant="secondary" label={t("Clear", "مسح")} disabled={!carSet && !draft.make && !draft.model && !draft.year && !draft.trim} onPress={clearCar} />
+            <GButton flex label={t("Show parts that fit", "عرض القطع المناسبة")} disabled={!draft.make.trim() || !!dHint} onPress={saveCar} />
           </View>
         }
       >
-        <View style={{ paddingHorizontal: 20 }}>
-          <Input label={t("Make", "الشركة المصنعة")} value={draft.make} onChangeText={(v) => setDraft({ ...draft, make: v })} placeholder="Toyota" autoCapitalize="words" />
-          <Input label={t("Model", "الطراز")} value={draft.model} onChangeText={(v) => setDraft({ ...draft, model: v })} placeholder="Corolla" autoCapitalize="words" />
-          <Input label={t("Year", "السنة")} value={draft.year} onChangeText={(v) => setDraft({ ...draft, year: v })} placeholder="2016" keyboardType="number-pad" maxLength={4} />
-          {dHint ? <Notice tone="accent" icon="information-circle-outline">{dHint}</Notice> : null}
-        </View>
-      </BottomSheet>
-    </BlueprintPage>
+        <VehiclePicker value={draft} onChange={(v) => setDraft(v)} />
+        {dHint ? <Note>{dHint}</Note> : null}
+      </Sheet>
+    </GaragePage>
   );
 }

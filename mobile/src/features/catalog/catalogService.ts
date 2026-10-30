@@ -28,17 +28,61 @@ export type CatalogProduct = {
   imageUri: string | null;
   fitments: Fitment[];
   shop: CatalogShopRef;
+  /** "was" price while a sale runs (server only sends it when it is higher than price and the sale window is open) */
+  compareAtPrice?: number | null;
+  warrantyMonths?: number | null;
+  /** server-computed badges (catalog list + detail) */
+  badges?: ProductBadge[];
 };
 
-export type PartSort = "relevance" | "price_asc" | "price_desc" | "newest";
-export type PartsQuery = { q?: string; make?: string; model?: string; year?: string; shopId?: string; category?: string; group?: string; sort?: PartSort; page?: number;
+/** DISCOUNT value = whole %, LOW_STOCK value = units left (only when 3 or fewer), CONDITION value = USED / REFURBISHED. */
+export type ProductBadge = { kind: "DISCOUNT" | "SOLD_OUT" | "LOW_STOCK" | "NEW" | "CONDITION"; value?: number | string };
+
+export type PartSort = "relevance" | "price_asc" | "price_desc" | "newest" | "discount";
+export type PartsQuery = { q?: string; make?: string; model?: string; year?: string; trim?: string; shopId?: string; category?: string; group?: string; sort?: PartSort; page?: number;
   // filter sheet (see filters.ts)
-  condition?: string; partType?: string; brand?: string; minPrice?: string; maxPrice?: string; inStock?: string; city?: string };
+  condition?: string; partType?: string; brand?: string; minPrice?: string; maxPrice?: string; inStock?: string; onSale?: string; city?: string };
 export type PartsPage = { products: CatalogProduct[]; page: number; total: number; hasMore: boolean };
 
-export type CatalogShopRow = { id: string; name: string; city: string; productCount: number };
+export type CatalogShopRow = {
+  id: string;
+  name: string;
+  nameAr: string | null;
+  brandName: string | null;
+  branchName: string | null;
+  city: string;
+  productCount: number;
+  categories: string[];
+  /** business location rounded to about 110 m by the server; null when the shop has not set one */
+  baseLat: number | null;
+  baseLng: number | null;
+  /** login-gated path of the storefront photo (use privateImageSource) */
+  storefrontUri: string | null;
+  /** opening hours as the shop wrote them */
+  hours: string | null;
+};
 
-export type CatalogShop = { id: string; name: string; city: string; address: string | null };
+/** A vehicle that really appears in the fitment data of visible parts; make / model are the exact strings the parts filter expects. */
+export type CatalogVehicle = { make: string; model: string; yearFrom: number; yearTo: number; partCount: number; /** engine / variant labels shops entered for this vehicle */ trims: string[] };
+
+export type CatalogShop = {
+  id: string;
+  name: string;
+  nameAr: string | null;
+  brandName: string | null;
+  branchName: string | null;
+  city: string;
+  address: string | null;
+  /** catalogue keys */
+  categories: string[];
+  /** business location rounded to about 110 m by the server; null when the shop has not set one */
+  baseLat: number | null;
+  baseLng: number | null;
+  /** login-gated path of the storefront photo (use privateImageSource) */
+  storefrontUri: string | null;
+  /** as the shop typed it, e.g. "Sat–Thu 08:00–18:00"; null when not set */
+  workingHours?: string | null;
+};
 
 export type TowCompanyRow = {
   id: string;
@@ -103,6 +147,10 @@ export const catalogService = {
   async getShops() {
     return (await api<{ shops: CatalogShopRow[] }>("GET", "/catalog/shops")).shops;
   },
+  /** Vehicles found in the fitment data; `q` words must each be part of the make or the model (empty q = the most covered). */
+  async getVehicles(q = "") {
+    return (await api<{ vehicles: CatalogVehicle[] }>("GET", `/catalog/vehicles${qs({ q })}`)).vehicles;
+  },
   async getShop(id: string) {
     const r = await api<{ shop: CatalogShop; products: CatalogProduct[] }>("GET", `/catalog/shops/${id}`);
     return { shop: r.shop, products: r.products.map(withImage) };
@@ -118,21 +166,21 @@ export const catalogService = {
 };
 
 /** Last "fits my car" values, kept in memory for the current app session only. */
-export const fitMemory = { make: "", model: "", year: "" };
+export const fitMemory = { make: "", model: "", year: "", trim: "" };
 
 /** Same rule as the server's fitment filter: make must match, model and year only when given. */
-export function fitsCar(p: { fitments: Fitment[] }, car: { make: string; model: string; year: string }) {
+export function fitsCar(p: { fitments: Fitment[] }, car: { make: string; model: string; year: string; trim?: string }) {
   const n = (v: string) => v.trim().toLowerCase().replace(/\s+/g, " ");
   const year = car.year.trim() ? Number(car.year.trim()) : null;
   return p.fitments.some(
-    (f) => n(f.make) === n(car.make) && (!car.model.trim() || n(f.model) === n(car.model)) && (year === null || (f.yearFrom <= year && year <= f.yearTo))
+    (f) => n(f.make) === n(car.make) && (!car.model.trim() || n(f.model) === n(car.model)) && (year === null || (f.yearFrom <= year && year <= f.yearTo)) && (!car.trim?.trim() || n(f.trim ?? "") === n(car.trim))
   );
 }
 
 /** The car from "Fits my car", or null when none (or an invalid year) is set. */
 export function currentCar() {
-  const { make, model, year } = fitMemory;
+  const { make, model, year, trim } = fitMemory;
   if (!make.trim()) return null;
   if (year.trim() && !/^\d{4}$/.test(year.trim())) return null;
-  return { make, model, year };
+  return { make, model, year, trim };
 }

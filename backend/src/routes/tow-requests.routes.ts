@@ -1,3 +1,4 @@
+import { DOCUMENTS_EXPIRED_MESSAGE, expiredDocuments, hasExpiredDocument, noExpiredDocument } from "../services/truck-eligibility.js";
 import { Router } from "express";
 import express from "express";
 import type { Prisma } from "../generated/prisma/client.js";
@@ -122,11 +123,13 @@ const statusFilter = (q: unknown) => {
 /** Gives the truck back after a job ends or is cancelled. Only a truck still marked BUSY is touched. */
 async function releaseTruck(tx: Prisma.TransactionClient, truckId: string | null) {
   if (!truckId) return;
-  const truck = await tx.truck.findUnique({ where: { id: truckId }, select: { verificationStatus: true } });
+  const truck = await tx.truck.findUnique({ where: { id: truckId }, select: { verificationStatus: true, archivedAt: true, files: { select: { purpose: true, expiresAt: true } } } });
   if (!truck) return;
+  // The job that just ended is finished normally. Only afterwards is the truck held back if it may not take NEW work.
+  const eligible = truck.verificationStatus === "APPROVED" && !truck.archivedAt && expiredDocuments(truck.files).length === 0;
   await tx.truck.updateMany({
     where: { id: truckId, operationalStatus: "BUSY" },
-    data: { operationalStatus: truck.verificationStatus === "APPROVED" ? "AVAILABLE" : "OUT_OF_SERVICE" },
+    data: { operationalStatus: eligible ? "AVAILABLE" : "OUT_OF_SERVICE" },
   });
 }
 
@@ -164,7 +167,7 @@ router.post("/requests/tow", ...customerSide, async (req, res) => {
     const id = await prisma.$transaction(async (tx) => {
       const company = await tx.towCompanyProfile.findFirst({ where: { id: companyId, verificationStatus: "APPROVED" }, select: { id: true } });
       if (!company) throw new HttpError(404, "Company not found.");
-      const available = await tx.truck.count({ where: { companyId: company.id, verificationStatus: "APPROVED", operationalStatus: "AVAILABLE" } });
+      const available = await tx.truck.count({ where: { companyId: company.id, verificationStatus: "APPROVED", operationalStatus: "AVAILABLE", archivedAt: null, ...noExpiredDocument() } });
       if (!available) throw new HttpError(409, "This company has no available truck right now.");
       const active = await tx.towRequest.findFirst({ where: { customerId: me.id, companyId: company.id, status: { in: [...ACTIVE] } }, select: { id: true } });
       if (active) throw new HttpError(409, "You already have an active request with this company.", { existingRequestId: active.id });
@@ -280,10 +283,15 @@ router.patch("/tow/me/requests/:id/accept", ...companySide, async (req, res) => 
       if (!truck) throw new HttpError(404, "Truck not found.");
       // Atomic claim: only an APPROVED + AVAILABLE truck can be taken, and only once.
       const claimed = await tx.truck.updateMany({
-        where: { id: truck.id, companyId: company.id, verificationStatus: "APPROVED", operationalStatus: "AVAILABLE" },
+        where: { id: truck.id, companyId: company.id, verificationStatus: "APPROVED", operationalStatus: "AVAILABLE", archivedAt: null, ...noExpiredDocument() },
         data: { operationalStatus: "BUSY" },
       });
-      if (!claimed.count) throw new HttpError(409, "This truck is not available. Choose an approved, available truck.");
+      if (!claimed.count) {
+        // say WHY when the cause is an expired document, so the company knows what to renew
+        const expired = await tx.truck.findFirst({ where: { id: truck.id, ...hasExpiredDocument() }, select: { id: true } });
+        if (expired) throw new HttpError(409, DOCUMENTS_EXPIRED_MESSAGE, { reason: "DOCUMENTS_EXPIRED" });
+        throw new HttpError(409, "This truck is not available. Choose an approved, available truck.");
+      }
       const moved = await tx.towRequest.updateMany({
         where: { id: row.id, companyId: company.id, status: "REQUESTED" },
         data: {

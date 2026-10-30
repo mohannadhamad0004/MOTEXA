@@ -1,86 +1,52 @@
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
-import {
-  BlueprintPage,
-  Icon,
-  InspectionCheck,
-  Ltr,
-  MechanicAvatar,
-  MO_HERO_OVERLAP,
-  MoHero,
-  Odometer,
-  OptionSheet,
-  PrimaryButton,
-  Press,
-  Rise,
-  SearchField,
-  UnderlineTabs,
-} from "../../../components/blueprint";
-import { Button } from "../../../components/ui/Button";
-import { EmptyState, Notice } from "../../../components/ui/Feedback";
-import { SkeletonList } from "../../../components/ui/Skeleton";
-import { Text } from "../../../components/ui/Text";
+import { Card, Chip, EmptyState, ErrorState, GarageHero, GaragePage, GButton, GIcon, GText, IconButton, Note, OptionSheet, Rail, SearchBar, SkeletonRows, StatusChip, Tap } from "../../../components/garage";
 import { CITIES, cityLabel } from "../../../core/constants/cities";
 import { Point, locationMemory, roundPoint } from "../../../core/constants/geo";
 import { useL } from "../../../core/hooks/useL";
-import { SkillBadges, useSkillLabel } from "../../../features/mechanics/mechanicBits";
+import { useSkillLabel } from "../../../features/mechanics/mechanicBits";
 import { MECHANIC_SKILLS, MechanicRow, mechanicCatalog } from "../../../features/mechanics/mechanicsService";
+import { InitialBubble, SkillChips } from "../../../features/requests/garageBits";
 import { LocationProblem, useCurrentLocation } from "../../../features/shared/useCurrentLocation";
-import { M, useIgnition } from "../../../motion";
-import { alpha } from "../../../theme/tokens";
-import { useTheme } from "../../../theme/useTheme";
+import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 
 const kmText = (km: number, ar: boolean) => `≈ ${km < 1 ? "<1" : km < 10 ? km.toFixed(1) : Math.round(km)} ${ar ? "كم" : "km"}`;
 
-/** One mechanic: person first, then name / workshop / city, approved skills, and the verification line last. */
-function MechanicCard({ m, i }: { m: MechanicRow; i: number }) {
-  const { c, row, align } = useTheme();
+/** One mechanic: initial, name / workshop / city (+ distance), approved skills, verified chip. */
+function MechanicCard({ m }: { m: MechanicRow }) {
+  const { g, row, align } = useGarageTheme();
   const { t, isArabic } = useL();
-  const early = i < 8; // only the first visible batch animates
-  const base = i * M.stagger;
-  const skillsEnd = base + 160 + Math.min(m.skills.length, 3) * M.staggerFine + 80;
+  const skillLabel = useSkillLabel();
   return (
-    <Press
-      accessibilityLabel={`${m.name}, ${m.workshopName}`}
-      onPress={() => router.push(`/customer/mechanic/${m.id}`)}
-      style={[row, { alignItems: "flex-start", gap: 14, paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: alpha(c.line, 0.6) }]}
-    >
-      <Rise i={early ? 0 : 99} delay={base} distance={8}>
-        <MechanicAvatar size={58} />
-      </Rise>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Rise i={early ? 0 : 99} delay={base + 40} distance={8}>
-          <Text numberOfLines={2} style={[{ color: c.ink, fontSize: 17, fontWeight: "700", lineHeight: isArabic ? 25 : 21 }, align]}>{m.name}</Text>
-          <Text numberOfLines={2} style={[{ color: c.soft, fontSize: 14, marginTop: 1 }, align]}>{m.workshopName}</Text>
-          <View style={[row, { alignItems: "center", gap: 4, marginTop: 2, flexWrap: "wrap" }]}>
-            <Icon name="pin" size={13} color={c.soft} />
-            <Text numberOfLines={1} style={{ color: c.soft, fontSize: 12, flexShrink: 1 }}>{cityLabel(m.city, isArabic)}</Text>
-            {m.distanceKm != null ? <Ltr style={{ color: c.soft, fontSize: 12 }}>{`· ${kmText(m.distanceKm, isArabic)}`}</Ltr> : null}
+    <Card onPress={() => router.push(`/customer/mechanic/${m.id}`)} label={`${m.name}, ${m.workshopName}`} pad={14}>
+      <View style={[row, { gap: 12, alignItems: "flex-start" }]}>
+        <InitialBubble name={m.name} />
+        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+          <GText numberOfLines={2} style={[gType.label, { fontWeight: "800", fontSize: 16 }, align]}>{m.name}</GText>
+          <GText soft numberOfLines={2} style={[gType.caption, align]}>{m.workshopName}</GText>
+          <View style={[row, { alignItems: "center", gap: 4, flexWrap: "wrap" }]}>
+            <GIcon name="location-outline" size={13} color={g.soft} />
+            <GText soft numberOfLines={1} style={[gType.caption, { flexShrink: 1 }]}>{cityLabel(m.city, isArabic)}</GText>
+            {m.distanceKm != null ? <GText soft style={[gType.caption, { writingDirection: "ltr" }]}>{`· ${kmText(m.distanceKm, isArabic)}`}</GText> : null}
           </View>
-        </Rise>
-        <View style={{ marginTop: 8 }}>
-          <SkillBadges skills={m.skills} max={3} after={early ? base + 160 : undefined} />
+          <View style={{ marginTop: 8 }}>
+            <SkillChips skills={m.skills} label={skillLabel} />
+          </View>
+          <View style={{ marginTop: 8 }}>
+            <StatusChip tone="success" icon="shield-checkmark" label={t("Verified by MOTEXA", "موثّق من موتكسا")} />
+          </View>
         </View>
-        <Rise i={early ? 0 : 99} delay={skillsEnd} distance={4}>
-          <View style={[row, { alignItems: "center", gap: 6, marginTop: 8 }]}>
-            <InspectionCheck size={15} color={c.bronze} animate={early} delay={skillsEnd} />
-            <Text style={{ color: c.bronze, fontSize: 12, fontWeight: "700" }}>{t("Verified by MOTEXA", "موثّق من موتكسا")}</Text>
-          </View>
-        </Rise>
+        <GIcon name="chevron-forward" size={16} color={g.soft} flip />
       </View>
-      <View style={{ alignSelf: "center" }}>
-        <Icon name="chev" size={15} color={alpha(c.soft, 0.7)} />
-      </View>
-    </Press>
+    </Card>
   );
 }
 
 export default function CustomerMechanics() {
-  const { c, row } = useTheme();
+  const { g, row } = useGarageTheme();
   const { t, isArabic } = useL();
   const skillLabel = useSkillLabel();
-  const ig = useIgnition("mechanics");
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
   const [cityOpen, setCityOpen] = useState(false);
@@ -156,106 +122,83 @@ export default function CustomerMechanics() {
     setSkill(null);
   };
 
-  // ---- hero: REAL values only. Every listed mechanic has at least one skill approved by MOTEXA ----
-  const soft = alpha(c.cream, 0.82);
-  const lineText = { color: soft, fontSize: 14 } as const;
+
   const where = me ? t("near you", "بالقرب منك") : city ? `${t("in", "في")} ${cityLabel(city, isArabic)}` : "";
-  const heroLine = (
-    <View style={[row, { alignItems: "center", flexWrap: "wrap", columnGap: 5 }]}>
-      {total === null ? (
-        <Text style={lineText}>{t("Looking for mechanics…", "جارٍ البحث عن ميكانيكيين…")}</Text>
-      ) : total === 0 ? (
-        <Text style={lineText}>{t("No verified mechanics found", "لا يوجد ميكانيكيون موثّقون")}</Text>
-      ) : (
-        <>
-          <Odometer value={total} size={14} color={c.cream} />
-          <Text style={lineText}>{`${total === 1 ? t("verified mechanic", "ميكانيكي موثّق") : t("verified mechanics", "ميكانيكيون موثّقون")}${where ? " " + where : ""}`}</Text>
-        </>
-      )}
-    </View>
-  );
-  const hint = me || city ? undefined : t("Use your location to find mechanics near you", "استخدم موقعك للعثور على ميكانيكيين بالقرب منك");
+  const line =
+    total === null
+      ? t("Looking for mechanics…", "جارٍ البحث عن ميكانيكيين…")
+      : total === 0
+        ? t("No verified mechanics found", "لا يوجد ميكانيكيون موثّقون")
+        : `${total} ${total === 1 ? t("verified mechanic", "ميكانيكي موثّق") : t("verified mechanics", "ميكانيكيون موثّقون")}${where ? " " + where : ""}`;
 
   // the skill row shows only skills that really have approved mechanics (all of them while the counts load)
   const skillKeys = (counts ? MECHANIC_SKILLS.filter((k) => (counts[k] ?? 0) > 0) : [...MECHANIC_SKILLS]) as string[];
 
   return (
-    <BlueprintPage
+    <GaragePage
       tabs
-      ignition={ig}
-      overlap={MO_HERO_OVERLAP}
+      entry="mechanics"
       refreshing={refreshing}
       onRefresh={() => run("refresh")}
-      top={
-        <MoHero
-          play={ig}
-          verified={(total ?? 0) > 0}
-          tag="MECHANICS / 04"
+      hero={
+        <GarageHero
+          variant="tab"
+          tab="mechanics"
+          onMap={() => router.push("/customer/mechanics/map")}
           title={t("Mechanics", "الميكانيكيون")}
-          line={heroLine}
-          primary={
-            me
-              ? { label: t("Near you", "بالقرب منك"), icon: "pin", active: true, onPress: forgetLocation }
-              : { label: t("Use my location", "استخدم موقعي"), icon: "pin", loading: loc.locating, onPress: () => void useMyLocation() }
-          }
-          secondary={{ label: t("View on map", "الخريطة"), icon: "map", onPress: () => router.push("/customer/mechanics/map") }}
-        />
+          line={line}
+        >
+          {me ? (
+            <GButton variant="secondary" icon="navigate" label={t("Near you", "بالقرب منك")} onPress={forgetLocation} />
+          ) : (
+            <GButton icon="navigate-outline" label={t("Use my location", "استخدم موقعي")} busy={loc.locating} onPress={() => void useMyLocation()} />
+          )}
+        </GarageHero>
       }
     >
       {loc.dialog}
       <View style={[row, { alignItems: "center", gap: 10 }]}>
         <View style={{ flex: 1 }}>
-          <SearchField compact style={{ height: 46, borderRadius: 14, backgroundColor: "transparent" }} value={name} onChangeText={setName} placeholder={t("Mechanic or workshop name", "اسم الميكانيكي أو الورشة")} />
+          <SearchBar value={name} onChangeText={setName} placeholder={t("Mechanic or workshop name", "اسم الميكانيكي أو الورشة")} />
         </View>
-        <Press
-          accessibilityLabel={t("City", "المدينة")}
-          onPress={() => setCityOpen(true)}
-          style={{ width: 46, height: 46, borderRadius: 14, borderWidth: 1, borderColor: city ? c.btn : c.line, backgroundColor: city ? c.btn : "transparent", alignItems: "center", justifyContent: "center" }}
-        >
-          <Icon name="pin" size={20} color={city ? c.btnFg : c.ink} />
-        </Press>
+        <IconButton icon="location-outline" label={t("City", "المدينة")} onPress={() => setCityOpen(true)} tone={city ? "accent" : "card"} />
       </View>
 
       {loc.status === "problem" && !me ? (
         <View style={{ marginTop: 10 }}>
           <LocationProblem loc={loc} />
-          <PrimaryButton variant="outline" icon="pin" label={t("Choose a city instead", "اختر مدينة بدلًا من ذلك")} onPress={() => setCityOpen(true)} />
+          <GButton variant="secondary" icon="location-outline" label={t("Choose a city instead", "اختر مدينة بدلًا من ذلك")} onPress={() => setCityOpen(true)} />
         </View>
       ) : null}
 
-      <View style={{ marginTop: 10 }}>
-        <UnderlineTabs
-          value={skill ?? "ALL"}
-          onChange={(k) => setSkill(k === "ALL" ? null : k)}
-          items={[{ key: "ALL", label: t("All", "الكل") }, ...skillKeys.map((k) => ({ key: k, label: skillLabel(k) }))]}
-        />
+      <View style={{ marginTop: 12 }}>
+        <Rail gap={8}>
+          <Chip label={t("All", "الكل")} on={!skill} onPress={() => setSkill(null)} />
+          {skillKeys.map((k) => (
+            <Chip key={k} label={skillLabel(k)} on={skill === k} count={counts?.[k]} onPress={() => setSkill(skill === k ? null : k)} />
+          ))}
+        </Rail>
       </View>
 
-      <View style={[row, { marginTop: 12, alignItems: "center", flexWrap: "wrap", gap: 8 }]}>
-        <View style={[row, { alignItems: "center", gap: 4 }]}>
-          {total !== null ? <Odometer value={total} size={13} color={c.soft} /> : null}
-          <Text style={{ color: c.soft, fontSize: 13 }}>{total === 1 ? t("mechanic", "ميكانيكي") : t("mechanics", "ميكانيكيين")}</Text>
-        </View>
+      <View style={[row, { marginTop: 12, alignItems: "center", flexWrap: "wrap", gap: 8, minHeight: 34 }]}>
+        <GText soft style={[gType.caption, { fontWeight: "700" }]}>{total !== null ? `${total} ${total === 1 ? t("mechanic", "ميكانيكي") : t("mechanics", "ميكانيكيين")}` : " "}</GText>
         {city ? (
-          <Press accessibilityLabel={cityLabel(city, isArabic)} onPress={() => setCity("")} style={[row, { minHeight: 32, alignItems: "center", gap: 6, paddingHorizontal: 10, borderRadius: 999, backgroundColor: alpha(c.bronze, 0.14), borderWidth: 1, borderColor: alpha(c.bronze, 0.4) }]}>
-            <Text style={{ color: c.ink, fontSize: 12, fontWeight: "600" }}>{cityLabel(city, isArabic)}</Text>
-            <Icon name="close" size={12} color={c.soft} />
-          </Press>
+          <Tap label={cityLabel(city, isArabic)} onPress={() => setCity("")} style={[row, { minHeight: 34, alignItems: "center", gap: 6, paddingHorizontal: 12, borderRadius: gShape.pill, backgroundColor: g.tint }]}>
+            <GText style={[gType.caption, { fontWeight: "700" }]}>{cityLabel(city, isArabic)}</GText>
+            <GIcon name="close" size={13} color={g.soft} />
+          </Tap>
         ) : null}
       </View>
 
-      <View style={{ marginTop: 2 }}>
+      <View style={{ marginTop: 8, gap: 12 }}>
         {loading && !items.length ? (
-          <SkeletonList />
+          <SkeletonRows count={4} />
         ) : error && !items.length ? (
-          <View style={{ alignItems: "center", paddingVertical: 30, gap: 14 }}>
-            <Notice tone="danger" icon="alert-circle-outline">{error}</Notice>
-            <Button label={t("Retry", "إعادة المحاولة")} variant="ghost" icon="refresh-outline" onPress={() => run("replace")} />
-          </View>
+          <ErrorState text={error} onRetry={() => run("replace")} retryLabel={t("Retry", "إعادة المحاولة")} />
         ) : !items.length ? (
           <>
             <EmptyState
-              icon="build-outline"
+              photo="empty.search"
               text={
                 city && !name.trim() && !skill
                   ? t(`No verified mechanics found in ${cityLabel(city, false)}`, `لا يوجد ميكانيكيون موثّقون في ${cityLabel(city, true)}`)
@@ -263,21 +206,17 @@ export default function CustomerMechanics() {
                     ? t("No mechanics match these filters", "لا يوجد ميكانيكيون يطابقون هذه التصفية")
                     : t("No verified mechanics are available yet.", "لا يوجد ميكانيكيون موثّقون بعد.")
               }
+              action={filtered ? { label: t("Clear filters", "مسح التصفية"), onPress: clearAll } : undefined}
             />
-            {filtered ? <Button variant="ghost" icon="close-circle-outline" label={t("Clear filters", "مسح التصفية")} onPress={clearAll} /> : null}
-            {city ? <Button variant="ghost" icon="pin" label={t("Choose another city", "اختر مدينة أخرى")} onPress={() => setCityOpen(true)} /> : null}
+            {city ? <GButton variant="ghost" icon="location-outline" label={t("Choose another city", "اختر مدينة أخرى")} onPress={() => setCityOpen(true)} /> : null}
           </>
         ) : (
           <>
-            {error ? <Notice tone="danger" icon="alert-circle-outline">{t("Could not refresh. The results below may be out of date.", "تعذّر التحديث. قد تكون النتائج أدناه قديمة.")}</Notice> : null}
-            {items.map((m, i) => (
-              <MechanicCard key={m.id} m={m} i={i} />
+            {error ? <Note tone="danger" icon="alert-circle-outline">{t("Could not refresh. The results below may be out of date.", "تعذّر التحديث. قد تكون النتائج أدناه قديمة.")}</Note> : null}
+            {items.map((m) => (
+              <MechanicCard key={m.id} m={m} />
             ))}
-            {hasMore ? (
-              <View style={{ marginTop: 16 }}>
-                <Button variant="ghost" icon="chevron-down-outline" label={more ? t("Loading…", "جارٍ التحميل…") : t("Show more", "عرض المزيد")} disabled={more} onPress={() => run("more")} />
-              </View>
-            ) : null}
+            {hasMore ? <GButton variant="secondary" icon="chevron-down-outline" label={more ? t("Loading…", "جارٍ التحميل…") : t("Show more", "عرض المزيد")} disabled={more} onPress={() => run("more")} /> : null}
           </>
         )}
       </View>
@@ -285,12 +224,13 @@ export default function CustomerMechanics() {
       <OptionSheet
         visible={cityOpen}
         onClose={() => setCityOpen(false)}
+        closeLabel={t("Close", "إغلاق")}
         title={t("City", "المدينة")}
         value={city || "ALL"}
         header={
-          <PrimaryButton
-            variant="outline"
-            icon="pin"
+          <GButton
+            variant="secondary"
+            icon="navigate-outline"
             label={me ? t("Stop using my location", "إيقاف استخدام موقعي") : loc.locating ? t("Finding your location…", "جارٍ تحديد موقعك…") : t("Use my location", "استخدم موقعي")}
             onPress={async () => {
               if (me) {
@@ -306,6 +246,6 @@ export default function CustomerMechanics() {
           setCityOpen(false);
         }}
       />
-    </BlueprintPage>
+    </GaragePage>
   );
 }

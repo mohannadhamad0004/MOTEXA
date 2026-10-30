@@ -1,64 +1,56 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { isDevSeedTile } from "../../../core/constants/files";
 import { View } from "react-native";
-import { Image } from "expo-image";
-import { BackButton, BlueprintPage, BlueprintSurface, COMPACT_OVERLAP, Tag, CategoryAssembly, Icon, InspectionCheck, Mono, Panel, Pill, Press, RoundIcon, Rise, Row, Section, Stamp, StickyActionBar, assemblyForCategory } from "../../../components/blueprint";
-import { Async, Notice } from "../../../components/ui/Feedback";
-import { Text } from "../../../components/ui/Text";
+import {
+  Badge,
+  Card,
+  ErrorState,
+  Gallery,
+  GarageHero,
+  GaragePage,
+  GButton,
+  GIcon,
+  GText,
+  ListRow,
+  Note,
+  PrivatePhoto,
+  ProductCard,
+  Rail,
+  Section,
+  SkeletonBlock,
+  StatusChip,
+  StickyActionBar,
+  cardBadges,
+} from "../../../components/garage";
+import { isDevSeedTile } from "../../../core/constants/files";
 import { findCategory, labelOf } from "../../../core/constants/categories";
 import { formatPrice } from "../../../core/constants/money";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
-import { ProductCard } from "../../../features/catalog/catalogBits";
 import { catalogService, currentCar, fitsCar } from "../../../features/catalog/catalogService";
 import { usePartLabels } from "../../../features/catalog/partAttrs";
-import { M } from "../../../motion";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useHeroStatusBar } from "../../../components/blueprint";
-import { alpha } from "../../../theme/tokens";
-import { useTheme } from "../../../theme/useTheme";
+import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 
-/** Compact dark detail hero (150 px): part number and category tags, the category assembly in the middle. */
-function DetailHero({ tl, tr, art }: { tl?: string; tr?: string; art: React.ReactNode }) {
-  const insets = useSafeAreaInsets();
-  const { c, isArabic } = useTheme();
-  useHeroStatusBar();
-  return (
-    <BlueprintSurface style={{ height: insets.top + 160 }}>
-      <View style={{ position: "absolute", left: 20, right: 20, top: insets.top + 18, flexDirection: isArabic ? "row-reverse" : "row", justifyContent: "space-between", gap: 12 }}>
-        <View style={[{ flexShrink: 1 }, isArabic ? { marginRight: 52 } : { marginLeft: 52 }]}>{tl ? <Tag color={alpha(c.cream, 0.7)} align={isArabic ? "right" : "left"}>{tl}</Tag> : null}</View>
-        <View style={{ maxWidth: "40%" }}>{tr ? <Tag color={c.bronzeLight} align={isArabic ? "left" : "right"}>{tr}</Tag> : null}</View>
-      </View>
-      <View style={{ position: "absolute", left: 0, right: 0, top: insets.top + 40, bottom: 34, alignItems: "center" }}>
-        <View style={{ height: "100%", aspectRatio: 1.6 }}>{art}</View>
-      </View>
-      <BackButton fallback="/customer/parts" />
-    </BlueprintSurface>
-  );
-}
-
-// the name, price and fitment badge reveal after the hero assembly (about 700 ms)
-const REVEAL = 480;
-
-/** Up to 6 more visible parts of the same shop. Hidden when there are none (or the call fails). */
-function OtherFromShop({ shopId, currentId, n }: { shopId: string; currentId: string; n: string }) {
+/** Up to 8 similar visible parts: same category (or the same shop when the part has none), never this one. Hidden when none. */
+function Similar({ category, shopId, currentId }: { category: string | null; shopId: string; currentId: string }) {
   const { t } = useL();
-  const state = useLoad(() => catalogService.searchParts({ shopId }), [shopId]);
+  const state = useLoad(() => catalogService.searchParts(category ? { category } : { shopId }), [category, shopId]);
   const car = currentCar();
-  const others = (state.data?.products ?? []).filter((x) => x.id !== currentId).slice(0, 6);
+  const others = (state.data?.products ?? []).filter((x) => x.id !== currentId).slice(0, 8);
   if (!others.length) return null;
   return (
-    <Section n={n} title={t("Other parts from this shop", "قطع أخرى من هذا المتجر")}>
-      {others.map((x) => (
-        <ProductCard key={x.id} p={x} showShop={false} car={car} onPress={() => router.push(`/customer/parts/${x.id}`)} />
-      ))}
+    <Section title={t("Similar parts", "قطع مشابهة")}>
+      <Rail>
+        {others.map((x) => (
+          <ProductCard key={x.id} p={x} compact width={164} car={car} onPress={() => router.push(`/customer/parts/${x.id}`)} />
+        ))}
+      </Rail>
     </Section>
   );
 }
 
 export default function CustomerPartDetail() {
-  const { c, row, align } = useTheme();
+  const { g, row, align } = useGarageTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, isArabic } = useL();
   const state = useLoad(() => catalogService.getPart(id), [id]);
@@ -67,128 +59,140 @@ export default function CustomerPartDetail() {
   const labels = usePartLabels();
   const p = state.data;
   const cat = findCategory(p?.category);
-  const carShort = car ? car.model || car.make : "";
+  const soldOut = p?.stock === "OUT";
+  const back = () => (router.canGoBack() ? router.back() : router.navigate("/customer/parts"));
 
   return (
-    <BlueprintPage
+    <GaragePage
       onRefresh={state.reload}
       refreshing={state.loading && !!state.data}
-      footer={
+      hero={<GarageHero variant="detail" onBack={back} title={p ? p.name : t("Part", "القطعة")} line={p ? `${p.brand} · ${p.partNumber}` : undefined} />}
+      bottom={
         p ? (
-          <StickyActionBar
-            price={formatPrice(p.price)}
-            icon="chat"
-            label={t("Ask the shop", "اسأل المتجر")}
-            onPress={() => router.push({ pathname: "/customer/inquiry/new", params: { productId: p.id } })}
-          />
+          <StickyActionBar note={soldOut ? t("Sold out. You can still look at the details.", "نفدت الكمية. يمكنك الاطلاع على التفاصيل.") : undefined}>
+            <View style={{ justifyContent: "center", paddingHorizontal: 4 }}>
+              <GText style={{ fontSize: 20, lineHeight: 26, fontWeight: "800", color: g.accentText, writingDirection: "ltr" }}>{formatPrice(p.price)}</GText>
+            </View>
+            <GButton flex icon="chatbubble-ellipses-outline" label={t("Ask the shop", "اسأل المتجر")} disabled={soldOut} onPress={() => router.push({ pathname: "/customer/inquiry/new", params: { productId: p.id } })} />
+          </StickyActionBar>
         ) : undefined
       }
-      overlap={COMPACT_OVERLAP}
-      top={<DetailHero tl={p ? `PART NO. ${p.partNumber}` : undefined} tr={cat ? labelOf(cat, isArabic) : undefined} art={p ? <CategoryAssembly key={p.id} kind={assemblyForCategory(p.category)} assemble delay={M.grid / 2} /> : null} />}
     >
-      <Async state={state}>
-        {(p) => {
+      {state.error && !p ? (
+        <ErrorState text={state.error} onRetry={state.reload} retryLabel={t("Retry", "إعادة المحاولة")} />
+      ) : !p ? (
+        <View style={{ gap: 12 }}>
+          <SkeletonBlock height={340} radius={gShape.cardLg} />
+          <SkeletonBlock width="60%" height={22} />
+          <SkeletonBlock width="40%" height={22} />
+        </View>
+      ) : (
+        (() => {
           const mine = car ? p.fitments.find((f) => fitsCar({ fitments: [f] }, car)) : undefined;
-          const others = p.fitments.filter((f) => f !== mine);
           const fits = car ? fitsCar(p, car) : null;
+          const old = p.compareAtPrice && p.compareAtPrice > p.price ? p.compareAtPrice : null;
+          const badges = cardBadges(p.badges, isArabic, 4);
+          const stock = { IN: ["success", t("In stock", "متوفر")], LOW: ["warning", t("Low stock", "كمية محدودة")], OUT: ["danger", t("Out of stock", "نفدت الكمية")] }[p.stock] as ["success" | "warning" | "danger", string];
           return (
             <>
-              <Rise i={0} delay={REVEAL}>
-                <Mono>{`${p.brand} · ${p.partNumber}`}</Mono>
-                <Text style={[{ color: c.ink, fontSize: 32, fontWeight: "700", lineHeight: isArabic ? 42 : 35, marginTop: 8 }, align]}>{p.name}</Text>
-              </Rise>
-              <Rise i={0} delay={REVEAL + M.stagger}>
-                <Text style={[{ color: c.ink, fontSize: 28, fontWeight: "700", marginTop: 8, writingDirection: "ltr" }, align]}>{formatPrice(p.price)}</Text>
-              </Rise>
-              <Rise i={0} delay={REVEAL + 2 * M.stagger} style={[row, { flexWrap: "wrap", gap: 8, marginTop: 16 }]}>
-                {fits === true ? <Pill icon={<InspectionCheck size={14} color={c.bronze} delay={REVEAL + 3 * M.stagger + M.entrance} />}>{`${t("Fits your", "تناسب")} ${carShort}`}</Pill> : null}
-                {fits === false && p.fitments.length === 0 ? (
-                  <Pill icon={<Icon name="alert" size={14} color={c.soft} />}>{t("Fitment not listed", "التوافق غير محدد")}</Pill>
-                ) : null}
-                {fits === false && p.fitments.length > 0 ? (
-                  <Pill tone="danger" icon={<Icon name="alert" size={14} color={c.danger} />}>
-                    {`${t("Does not fit your", "لا تناسب")} ${carShort}`}
-                  </Pill>
-                ) : null}
-                <Pill tone={p.stock === "OUT" ? "danger" : p.stock === "LOW" ? "warning" : undefined} icon={<Icon name="box" size={14} color={p.stock === "OUT" ? c.danger : p.stock === "LOW" ? c.warning : c.bronze} />}>
-                  {p.stock === "OUT" ? t("Out of stock", "نفد المخزون") : p.stock === "LOW" ? t("Low stock", "مخزون منخفض") : t("In stock", "متوفر")}
-                </Pill>
-                <Pill icon={<Icon name="spark" size={14} color={c.bronze} />}>{labels.condition[p.condition]}</Pill>
-              </Rise>
-
               {p.imageUri && photoOk ? (
-                <View style={{ marginTop: 24, aspectRatio: 1.5, borderRadius: 20, overflow: "hidden", backgroundColor: c.pill }}>
-                  <Image
-                    source={{ uri: p.imageUri }}
-                    style={{ width: "100%", height: "100%" }}
-                    contentFit="cover"
-                    transition={M.detail}
-                    onError={() => setPhotoOk(false)}
-                    // dev builds only: the dev seed letter tile (96 px) is not a photo, see isDevSeedTile
-                    onLoad={(e) => isDevSeedTile(e.source.width, e.source.height) && setPhotoOk(false)}
-                  />
-                </View>
+                <Gallery
+                  uris={[p.imageUri]}
+                  label={p.name}
+                  onFail={() => setPhotoOk(false)}
+                  // dev builds only: the dev seed letter tile (96 px) is not a photo, see isDevSeedTile
+                  onPhoto={(s) => isDevSeedTile(s.width, s.height) && setPhotoOk(false)}
+                />
               ) : null}
+
+              <Card style={{ marginTop: 14 }}>
+                {badges.length ? (
+                  <View style={[row, { gap: 6, flexWrap: "wrap", marginBottom: 10 }]}>
+                    {badges.map((b) => (
+                      <Badge key={b.label} label={b.label} tone={b.tone} />
+                    ))}
+                  </View>
+                ) : null}
+                <View style={[row, { alignItems: "baseline", gap: 10, flexWrap: "wrap" }]}>
+                  <GText style={{ fontSize: 28, lineHeight: 36, fontWeight: "800", color: g.accentText, writingDirection: "ltr" }}>{formatPrice(p.price)}</GText>
+                  {old ? <GText soft style={{ fontSize: 16, textDecorationLine: "line-through", writingDirection: "ltr" }}>{formatPrice(old)}</GText> : null}
+                </View>
+                <View style={[row, { gap: 6, flexWrap: "wrap", marginTop: 10 }]}>
+                  <StatusChip tone={stock[0]} label={stock[1]} icon="cube-outline" />
+                  <StatusChip tone="neutral" label={labels.condition[p.condition]} icon="sparkles-outline" />
+                  {fits === true ? <StatusChip tone="success" icon="checkmark-circle" label={t("Fits your car", "تناسب سيارتك")} /> : null}
+                  {fits === false ? <StatusChip tone="danger" icon="alert-circle-outline" label={p.fitments.length ? t("May not fit your car", "قد لا تناسب سيارتك") : t("Fitment not listed", "التوافق غير محدد")} /> : null}
+                </View>
+              </Card>
 
               {fits === false ? (
-                <View style={{ marginTop: 16 }}>
-                  <Notice tone="accent" icon="alert-circle-outline">{p.fitments.length === 0 ? t("The shop has not listed which cars this part fits. Ask the shop to confirm.", "لم يحدد المتجر السيارات المناسبة لهذه القطعة. اسأل المتجر للتأكيد.") : t("This part may not fit your car. Check the list below or ask the shop.", "قد لا تناسب هذه القطعة سيارتك. راجع القائمة أدناه أو اسأل المتجر.")}</Notice>
+                <View style={{ marginTop: 12 }}>
+                  <Note icon="alert-circle-outline">{p.fitments.length === 0 ? t("The shop has not listed which cars this part fits. Ask the shop to confirm.", "لم يحدد المتجر السيارات المناسبة لهذه القطعة. اسأل المتجر للتأكيد.") : t("This part may not fit your car. Check the list below or ask the shop.", "قد لا تناسب هذه القطعة سيارتك. راجع القائمة أدناه أو اسأل المتجر.")}</Note>
                 </View>
               ) : null}
 
-              <Section n="01" title={t("Part details", "تفاصيل القطعة")}>
-                <View style={{ borderStartWidth: 2, borderStartColor: c.bronze, paddingStart: 12 }}>
-                <Row label={t("Brand", "الماركة")} value={p.brand} />
-                <Row label={t("Part number", "رقم القطعة")} value={p.partNumber} mono />
-                <Row label={t("Condition", "الحالة")} value={labels.condition[p.condition]} />
-                <Row label={t("Category", "الفئة")} value={cat ? labelOf(cat, isArabic) : undefined} />
-                {p.partType ? <Row label={t("Type", "النوع")} value={labels.type[p.partType]} /> : null}
-                {p.description ? <Text style={[{ color: c.ink, fontSize: 14, lineHeight: 22, marginTop: 16 }, align]}>{p.description}</Text> : null}
-                </View>
+              <Section title={t("Part details", "تفاصيل القطعة")}>
+                <Card pad={12}>
+                  <ListRow icon="pricetag-outline" title={t("Brand", "الماركة")} end={<GText style={gType.label}>{p.brand}</GText>} />
+                  <ListRow divider icon="barcode-outline" title={t("Part number", "رقم القطعة")} end={<GText selectable style={[gType.label, { writingDirection: "ltr" }]}>{p.partNumber}</GText>} />
+                  <ListRow divider icon="sparkles-outline" title={t("Condition", "الحالة")} end={<GText style={gType.label}>{labels.condition[p.condition]}</GText>} />
+                  {cat ? <ListRow divider icon="grid-outline" title={t("Category", "الفئة")} end={<GText style={gType.label}>{labelOf(cat, isArabic)}</GText>} /> : null}
+                  {p.partType ? <ListRow divider icon="ribbon-outline" title={t("Type", "النوع")} end={<GText style={gType.label}>{labels.type[p.partType]}</GText>} /> : null}
+                  {p.warrantyMonths ? <ListRow divider icon="shield-checkmark-outline" title={t("Warranty", "الضمان")} end={<GText style={gType.label}>{t(`${p.warrantyMonths} months`, `${p.warrantyMonths} شهر`)}</GText>} /> : null}
+                </Card>
+                {p.description ? <GText style={[gType.body, align, { marginTop: 12 }]}>{p.description}</GText> : null}
               </Section>
 
-              <Section n="02" title={t("Compatibility", "التوافق")}>
-                {mine ? (
-                  <Panel bronze style={{ marginBottom: 4 }}>
-                    <View style={[row, { alignItems: "center", justifyContent: "space-between", gap: 10 }]}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[{ color: c.ink, fontSize: 15, fontWeight: "700" }, align]}>{`${mine.make} ${mine.model}`}</Text>
-                        <Mono>{`${mine.yearFrom}–${mine.yearTo}${mine.trim ? ` · ${mine.trim}` : ""}`}</Mono>
+              <Section title={t("Fits these cars", "تناسب هذه السيارات")}>
+                {p.fitments.length ? (
+                  <Card pad={0} style={{ overflow: "hidden" }}>
+                    <View style={[row, { paddingHorizontal: 14, paddingVertical: 10, backgroundColor: g.tint }]}>
+                      <GText soft style={[gType.tiny, { fontWeight: "800", flex: 1.4 }, align]}>{t("Car", "السيارة")}</GText>
+                      <GText soft style={[gType.tiny, { fontWeight: "800", flex: 1 }, align]}>{t("Years", "السنوات")}</GText>
+                      <GText soft style={[gType.tiny, { fontWeight: "800", flex: 1 }, align]}>{t("Engine", "المحرك")}</GText>
+                    </View>
+                    {p.fitments.map((f, i) => {
+                      const me = f === mine;
+                      return (
+                        <View key={i} style={[row, { alignItems: "center", paddingHorizontal: 14, paddingVertical: 12, borderTopWidth: i ? 1 : 0, borderTopColor: g.line, backgroundColor: me ? g.cardSoft : undefined }]}>
+                          <View style={[row, { flex: 1.4, alignItems: "center", gap: 6 }]}>
+                            {me ? <GIcon name="checkmark-circle" size={16} color={g.success} /> : null}
+                            <GText numberOfLines={2} style={[gType.caption, { fontWeight: "700", flexShrink: 1 }, align]}>{`${f.make} ${f.model}`}</GText>
+                          </View>
+                          <GText style={[gType.caption, { flex: 1, writingDirection: "ltr" }, align]}>{`${f.yearFrom}–${f.yearTo}`}</GText>
+                          <GText soft numberOfLines={2} style={[gType.caption, { flex: 1 }, align]}>{f.trim || "—"}</GText>
+                        </View>
+                      );
+                    })}
+                  </Card>
+                ) : (
+                  <Card soft>
+                    <GText soft style={[gType.bodySm, align]}>{t("No fitment listed", "لا يوجد توافق محدد")}</GText>
+                  </Card>
+                )}
+              </Section>
+
+              <Section title={t("Sold by", "يبيعها")}>
+                <Card onPress={() => router.push(`/customer/shops/${p.shop.id}`)} label={p.shop.name} pad={12}>
+                  <View style={[row, { alignItems: "center", gap: 12 }]}>
+                    <PrivatePhoto uri={null} fallback="service.parts" radius={16} style={{ width: 56, height: 56 }} />
+                    <View style={{ flex: 1 }}>
+                      <GText numberOfLines={2} style={[gType.label, { fontWeight: "800" }, align]}>{p.shop.name}</GText>
+                      <View style={[row, { alignItems: "center", gap: 4, marginTop: 2 }]}>
+                        <GIcon name="location-outline" size={14} color={g.soft} />
+                        <GText soft numberOfLines={1} style={gType.caption}>{p.shop.city}</GText>
                       </View>
-                      <Pill icon={<InspectionCheck size={14} color={c.bronze} />}>{t("Your car", "سيارتك")}</Pill>
                     </View>
-                  </Panel>
-                ) : null}
-                {others.length ? (
-                  others.map((f, i) => <Row key={i} label={`${f.make} ${f.model}`} value={`${f.yearFrom}–${f.yearTo}${f.trim ? ` · ${f.trim}` : ""}`} mono />)
-                ) : !mine ? (
-                  <Text style={[{ color: c.soft, fontSize: 14 }, align]}>{t("No fitment listed", "لا يوجد توافق محدد")}</Text>
-                ) : null}
-              </Section>
-
-              <Section n="03" title={t("Shop", "المحل")}>
-                <Press
-                  accessibilityLabel={p.shop.name}
-                  onPress={() => router.push(`/customer/shops/${p.shop.id}`)}
-                  style={[row, { alignItems: "center", gap: 16, borderRadius: 20, borderWidth: 1, borderColor: c.line, backgroundColor: c.field, padding: 16 }]}
-                >
-                  <RoundIcon icon="shop" size={48} />
-                  <View style={{ flex: 1 }}>
-                    <Text numberOfLines={2} style={[{ color: c.ink, fontSize: 15, fontWeight: "700" }, align]}>{p.shop.name}</Text>
-                    <View style={[row, { alignItems: "center", gap: 4, marginTop: 2 }]}>
-                      <Icon name="pin" size={14} color={c.soft} />
-                      <Text numberOfLines={1} style={{ color: c.soft, fontSize: 13 }}>{p.shop.city}</Text>
-                    </View>
+                    <StatusChip tone="success" icon="shield-checkmark" label={t("Verified", "موثّق")} />
                   </View>
-                  <Stamp label={t("Verified", "موثّق")} />
-                </Press>
+                </Card>
               </Section>
 
-              <OtherFromShop n="04" shopId={p.shop.id} currentId={p.id} />
+              <Similar category={p.category} shopId={p.shop.id} currentId={p.id} />
             </>
           );
-        }}
-      </Async>
-    </BlueprintPage>
+        })()
+      )}
+    </GaragePage>
   );
 }

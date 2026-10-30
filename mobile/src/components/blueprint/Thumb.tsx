@@ -6,55 +6,9 @@ import { M } from "../../motion";
 import { alpha } from "../../theme/tokens";
 import { useTheme } from "../../theme/useTheme";
 import { Text } from "../ui/Text";
-import { CategoryAssembly, assemblyForCategory } from "./assemblies";
 import { DRAWINGS, DrawingKind } from "./drawings";
 import { Icon, IconName } from "./Icon";
 import { BlueprintSurface } from "./Surface";
-
-const BY_CATEGORY: Record<string, DrawingKind> = {
-  BRAKE_SYSTEM: "disc",
-  ENGINE: "plug",
-  FILTERS: "filter",
-  SUSPENSION_STEERING: "shock",
-  ELECTRICAL: "battery",
-  LIGHTING: "light",
-  BODY: "car",
-  ENGINE_OIL: "oil",
-  TRANSMISSION_FLUID: "oil",
-  COOLANT: "oil",
-  BRAKE_FLUID: "oil",
-  TIRES: "tyre",
-  WHEELS: "tyre",
-  HAND_TOOLS: "toolbox",
-  JACKS_STANDS: "toolbox",
-  DIAGNOSTICS: "toolbox",
-};
-
-/** The line drawing that belongs to a catalogue category, or null (the thumb then shows a box icon). */
-export const drawingForCategory = (key?: string | null): DrawingKind | null => (key ? BY_CATEGORY[key] ?? null : null);
-
-/**
- * Part thumbnail: the shop's real photo when there is one, otherwise a blueprint mini panel with the
- * category's drawing. `size` omitted = fill the width as a square.
- */
-export function PartThumb({ category, uri, size, style }: { category?: string | null; uri?: string | null; size?: number; style?: ViewStyle }) {
-  const { c } = useTheme();
-  const box: ViewStyle = size ? { width: size, height: size } : { width: "100%", aspectRatio: 1 };
-  // a photo that fails to load falls back to the category illustration
-  const [failed, setFailed] = useState(false);
-  if (uri && !failed)
-    return (
-      <View style={[box, { borderRadius: 16, overflow: "hidden", backgroundColor: c.pill }, style]}>
-        <Image source={{ uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" transition={M.detail} onError={() => setFailed(true)} onLoad={(e) => isDevSeedTile(e.source.width, e.source.height) && setFailed(true)} />
-      </View>
-    );
-  // the same technical illustration as the product hero, static here; an unknown category shows the generic part box
-  return (
-    <BlueprintSurface style={[box, { borderRadius: 16, padding: 4, alignItems: "center", justifyContent: "center" }, style]}>
-      <CategoryAssembly kind={assemblyForCategory(category)} />
-    </BlueprintSurface>
-  );
-}
 
 /** Square blueprint tile holding one line icon (tow company, shop, request type). */
 export function IconTile({ icon, size = 56, round = false }: { icon: IconName; size?: number; round?: boolean }) {

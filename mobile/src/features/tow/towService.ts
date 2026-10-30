@@ -47,6 +47,12 @@ export type Truck = {
   hasActiveJob: boolean;
   documents: TruckDocument[];
   rejectionReason?: string | null;
+  /** required documents that have expired: this truck gets no NEW work (server rule); the company is not affected */
+  expiredDocuments?: { kind: DocKind; expiresAt: string }[];
+  canTakeNewWork?: boolean;
+  /** set when MOTEXA archived the truck (out of service until restored) */
+  archivedAt?: string | null;
+  archiveReason?: string | null;
   history: HistoryEntry[];
 };
 
@@ -72,6 +78,9 @@ export type Actor = { id: string; email: string; fullName: string };
 export type TruckInput = Pick<Truck, "type" | "plate" | "make" | "model" | "year" | "maxWeightKg" | "photoUri" | "documents">;
 export type CompanyProfileInput = { description: string; address: string; workingHours: string; serviceCities: string[]; baseLat: number | null; baseLng: number | null };
 
+/** Admin edit of a truck: the provider fields plus the truck's own operating point. */
+export type AdminTruckInput = TruckInput & { baseLat: number | null; baseLng: number | null; locationAddress: string | null };
+
 export type CompanyRow = TowCompany & { truckCount: number; pendingTruckCount: number };
 
 // ---- API shapes -> screen shapes ----
@@ -94,6 +103,10 @@ type ApiTruck = {
   photoUri: string | null;
   documents: (TruckDocument & { expired?: boolean })[];
   hasActiveJob: boolean;
+  archivedAt?: string | null;
+  archiveReason?: string | null;
+  expiredDocuments?: { kind: DocKind; expiresAt: string }[];
+  canTakeNewWork?: boolean;
   missingForApproval?: string[];
   history: HistoryEntry[];
 };
@@ -117,6 +130,10 @@ type ApiCompany = {
 };
 
 const toTruck = (t: ApiTruck): Truck => ({
+  expiredDocuments: t.expiredDocuments ?? [],
+  canTakeNewWork: t.canTakeNewWork,
+  archivedAt: t.archivedAt ?? null,
+  archiveReason: t.archiveReason ?? null,
   id: t.id,
   companyId: t.companyId,
   photoUri: publicImageUrl(t.photoUri),
@@ -244,7 +261,29 @@ export const towAdminService = {
     const r = await api<{ company: ApiCompany }>("PATCH", `/admin/tow/companies/${companyId}/decision`, body);
     return toCompany(r.company);
   },
-  /** Admin may only decide. No field of the truck itself is editable here. */
+  /** Company profile fields (never the approval status or the login account). */
+  async updateCompany(_a: AdminActor, id: string, patch: Record<string, unknown>) {
+    await api("PATCH", `/admin/tow/companies/${id}`, patch);
+  },
+  /** Add a truck on behalf of a company. It starts Pending like any new truck; approving it is a separate decision. */
+  async addTruck(_a: AdminActor, companyId: string, input: AdminTruckInput) {
+    const r = await api<{ truck: ApiTruck }>("POST", `/admin/tow/companies/${companyId}/trucks`, { ...(await toVehicleBody(input)), baseLat: input.baseLat, baseLng: input.baseLng, locationAddress: input.locationAddress });
+    return toTruck(r.truck);
+  },
+  async updateTruck(_a: AdminActor, id: string, input: AdminTruckInput) {
+    const r = await api<{ truck: ApiTruck }>("PATCH", `/admin/tow/trucks/${id}`, { ...(await toVehicleBody(input)), baseLat: input.baseLat, baseLng: input.baseLng, locationAddress: input.locationAddress });
+    return toTruck(r.truck);
+  },
+  /** Take a truck out of service (reason required) or lift that again. Documents and history are kept. */
+  async archiveTruck(_a: AdminActor, id: string, change: { archived: true; reason: string } | { archived: false }) {
+    const r = await api<{ truck: ApiTruck }>("PATCH", `/admin/tow/trucks/${id}/archive`, change);
+    return toTruck(r.truck);
+  },
+  async getTruck(_a: AdminActor, companyId: string, id: string) {
+    const r = await towAdminService.getCompany(_a, companyId);
+    return r.trucks.find((t) => t.id === id) ?? null;
+  },
+  /** Approve or reject a truck (reason required to reject). Its fields are edited with updateTruck. */
   async decideTruck(_a: AdminActor, truckId: string, decision: { approve: true } | { approve: false; reason: string }) {
     const body = decision.approve ? { decision: "APPROVED" } : { decision: "REJECTED", reason: decision.reason.trim() };
     const r = await api<{ truck: ApiTruck }>("PATCH", `/admin/tow/trucks/${truckId}/decision`, body);

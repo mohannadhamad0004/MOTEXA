@@ -29,6 +29,11 @@ export type Product = {
   // Moderation is owned by MOTEXA admins; providers can read it but never write it.
   hidden: boolean;
   hiddenReason?: string | null;
+  // admin shop detail only: what a customer would get
+  hasPhoto?: boolean;
+  customerVisible?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type HistoryEntry = {
@@ -77,6 +82,10 @@ type ApiProduct = {
   partType: PartType | null;
   isHidden: boolean;
   hiddenReason: string | null;
+  hasPhoto?: boolean;
+  customerVisible?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
   imageUri: string | null;
   fitments: Fitment[];
 };
@@ -111,6 +120,10 @@ const toProduct = (p: ApiProduct): Product => ({
   fitments: p.fitments,
   hidden: p.isHidden,
   hiddenReason: p.hiddenReason,
+  hasPhoto: p.hasPhoto,
+  customerVisible: p.customerVisible,
+  createdAt: p.createdAt,
+  updatedAt: p.updatedAt,
 });
 
 const toShop = (s: ApiShop): Shop => ({
@@ -190,6 +203,27 @@ export const partsAdminService = {
     const body = change.hidden ? { hidden: true, reason: change.reason.trim() } : { hidden: false };
     const r = await api<{ product: ApiProduct }>("PATCH", `/admin/parts/products/${productId}/visibility`, body);
     return toProduct(r.product);
+  },
+  /** One product with what a customer would get (admin). */
+  async getProduct(_a: AdminActor, id: string) {
+    const r = await api<{ product: ApiProduct }>("GET", `/admin/parts/products/${id}`);
+    return toProduct(r.product);
+  },
+  /** Add a product on behalf of a shop (same rules as the shop's own form; the admin is recorded as the author). */
+  async createProduct(_a: AdminActor, shopId: string, input: ProductInput) {
+    const r = await api<{ product: ApiProduct }>("POST", `/admin/parts/shops/${shopId}/products`, await toBody(input));
+    return toProduct(r.product);
+  },
+  async updateProduct(_a: AdminActor, id: string, input: ProductInput) {
+    const r = await api<{ product: ApiProduct }>("PATCH", `/admin/parts/products/${id}`, await toBody(input));
+    return toProduct(r.product);
+  },
+  /** Shop profile fields only; the approval status is never part of this. */
+  async updateShop(_a: AdminActor, id: string, patch: Record<string, unknown>) {
+    await api("PATCH", `/admin/parts/shops/${id}`, patch);
+  },
+  async replaceStorefront(_a: AdminActor, id: string, uri: string) {
+    await api("PUT", `/admin/parts/shops/${id}/storefront`, { image: { name: fileNameOf(uri, "storefront.jpg"), dataBase64: await localFileToBase64(uri) } });
   },
   async decideShop(_a: AdminActor, id: string, decision: { approve: true } | { approve: false; reason: string }) {
     const body = decision.approve ? { decision: "APPROVED" } : { decision: "REJECTED", reason: decision.reason.trim() };

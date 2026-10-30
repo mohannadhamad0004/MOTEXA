@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { Icon, InspectionCheck, Ltr, Mono, PartThumb, Press, Rise } from "../../components/blueprint";
+import { Icon, InspectionCheck, Ltr, Mono, Press, Rise } from "../../components/blueprint";
 import { ease, M, useReduced } from "../../motion";
 import { Text } from "../../components/ui/Text";
 import { formatPrice } from "../../core/constants/money";
@@ -10,9 +10,11 @@ import { useTheme } from "../../theme/useTheme";
 import { fitmentSummary } from "../parts/partsBits";
 import { fitsCar, type CatalogProduct } from "./catalogService";
 import { usePartLabels } from "./partAttrs";
+import { PartPhoto } from "./PartPhoto";
 
-type Car = { make: string; model: string; year: string };
-export const carName = (c: Car) => [c.make, c.model, c.year].map((v) => v.trim()).filter(Boolean).join(" ");
+type Car = { make: string; model: string; year: string; trim?: string };
+/** "Mercedes-Benz W202 · 1998 · C 200 Petrol" */
+export const carName = (c: Car) => [[c.make, c.model].map((v) => v.trim()).filter(Boolean).join(" "), c.year.trim(), (c.trim ?? "").trim()].filter(Boolean).join(" · ");
 
 /** "Fits your <car>" (bronze check) / "Doesn't fit your <car>" (danger). Renders nothing when no car is set. */
 export function FitBadge({ p, car, sweep }: { p: { fitments: CatalogProduct["fitments"] }; car: Car | null; sweep?: number }) {
@@ -53,7 +55,9 @@ export function ProductCard({
   car = null,
   cascade,
   sweep,
+  onBroken,
 }: {
+  onBroken?: (id: string) => void;
   p: CatalogProduct;
   onPress: () => void;
   showShop?: boolean;
@@ -83,7 +87,7 @@ export function ProductCard({
         style={[row, { gap: 14, paddingVertical: 14, alignItems: "flex-start", borderBottomWidth: 1, borderBottomColor: c.line + "99" }]}
       >
         <Rise i={ci} distance={0} style={{ width: "30%" }}>
-          <PartThumb category={p.category} uri={p.imageUri} />
+          <PartPhoto uri={p.imageUri} onFail={onBroken ? () => onBroken(p.id) : undefined} />
         </Rise>
         <Rise i={ci} delay={50} style={{ flex: 1, minWidth: 0 }}>
           <Text numberOfLines={2} style={[{ color: c.ink, fontSize: 16, fontWeight: "700", lineHeight: 21 }, align]}>{p.name}</Text>
@@ -110,5 +114,49 @@ export function ProductCard({
         </Rise>
       </Press>
     </Animated.View>
+  );
+}
+
+/** Stock as a coloured dot + word (real state only). */
+export function StockLine({ state }: { state: "IN" | "LOW" | "OUT" }) {
+  const { t } = useL();
+  const { c } = useTheme();
+  const m = { IN: [c.success, t("In stock", "متوفر")], LOW: [c.warning, t("Low stock", "مخزون منخفض")], OUT: [c.danger, t("Out of stock", "نفد المخزون")] }[state];
+  return <Text numberOfLines={1} style={{ color: m[0], fontSize: 11, fontWeight: "700" }}>{`● ${m[1]}`}</Text>;
+}
+
+/**
+ * Photo-first product card: real photo, name, OEM / part number, "brand · condition", price, stock. `compact` = the narrower
+ * card of a horizontal row; otherwise the two-column grid card. The whole card opens the part.
+ */
+export function ProductGridCard({ p, onPress, car = null, onBroken, compact = false, width }: { p: CatalogProduct; onPress: () => void; car?: Car | null; onBroken?: (id: string) => void; compact?: boolean; width?: number | string }) {
+  const { c } = useTheme();
+  const { row, align } = useL();
+  const labels = usePartLabels();
+  return (
+    <Press accessibilityLabel={p.name} onPress={onPress} style={{ width: (width ?? "48.5%") as any, borderRadius: 18, borderWidth: 1, borderColor: c.line, backgroundColor: c.field, padding: compact ? 6 : 8 }}>
+      <PartPhoto uri={p.imageUri} style={{ borderRadius: 12 }} onFail={onBroken ? () => onBroken(p.id) : undefined} />
+      <View style={{ paddingHorizontal: 4, paddingTop: 8, paddingBottom: 4 }}>
+        <Text numberOfLines={2} style={[{ color: c.ink, fontSize: compact ? 12 : 14, fontWeight: "700", lineHeight: compact ? 16 : 19, minHeight: compact ? 32 : 38 }, align]}>{p.name}</Text>
+        <Mono numberOfLines={1} size={compact ? 10 : 11} color={c.soft}>{p.partNumber}</Mono>
+        <Text numberOfLines={1} style={[{ color: c.soft, fontSize: compact ? 10.5 : 12, marginTop: 2 }, align]}>{`${p.brand} · ${labels.condition[p.condition]}`}</Text>
+        <View style={[row, { alignItems: "center", justifyContent: "space-between", marginTop: 6 }]}>
+          <Ltr style={{ fontSize: compact ? 14 : 17, fontWeight: "700" }}>{formatPrice(p.price)}</Ltr>
+          {compact ? (
+            <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: c.bronze, alignItems: "center", justifyContent: "center" }}>
+              <Icon name="chev" size={11} color={c.btnFg} />
+            </View>
+          ) : null}
+        </View>
+        <View style={{ marginTop: 3 }}>
+          <StockLine state={p.stock} />
+        </View>
+        {car ? (
+          <View style={{ marginTop: 5 }}>
+            <FitBadge p={p} car={car} />
+          </View>
+        ) : null}
+      </View>
+    </Press>
   );
 }
