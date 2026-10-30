@@ -10,10 +10,12 @@ export type PartFilters = {
   minPrice: string; // typed text; "" = no bound
   maxPrice: string;
   inStock: boolean;
+  /** only products with a running sale */
+  onSale: boolean;
   city: string; // English name from shared/cities.ts; "" = any
 };
 
-export const EMPTY_FILTERS: PartFilters = { conditions: [], partType: null, brands: [], minPrice: "", maxPrice: "", inStock: false, city: "" };
+export const EMPTY_FILTERS: PartFilters = { conditions: [], partType: null, brands: [], minPrice: "", maxPrice: "", inStock: false, onSale: false, city: "" };
 
 export const filterMemory: { current: PartFilters } = { current: EMPTY_FILTERS };
 
@@ -29,7 +31,7 @@ export function priceProblem(f: Pick<PartFilters, "minPrice" | "maxPrice">): "in
 
 /** Number of active filters, as shown on the Filters button (the price range counts once). */
 export const countFilters = (f: PartFilters) =>
-  f.conditions.length + (f.partType ? 1 : 0) + f.brands.length + (f.minPrice.trim() || f.maxPrice.trim() ? 1 : 0) + (f.inStock ? 1 : 0) + (f.city ? 1 : 0);
+  f.conditions.length + (f.partType ? 1 : 0) + f.brands.length + (f.minPrice.trim() || f.maxPrice.trim() ? 1 : 0) + (f.inStock ? 1 : 0) + (f.onSale ? 1 : 0) + (f.city ? 1 : 0);
 
 /** The query-string parameters for GET /catalog/parts. */
 export function filterParams(f: PartFilters) {
@@ -40,6 +42,7 @@ export function filterParams(f: PartFilters) {
     minPrice: f.minPrice.trim() || undefined,
     maxPrice: f.maxPrice.trim() || undefined,
     inStock: f.inStock ? "1" : undefined,
+    onSale: f.onSale ? "1" : undefined,
     city: f.city || undefined,
   };
 }

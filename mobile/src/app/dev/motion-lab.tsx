@@ -2,13 +2,10 @@ import { Redirect } from "expo-router";
 import { ReactNode, useEffect, useState } from "react";
 import { View } from "react-native";
 import {
-  ASSEMBLY_KINDS,
-  AssemblyKind,
   BlueprintSurface,
   CarTop,
   TowHero,
   CompactHero,
-  CategoryAssembly,
   CrossFade,
   FadeSwitch,
   FloatingTabBar,
@@ -241,7 +238,6 @@ function Lab() {
     return () => setReducedOverride(null);
   }, [mode]);
   const reduced = useReduced();
-  const kinds: AssemblyKind[] = ASSEMBLY_KINDS;
   return (
     <SimplePage kind="toolbox" tl="DEV / MOTION" title="Motion lab" sub={`Every motion piece, same components as the real screens. Reduced motion: ${reduced ? "ON" : "off"}${isArabic ? " · RTL" : ""}`} back="/customer/profile">
       <View style={[row, { marginTop: 8, alignItems: "center", gap: 10 }]}>
@@ -300,18 +296,6 @@ function Lab() {
 
       <Demo title="Route: Steps + VerticalTimeline" note="Next status extends the line only from the previous node. Cancel stops it on a danger node." replay={false}>
         {() => <RouteDemo />}
-      </Demo>
-
-      <Demo title="Category assemblies (8)" note="Groups assemble outward → in place, 60 ms apart, ≤ 700 ms.">
-        {(n) => (
-          <View key={n} style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {kinds.map((k) => (
-              <BlueprintSurface key={k} style={{ width: "48%", height: 110, borderRadius: 14, padding: 4 }}>
-                <CategoryAssembly kind={k} assemble />
-              </BlueprintSurface>
-            ))}
-          </View>
-        )}
       </Demo>
 
       <Demo title="Headlights" note="Two soft bronze glows after the trace, then a low glow.">

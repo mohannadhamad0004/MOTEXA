@@ -1,0 +1,181 @@
+import { Notice } from "../../components/ui/Feedback";
+import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
+import { Input } from "../../components/ui/Input";
+import { SectionHeader } from "../../components/ui/SectionHeader";
+import { PartPhoto } from "../catalog/PartPhoto";
+import { pickImage } from "../../core/hooks/nav";
+import { useL } from "../../core/hooks/useL";
+import { Text } from "../../components/ui/Text";
+import { useTheme } from "../../theme/useTheme";
+import { useState } from "react";
+import { View } from "react-native";
+import { Fitment, Product, ProductInput } from "./partsService";
+import { Chip } from "../catalog/catalogBits";
+import { CONDITIONS, PART_TYPES, usePartLabels } from "../catalog/partAttrs";
+import { CATALOG_GROUPS, labelOf } from "../../core/constants/categories";
+
+// The product form shared by the shop (provider) screen and the MOTEXA admin editor. It knows nothing about who is
+// saving: the caller passes onSubmit (provider or admin service) and onDone.
+export const blankProduct: ProductInput = {
+  name: "", brand: "", partNumber: "", description: "", price: 0, stock: 0, category: null, condition: "NEW", partType: null, imageUri: null, fitments: [],
+};
+
+export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin = false }: { initial: ProductInput; product?: Product; isNew: boolean; onSubmit: (input: ProductInput) => Promise<unknown>; onDone: () => void; /** MOTEXA admin editing on behalf of the shop: no provider-only wording */ admin?: boolean }) {
+  const { c: col } = useTheme();
+  const { t, row, isArabic, align } = useL();
+  const labels = usePartLabels();
+  const [f, setF] = useState(initial);
+  const [price, setPrice] = useState(String(initial.price || ""));
+  const [stock, setStock] = useState(String(initial.stock || ""));
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const picked = f.imageUri !== initial.imageUri; // a local photo chosen in this session, not saved yet
+
+  const setFit = (i: number, patch: Partial<Fitment>) =>
+    setF({ ...f, fitments: f.fitments.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
+
+  const save = async () => {
+    // A completely empty fitment row is ignored; a half-filled one blocks saving and says which row.
+    const isEmptyRow = (x: Fitment) => !x.make.trim() && !x.model.trim() && !(x.trim ?? "").trim();
+    const badRow = f.fitments.findIndex((x) => !isEmptyRow(x) && (!x.make.trim() || !x.model.trim()));
+    if (badRow >= 0) {
+      const n = badRow + 1;
+      return setErr(
+        t(
+          `Fitment row ${n} is incomplete: enter both the make and the model, or remove the row.`,
+          `صف التوافق رقم ${n} غير مكتمل: أدخل الشركة المصنعة والطراز معًا، أو أزل الصف.`
+        )
+      );
+    }
+    if (!f.category) return setErr(t("Choose a category.", "اختر فئة."));
+    setBusy(true);
+    setErr(null);
+    try {
+      const input: ProductInput = {
+        ...f,
+        price: parseFloat(price || "0"),
+        stock: parseInt(stock || "0", 10),
+        fitments: f.fitments.filter((x) => !isEmptyRow(x)),
+      };
+      await onSubmit(input);
+      onDone();
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      {product?.hidden && (
+        <Notice tone="danger" icon="eye-off-outline">
+          {t("Hidden by MOTEXA", "مخفية بواسطة MOTEXA")}
+          {product.hiddenReason ? "\n" + product.hiddenReason : ""}
+          {"\n"}
+          {admin ? t("This listing is hidden from customers. Use Show again on the shop page to publish it.", "هذه القطعة مخفية عن العملاء. استخدم إظهار مرة أخرى من صفحة المتجر لنشرها.") : t("You can edit the details, but only MOTEXA can make this listing visible again.", "يمكنك تعديل التفاصيل، ولكن MOTEXA فقط يمكنها إعادة إظهار هذه القطعة.")}
+        </Notice>
+      )}
+      <SectionHeader title={t("Product photo", "صورة المنتج")} />
+      {!f.imageUri ? (
+        <Notice tone="warning" icon="image-outline">
+          {admin
+            ? t("Product photo required — hidden from customers", "صورة المنتج مطلوبة — مخفي عن العملاء")
+            : t("Product photo required: customers can't see this part until it has a real photo of the actual product.", "صورة المنتج مطلوبة: لا يرى العملاء هذه القطعة حتى تضاف لها صورة حقيقية للمنتج نفسه.")}
+        </Notice>
+      ) : null}
+      <Card>
+        {/* whole picture, aspect ratio kept, never cropped; the server checks the real JPEG/PNG and the minimum size on save */}
+        <PartPhoto uri={f.imageUri} style={{ marginBottom: 12 }} />
+        {picked ? (
+          <Text style={[{ color: col.textMuted, fontSize: 12, marginBottom: 10 }, align]}>
+            {t("New photo selected. It is uploaded when you save.", "تم اختيار صورة جديدة. تُرفع عند الحفظ.")}
+          </Text>
+        ) : null}
+        <Button
+          variant={f.imageUri ? "ghost" : "primary"}
+          icon="camera-outline"
+          label={!f.imageUri ? t("Add product photo", "إضافة صورة المنتج") : picked ? t("Replace selection", "استبدال الصورة المختارة") : t("Change product photo", "تغيير صورة المنتج")}
+          onPress={async () => {
+            const uri = await pickImage();
+            if (uri) setF({ ...f, imageUri: uri });
+          }}
+        />
+        {picked ? <Button variant="ghost" icon="close-outline" label={t("Cancel selection", "إلغاء الاختيار")} onPress={() => setF({ ...f, imageUri: initial.imageUri })} /> : null}
+      </Card>
+
+      <SectionHeader title={t("Details", "التفاصيل")} />
+      <Card>
+        <Input label={t("Part name", "اسم القطعة")} value={f.name} onChangeText={(v) => setF({ ...f, name: v })} />
+        <Input label={t("Brand", "العلامة التجارية")} value={f.brand} onChangeText={(v) => setF({ ...f, brand: v })} />
+        <Input label={t("Part number", "رقم القطعة")} value={f.partNumber} autoCapitalize="characters" onChangeText={(v) => setF({ ...f, partNumber: v })} />
+        <Input label={t("Description", "الوصف")} value={f.description} multiline onChangeText={(v) => setF({ ...f, description: v })} />
+        <Input label={t("Price (₪)", "السعر (₪)")} value={price} keyboardType="decimal-pad" onChangeText={setPrice} />
+        <Input label={t("Stock quantity", "الكمية المتوفرة")} value={stock} keyboardType="number-pad" onChangeText={setStock} />
+      </Card>
+
+      <SectionHeader title={t("Condition", "الحالة")} />
+      <Card>
+        <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
+          {CONDITIONS.map((c) => (
+            <Chip key={c} label={labels.condition[c]} on={f.condition === c} onPress={() => setF({ ...f, condition: c })} />
+          ))}
+        </View>
+        <Text style={[{ color: col.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 1, marginTop: 14, marginBottom: 7 }, align]}>{t("TYPE", "النوع")}</Text>
+        <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
+          {PART_TYPES.map((p) => (
+            <Chip key={p} label={labels.type[p]} on={f.partType === p} onPress={() => setF({ ...f, partType: p })} />
+          ))}
+          <Chip label={labels.notSpecified} on={f.partType === null} onPress={() => setF({ ...f, partType: null })} />
+        </View>
+      </Card>
+
+      <SectionHeader title={t("Category", "الفئة")} />
+      {!f.category && !isNew ? (
+        <Notice tone="accent" icon="information-circle-outline">{t("This part has no category yet. Choose one to save changes.", "ليس لهذه القطعة فئة بعد. اختر فئة لحفظ التغييرات.")}</Notice>
+      ) : null}
+      <Card>
+        {CATALOG_GROUPS.map((g) => (
+          <View key={g.key} style={{ marginBottom: 12 }}>
+            <Text style={[{ color: col.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 1, marginBottom: 7 }, align]}>{labelOf(g, isArabic)}</Text>
+            <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
+              {g.categories.map((c) => (
+                <Chip key={c.key} icon={c.icon} label={labelOf(c, isArabic)} on={f.category === c.key} onPress={() => setF({ ...f, category: c.key })} />
+              ))}
+            </View>
+          </View>
+        ))}
+      </Card>
+
+      <SectionHeader title={t("Vehicle fitment", "توافق المركبات")} />
+      {f.fitments.map((x, i) => (
+        <Card key={i}>
+          <Input label={t("Make", "الشركة المصنعة")} value={x.make} onChangeText={(v) => setFit(i, { make: v })} />
+          <Input label={t("Model", "الطراز")} value={x.model} onChangeText={(v) => setFit(i, { model: v })} />
+          <View style={[row, { gap: 10 }]}>
+            <View style={{ flex: 1 }}>
+              <Input label={t("Year from", "من سنة")} value={String(x.yearFrom || "")} keyboardType="number-pad" onChangeText={(v) => setFit(i, { yearFrom: parseInt(v || "0", 10) })} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Input label={t("Year to", "إلى سنة")} value={String(x.yearTo || "")} keyboardType="number-pad" onChangeText={(v) => setFit(i, { yearTo: parseInt(v || "0", 10) })} />
+            </View>
+          </View>
+          <Input label={t("Engine / trim (optional)", "المحرك / الفئة (اختياري)")} value={x.trim ?? ""} onChangeText={(v) => setFit(i, { trim: v })} />
+          <Button variant="danger" label={t("Remove fitment", "إزالة التوافق")} onPress={() => setF({ ...f, fitments: f.fitments.filter((_, j) => j !== i) })} />
+        </Card>
+      ))}
+      <Button
+        variant="ghost"
+        icon="add-outline"
+        label={t("Add fitment", "إضافة توافق")}
+        onPress={() => setF({ ...f, fitments: [...f.fitments, { make: "", model: "", yearFrom: 2010, yearTo: 2020 }] })}
+      />
+
+      <View style={{ height: 20 }} />
+      {err ? <Notice tone="danger" icon="alert-circle-outline">{err}</Notice> : null}
+      <Button label={isNew ? t("Add part", "إضافة القطعة") : t("Save changes", "حفظ التغييرات")} disabled={busy} onPress={save} />
+    </>
+  );
+}
+

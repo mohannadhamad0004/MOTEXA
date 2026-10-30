@@ -1,75 +1,73 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
-import { BlueprintPage, Icon, PageTitle, PartThumb, Press, Sub, Toolbox, UnderlineTabs } from "../../components/blueprint";
-import { Async } from "../../components/ui/Feedback";
-import { Text } from "../../components/ui/Text";
+import { Chip, ErrorState, GarageHero, GaragePage, GText, Photo, Rail, SkeletonCards, Tap } from "../../components/garage";
 import { CATALOG_GROUPS, labelOf } from "../../core/constants/categories";
 import { useL } from "../../core/hooks/useL";
 import { useLoad } from "../../core/hooks/useLoad";
 import { catalogService } from "../../features/catalog/catalogService";
-import { useTheme } from "../../theme/useTheme";
+import { gShape, gType, useGarageTheme } from "../../theme/garage";
+import type { PhotoKey } from "../../theme/photos";
 
-/** Browse by category: the groups as tabs, that group's categories below with the real number of parts in each. */
+/** Browse by category: the groups as chips, that group's categories as a photo grid with the real number of parts in each. */
 export default function CustomerCategories() {
-  const { c } = useTheme();
-  const { t, row, align, isArabic } = useL();
+  const { g, shadow, row, align } = useGarageTheme();
+  const { t, isArabic } = useL();
   const [groupKey, setGroupKey] = useState(CATALOG_GROUPS[0].key);
   const state = useLoad(() => catalogService.getCategories(), []);
-  const group = CATALOG_GROUPS.find((g) => g.key === groupKey)!;
+  const group = CATALOG_GROUPS.find((x) => x.key === groupKey)!;
   const partsLabel = (n: number) => `${n} ${n === 1 ? t("part", "قطعة") : t("parts", "قطع")}`;
+  const total = state.data ? state.data.reduce((n, x) => n + x.count, 0) : null;
 
-  const line = (key: string, label: string, sub: string, category: string | null, dim: boolean) => (
-    <Press
-      key={key}
-      accessibilityLabel={label}
-      onPress={() => router.push(`/customer/category/${key}`)}
-      style={[row, { alignItems: "center", gap: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.line + "99", opacity: dim ? 0.55 : 1 }]}
-    >
-      <PartThumb category={category} size={52} />
-      <View style={{ flex: 1 }}>
-        <Text numberOfLines={2} style={[{ color: c.ink, fontSize: 15, fontWeight: "700" }, align]}>{label}</Text>
-        <Text style={[{ color: c.soft, fontSize: 12, marginTop: 2 }, align]}>{sub}</Text>
+  const tile = (key: string, label: string, sub: string, dim: boolean) => (
+    <Tap key={key} label={label} onPress={() => router.push(`/customer/category/${key}`)} style={[{ width: "48%", borderRadius: gShape.card, padding: 8, backgroundColor: g.card, opacity: dim ? 0.6 : 1 }, shadow(1)]}>
+      <Photo k={`category.${key}` as PhotoKey} radius={16} style={{ width: "100%", aspectRatio: 1 }} />
+      <View style={{ padding: 6 }}>
+        <GText numberOfLines={2} style={[gType.label, { fontWeight: "800", minHeight: 40 }, align]}>{label}</GText>
+        <GText soft style={[gType.caption, align]}>{sub}</GText>
       </View>
-      <Icon name="chev" size={16} color={c.soft} />
-    </Press>
+    </Tap>
   );
 
   return (
-    <BlueprintPage
+    <GaragePage
       onRefresh={state.reload}
       refreshing={state.loading && !!state.data}
-      hero={{
-        height: 180,
-        back: "/customer/parts",
-        tl: "CATEGORIES",
-        art: (
-          <View style={{ height: "100%", aspectRatio: 1.5 }}>
-            <Toolbox />
-          </View>
-        ),
-      }}
+      hero={
+        <GarageHero
+          variant="detail"
+          onBack={() => (router.canGoBack() ? router.back() : router.navigate("/customer/parts"))}
+          title={t("Categories", "الفئات")}
+          line={total !== null ? t(`${total} parts in ${CATALOG_GROUPS.length} groups`, `${total} قطعة في ${CATALOG_GROUPS.length} مجموعات`) : undefined}
+        />
+      }
     >
-      <PageTitle>{t("Categories", "الفئات")}</PageTitle>
-      <Sub>{t("Shop by category", "تسوق حسب الفئة")}</Sub>
-      <View style={{ marginTop: 20 }}>
-        <UnderlineTabs value={groupKey} onChange={setGroupKey} items={CATALOG_GROUPS.map((g) => ({ key: g.key, label: labelOf(g, isArabic) }))} />
+      <Rail gap={8}>
+        {CATALOG_GROUPS.map((x) => (
+          <Chip key={x.key} label={labelOf(x, isArabic)} on={x.key === groupKey} onPress={() => setGroupKey(x.key)} />
+        ))}
+      </Rail>
+      <View style={{ marginTop: 16 }}>
+        {state.error && !state.data ? (
+          <ErrorState text={state.error} onRetry={state.reload} retryLabel={t("Retry", "إعادة المحاولة")} />
+        ) : !state.data ? (
+          <SkeletonCards />
+        ) : (
+          (() => {
+            const counts = new Map(state.data.flatMap((x) => x.categories.map((c) => [c.key, c.count] as const)));
+            const groupCount = state.data.find((x) => x.key === groupKey)?.count ?? 0;
+            return (
+              <View style={[row, { flexWrap: "wrap", justifyContent: "space-between", rowGap: 14 }]}>
+                {tile(group.key, `${t("All", "كل")} ${labelOf(group, isArabic)}`, partsLabel(groupCount), false)}
+                {group.categories.map((c) => {
+                  const n = counts.get(c.key) ?? 0;
+                  return tile(c.key, labelOf(c, isArabic), n === 0 ? t("No parts yet", "لا توجد قطع بعد") : partsLabel(n), n === 0);
+                })}
+              </View>
+            );
+          })()
+        )}
       </View>
-      <Async state={state}>
-        {(groups) => {
-          const counts = new Map(groups.flatMap((g) => g.categories.map((x) => [x.key, x.count] as const)));
-          const groupCount = groups.find((g) => g.key === groupKey)?.count ?? 0;
-          return (
-            <View style={{ marginTop: 8 }}>
-              {line(group.key, `${t("All", "كل")} ${labelOf(group, isArabic)}`, partsLabel(groupCount), null, false)}
-              {group.categories.map((x) => {
-                const n = counts.get(x.key) ?? 0;
-                return line(x.key, labelOf(x, isArabic), n === 0 ? t("No parts yet", "لا توجد قطع بعد") : partsLabel(n), x.key, n === 0);
-              })}
-            </View>
-          );
-        }}
-      </Async>
-    </BlueprintPage>
+    </GaragePage>
   );
 }

@@ -1,12 +1,7 @@
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
-import Animated, { FadeIn, LinearTransition } from "react-native-reanimated";
-import { BlueprintPage, Chip, Icon, Ltr, Odometer, OptionSheet, Press, PrimaryButton, SearchField, TowHero, TOW_HERO_OVERLAP } from "../../../components/blueprint";
-import { Button } from "../../../components/ui/Button";
-import { EmptyState, Notice } from "../../../components/ui/Feedback";
-import { SkeletonList } from "../../../components/ui/Skeleton";
-import { Text } from "../../../components/ui/Text";
+import { Card, Chip, EmptyState, ErrorState, GarageHero, GaragePage, GButton, GIcon, GText, Note, OptionSheet, SearchBar, SkeletonRows, StatusChip, Tap } from "../../../components/garage";
 import { CITIES, cityLabel, cityToEnglish } from "../../../core/constants/cities";
 import { Point, locationMemory } from "../../../core/constants/geo";
 import { useL } from "../../../core/hooks/useL";
@@ -15,9 +10,7 @@ import { WhileYouWait } from "../../../features/requests/WhileYouWait";
 import { LocationProblem, useCurrentLocation } from "../../../features/shared/useCurrentLocation";
 import type { TruckType } from "../../../features/tow/towService";
 import { useTruckLabels } from "../../../features/tow/truckBits";
-import { M, useIgnition } from "../../../motion";
-import { alpha } from "../../../theme/tokens";
-import { useTheme } from "../../../theme/useTheme";
+import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 
 const TRUCK_TYPES: TruckType[] = ["FLATBED", "HOOK_CHAIN", "WHEEL_LIFT", "HEAVY_DUTY"];
 type Sort = "nearest" | "available" | "name";
@@ -26,47 +19,47 @@ type Sheet = null | "type" | "city" | "sort";
 /** "≈ 7.0 km" (straight line). */
 const kmShort = (km: number, ar: boolean) => (km < 1 ? (ar ? "≈ <1 كم" : "≈ <1 km") : `≈ ${km < 10 ? km.toFixed(1) : Math.round(km)} ${ar ? "كم" : "km"}`);
 
-/** A tow company: availability rail, strong name, city and truck types, free-truck count, distance when computed. */
-function CompanyRow({ x, i }: { x: TowCompanyRow; i: number }) {
-  const { c, row, align } = useTheme();
+/** A tow company: name, real availability chip, truck types, distance when computed; View + Request (only with a free truck). */
+function CompanyCard({ x }: { x: TowCompanyRow }) {
+  const { g, row, align } = useGarageTheme();
   const { t, isArabic } = useL();
   const { type } = useTruckLabels();
   const free = x.availableTrucks > 0;
   return (
-    <Animated.View entering={i < 8 ? FadeIn.duration(M.entrance).delay(i * M.stagger) : undefined} layout={LinearTransition.duration(M.detail)}>
-      <Press
-        accessibilityLabel={x.name}
-        onPress={() => router.push(`/customer/tow/${x.id}`)}
-        style={[row, { alignItems: "stretch", gap: 14, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: alpha(c.line, 0.6) }]}
-      >
-        <View style={{ width: 3, borderRadius: 2, backgroundColor: free ? c.bronze : c.line }} />
+    <Card>
+      <View style={[row, { alignItems: "flex-start", gap: 10 }]}>
+        <View style={{ width: 44, height: 44, borderRadius: gShape.small, backgroundColor: g.tint, alignItems: "center", justifyContent: "center" }}>
+          <GIcon name="car-outline" size={22} />
+        </View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text numberOfLines={2} style={[{ color: c.ink, fontSize: 17, fontWeight: "700", lineHeight: isArabic ? 25 : 21 }, align]}>{x.name}</Text>
-          <Text numberOfLines={1} style={[{ color: c.soft, fontSize: 13, marginTop: 2 }, align]}>
-            {[cityLabel(x.city, isArabic), x.truckTypes.map((k) => type[k]).join(isArabic ? "، " : " · ")].filter(Boolean).join(" · ")}
-          </Text>
-          <View style={[row, { alignItems: "center", gap: 6, marginTop: 7 }]}>
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: free ? c.bronze : c.line }} />
-            {free ? <Odometer value={x.availableTrucks} size={13} color={c.bronze} /> : null}
-            <Text style={{ color: free ? c.bronze : c.soft, fontSize: 13, fontWeight: "600" }}>
-              {free ? (x.availableTrucks === 1 ? t("truck free", "شاحنة متاحة") : t("trucks free", "شاحنات متاحة")) : t("No free truck", "لا توجد شاحنة متاحة")}
-            </Text>
-            {x.distanceKm != null ? <Ltr style={{ color: c.soft, fontSize: 12 }}>{`· ${kmShort(x.distanceKm, isArabic)}`}</Ltr> : null}
+          <GText numberOfLines={2} style={[gType.label, { fontWeight: "800", fontSize: 16 }, align]}>{x.name}</GText>
+          <View style={[row, { alignItems: "center", gap: 4, flexWrap: "wrap", marginTop: 2 }]}>
+            <GIcon name="location-outline" size={13} color={g.soft} />
+            <GText soft numberOfLines={1} style={[gType.caption, { flexShrink: 1 }]}>{cityLabel(x.city, isArabic)}</GText>
+            {x.distanceKm != null ? <GText soft style={[gType.caption, { writingDirection: "ltr" }]}>{`· ${kmShort(x.distanceKm, isArabic)}`}</GText> : null}
+          </View>
+          {x.truckTypes.length ? <GText soft numberOfLines={2} style={[gType.caption, align, { marginTop: 2 }]}>{x.truckTypes.map((k) => type[k]).join(isArabic ? "، " : " · ")}</GText> : null}
+          <View style={{ marginTop: 8 }}>
+            <StatusChip
+              tone={free ? "success" : "neutral"}
+              icon={free ? "checkmark-circle" : "time-outline"}
+              label={free ? `${x.availableTrucks} ${x.availableTrucks === 1 ? t("truck free", "شاحنة متاحة") : t("trucks free", "شاحنات متاحة")}` : t("No free truck", "لا توجد شاحنة متاحة")}
+            />
           </View>
         </View>
-        <View style={{ justifyContent: "center" }}>
-          <Icon name="chev" size={15} color={alpha(c.soft, 0.7)} />
-        </View>
-      </Press>
-    </Animated.View>
+      </View>
+      <View style={[row, { gap: 10, marginTop: 14 }]}>
+        <GButton flex variant="secondary" label={t("View", "عرض")} onPress={() => router.push(`/customer/tow/${x.id}`)} />
+        {free ? <GButton flex icon="car-outline" label={t("Request", "اطلب")} onPress={() => router.push({ pathname: "/customer/towrequest/new", params: { companyId: x.id } })} /> : null}
+      </View>
+    </Card>
   );
 }
 
 export default function CustomerTow() {
-  const { c, row } = useTheme();
+  const { g, row } = useGarageTheme();
   const { t, isArabic } = useL();
   const { type } = useTruckLabels();
-  const ig = useIgnition("tow");
   const [city, setCity] = useState("");
   const [name, setName] = useState("");
   const [truckType, setTruckType] = useState<TruckType | null>(null);
@@ -151,127 +144,86 @@ export default function CustomerTow() {
     return () => clearTimeout(h);
   }, [run]);
 
+
   // ---- hero: REAL numbers only ----
   const cityEn = cityToEnglish(city);
   const freeTrucks = items.reduce((n, x) => n + x.availableTrucks, 0);
-  const freeCompanies = items.filter((x) => x.availableTrucks > 0).length;
   const nearestFree = me ? items.filter((x) => x.availableTrucks > 0 && x.distanceKm != null).sort((x, y) => (x.distanceKm ?? 0) - (y.distanceKm ?? 0))[0] : undefined;
-  const soft = alpha(c.cream, 0.82);
-  const lineText = { color: soft, fontSize: 14 } as const;
   const where = me ? t("near you", "بالقرب منك") : cityEn ? `${t("in", "في")} ${cityLabel(cityEn, isArabic)}` : "";
-  const heroLine = (
-    <View style={[row, { alignItems: "center", flexWrap: "wrap", columnGap: 5 }]}>
-      {loading && !items.length ? (
-        <Text style={lineText}>{t("Looking for trucks…", "جارٍ البحث عن شاحنات…")}</Text>
-      ) : !items.length ? (
-        <Text style={lineText}>{t("No tow companies found", "لا توجد شركات سحب")}</Text>
-      ) : freeTrucks === 0 ? (
-        <Text style={lineText}>{t("No free truck right now", "لا توجد شاحنة متاحة الآن")}</Text>
-      ) : where ? (
-        <>
-          <Odometer value={freeTrucks} size={14} color={c.cream} />
-          <Text style={lineText}>{`${freeTrucks === 1 ? t("truck available", "شاحنة متاحة") : t("trucks available", "شاحنات متاحة")} ${where}`}</Text>
-        </>
-      ) : (
-        <>
-          <Odometer value={freeCompanies} size={14} color={c.cream} />
-          <Text style={lineText}>{freeCompanies === 1 ? t("tow company available", "شركة سحب متاحة") : t("tow companies available", "شركات سحب متاحة")}</Text>
-        </>
-      )}
-    </View>
-  );
-  const hint = me
-    ? nearestFree?.distanceKm != null
-      ? `${t("Nearest with a free truck", "الأقرب وفيها شاحنة")} ${kmShort(nearestFree.distanceKm, isArabic)} · ${t("straight line", "خط مستقيم")}`
-      : undefined
-    : cityEn
-      ? undefined
-      : t("Choose your location to find nearby towing", "اختر موقعك للعثور على سحب قريب");
+  const line =
+    loading && !items.length
+      ? t("Looking for trucks…", "جارٍ البحث عن شاحنات…")
+      : !items.length
+        ? t("No tow companies found", "لا توجد شركات سحب")
+        : freeTrucks === 0
+          ? t("No free truck right now", "لا توجد شاحنة متاحة الآن")
+          : [
+              `${freeTrucks} ${freeTrucks === 1 ? t("truck free", "شاحنة متاحة") : t("trucks free", "شاحنات متاحة")}${where ? " " + where : ""}`,
+              nearestFree?.distanceKm != null ? `${t("nearest", "الأقرب")} ${kmShort(nearestFree.distanceKm, isArabic)}` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ");
 
   const sortLabel: Record<Sort, string> = { nearest: t("Nearest", "الأقرب"), available: t("Most trucks", "الأكثر شاحنات"), name: t("Name", "الاسم") };
   const cityPillLabel = me ? t("Near me", "بالقرب مني") : cityEn ? cityLabel(cityEn, isArabic) : t("City", "المدينة");
 
   return (
-    <BlueprintPage
+    <GaragePage
       tabs
-      ignition={ig}
-      overlap={TOW_HERO_OVERLAP}
+      entry="tow"
       refreshing={refreshing}
       onRefresh={() => run("refresh")}
-      top={
-        <TowHero
-          play={ig}
-          available={freeTrucks > 0}
-          tag="TOW / 02"
+      hero={
+        <GarageHero
+          variant="tab"
+          tab="tow"
+          onMap={() => router.push("/customer/tow/map")}
           title={t("Tow trucks", "شاحنات السحب")}
-          line={heroLine}
-          hint={hint}
-          primary={{ label: t("Request nearest available", "اطلب أقرب شاحنة"), icon: "tow", loading: nearBusy || loc.locating, onPress: requestNearest }}
-          secondary={{ label: t("View map", "الخريطة"), icon: "map", onPress: () => router.push("/customer/tow/map") }}
-        />
+          line={line}
+        >
+          <GButton icon="navigate" label={t("Request nearest", "اطلب الأقرب")} busy={nearBusy || loc.locating} onPress={requestNearest} />
+        </GarageHero>
       }
     >
       {loc.dialog}
-      {nearErr ? (
-        <View style={{ marginBottom: 12 }}>
-          <Notice tone="danger" icon="alert-circle-outline">{nearErr}</Notice>
-        </View>
-      ) : null}
+      {nearErr ? <Note tone="danger" icon="alert-circle-outline">{nearErr}</Note> : null}
 
-      <SearchField
-        compact
-        style={{ height: 46, borderRadius: 14, backgroundColor: "transparent" }}
-        value={name}
-        onChangeText={setName}
-        placeholder={t("Company name", "اسم الشركة")}
-      />
-      <View style={[row, { marginTop: 10, gap: 8 }]}>
-        <Chip check label={t("Available", "متاح")} on={availableOnly} onPress={() => setAvailableOnly(!availableOnly)} />
-        <Chip label={truckType ? type[truckType] : t("Type", "النوع")} on={!!truckType} trailing="down" onPress={() => setSheet("type")} />
-        <Chip label={cityPillLabel} on={!!cityEn || !!me} trailing="down" onPress={() => setSheet("city")} />
+      <SearchBar value={name} onChangeText={setName} placeholder={t("Company name", "اسم الشركة")} />
+      <View style={[row, { marginTop: 12, gap: 8, flexWrap: "wrap" }]}>
+        <Chip icon={availableOnly ? "checkmark" : undefined} label={t("Available", "متاح")} on={availableOnly} onPress={() => setAvailableOnly(!availableOnly)} />
+        <Chip icon="chevron-down" label={truckType ? type[truckType] : t("Type", "النوع")} on={!!truckType} onPress={() => setSheet("type")} />
+        <Chip icon="location-outline" label={cityPillLabel} on={!!cityEn || !!me} onPress={() => setSheet("city")} />
       </View>
       <LocationProblem loc={loc} />
 
       {items.length ? (
         <View style={[row, { marginTop: 14, alignItems: "center", justifyContent: "space-between" }]}>
-          <View style={[row, { alignItems: "center", gap: 4 }]}>
-            <Odometer value={items.length} size={13} color={c.soft} />
-            <Text style={{ color: c.soft, fontSize: 13 }}>{items.length === 1 ? t("company", "شركة") : t("companies", "شركات")}</Text>
-          </View>
-          <Press accessibilityLabel={t("Sort", "ترتيب")} onPress={() => setSheet("sort")} style={[row, { minHeight: 40, alignItems: "center", gap: 4, paddingHorizontal: 4 }]}>
-            <Text style={{ color: c.ink, fontSize: 13, fontWeight: "600" }}>{sortLabel[sort]}</Text>
-            <Icon name="down" size={14} color={c.soft} />
-          </Press>
+          <GText soft style={[gType.caption, { fontWeight: "700" }]}>{`${items.length} ${items.length === 1 ? t("company", "شركة") : t("companies", "شركات")}`}</GText>
+          <Tap label={t("Sort", "ترتيب")} onPress={() => setSheet("sort")} style={[row, { minHeight: 44, alignItems: "center", gap: 4, paddingHorizontal: 4 }]}>
+            <GIcon name="swap-vertical-outline" size={16} />
+            <GText style={[gType.caption, { fontWeight: "800", color: g.accentText }]}>{sortLabel[sort]}</GText>
+          </Tap>
         </View>
       ) : null}
 
-      <View style={{ marginTop: 2 }}>
+      <View style={{ marginTop: 8, gap: 12 }}>
         {loading && !items.length ? (
-          <SkeletonList />
+          <SkeletonRows count={3} />
         ) : error && !items.length ? (
-          <View style={{ alignItems: "center", paddingVertical: 30, gap: 14 }}>
-            <Notice tone="danger" icon="alert-circle-outline">{error}</Notice>
-            <Button label={t("Retry", "إعادة المحاولة")} variant="ghost" icon="refresh-outline" onPress={() => run("replace")} />
-          </View>
+          <ErrorState text={error} onRetry={() => run("replace")} retryLabel={t("Retry", "إعادة المحاولة")} />
         ) : !items.length ? (
-          <>
-            <EmptyState icon="car-outline" text={filtered ? t("No tow companies cover this area yet.", "لا توجد شركات سحب تغطي هذه المنطقة بعد.") : t("No tow companies are available yet.", "لا توجد شركات سحب متاحة بعد.")} />
-            {filtered ? <Button variant="ghost" icon="close-circle-outline" label={t("Show all", "عرض الكل")} onPress={showAll} /> : null}
-          </>
+          <EmptyState
+            photo="empty.search"
+            text={filtered ? t("No tow companies cover this area yet.", "لا توجد شركات سحب تغطي هذه المنطقة بعد.") : t("No tow companies are available yet.", "لا توجد شركات سحب متاحة بعد.")}
+            action={filtered ? { label: t("Show all", "عرض الكل"), onPress: showAll } : undefined}
+          />
         ) : (
           <>
-            {error ? (
-              <View style={{ gap: 8, marginVertical: 8 }}>
-                <Notice tone="danger" icon="alert-circle-outline">{t("Could not refresh. The results below may be out of date.", "تعذّر التحديث. قد تكون النتائج أدناه قديمة.")}</Notice>
-                <Button variant="ghost" icon="refresh-outline" label={t("Retry", "إعادة المحاولة")} onPress={() => run("replace")} />
-              </View>
-            ) : null}
-            {items.map((x, i) => (
-              <CompanyRow key={x.id} x={x} i={i} />
+            {error ? <Note tone="danger" icon="alert-circle-outline">{t("Could not refresh. The results below may be out of date.", "تعذّر التحديث. قد تكون النتائج أدناه قديمة.")}</Note> : null}
+            {items.map((x) => (
+              <CompanyCard key={x.id} x={x} />
             ))}
-            {items.some((x) => x.distanceKm != null) ? (
-              <Text style={{ color: c.soft, fontSize: 11, marginTop: 12, textAlign: isArabic ? "right" : "left" }}>{t("Distances are straight lines, not driving routes.", "المسافات خطوط مستقيمة وليست مسارات قيادة.")}</Text>
-            ) : null}
+            {items.some((x) => x.distanceKm != null) ? <GText soft style={[gType.tiny, { textAlign: isArabic ? "right" : "left" }]}>{t("Distances are straight lines, not driving routes.", "المسافات خطوط مستقيمة وليست مسارات قيادة.")}</GText> : null}
           </>
         )}
       </View>
@@ -281,6 +233,7 @@ export default function CustomerTow() {
       <OptionSheet
         visible={sheet === "type"}
         onClose={() => setSheet(null)}
+        closeLabel={t("Close", "إغلاق")}
         title={t("Truck type", "نوع الشاحنة")}
         value={truckType ?? "ANY"}
         options={[{ key: "ANY", label: t("Any type", "أي نوع") }, ...TRUCK_TYPES.map((k) => ({ key: k as string, label: type[k] }))]}
@@ -292,12 +245,13 @@ export default function CustomerTow() {
       <OptionSheet
         visible={sheet === "city"}
         onClose={() => setSheet(null)}
+        closeLabel={t("Close", "إغلاق")}
         title={t("Location", "الموقع")}
         value={cityEn || "ALL"}
         header={
-          <PrimaryButton
-            variant="outline"
-            icon="pin"
+          <GButton
+            variant="secondary"
+            icon="navigate-outline"
             label={me ? t("Stop using my location", "إيقاف استخدام موقعي") : loc.locating ? t("Finding your location…", "جارٍ تحديد موقعك…") : t("Use my location", "استخدم موقعي")}
             onPress={async () => {
               if (me) {
@@ -319,6 +273,7 @@ export default function CustomerTow() {
       <OptionSheet
         visible={sheet === "sort"}
         onClose={() => setSheet(null)}
+        closeLabel={t("Close", "إغلاق")}
         title={t("Sort by", "ترتيب حسب")}
         value={sort}
         options={[...(me ? [{ key: "nearest" as Sort, label: sortLabel.nearest }] : []), { key: "available" as Sort, label: sortLabel.available }, { key: "name" as Sort, label: sortLabel.name }]}
@@ -327,6 +282,6 @@ export default function CustomerTow() {
           setSheet(null);
         }}
       />
-    </BlueprintPage>
+    </GaragePage>
   );
 }

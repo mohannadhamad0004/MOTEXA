@@ -4,6 +4,7 @@ import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withSpring
 import { ease, M, useReduced } from "../../motion";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../theme/useTheme";
+import { useGarageTheme } from "../../theme/garage";
 
 export const WIDE_MIN_WIDTH = 700;
 export const SIDE_PANEL_WIDTH = 380;
@@ -34,7 +35,10 @@ export function MapPanel({
 }) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { c, r, isArabic } = useTheme();
+  const { r, isArabic } = useTheme();
+  // customer map panel: garage colours (card surface, warm line)
+  const { g } = useGarageTheme();
+  const c = { sheet: g.card, line: g.line };
   const wide = width >= WIDE_MIN_WIDTH;
   const collapsedH = Math.min(360, Math.round(height * 0.46));
   const expandedH = Math.round(height * 0.88);

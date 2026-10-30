@@ -16,7 +16,7 @@ import { View } from "react-native";
 import { HistoryList, KV, PrivateDocs, VerificationBadge } from "../../../features/shared/blocks";
 import { asActor, useSessionUser } from "../../../features/shared/session";
 import { DocKind, TRUCK_TYPES, Truck, TruckInput, TruckType, towFleetService } from "../../../features/tow/towService";
-import { OperationalBadge, TruckSummary, docLabel, useTruckLabels } from "../../../features/tow/truckBits";
+import { ExpiredNotice, OperationalBadge, TruckSummary, docLabel, useTruckLabels } from "../../../features/tow/truckBits";
 import { isRealDate } from "../../../core/constants/files";
 
 const KINDS: DocKind[] = ["REGISTRATION", "INSURANCE"];
@@ -188,6 +188,7 @@ function TruckView({ truck, onChange }: { truck: Truck; onChange: () => void }) 
 
   return (
     <>
+      <ExpiredNotice truck={truck} />
       <Card>
         <TruckSummary truck={truck} />
       </Card>

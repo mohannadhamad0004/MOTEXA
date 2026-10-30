@@ -260,8 +260,10 @@ function ChangesPanel({ app, onSend, onCancel }: { app: Application; onSend: (d:
 export function ApplicationReview({ kind, id }: { kind: Kind; id: string }) {
   const d = useDT();
   const state = useLoad(() => review.get(kind, id), [kind, id], 15000);
-  const products = useLoad(async () => (kind === "PARTS" && state.data?.status === "APPROVED" ? (await partsAdminService.getShop(NOACTOR, id)).products : []), [kind, id, state.data?.status]);
+  const products = useLoad(async () => (kind === "PARTS" ? (await partsAdminService.getShop(NOACTOR, id)).products : []), [kind, id, state.data?.status]);
   const [mode, setMode] = useState<null | "changes" | "reject">(null);
+  const [pq, setPq] = useState("");
+  const [pf, setPf] = useState<"ALL" | "VISIBLE" | "HIDDEN" | "NOPHOTO">("ALL");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -321,6 +323,9 @@ export function ApplicationReview({ kind, id }: { kind: Kind; id: string }) {
                 </View>
                 <Text style={{ color: d.muted, fontSize: 12, textAlign: d.align, marginTop: 6 }}>{a.owner.email}</Text>
               </Panel>
+              <View style={{ marginBottom: 10 }}>
+                <DButton variant="ghost" icon="create-outline" label={kind === "PARTS" ? d.t("Edit shop details", "تعديل بيانات المتجر") : d.t("Edit company details", "تعديل بيانات الشركة")} onPress={() => go(kind === "PARTS" ? `/dept/edit/shop/${id}` : `/dept/edit/company/${id}`)} />
+              </View>
               {error ? <Text accessibilityRole="alert" style={{ color: d.bad, fontSize: 13, lineHeight: 20, marginBottom: 10, textAlign: d.align }}>{error}</Text> : null}
 
               <InteractiveButton accessibilityRole="button" onPress={() => go(`/dept/thread/${kind}/${id}`)} style={{ ...cardStyle(d), flexDirection: d.row, alignItems: "center", gap: 12, minHeight: 56, paddingHorizontal: 16, marginBottom: 14 }}>
@@ -403,9 +408,13 @@ export function ApplicationReview({ kind, id }: { kind: Kind; id: string }) {
                 </Panel>
               ) : null}
 
-              {kind === "TOW" && a.trucks.length ? (
+              {kind === "TOW" ? (
                 <>
-                  <Section title={d.t("Trucks", "الشاحنات")} />
+                  <Section title={`${d.t("Trucks", "الشاحنات")} (${a.trucks.length})`} />
+                  <View style={{ marginBottom: 8 }}>
+                    <DButton variant="ghost" icon="add-circle-outline" label={d.t("Add truck", "إضافة شاحنة")} onPress={() => go(`/dept/edit/truck/new?companyId=${id}`)} />
+                  </View>
+                  {a.trucks.length === 0 ? <Empty icon="car-sport-outline" text={d.t("This company has no trucks yet.", "لا توجد شاحنات لهذه الشركة بعد.")} /> : null}
                   {a.trucks.map((t) => (
                     <ItemCard key={t.id} label={t.plate} onPress={() => go(`/dept/review/truck/${t.id}`)}>
                       <View style={{ flexDirection: d.row, alignItems: "center", gap: 10 }}>
@@ -418,13 +427,55 @@ export function ApplicationReview({ kind, id }: { kind: Kind; id: string }) {
                 </>
               ) : null}
 
-              {kind === "PARTS" && a.status === "APPROVED" ? (
+              {kind === "PARTS" ? (
                 <>
-                  <Section title={`${d.t("Products", "المنتجات")} (${products.data?.length ?? 0})`} caption={d.t("You can hide or show a product. You cannot edit it.", "يمكنك إخفاء المنتج أو إظهاره دون تعديله.")} />
+                  <Section
+                    title={`${d.t("Products", "المنتجات")} (${products.data?.length ?? 0})`}
+                    caption={
+                      (products.data ?? []).length
+                        ? `${(products.data ?? []).filter((p) => p.customerVisible).length} ${d.t("visible to customers", "ظاهرة للعملاء")} · ${(products.data ?? []).filter((p) => !p.hasPhoto).length} ${d.t("photo required (hidden from customers)", "الصورة مطلوبة (غير ظاهرة للعملاء)")} · ${(products.data ?? []).filter((p) => p.hidden).length} ${d.t("hidden by MOTEXA", "مخفية من موتكسا")}`
+                        : d.t("You can hide or show a product. You cannot edit it.", "يمكنك إخفاء أو إظهار منتج. لا يمكنك تعديله.")
+                    }
+                  />
+                  <View style={{ marginBottom: 8 }}>
+                    <DButton variant="ghost" icon="add-circle-outline" label={d.t("Add product", "إضافة منتج")} onPress={() => go(`/dept/edit/product/new?shopId=${id}`)} />
+                  </View>
+                  {(products.data ?? []).length > 0 ? (
+                    <View style={{ gap: 8, marginBottom: 8 }}>
+                      <TextInput
+                        value={pq}
+                        onChangeText={setPq}
+                        accessibilityLabel={d.t("Search products", "بحث في المنتجات")}
+                        placeholder={d.t("Search name, brand or part number", "ابحث بالاسم أو الماركة أو رقم القطعة")}
+                        placeholderTextColor={d.muted}
+                        style={{ minHeight: 44, borderRadius: 14, borderWidth: 1, borderColor: d.border, paddingHorizontal: 14, color: d.ink, textAlign: d.align, fontSize: 14 }}
+                      />
+                      <View style={{ flexDirection: d.row, flexWrap: "wrap", gap: 6 }}>
+                        {(
+                          [
+                            ["ALL", d.t("All", "الكل")],
+                            ["NOPHOTO", d.t("Photo required", "الصورة مطلوبة")],
+                            ["VISIBLE", d.t("Customer visible", "ظاهرة للعملاء")],
+                            ["HIDDEN", d.t("Hidden", "مخفية")],
+                          ] as const
+                        ).map(([k, label]) => (
+                          <InteractiveButton key={k} accessibilityRole="button" accessibilityState={{ selected: pf === k }} onPress={() => setPf(k)} style={{ minHeight: 36, paddingHorizontal: 12, borderRadius: 18, borderWidth: 1, borderColor: pf === k ? d.fill : d.border, backgroundColor: pf === k ? d.fill : "transparent", justifyContent: "center" }}>
+                            <Text style={{ color: pf === k ? d.fillInk : d.ink, fontSize: 12, fontWeight: "700" }}>{label}</Text>
+                          </InteractiveButton>
+                        ))}
+                      </View>
+                    </View>
+                  ) : null}
                   {(products.data ?? []).length === 0 ? <Empty icon="cube-outline" text={d.t("This shop has no products yet.", "لا توجد منتجات لهذا المتجر بعد.")} /> : null}
-                  {(products.data ?? []).map((p) => (
-                    <ProductLine key={p.id} product={p} onDone={() => void products.reload()} />
-                  ))}
+                  {(products.data ?? [])
+                    .filter((p) => {
+                      const n = pq.trim().toLowerCase();
+                      if (n && ![p.name, p.brand, p.partNumber].join(" ").toLowerCase().includes(n)) return false;
+                      return pf === "ALL" || (pf === "VISIBLE" && p.customerVisible) || (pf === "HIDDEN" && p.hidden) || (pf === "NOPHOTO" && p.hasPhoto === false);
+                    })
+                    .map((p) => (
+                      <ProductLine key={p.id} product={p} onDone={() => void products.reload()} />
+                    ))}
                 </>
               ) : null}
 

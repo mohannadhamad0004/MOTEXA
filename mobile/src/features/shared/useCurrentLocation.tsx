@@ -33,7 +33,7 @@ type Status = "idle" | "locating" | "ready" | "problem";
  * tracking, nothing stored. Before the system permission prompt it shows a short explanation. Put `{loc.dialog}` and
  * `<LocationProblem loc={loc} />` in the screen.
  */
-export function useCurrentLocation(purpose: "tow-request" | "signup" = "tow-request") {
+export function useCurrentLocation(purpose: "tow-request" | "signup" | "directions" = "tow-request") {
   const { t } = useL();
   const [status, setStatus] = useState<Status>("idle");
   const [shown, setPair] = useState<readonly [string, string] | null>(null); // EN + AR, so a visible message follows a language switch
@@ -122,7 +122,12 @@ export function useCurrentLocation(purpose: "tow-request" | "signup" = "tow-requ
       type="confirm"
       title={t("Use your location?", "استخدام موقعك؟")}
       message={
-        purpose === "signup"
+        purpose === "directions"
+          ? t(
+              "MOTEXA reads your location once, only now, to draw the route to the shop on the map. It is not tracked in the background and it is not saved.",
+              "يقرأ MOTEXA موقعك مرة واحدة فقط الآن لرسم الطريق إلى المتجر على الخريطة. لا يتم تتبعه في الخلفية ولا يتم حفظه."
+            )
+          : purpose === "signup"
           ? t(
               "MOTEXA needs a location to register where your business operates. It reads your location once, only now. It is not tracked in the background.",
               "يحتاج MOTEXA إلى موقع لتسجيل المكان الذي يعمل منه نشاطك. يقرأ موقعك مرة واحدة فقط الآن. ولا يتم تتبعه في الخلفية."

@@ -1,21 +1,45 @@
 import { hapticError, hapticSuccess } from "../../motion";
 import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
-import { Section } from "../../components/blueprint";
-import { Button } from "../../components/ui/Button";
-import { Card } from "../../components/ui/Card";
-import { Input } from "../../components/ui/Input";
-import { Text } from "../../components/ui/Text";
 import { cityCentre } from "../../core/constants/cities";
 import { Point, locationMemory, roundPoint } from "../../core/constants/geo";
 import { useL } from "../../core/hooks/useL";
-import { useTheme } from "../../theme/useTheme";
 import { currentCar } from "../catalog/catalogService";
 import { MAPS_AVAILABLE, PinMap } from "../shared/maps";
 import { LocationProblem, reverseGeocode, useCurrentLocation } from "../shared/useCurrentLocation";
-import { Chip, ChipRow } from "../../components/ui/Chip";
 import { useProblemLabels } from "./requestBits";
 import { TOW_PROBLEMS, TowProblem, CustomerTowRequest, customerTowRequests, existingIdOf } from "./requestsService";
+import { Card as GCard, Chip as GChip, Field, GButton, GIconName, GText } from "../../components/garage";
+import { gType, useGarageTheme } from "../../theme/garage";
+
+// ---- garage adapters: these fields only appear in the customer map panel; same structure, "Mo's Garage" look ----
+function useTheme() {
+  const { g, align, row } = useGarageTheme();
+  return { align, row, c: { ink: g.ink, text: g.ink, soft: g.soft } };
+}
+const Text = GText;
+const Card = ({ children }: { children: React.ReactNode }) => <GCard style={{ marginBottom: 12 }}>{children}</GCard>;
+const Input = (p: { label: string; value: string; onChangeText: (v: string) => void; multiline?: boolean; maxLength?: number; keyboardType?: "default" | "decimal-pad" | "number-pad" | "phone-pad"; placeholder?: string }) => <Field {...p} />;
+const Button = ({ label, onPress, icon, disabled }: { label: string; onPress: () => void; icon?: string; disabled?: boolean; variant?: string }) => (
+  <View style={{ marginBottom: 10 }}>
+    <GButton variant="secondary" label={label} onPress={onPress} icon={icon as GIconName} disabled={disabled} />
+  </View>
+);
+const Chip = ({ label, on, onPress }: { label: string; on?: boolean; onPress: () => void }) => <GChip label={label} on={on} onPress={onPress} />;
+function ChipRow({ children }: { children: React.ReactNode }) {
+  const { row } = useGarageTheme();
+  return <View style={[row, { flexWrap: "wrap", gap: 8, marginBottom: 4 }]}>{children}</View>;
+}
+function Section({ title, children }: { n?: string; title: string; children: React.ReactNode }) {
+  const { align } = useGarageTheme();
+  return (
+    <View style={{ marginTop: 20 }}>
+      <GText style={[gType.label, { fontWeight: "800", marginBottom: 10 }, align]}>{title}</GText>
+      {children}
+    </View>
+  );
+}
+
 
 /**
  * All state and rules of the tow request form (validation, address lookup, location). The full screen

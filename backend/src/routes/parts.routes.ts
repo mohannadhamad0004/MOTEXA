@@ -5,7 +5,7 @@ import { prisma } from "../prisma.js";
 import { isCategory } from "../catalogCategories.js";
 import { CONDITIONS, PART_TYPES } from "../partAttributes.js";
 import { requireAuth, requirePartsAdmin, requirePartsProvider } from "../middleware/auth.middleware.js";
-import { type ParsedUpload, filePath, parseUpload, removeStoredFiles, storeFile } from "../uploads/providerFiles.js";
+import { MIN_PHOTO_BYTES, type ParsedUpload, hasPhoto, filePath, parseUpload, removeStoredFiles, storeFile } from "../uploads/providerFiles.js";
 import { requireApprovedProvider } from "../services/provider-onboarding.js";
 import { checklist, loadApp } from "../services/provider-onboarding.js";
 
@@ -29,6 +29,9 @@ const fail = (res: any, label: string, error: unknown) => {
   console.error(`${label}:`, error);
   return res.status(500).json({ success: false, message: "Internal server error." });
 };
+/** Admin overrides are told apart from the provider's own changes: the action gets an ADMIN_ prefix and details.byAdmin is set. */
+const acted = (res: any, action: string) => (res.locals.asAdmin ? `ADMIN_${action}` : action);
+const adminMark = (res: any) => (res.locals.asAdmin ? { byAdmin: true } : {});
 const log = (actorId: string, action: string, targetId: string, details: object = {}) =>
   prisma.auditLog.create({ data: { actorId, action, targetId, details } });
 
@@ -90,12 +93,20 @@ const shapeShop = (s: ShopRow, history: HistoryItem[]) => ({
   categories: s.categories,
   verificationStatus: s.verificationStatus,
   rejectionReason: s.rejectionReason,
+  // the storefront photo (a private document: only admins and the shop get this path)
+  storefrontUri: (() => {
+    const f = s.files.find((x) => x.docKind === "STOREFRONT_PHOTO" || x.label === "STOREFRONT_PHOTO");
+    return f ? filePath(f) : null;
+  })(),
   documents: s.files.map((f) => ({ kind: f.label ?? "Document", fileName: f.originalName, uri: filePath(f) })),
   history,
 });
 
 const withFiles = { files: true, fitments: { orderBy: { position: "asc" } } } as const;
 type ProductRow = Prisma.PartsProductGetPayload<{ include: typeof withFiles }>;
+/** The product's real photo (same rule as hasPhoto). A dev seed tile or other tiny image is never handed out as the product image. */
+const realPhoto = (p: Pick<ProductRow, "files">) =>
+  p.files.find((f) => f.purpose === "PRODUCT_IMAGE" && f.visibility === "PUBLIC" && f.mimeType.startsWith("image/") && f.sizeBytes >= MIN_PHOTO_BYTES);
 const shapeProduct = (p: ProductRow) => ({
   id: p.id,
   shopId: p.shopId,
@@ -111,7 +122,7 @@ const shapeProduct = (p: ProductRow) => ({
   isHidden: p.isHidden,
   hiddenReason: p.hiddenReason,
   imageUri: (() => {
-    const f = p.files.find((x) => x.purpose === "PRODUCT_IMAGE");
+    const f = realPhoto(p);
     return f ? filePath(f) : null;
   })(),
   fitments: p.fitments.map((f) => ({ make: f.make, model: f.model, yearFrom: f.yearFrom, yearTo: f.yearTo, ...(f.trim ? { trim: f.trim } : {}) })),
@@ -217,12 +228,19 @@ const approved = [...provider, requireApprovedProvider];
 function parseImage(body: any): { image: ParsedUpload | null } | { error: string } {
   if (body?.image === undefined || body.image === null) return { image: null };
   const p = parseUpload(body.image, "product-image");
-  return "error" in p ? { error: `Product image: ${p.error}` } : { image: p.file };
+  if ("error" in p) return { error: `Product image: ${p.error}` };
+  if (p.file.buffer.length < MIN_PHOTO_BYTES) return { error: "Product image: this image is too small to be a real product photo." };
+  return { image: p.file };
 }
 
-async function myShop(res: any) {
+/**
+ * The shop a request works on. A provider always gets the shop linked to their own login. The admin routes below reuse the
+ * same handlers with res.locals.asAdmin = true (set only AFTER requirePartsAdmin passed): there the shop is the one named in
+ * the URL, so a Parts Admin can act on any parts shop, and a provider can never reach another shop.
+ */
+async function myShop(res: any, req?: any) {
   const user = res.locals.authUser as { id: string };
-  const s = await loadShop({ userId: user.id });
+  const s = res.locals.asAdmin && req ? await loadShop({ id: idParam(req.params.id) }) : await loadShop({ userId: user.id });
   if (!s) bad(res, 404, "No parts shop is linked to this account.");
   return s;
 }
@@ -231,6 +249,16 @@ async function myShop(res: any) {
 const REJECTED_MSG = "Your shop application was rejected. You cannot add or edit products.";
 
 async function ownProduct(req: any, res: any) {
+  if (res.locals.asAdmin) {
+    // admin: the product by id, in whichever shop it belongs to
+    const found = await prisma.partsProduct.findUnique({ where: { id: idParam(req.params.id) }, include: withFiles });
+    if (!found) {
+      bad(res, 404, "Product not found.");
+      return null;
+    }
+    const shop = await loadShop({ id: found.shopId });
+    return shop ? { shop, product: found } : null;
+  }
   const s = await myShop(res);
   if (!s) return null;
   const p = await prisma.partsProduct.findFirst({ where: { id: idParam(req.params.id), shopId: s.id }, include: withFiles });
@@ -295,13 +323,13 @@ router.get("/parts/me/products/:id", ...provider, async (req, res) => {
   }
 });
 
-router.post("/parts/me/products", ...approved, async (req, res) => {
+const createProduct = async (req: any, res: any) => {
   const written: string[] = [];
   try {
     const actor = res.locals.authUser as { id: string };
-    const s = await myShop(res);
+    const s = await myShop(res, req);
     if (!s) return;
-    if (s.verificationStatus === "REJECTED") return bad(res, 403, REJECTED_MSG);
+    if (!res.locals.asAdmin && s.verificationStatus === "REJECTED") return bad(res, 403, REJECTED_MSG);
     const parsed = parseProduct(req.body, true);
     if ("error" in parsed) return bad(res, 400, parsed.error);
     const d = parsed.data as ProductFields;
@@ -335,7 +363,7 @@ router.post("/parts/me/products", ...approved, async (req, res) => {
         include: withFiles,
       });
       await tx.auditLog.create({
-        data: { actorId: actor.id, action: "PARTS_PRODUCT_CREATED", targetId: created.id, details: { name: created.name, partNumber: created.partNumber } },
+        data: { actorId: actor.id, action: acted(res, "PARTS_PRODUCT_CREATED"), targetId: created.id, details: { name: created.name, partNumber: created.partNumber, shopId: s.id, ...adminMark(res) } },
       });
       return created;
     });
@@ -344,15 +372,16 @@ router.post("/parts/me/products", ...approved, async (req, res) => {
     await removeStoredFiles(written);
     return fail(res, "Parts product create error", e);
   }
-});
+};
+router.post("/parts/me/products", ...approved, createProduct);
 
-router.patch("/parts/me/products/:id", ...approved, async (req, res) => {
+const editProduct = async (req: any, res: any) => {
   const written: string[] = [];
   try {
     const actor = res.locals.authUser as { id: string };
     const own = await ownProduct(req, res);
     if (!own) return;
-    if (own.shop.verificationStatus === "REJECTED") return bad(res, 403, REJECTED_MSG);
+    if (!res.locals.asAdmin && own.shop.verificationStatus === "REJECTED") return bad(res, 403, REJECTED_MSG);
     // Only content fields are read from the body; isHidden/hiddenReason can never be set here.
     const img = parseImage(req.body);
     if ("error" in img) return bad(res, 400, img.error);
@@ -404,7 +433,7 @@ router.patch("/parts/me/products/:id", ...approved, async (req, res) => {
         where: { id: p.id },
         data: { ...data, ...(data.partNumber ? { partNumberNormalized: normalizePart(data.partNumber) } : {}) },
       });
-      await tx.auditLog.create({ data: { actorId: actor.id, action: "PARTS_PRODUCT_EDITED", targetId: p.id, details: { fields: changed } } });
+      await tx.auditLog.create({ data: { actorId: actor.id, action: acted(res, "PARTS_PRODUCT_EDITED"), targetId: p.id, details: { fields: changed, shopId: p.shopId, ...adminMark(res) } } });
     });
     if (oldImage) await removeStoredFiles([oldImage.storageKey]); // exactly the replaced file
     const fresh = await prisma.partsProduct.findUniqueOrThrow({ where: { id: p.id }, include: withFiles });
@@ -413,7 +442,8 @@ router.patch("/parts/me/products/:id", ...approved, async (req, res) => {
     await removeStoredFiles(written);
     return fail(res, "Parts product update error", e);
   }
-});
+};
+router.patch("/parts/me/products/:id", ...approved, editProduct);
 
 router.delete("/parts/me/products/:id", ...approved, async (req, res) => {
   try {
@@ -452,7 +482,7 @@ router.get("/parts/fitment-search", requireAuth, async (req, res) => {
       ...(year !== null ? { yearFrom: { lte: year }, yearTo: { gte: year } } : {}),
     };
     const products = await prisma.partsProduct.findMany({
-      where: { isHidden: false, shop: { verificationStatus: "APPROVED" }, fitments: { some: match } },
+      where: { isHidden: false, shop: { verificationStatus: "APPROVED" }, ...hasPhoto, fitments: { some: match } },
       include: { ...withFiles, fitments: { where: match, orderBy: { position: "asc" } }, shop: { select: { id: true, shopName: true, city: true } } },
       orderBy: [{ name: "asc" }, { createdAt: "asc" }],
       take: 50,
@@ -543,7 +573,12 @@ router.get("/admin/parts/shops/:id", ...admin, async (req, res) => {
     const s = await loadShop({ id: idParam(req.params.id) });
     if (!s) return bad(res, 404, "Shop not found.");
     const products = await prisma.partsProduct.findMany({ where: { shopId: s.id }, include: withFiles, orderBy: { createdAt: "asc" } });
-    return res.json({ success: true, shop: shapeShop(s, await shopHistory(s)), products: products.map(shapeProduct) });
+    // Admins see EVERY product of the shop. These two flags say what a customer would get: a real photo is required (see hasPhoto).
+    return res.json({
+      success: true,
+      shop: shapeShop(s, await shopHistory(s)),
+      products: products.map((p) => ({ ...shapeProduct(p), hasPhoto: !!realPhoto(p), customerVisible: s.verificationStatus === "APPROVED" && !p.isHidden && !!realPhoto(p), updatedAt: p.updatedAt, createdAt: p.createdAt })),
+    });
   } catch (e) {
     return fail(res, "Parts admin shop error", e);
   }
@@ -608,6 +643,140 @@ router.patch("/admin/parts/products/:id/visibility", ...admin, async (req, res) 
     return res.json({ success: true, product: shapeProduct(updated) });
   } catch (e) {
     return fail(res, "Parts product visibility error", e);
+  }
+});
+
+// =====================================================================
+// Admin full control of the PARTS domain (SUPER_ADMIN or ADMIN + MANAGE_SPARE_PARTS). Nothing here touches tow, mechanics,
+// other admins or permissions. No hard delete: products are unpublished with the visibility route above, never removed, and
+// document history is kept. Product writes reuse the provider handlers (same validation, same image and fitment rules);
+// every change is audited with an ADMIN_ action and details.byAdmin.
+// =====================================================================
+const adminAsAdmin = (_req: any, res: any, next: any) => {
+  res.locals.asAdmin = true;
+  next();
+};
+const adminWrite = [requireAuth, requirePartsAdmin, express.json({ limit: "25mb" }), adminAsAdmin];
+
+router.post("/admin/parts/shops/:id/products", ...adminWrite, createProduct);
+router.patch("/admin/parts/products/:id", ...adminWrite, editProduct);
+
+// One product with everything an admin needs: all fields, fitments, image and what a customer would get.
+router.get("/admin/parts/products/:id", ...admin, async (req, res) => {
+  try {
+    const p = await prisma.partsProduct.findUnique({ where: { id: idParam(req.params.id) }, include: { ...withFiles, shop: { select: { id: true, shopName: true, verificationStatus: true } } } });
+    if (!p) return bad(res, 404, "Product not found.");
+    const photo = !!realPhoto(p);
+    const { shop, ...rest } = p;
+    return res.json({
+      success: true,
+      product: { ...shapeProduct(rest as ProductRow), hasPhoto: photo, customerVisible: shop.verificationStatus === "APPROVED" && !p.isHidden && photo, createdAt: p.createdAt, updatedAt: p.updatedAt },
+      shop: { id: shop.id, name: shop.shopName, verificationStatus: shop.verificationStatus },
+    });
+  } catch (e) {
+    return fail(res, "Parts admin product error", e);
+  }
+});
+
+// Shop profile edit: only the fields a shop profile has. Account ownership, login, role and the approval status are not
+// editable here; the status keeps changing only through /decision, so editing never approves anything.
+router.patch("/admin/parts/shops/:id", ...admin, async (req, res) => {
+  try {
+    const actor = res.locals.authUser as { id: string };
+    const s = await loadShop({ id: idParam(req.params.id) });
+    if (!s) return bad(res, 404, "Shop not found.");
+    const b = req.body ?? {};
+    const has = (k: string) => Object.prototype.hasOwnProperty.call(b, k);
+    const data: Prisma.PartsShopProfileUpdateInput = {};
+    const need = (k: "shopName" | "phone" | "city", max: number, label: string) => {
+      const v = text(b[k], max);
+      if (!v) throw new Error(`${label} is required.`);
+      data[k] = v;
+    };
+    const opt = (k: "shopNameAr" | "brandName" | "branchName" | "ownerName" | "address" | "licenceNumber" | "workingHours" | "locationAddress", max: number) => {
+      const v = b[k];
+      if (v === null || v === "") data[k] = null;
+      else if (typeof v === "string") data[k] = v.trim().slice(0, max) || null;
+      else throw new Error(`${k} must be text.`);
+    };
+    try {
+      if (has("shopName")) need("shopName", 200, "Shop name");
+      if (has("phone")) {
+        need("phone", 24, "Phone");
+        if (!/^\+?[0-9 ()-]{8,24}$/.test(String(data.phone))) throw new Error("Phone number is not valid.");
+      }
+      if (has("city")) need("city", 80, "City");
+      for (const k of ["shopNameAr", "brandName", "branchName", "ownerName", "address", "licenceNumber", "workingHours", "locationAddress"] as const) if (has(k)) opt(k, k === "address" || k === "locationAddress" ? 300 : 200);
+    } catch (e) {
+      return bad(res, 400, (e as Error).message);
+    }
+    if (has("categories")) {
+      if (!Array.isArray(b.categories) || !b.categories.every(isCategory)) return bad(res, 400, "categories must be a list of valid category keys.");
+      data.categories = [...new Set(b.categories as string[])];
+    }
+    if (has("baseLat") || has("baseLng")) {
+      const lat = b.baseLat;
+      const lng = b.baseLng;
+      if (lat === null && lng === null) {
+        data.baseLat = null;
+        data.baseLng = null;
+      } else if (typeof lat === "number" && typeof lng === "number" && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+        // an unchanged point is not a change (and keeps its original source, e.g. "current_location")
+        if (lat !== s.baseLat || lng !== s.baseLng) {
+          data.baseLat = lat;
+          data.baseLng = lng;
+          data.locationSource = "manual";
+        }
+      } else return bad(res, 400, "Location needs both a latitude and a longitude (or both empty).");
+    }
+    const fields = [...new Set(Object.keys(data).map((k) => (k === "baseLat" || k === "baseLng" || k === "locationSource" ? "location" : k)))];
+    if (!fields.length) return bad(res, 400, "Nothing to update.");
+    await prisma.$transaction([prisma.partsShopProfile.update({ where: { id: s.id }, data }), log(actor.id, "ADMIN_PARTS_SHOP_EDITED", s.id, { fields, byAdmin: true })]);
+    const fresh = (await loadShop({ id: s.id }))!;
+    return res.json({ success: true, shop: shapeShop(fresh, await shopHistory(fresh)) });
+  } catch (e) {
+    return fail(res, "Parts admin shop edit error", e);
+  }
+});
+
+// Replace the storefront photo (a private shop document). Same image rules as the signup upload; the old file is removed.
+router.put("/admin/parts/shops/:id/storefront", ...adminWrite, async (req, res) => {
+  let key = "";
+  try {
+    const actor = res.locals.authUser as { id: string };
+    const s = await loadShop({ id: idParam(req.params.id) });
+    if (!s) return bad(res, 404, "Shop not found.");
+    const up = parseUpload(req.body?.image, "storefront");
+    if ("error" in up) return bad(res, 400, up.error);
+    if (up.file.buffer.length < MIN_PHOTO_BYTES) return bad(res, 400, "This image is too small to be a real storefront photo.");
+    key = await storeFile(up.file);
+    const old = s.files.filter((f) => f.docKind === "STOREFRONT_PHOTO" || f.label === "STOREFRONT_PHOTO");
+    await prisma.$transaction(async (tx) => {
+      if (old.length) await tx.providerFile.deleteMany({ where: { id: { in: old.map((o) => o.id) } } });
+      await tx.providerFile.create({
+        data: {
+          ownerUserId: s.userId,
+          purpose: "PARTS_SHOP_DOCUMENT",
+          visibility: "PRIVATE",
+          partsShopId: s.id,
+          label: "STOREFRONT_PHOTO",
+          docKind: "STOREFRONT_PHOTO",
+          originalName: up.file.originalName,
+          mimeType: up.file.mimeType,
+          sizeBytes: up.file.buffer.length,
+          storageKey: key,
+          sha256: up.file.sha256,
+          reviewStatus: "ACCEPTED",
+        },
+      });
+      await tx.auditLog.create({ data: { actorId: actor.id, action: "ADMIN_PARTS_STOREFRONT_REPLACED", targetId: s.id, details: { byAdmin: true } } });
+    });
+    await removeStoredFiles(old.map((o) => o.storageKey));
+    const fresh = (await loadShop({ id: s.id }))!;
+    return res.json({ success: true, shop: shapeShop(fresh, await shopHistory(fresh)) });
+  } catch (e) {
+    if (key) await removeStoredFiles([key]);
+    return fail(res, "Parts admin storefront error", e);
   }
 });
 

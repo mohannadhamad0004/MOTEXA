@@ -1,130 +1,116 @@
+import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
-import { Pressable, View } from "react-native";
-import { Icon, InspectionCheck, Mono, Pill, Row, Section, SimplePage, StickyActionBar } from "../../../components/blueprint";
-import { Card } from "../../../components/ui/Card";
-import { Async, EmptyState, Notice } from "../../../components/ui/Feedback";
-import { ImageTile } from "../../../components/ui/Rows";
-import { Text } from "../../../components/ui/Text";
+import { View } from "react-native";
+import { Card, Chip, EmptyState, ErrorState, GarageHero, GaragePage, GButton, GIcon, GText, ListRow, Note, Section, SkeletonBlock, StatusChip, StickyActionBar } from "../../../components/garage";
 import { cityLabel } from "../../../core/constants/cities";
 import { distanceLabel, locationMemory } from "../../../core/constants/geo";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { catalogService } from "../../../features/catalog/catalogService";
 import { MAPS_AVAILABLE, PinMap } from "../../../features/shared/maps";
-import { OperationalBadge, useTruckLabels } from "../../../features/tow/truckBits";
-import { useTheme } from "../../../theme/useTheme";
+import { useTruckLabels } from "../../../features/tow/truckBits";
+import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 
 // Customers see approved trucks only, never plate numbers, documents or contact data.
 export default function CustomerTowCompany() {
-  const { c, row, align } = useTheme();
+  const { g, row, align } = useGarageTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, isArabic } = useL();
   const { type } = useTruckLabels();
   const state = useLoad(() => catalogService.getTowCompany(id, locationMemory.current), [id]);
   const co = state.data?.company;
+  const trucks = state.data?.trucks ?? [];
+  const opLabel = { AVAILABLE: t("Available", "متاحة"), BUSY: t("Busy", "مشغولة"), OUT_OF_SERVICE: t("Out of service", "خارج الخدمة") };
+  const opTone = { AVAILABLE: "success", BUSY: "warning", OUT_OF_SERVICE: "neutral" } as const;
 
   return (
-    <SimplePage
-      kind="tow"
-      back="/customer/tow"
-      tl="TOW / 02"
-      tr={co ? cityLabel(co.city, isArabic) : undefined}
-      title={co?.name ?? t("Tow company", "شركة سحب")}
+    <GaragePage
       onRefresh={state.reload}
       refreshing={state.loading && !!state.data}
-      footer={
+      hero={
+        <GarageHero
+          variant="detail"
+          onBack={() => (router.canGoBack() ? router.back() : router.navigate("/customer/tow"))}
+          title={co?.name ?? t("Tow company", "شركة سحب")}
+          line={co ? [cityLabel(co.city, isArabic), co.address].filter(Boolean).join(" · ") : undefined}
+        >
+          {co ? (
+            <View style={[row, { gap: 6, flexWrap: "wrap" }]}>
+              <StatusChip tone="success" icon="shield-checkmark" label={t("Verified by MOTEXA", "موثّقة من موتكسا")} />
+              <StatusChip tone={co.availableTrucks > 0 ? "success" : "neutral"} label={co.availableTrucks > 0 ? `${co.availableTrucks} ${co.availableTrucks === 1 ? t("truck free", "شاحنة متاحة") : t("trucks free", "شاحنات متاحة")}` : t("No free truck", "لا توجد شاحنة متاحة")} />
+            </View>
+          ) : null}
+        </GarageHero>
+      }
+      bottom={
         co ? (
-          <StickyActionBar
-            icon="tow"
-            label={t("Request a tow", "اطلب سحبًا")}
-            disabled={co.availableTrucks === 0}
-            onPress={() => router.push({ pathname: "/customer/towrequest/new", params: { companyId: co.id } })}
-          />
+          <StickyActionBar note={co.availableTrucks === 0 ? t("No truck is available right now. Please try again later or choose another company.", "لا توجد شاحنة متاحة الآن. حاول لاحقًا أو اختر شركة أخرى.") : undefined}>
+            <GButton flex icon="car-outline" label={t("Request a tow", "اطلب سحبًا")} disabled={co.availableTrucks === 0} onPress={() => router.push({ pathname: "/customer/towrequest/new", params: { companyId: co.id } })} />
+          </StickyActionBar>
         ) : undefined
       }
     >
-      <Async state={state}>
-        {({ company, trucks }) => (
-          <>
-            <Text style={[{ color: c.soft, fontSize: 14, marginTop: 8 }, align]}>
-              {t("Based in", "المقر في")} {cityLabel(company.city, isArabic)}
-              {company.address ? ` · ${company.address}` : ""}
-            </Text>
-            {company.distanceKm != null ? (
-              <Text style={[{ color: c.bronze, fontSize: 13, fontWeight: "700", marginTop: 8 }, align]}>
-                {distanceLabel(company.distanceKm, isArabic)}
-                {company.distanceSource === "city" ? ` · ${t("from the city centre", "من مركز المدينة")}` : ""}
-              </Text>
-            ) : null}
+      {state.error && !co ? (
+        <ErrorState text={state.error} onRetry={state.reload} retryLabel={t("Retry", "إعادة المحاولة")} />
+      ) : !co ? (
+        <SkeletonBlock height={200} radius={gShape.card} />
+      ) : (
+        <View>
+          <Card pad={12}>
+            {co.distanceKm != null ? <ListRow icon="navigate-outline" title={distanceLabel(co.distanceKm, isArabic)} sub={co.distanceSource === "city" ? t("from the city centre", "من مركز المدينة") : undefined} /> : null}
+            <ListRow divider={co.distanceKm != null} icon="map-outline" title={t("View on map", "عرض على الخريطة")} onPress={() => router.push({ pathname: "/customer/tow/map", params: { focus: co.id } })} />
+          </Card>
 
-            <View style={[row, { flexWrap: "wrap", gap: 8, marginTop: 12 }]}>
-              <Pill icon={<InspectionCheck size={14} color={c.bronze} />}>{t("Verified by MOTEXA", "موثّقة من موتكسا")}</Pill>
-              {[...new Set(trucks.map((x) => x.type))].map((k) => (
-                <Pill key={k} icon={<Icon name="tow" size={14} color={c.bronze} />}>{type[k]}</Pill>
-              ))}
+          {MAPS_AVAILABLE && co.baseLat !== null && co.baseLng !== null ? (
+            <View style={{ marginTop: 12, borderRadius: gShape.card, overflow: "hidden" }}>
+              <PinMap point={{ lat: co.baseLat, lng: co.baseLng }} height={160} />
             </View>
+          ) : null}
 
-            <Pressable accessibilityRole="link" onPress={() => router.push({ pathname: "/customer/tow/map", params: { focus: company.id } })} hitSlop={8} style={[row, { alignItems: "center", gap: 6, minHeight: 44 }]}>
-              <Icon name="map" size={16} color={c.bronze} />
-              <Text style={{ color: c.bronze, fontSize: 13, fontWeight: "700" }}>{t("Show on map", "عرض على الخريطة")}</Text>
-            </Pressable>
-            {company.availableTrucks === 0 ? (
-              <View style={{ marginTop: 16 }}>
-                <Notice icon="information-circle-outline">{t("No truck is available right now. Please try again later or choose another company.", "لا توجد شاحنة متاحة الآن. حاول لاحقًا أو اختر شركة أخرى.")}</Notice>
+          <Section title={t("The company", "الشركة")}>
+            <Card pad={12}>
+              {co.description ? <GText style={[gType.bodySm, align, { paddingVertical: 6 }]}>{co.description}</GText> : null}
+              {co.workingHours ? <ListRow divider={!!co.description} icon="time-outline" title={t("Working hours", "ساعات العمل")} sub={co.workingHours} /> : null}
+              <ListRow divider icon="car-outline" title={t("Approved trucks", "الشاحنات المعتمدة")} end={<GText style={[gType.label, { writingDirection: "ltr" }]}>{String(co.approvedTrucks)}</GText>} />
+              <ListRow divider icon="checkmark-circle-outline" title={t("Available now", "المتاحة الآن")} end={<GText style={[gType.label, { writingDirection: "ltr" }]}>{String(co.availableTrucks)}</GText>} />
+            </Card>
+            {co.serviceCities.length ? (
+              <View style={[row, { flexWrap: "wrap", gap: 8, marginTop: 12 }]}>
+                {co.serviceCities.map((x) => (
+                  <Chip key={x} icon="location-outline" label={cityLabel(x, isArabic)} />
+                ))}
               </View>
             ) : null}
+          </Section>
 
-            {MAPS_AVAILABLE && company.baseLat !== null && company.baseLng !== null ? (
-              <View style={{ marginTop: 20 }}>
-                <PinMap point={{ lat: company.baseLat, lng: company.baseLng }} height={160} />
-              </View>
-            ) : null}
-
-            <Section n="01" title={t("The company", "الشركة")}>
-              {company.description ? <Text style={[{ color: c.ink, fontSize: 14, lineHeight: 22, marginBottom: 8 }, align]}>{company.description}</Text> : null}
-              {company.workingHours ? <Row label={t("Working hours", "ساعات العمل")} value={company.workingHours} /> : null}
-              <Row label={t("Approved trucks", "الشاحنات المعتمدة")} value={String(company.approvedTrucks)} mono />
-              <Row label={t("Available now", "المتاحة الآن")} value={String(company.availableTrucks)} mono />
-              {company.serviceCities.length ? (
-                <View style={[row, { flexWrap: "wrap", gap: 8, marginTop: 16 }]}>
-                  {company.serviceCities.map((x) => (
-                    <Pill key={x} icon={<Icon name="pin" size={14} color={c.bronze} />}>{cityLabel(x, isArabic)}</Pill>
-                  ))}
-                </View>
-              ) : null}
-            </Section>
-
-            <Section n="02" title={`${t("Trucks", "الشاحنات")} (${trucks.length})`}>
-              {trucks.length ? (
-                trucks.map((tr) => (
-                  <Card key={tr.id}>
-                    <View style={[row, { gap: 14, alignItems: "center" }]}>
-                      <ImageTile uri={tr.photoUri} icon="car-sport-outline" size={64} />
-                      <View style={{ flex: 1 }}>
-                        <Text numberOfLines={1} style={[{ color: c.ink, fontSize: 15, fontWeight: "700" }, align]}>{type[tr.type]}</Text>
-                        <Text numberOfLines={1} style={[{ color: c.soft, fontSize: 12, marginTop: 3 }, align]}>
-                          {[tr.make, tr.model, tr.year].filter(Boolean).join(" ")}
-                        </Text>
-                        {tr.maxWeightKg ? (
-                          <View style={[row, { gap: 4, marginTop: 3, alignItems: "baseline" }]}>
-                            <Text style={{ color: c.soft, fontSize: 12 }}>{t("Carries vehicles up to", "تحمل مركبات حتى")}</Text>
-                            <Mono size={12}>{`${tr.maxWeightKg} ${isArabic ? "كغ" : "kg"}`}</Mono>
-                          </View>
-                        ) : null}
+          <Section title={`${t("Trucks", "الشاحنات")} (${trucks.length})`}>
+            {trucks.length ? (
+              <View style={{ gap: 12 }}>
+                {trucks.map((tr) => (
+                  <Card key={tr.id} pad={10}>
+                    <View style={[row, { gap: 12, alignItems: "center" }]}>
+                      <View style={{ width: 76, height: 76, borderRadius: gShape.small, overflow: "hidden", backgroundColor: g.tint, alignItems: "center", justifyContent: "center" }}>
+                        {tr.photoUri ? <Image source={{ uri: tr.photoUri }} contentFit="cover" style={{ width: "100%", height: "100%" }} /> : <GIcon name="car-outline" size={26} />}
+                      </View>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <GText numberOfLines={1} style={[gType.label, { fontWeight: "800" }, align]}>{type[tr.type]}</GText>
+                        <GText soft numberOfLines={1} style={[gType.caption, align]}>{[tr.make, tr.model, tr.year].filter(Boolean).join(" ")}</GText>
+                        {tr.maxWeightKg ? <GText soft numberOfLines={1} style={[gType.caption, align]}>{`${t("Carries vehicles up to", "تحمل مركبات حتى")} ${tr.maxWeightKg} ${isArabic ? "كغ" : "kg"}`}</GText> : null}
+                        <View style={{ marginTop: 4 }}>
+                          <StatusChip tone={opTone[tr.operationalStatus]} label={opLabel[tr.operationalStatus]} />
+                        </View>
                       </View>
                     </View>
-                    <View style={[row, { marginTop: 12 }]}>
-                      <OperationalBadge value={tr.operationalStatus} />
-                    </View>
                   </Card>
-                ))
-              ) : (
-                <EmptyState icon="car-outline" text={t("This company has no approved trucks yet.", "لا توجد شاحنات معتمدة لهذه الشركة بعد.")} />
-              )}
-            </Section>
-          </>
-        )}
-      </Async>
-    </SimplePage>
+                ))}
+              </View>
+            ) : (
+              <EmptyState photo="empty.search" text={t("This company has no approved trucks yet.", "لا توجد شاحنات معتمدة لهذه الشركة بعد.")} />
+            )}
+          </Section>
+          {co.availableTrucks === 0 ? <View style={{ marginTop: 12 }}><Note>{t("Trucks become available again when a job ends. Pull down to refresh.", "تصبح الشاحنات متاحة مجددًا عند انتهاء مهمة. اسحب للأسفل للتحديث.")}</Note></View> : null}
+        </View>
+      )}
+    </GaragePage>
   );
 }

@@ -6,6 +6,7 @@ import { StatTiles } from "../../../components/blueprint";
 import { DashboardLayout } from "../../../components/layout/DashboardLayout";
 import { SearchBar } from "../../../components/ui/Input";
 import { Segmented } from "../../../components/ui/Chip";
+import { Chip } from "../../../features/catalog/catalogBits";
 import { ImageTile } from "../../../components/ui/Rows";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
@@ -20,7 +21,7 @@ import { VerificationBadge } from "../../../features/shared/blocks";
 import { formatPrice } from "../../../core/constants/money";
 import { asActor, useSessionUser } from "../../../features/shared/session";
 
-type Filter = "ALL" | "IN" | "LOW" | "OUT";
+type Filter = "ALL" | "IN" | "LOW" | "OUT" | "PHOTO";
 
 export default function MyParts() {
   const { c: col } = useTheme();
@@ -40,7 +41,8 @@ export default function MyParts() {
           const n = q.trim().toLowerCase();
           const rows = products.filter(
             (p) =>
-              (filter === "ALL" || stockState(p.stock) === filter) &&
+              // imageUri is set only for a real photo (server rule), so "no imageUri" = photo required
+              (filter === "ALL" || (filter === "PHOTO" ? !p.imageUri : stockState(p.stock) === filter)) &&
               (!n || [p.name, p.brand, p.partNumber].some((x) => x.toLowerCase().includes(n)))
           );
           return (
@@ -72,6 +74,16 @@ export default function MyParts() {
                   { key: "OUT", label: t("Out", "نفد") },
                 ]}
               />
+              {products.some((x) => !x.imageUri) ? (
+                <View style={[row, { marginTop: -8, marginBottom: 16 }]}>
+                  <Chip
+                    icon="image-outline"
+                    label={`${t("Needs photo", "بحاجة إلى صورة")} (${products.filter((x) => !x.imageUri).length})`}
+                    on={filter === "PHOTO"}
+                    onPress={() => setFilter(filter === "PHOTO" ? "ALL" : "PHOTO")}
+                  />
+                </View>
+              ) : null}
               {!rows.length ? (
                 <EmptyState icon="cube-outline" text={products.length ? t("No parts match.", "لا توجد قطع مطابقة.") : t("You have no parts yet. Add your first part.", "لا توجد قطع بعد. أضف أول قطعة.")} />
               ) : (
@@ -99,6 +111,13 @@ export default function MyParts() {
                         <Notice tone="danger" icon="eye-off-outline">
                           {t("Hidden by MOTEXA", "مخفية بواسطة MOTEXA")}
                           {p.hiddenReason ? "\n" + p.hiddenReason : ""}
+                        </Notice>
+                      </View>
+                    )}
+                    {!p.hidden && !p.imageUri && (
+                      <View style={{ marginTop: 12 }}>
+                        <Notice tone="warning" icon="image-outline">
+                          {t("Product photo required: customers can't see this part until it has a real photo. Tap to add one.", "صورة المنتج مطلوبة: لا يرى العملاء هذه القطعة حتى تضاف لها صورة حقيقية. اضغط لإضافتها.")}
                         </Notice>
                       </View>
                     )}

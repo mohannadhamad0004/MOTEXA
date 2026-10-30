@@ -1,4 +1,9 @@
 import { Router } from "express";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { expiredDocuments } from "../services/truck-eligibility.js";
+import { PROVIDER_STORAGE_DIR, hasPhoto } from "../uploads/providerFiles.js";
+import { type SaleFields, discountPct, productBadges, saleWas } from "../services/catalog-badges.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
 import { CATALOG_GROUPS, categoriesOfGroup, isCategory, isGroup } from "../catalogCategories.js";
@@ -34,7 +39,8 @@ const stockState = (n: number) => (n <= 0 ? "OUT" : n <= LOW_STOCK_AT ? "LOW" : 
 // ---- parts ----
 
 /** Only products a customer may ever see. */
-const visible: Prisma.PartsProductWhereInput = { isHidden: false, shop: { verificationStatus: "APPROVED" } };
+/** A customer never sees a part without a real photo (see hasPhoto). Products without one stay available to the provider and the admin. */
+const visible: Prisma.PartsProductWhereInput = { isHidden: false, shop: { verificationStatus: "APPROVED" }, ...hasPhoto };
 
 const productInclude = {
   files: { where: { purpose: "PRODUCT_IMAGE" as const } },
@@ -57,17 +63,21 @@ const shapeProduct = (p: ProductRow, withDescription = false) => ({
   imageUri: p.files[0] ? `/files/public/${p.files[0].id}` : null,
   fitments: p.fitments.map((f) => ({ make: f.make, model: f.model, yearFrom: f.yearFrom, yearTo: f.yearTo, ...(f.trim ? { trim: f.trim } : {}) })),
   shop: { id: p.shop.id, name: p.shop.shopName, city: p.shop.city },
+  compareAtPrice: saleWas(p),
+  warrantyMonths: p.warrantyMonths,
+  badges: productBadges(p),
 });
 
-const PART_SORTS = ["relevance", "price_asc", "price_desc", "newest"] as const;
+const PART_SORTS = ["relevance", "price_asc", "price_desc", "newest", "discount"] as const;
 type PartSort = (typeof PART_SORTS)[number];
-type SortRow = { id: string; name: string; stock: number; price: Prisma.Decimal; createdAt: Date };
+type SortRow = SaleFields & { id: string; name: string; stock: number; createdAt: Date };
 /** Every order ends with name, then id, so pages never overlap or skip when prices or dates tie. */
 const PART_ORDER: Record<PartSort, (a: SortRow, b: SortRow) => number> = {
   relevance: (a, b) => Number(b.stock > 0) - Number(a.stock > 0),
   price_asc: (a, b) => Number(a.price) - Number(b.price),
   price_desc: (a, b) => Number(b.price) - Number(a.price),
   newest: (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+  discount: (a, b) => discountPct(b) - discountPct(a),
 };
 
 /** A list parameter: "a,b" or repeated ?x=a&x=b. Blank items are dropped, at most 20 are kept. */
@@ -82,14 +92,16 @@ const listParam = (v: unknown) =>
 const money = (v: unknown) => (typeof v === "string" && /^\d+(\.\d{1,2})?$/.test(v.trim()) && Number(v) <= 9_999_999_999.99 ? Number(v) : null);
 
 // ?q= &make= &model= &year= &shopId= &category=KEY &group=KEY &sort=relevance|price_asc|price_desc|newest &page=   (model/year need make)
-//   &condition=NEW,USED  &partType=OEM|AFTERMARKET  &brand=Bosch,Mann  &minPrice= &maxPrice=  &inStock=1  &city=Nablus (shop city, from the city list)
+//   &condition=NEW,USED  &partType=OEM|AFTERMARKET  &brand=Bosch,Mann  &minPrice= &maxPrice=  &inStock=1  &onSale=1  &city=Nablus (shop city, from the city list)
+//   &sort=discount (biggest running discount first)
 router.get("/parts", async (req, res) => {
   try {
     const q = text(req.query.q, 100);
     const make = text(req.query.make, 60);
     const model = text(req.query.model, 60);
+    const trim = text(req.query.trim, 60); // engine / variant, only with a make
     const yearRaw = typeof req.query.year === "string" ? req.query.year : "";
-    if ((model || yearRaw) && !make) return bad(res, 400, "make is required when model or year is given.");
+    if ((model || yearRaw || trim) && !make) return bad(res, 400, "make is required when model or year is given.");
     if (yearRaw && !/^\d{4}$/.test(yearRaw)) return bad(res, 400, "year must be a 4-digit number.");
     const pageRaw = typeof req.query.page === "string" ? req.query.page : "1";
     const page = Number(pageRaw);
@@ -118,6 +130,8 @@ router.get("/parts", async (req, res) => {
     if (minPrice !== null && maxPrice !== null && minPrice > maxPrice) return bad(res, 400, "minPrice cannot be more than maxPrice.");
     const inStockRaw = typeof req.query.inStock === "string" ? req.query.inStock : "";
     if (inStockRaw && !["1", "true", "0", "false"].includes(inStockRaw)) return bad(res, 400, "inStock must be 1 or 0.");
+    const onSaleRaw = typeof req.query.onSale === "string" ? req.query.onSale : "";
+    if (onSaleRaw && !["1", "true", "0", "false"].includes(onSaleRaw)) return bad(res, 400, "onSale must be 1 or 0.");
     const cityRaw = typeof req.query.city === "string" ? req.query.city.trim() : "";
     const city = cityRaw ? canonicalCity(cityRaw) : null;
     if (cityRaw && !city) return bad(res, 400, "Unknown city. Choose from the city list.");
@@ -132,22 +146,35 @@ router.get("/parts", async (req, res) => {
     if (brands.length) and.push({ OR: brands.map((b) => ({ brand: { equals: b, mode: "insensitive" as const } })) });
     if (minPrice !== null || maxPrice !== null) and.push({ price: { ...(minPrice !== null ? { gte: minPrice } : {}), ...(maxPrice !== null ? { lte: maxPrice } : {}) } });
     if (inStockRaw === "1" || inStockRaw === "true") and.push({ stock: { gt: 0 } });
+    // same rule as saleWas(): a "was" price above the price, inside the optional window
+    if (onSaleRaw === "1" || onSaleRaw === "true") {
+      const now = new Date();
+      and.push(
+        { compareAtPrice: { gt: prisma.partsProduct.fields.price } },
+        { OR: [{ saleStartsAt: null }, { saleStartsAt: { lte: now } }] },
+        { OR: [{ saleEndsAt: null }, { saleEndsAt: { gt: now } }] }
+      );
+    }
     if (city) and.push({ shop: { city: { equals: city, mode: "insensitive" } } });
+    // Search: every word must match something real of the product: its name, brand, part / OEM number (formatting ignored,
+    // 4+ characters, no fuzzy matching) or the make / model of one of its fitment records (so "W202 brake pads" = model W202 + name).
+    for (const w of q ? normText(q).split(" ").filter(Boolean).slice(0, 6) : []) {
+      const np = normalizePart(w);
+      and.push({
+        OR: [
+          { name: { contains: w, mode: "insensitive" } },
+          { brand: { contains: w, mode: "insensitive" } },
+          ...(w.length >= 3 ? [{ partNumber: { contains: w, mode: "insensitive" as const } }] : []),
+          ...(np.length >= 4 ? [{ partNumberNormalized: { contains: np } }] : []),
+          { fitments: { some: { OR: [{ makeNormalized: { contains: w } }, { modelNormalized: { contains: w } }] } } },
+        ],
+      });
+    }
     const where: Prisma.PartsProductWhereInput = {
       ...visible,
       ...(shopId ? { shopId } : {}),
       ...(category ? { category } : {}),
       ...(and.length ? { AND: and } : {}),
-      ...(q
-        ? {
-            OR: [
-              { name: { contains: q, mode: "insensitive" } },
-              { brand: { contains: q, mode: "insensitive" } },
-              { partNumber: { contains: q, mode: "insensitive" } },
-              ...(norm ? [{ partNumberNormalized: { contains: norm } }] : []),
-            ],
-          }
-        : {}),
       ...(make
         ? {
             fitments: {
@@ -155,6 +182,7 @@ router.get("/parts", async (req, res) => {
                 makeNormalized: normText(make),
                 ...(model ? { modelNormalized: normText(model) } : {}),
                 ...(year !== null ? { yearFrom: { lte: year }, yearTo: { gte: year } } : {}),
+                ...(trim ? { trim: { equals: trim, mode: "insensitive" as const } } : {}),
               },
             },
           }
@@ -163,7 +191,7 @@ router.get("/parts", async (req, res) => {
 
     // ponytail: ids are sorted in memory (default: in stock first, then name) because Prisma can't order by "stock > 0".
     // Fine for a catalog of thousands; switch to a raw ORDER BY (stock > 0) DESC, name when it grows.
-    const all = await prisma.partsProduct.findMany({ where, select: { id: true, name: true, stock: true, price: true, createdAt: true } });
+    const all = await prisma.partsProduct.findMany({ where, select: { id: true, name: true, stock: true, price: true, createdAt: true, compareAtPrice: true, saleStartsAt: true, saleEndsAt: true } });
     all.sort((a, b) => PART_ORDER[sort](a, b) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
     const ids = all.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((p) => p.id);
     const rows = await prisma.partsProduct.findMany({ where: { id: { in: ids } }, include: productInclude });
@@ -234,10 +262,18 @@ router.get("/shops", async (_req, res) => {
   try {
     const shops = await prisma.partsShopProfile.findMany({
       where: { verificationStatus: "APPROVED" },
-      select: { id: true, shopName: true, city: true, _count: { select: { products: { where: { isHidden: false } } } } },
+      select: {
+        id: true, shopName: true, shopNameAr: true, brandName: true, branchName: true, city: true, categories: true, baseLat: true, baseLng: true, workingHours: true,
+        files: { where: { purpose: "PARTS_SHOP_DOCUMENT", docKind: "STOREFRONT_PHOTO" }, select: { id: true }, take: 1 },
+        _count: { select: { products: { where: { isHidden: false, ...hasPhoto } } } },
+      },
     });
     const list = shops
-      .map((s) => ({ id: s.id, name: s.shopName, city: s.city, productCount: s._count.products }))
+      .map((s) => ({
+        id: s.id, name: s.shopName, nameAr: s.shopNameAr, brandName: s.brandName, branchName: s.branchName, city: s.city, productCount: s._count.products,
+        categories: s.categories.filter(isCategory), baseLat: round3(s.baseLat), baseLng: round3(s.baseLng), storefrontUri: s.files[0] ? `/catalog/shops/${s.id}/storefront` : null,
+        hours: s.workingHours,
+      }))
       .sort((a, b) => b.productCount - a.productCount || a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
     return res.json({ success: true, shops: list });
   } catch (e) {
@@ -245,21 +281,91 @@ router.get("/shops", async (_req, res) => {
   }
 });
 
+// One APPROVED shop, public fields only. The storefront photo is a private verification file: only that photo (never another
+// document) is streamed, to logged-in customers, by /shops/:id/storefront. The map point is rounded to ~110 m like tow companies.
 router.get("/shops/:id", async (req, res) => {
   try {
     const s = await prisma.partsShopProfile.findFirst({
       where: { id: idParam(req.params.id), verificationStatus: "APPROVED" },
-      select: { id: true, shopName: true, city: true, address: true },
+      select: {
+        id: true, shopName: true, shopNameAr: true, brandName: true, branchName: true, city: true, address: true, locationAddress: true, categories: true, baseLat: true, baseLng: true, workingHours: true,
+        files: { where: { purpose: "PARTS_SHOP_DOCUMENT", docKind: "STOREFRONT_PHOTO" }, select: { id: true }, take: 1 },
+      },
     });
     if (!s) return bad(res, 404, "Shop not found.");
-    const products = await prisma.partsProduct.findMany({ where: { shopId: s.id, isHidden: false }, include: productInclude, orderBy: { name: "asc" }, take: 100 });
+    const products = await prisma.partsProduct.findMany({ where: { shopId: s.id, isHidden: false, ...hasPhoto }, include: productInclude, orderBy: { name: "asc" }, take: 100 });
     return res.json({
       success: true,
-      shop: { id: s.id, name: s.shopName, city: s.city, address: s.address },
+      shop: {
+        id: s.id,
+        name: s.shopName,
+        nameAr: s.shopNameAr,
+        brandName: s.brandName,
+        branchName: s.branchName,
+        city: s.city,
+        address: s.address ?? s.locationAddress,
+        categories: s.categories.filter(isCategory),
+        baseLat: round3(s.baseLat),
+        baseLng: round3(s.baseLng),
+        storefrontUri: s.files[0] ? `/catalog/shops/${s.id}/storefront` : null,
+        workingHours: s.workingHours,
+      },
       products: products.map((p) => shapeProduct(p)),
     });
   } catch (e) {
     return fail(res, "Catalog shop error", e);
+  }
+});
+
+router.get("/shops/:id/storefront", async (req, res) => {
+  try {
+    const f = await prisma.providerFile.findFirst({
+      where: { purpose: "PARTS_SHOP_DOCUMENT", docKind: "STOREFRONT_PHOTO", partsShop: { id: idParam(req.params.id), verificationStatus: "APPROVED" } },
+      select: { storageKey: true, mimeType: true },
+    });
+    if (!f || !f.mimeType.startsWith("image/")) return bad(res, 404, "Photo not found.");
+    const bytes = await readFile(path.join(PROVIDER_STORAGE_DIR, path.basename(f.storageKey)));
+    res.setHeader("Content-Type", f.mimeType);
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Cache-Control", "private, max-age=300");
+    return res.send(bytes);
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return bad(res, 404, "Photo not found.");
+    return fail(res, "Catalog storefront error", e);
+  }
+});
+
+// Vehicles that really appear in the fitment data of visible products (no separate vehicle catalogue exists). ?q= is split into
+// words and every word must be part of the make or the model, so "mercedes w202" finds make Mercedes, model W202. Each row
+// carries the exact make / model strings the /parts filter expects, the years covered and how many parts fit.
+router.get("/vehicles", async (req, res) => {
+  try {
+    const words = normText(text(req.query.q, 60) ?? "").split(" ").filter(Boolean).slice(0, 4);
+    const rows = await prisma.partsFitment.findMany({
+      where: {
+        product: visible,
+        AND: words.map((w) => ({ OR: [{ makeNormalized: { contains: w } }, { modelNormalized: { contains: w } }] })),
+      },
+      select: { make: true, model: true, makeNormalized: true, modelNormalized: true, yearFrom: true, yearTo: true, trim: true, productId: true },
+      take: 3000,
+    });
+    const by = new Map<string, { make: string; model: string; yearFrom: number; yearTo: number; products: Set<string>; trims: Set<string> }>();
+    for (const r of rows) {
+      const k = `${r.makeNormalized}|${r.modelNormalized}`;
+      const v = by.get(k) ?? { make: r.make, model: r.model, yearFrom: r.yearFrom, yearTo: r.yearTo, products: new Set<string>(), trims: new Set<string>() };
+      v.yearFrom = Math.min(v.yearFrom, r.yearFrom);
+      v.yearTo = Math.max(v.yearTo, r.yearTo);
+      v.products.add(r.productId);
+      if (r.trim) v.trims.add(r.trim);
+      by.set(k, v);
+    }
+    const vehicles = [...by.values()]
+      .map((v) => ({ make: v.make, model: v.model, yearFrom: v.yearFrom, yearTo: v.yearTo, partCount: v.products.size, trims: [...v.trims].sort((a, b) => a.localeCompare(b)) }))
+      .sort((a, b) => b.partCount - a.partCount || a.make.localeCompare(b.make) || a.model.localeCompare(b.model))
+      .slice(0, 15);
+    return res.json({ success: true, vehicles });
+  } catch (e) {
+    return fail(res, "Catalog vehicles error", e);
   }
 });
 
@@ -323,7 +429,7 @@ router.get("/tow/companies", async (req, res) => {
         workingHours: true,
         baseLat: true,
         baseLng: true,
-        trucks: { where: { verificationStatus: "APPROVED" }, select: { truckType: true, operationalStatus: true } },
+        trucks: { where: { verificationStatus: "APPROVED", archivedAt: null }, select: { truckType: true, operationalStatus: true, files: { select: { purpose: true, expiresAt: true } } } },
       },
     });
     const rows = companies
@@ -341,7 +447,8 @@ router.get("/tow/companies", async (req, res) => {
         baseLng: round3(c.baseLng),
         ...(point ? distanceTo(point, c) : {}),
         approvedTrucks: c.trucks.length,
-        availableTrucks: c.trucks.filter((t) => t.operationalStatus === "AVAILABLE").length,
+        // a truck with an expired document is not available for new work
+        availableTrucks: c.trucks.filter((t) => t.operationalStatus === "AVAILABLE" && expiredDocuments(t.files).length === 0).length,
         truckTypes: [...new Set(c.trucks.map((t) => t.truckType))],
       }))
       .filter((c) => !availableOnly || c.availableTrucks > 0)
@@ -373,7 +480,7 @@ router.get("/tow/companies/:id", async (req, res) => {
         baseLat: true,
         baseLng: true,
         trucks: {
-          where: { verificationStatus: "APPROVED" },
+          where: { verificationStatus: "APPROVED", archivedAt: null },
           select: {
             id: true,
             truckType: true,
@@ -382,7 +489,7 @@ router.get("/tow/companies/:id", async (req, res) => {
             model: true,
             year: true,
             operationalStatus: true,
-            files: { where: { purpose: "TRUCK_PHOTO" }, select: { id: true } },
+            files: { select: { id: true, purpose: true, expiresAt: true } },
           },
           orderBy: { createdAt: "asc" },
         },
@@ -390,7 +497,9 @@ router.get("/tow/companies/:id", async (req, res) => {
     });
     if (!c || c.trucks.length === 0) return bad(res, 404, "Company not found.");
     // Available trucks first. No plate numbers: customers never see them.
-    const trucks = [...c.trucks].sort((a, b) => Number(b.operationalStatus === "AVAILABLE") - Number(a.operationalStatus === "AVAILABLE"));
+    // a truck with an expired document is shown as not available (it cannot take new work)
+    const usable = (t: (typeof c.trucks)[number]) => t.operationalStatus === "AVAILABLE" && expiredDocuments(t.files).length === 0;
+    const trucks = [...c.trucks].sort((a, b) => Number(usable(b)) - Number(usable(a)));
     return res.json({
       success: true,
       company: {
@@ -405,7 +514,7 @@ router.get("/tow/companies/:id", async (req, res) => {
         baseLng: round3(c.baseLng),
         ...(point ? distanceTo(point, c) : {}),
         approvedTrucks: trucks.length,
-        availableTrucks: trucks.filter((t) => t.operationalStatus === "AVAILABLE").length,
+        availableTrucks: trucks.filter(usable).length,
       },
       trucks: trucks.map((t) => ({
         id: t.id,
@@ -414,8 +523,8 @@ router.get("/tow/companies/:id", async (req, res) => {
         model: t.model,
         year: t.year,
         maxWeightKg: t.maxWeightKg,
-        photoUri: t.files[0] ? `/files/public/${t.files[0].id}` : null,
-        operationalStatus: t.operationalStatus,
+        photoUri: t.files.find((f) => f.purpose === "TRUCK_PHOTO") ? `/files/public/${t.files.find((f) => f.purpose === "TRUCK_PHOTO")!.id}` : null,
+        operationalStatus: usable(t) || t.operationalStatus !== "AVAILABLE" ? t.operationalStatus : "OUT_OF_SERVICE",
       })),
     });
   } catch (e) {

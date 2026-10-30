@@ -5,6 +5,7 @@ import { Text } from "../../components/ui/Text";
 import { useTheme } from "../../theme/useTheme";
 import { View } from "react-native";
 import { VerificationBadge } from "../shared/blocks";
+import { Notice } from "../../components/ui/Feedback";
 import type { Operational, Truck, TruckType } from "./towService";
 
 export function useTruckLabels() {
@@ -30,6 +31,26 @@ export function OperationalBadge({ value }: { value: Operational }) {
   return <Badge tone={k.tone} icon={k.icon} label={k.label} prefix={t("Status", "الحالة")} />;
 }
 
+/** Which documents are expired, as "Vehicle registration (expired 2026-01-01)". */
+export const expiredList = (t: (en: string, ar: string) => string, truck: Truck) =>
+  (truck.expiredDocuments ?? []).map((d) => `${docLabel(t, d.kind)} (${t("expired", "منتهي")} ${d.expiresAt.slice(0, 10)})`);
+
+/** Truthful reason a truck gets no new work: its OWN documents expired. The company and its other trucks keep working. */
+export function ExpiredNotice({ truck }: { truck: Truck }) {
+  const { t, align } = useL();
+  const list = expiredList(t, truck);
+  if (!list.length) return null;
+  return (
+    <Notice tone="danger" icon="alert-circle-outline">
+      {t("Truck documents expired: this truck cannot take new work until they are renewed.", "انتهت صلاحية مستندات الشاحنة: لا يمكنها استلام أعمال جديدة حتى يتم تجديدها.")}
+      {"\n"}
+      {list.join(t(", ", "، "))}
+      {"\n"}
+      {t("Your company and your other trucks are not affected. Jobs already accepted continue.", "شركتك وشاحناتك الأخرى غير متأثرة. الأعمال المقبولة سابقًا تستمر.")}
+    </Notice>
+  );
+}
+
 export function TruckSummary({ truck }: { truck: Truck }) {
   const { c: col } = useTheme();
   const { type } = useTruckLabels();
@@ -47,6 +68,7 @@ export function TruckSummary({ truck }: { truck: Truck }) {
         <View style={[row, { flexWrap: "wrap", gap: 6, marginTop: 8 }]}>
           <VerificationBadge value={truck.verification} prefix={t("Approval", "الاعتماد")} />
           <OperationalBadge value={truck.operational} />
+          {truck.expiredDocuments?.length ? <Badge tone="danger" icon="alert-circle-outline" label={t("Documents expired", "مستندات منتهية")} /> : null}
         </View>
       </View>
     </View>

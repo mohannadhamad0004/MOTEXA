@@ -115,7 +115,6 @@ export function TowHero({
   play,
   available,
   back,
-  scene,
 }: {
   tag: string;
   title: string;
@@ -126,8 +125,6 @@ export function TowHero({
   play: boolean;
   available?: boolean;
   back?: Parameters<typeof BackButton>[0]["fallback"];
-  /** a different end-side scene (Parts); default is the tow scene. Receives the replay key and whether to play. */
-  scene?: (key: number, play: boolean) => ReactNode;
 }) {
   const insets = useSafeAreaInsets();
   const { c, row, isArabic, align } = useTheme();
@@ -205,7 +202,7 @@ export function TowHero({
             ) : null}
           </Animated.View>
           <Pressable accessibilityLabel={title} onPress={() => setReplay((n) => n + 1)} style={{ width: 134, height: 96, alignSelf: "flex-end", marginBottom: 6 }}>
-            {scene ? scene(replay, play || replay > 0) : <TowScene key={replay} play={play || replay > 0} available={!!available} />}
+            <TowScene key={replay} play={play || replay > 0} available={!!available} />
           </Pressable>
         </View>
         <Animated.View style={[row, { gap: 10 }, ctaStyle]}>

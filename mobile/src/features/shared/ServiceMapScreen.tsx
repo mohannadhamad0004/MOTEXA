@@ -1,23 +1,23 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Linking, Pressable, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Chip, CrossFade, FadeSwitch, HScroll, Icon, IconName, InspectionCheck, Mono, OptionSheet, Pill, PrimaryButton, RoadLoader, SearchField, Stamp, Steps } from "../../components/blueprint";
+import { Chip as GChip, GButton, GIcon, GIconName, GText, Note, OptionSheet, Rail, SearchBar, StatusChip, Tone } from "../../components/garage";
 import { useDelayed, useReduced } from "../../motion";
-import { Notice } from "../../components/ui/Feedback";
-import { Text } from "../../components/ui/Text";
 import { CITIES, cityCentre, cityLabel } from "../../core/constants/cities";
-import { Point, locationMemory } from "../../core/constants/geo";
+import { findCategory, labelOf } from "../../core/constants/categories";
+import { Point, haversineKm, locationMemory, mapsDirectionsUrl } from "../../core/constants/geo";
 import { goBack } from "../../core/hooks/nav";
 import { useL } from "../../core/hooks/useL";
 import { alpha } from "../../theme/tokens";
-import { useTheme } from "../../theme/useTheme";
-import { TowCompanyRow, catalogService } from "../catalog/catalogService";
-import { SkillBadges, MechanicStatusBadge, useSkillLabel } from "../mechanics/mechanicBits";
+import { gShape, useGarageTheme } from "../../theme/garage";
+import { CatalogShopRow, TowCompanyRow, catalogService } from "../catalog/catalogService";
+import { useMechanicStatusLabels, useSkillLabel } from "../mechanics/mechanicBits";
 import { MechanicRequestFields, useMechanicRequestForm } from "../mechanics/MechanicRequestForm";
 import { CustomerMechanicRequest, MECHANIC_SKILLS, MechanicRow, REFRESH_MS, customerMechanicRequests, mechanicCatalog } from "../mechanics/mechanicsService";
 import { TowRequestFields, useTowRequestForm } from "../requests/TowRequestForm";
-import { TowStatusBadge } from "../requests/requestBits";
+import { mechTone, SkillChips, towTone } from "../requests/garageBits";
+import { useTowStatusLabels } from "../requests/requestBits";
 import { CustomerTowRequest, customerTowRequests } from "../requests/requestsService";
 import type { TruckType } from "../tow/towService";
 import { useTruckLabels } from "../tow/truckBits";
@@ -26,10 +26,102 @@ import { MAPS_AVAILABLE, ServiceMap, ServicePin } from "./maps";
 import { LocationProblem, useCurrentLocation } from "./useCurrentLocation";
 import { RouteSummary, useRoute } from "./useRoute";
 
-type Mode = "tow" | "mechanic";
+// ---- garage adapters: this customer-only screen keeps its structure; these give it the "Mo's Garage" look ----
+type IconName = "back" | "search" | "pin" | "chev" | "spark" | "arrow";
+const ICON: Record<IconName, GIconName> = { back: "arrow-back", search: "search-outline", pin: "navigate-outline", chev: "chevron-forward", spark: "flash-outline", arrow: "arrow-forward" };
+/** Garage colours under the names this screen was written with. */
+function useTheme() {
+  const { g, row, align, isArabic } = useGarageTheme();
+  return {
+    row,
+    align,
+    isArabic,
+    c: { ink: g.ink, soft: g.soft, line: g.line, bronze: g.accentText, danger: g.danger, dangerBorder: g.danger, page: g.page, sheet: g.card, field: g.card, btn: g.accent, btnFg: g.onAccent },
+  };
+}
+const Text = GText;
+function Icon({ name, size = 20, color }: { name: IconName; size?: number; color?: string }) {
+  return <GIcon name={ICON[name]} size={size} color={color} flip={name === "back" || name === "chev" || name === "arrow"} />;
+}
+function Chip({ label, on, onPress, icon }: { label: string; on?: boolean; onPress?: () => void; icon?: IconName }) {
+  return <GChip label={label} on={on} onPress={onPress} icon={icon ? ICON[icon] : undefined} />;
+}
+const HScroll = ({ children }: { children: ReactNode }) => <Rail gap={8}>{children}</Rail>;
+function SearchField({ value, onChangeText, placeholder }: { value: string; onChangeText: (v: string) => void; placeholder: string; compact?: boolean }) {
+  return <SearchBar value={value} onChangeText={onChangeText} placeholder={placeholder} />;
+}
+function PrimaryButton({ label, onPress, variant, disabled, loading, style, icon }: { label: string; onPress: () => void; variant?: "outline" | "danger"; disabled?: boolean; loading?: boolean; road?: boolean; style?: object; icon?: IconName }) {
+  return <GButton label={label} onPress={onPress} variant={variant === "outline" ? "secondary" : variant === "danger" ? "danger" : "primary"} disabled={disabled} busy={loading} style={style} icon={icon ? ICON[icon] : undefined} />;
+}
+function Pill({ children, icon }: { children: ReactNode; icon?: ReactNode }) {
+  const { g, row } = useGarageTheme();
+  return (
+    <View style={[row, { alignSelf: "flex-start", alignItems: "center", gap: 6, minHeight: 28, paddingHorizontal: 10, borderRadius: gShape.pill, backgroundColor: g.tint }]}>
+      {icon}
+      <GText style={{ fontSize: 12, lineHeight: 16, fontWeight: "700" }}>{children}</GText>
+    </View>
+  );
+}
+const InspectionCheck = ({ size = 14 }: { size?: number; color?: string }) => <GIcon name="checkmark-circle" size={size} />;
+const Stamp = ({ label }: { label: string }) => <StatusChip tone="success" icon="shield-checkmark" label={label} />;
+function Mono({ children, size = 12, bold }: { children: ReactNode; color?: string; size?: number; bold?: boolean }) {
+  return <GText soft style={{ fontSize: size, lineHeight: size + 5, fontWeight: bold ? "800" : "600", writingDirection: "ltr" }}>{children}</GText>;
+}
+function RoadLoader({ label, compact }: { label?: string; compact?: boolean }) {
+  const { g, row } = useGarageTheme();
+  return (
+    <View style={[row, { alignItems: "center", gap: 10 }]}>
+      <ActivityIndicator color={g.accent} />
+      {label && !compact ? <GText soft style={{ fontSize: 13 }}>{label}</GText> : null}
+    </View>
+  );
+}
+const Notice = ({ children, tone }: { children: ReactNode; tone?: "danger"; icon?: string }) => <Note tone={tone ?? "accent"} icon={tone === "danger" ? "alert-circle-outline" : "information-circle-outline"}>{children}</Note>;
+const CrossFade = ({ children }: { children: ReactNode; k?: string }) => <>{children}</>;
+const FadeSwitch = ({ show, children, style }: { show: boolean; children: ReactNode; style?: object }) => (show ? <View style={style}>{children}</View> : null);
+const SkillBadges = ({ skills, max }: { skills: string[]; max?: number }) => {
+  const label = useSkillLabel();
+  return <SkillChips skills={skills} max={max} label={label} />;
+};
+function TowStatusBadge({ value }: { value: CustomerTowRequest["status"] }) {
+  const label = useTowStatusLabels();
+  return <StatusChip tone={towTone(value)} label={label[value]} />;
+}
+function MechanicStatusBadge({ value }: { value: CustomerMechanicRequest["status"] }) {
+  const label = useMechanicStatusLabels();
+  return <StatusChip tone={mechTone(value) as Tone} label={label[value]} />;
+}
+/** Progress of an open request: one segment per step, filled up to `index` (danger when it failed). */
+function Steps({ labels, index, tone }: { labels: string[]; index: number; tone?: "danger" | "success" | "brand" }) {
+  const { g, row } = useGarageTheme();
+  const fill = tone === "danger" ? g.danger : tone === "success" ? g.success : g.accent;
+  return (
+    <View style={{ gap: 6 }}>
+      <View style={[row, { gap: 6 }]}>
+        {labels.map((l, i) => (
+          <View key={l + i} style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: i <= index ? fill : g.line }} />
+        ))}
+      </View>
+      <GText style={{ fontSize: 12, lineHeight: 16, fontWeight: "800", color: fill }}>{labels[index]}</GText>
+    </View>
+  );
+}
+
+/** which places this map shows: one service, or "all" (the Home map: every layer, switched on / off with chips) */
+type Mode = "tow" | "mechanic" | "parts" | "all";
 type Step = "select" | "form" | "route";
+type Kind = "tow" | "mech" | "shop";
+const KINDS: Kind[] = ["tow", "shop", "mech"];
+const MODE_KINDS: Record<Mode, Kind[]> = { tow: ["tow"], mechanic: ["mech"], parts: ["shop"], all: KINDS };
+/** one colour + glyph per place type: the pins, the Home chips and the list markers use the same */
+export const PLACE_COLOR: Record<Kind, string> = { tow: "#B5541C", shop: "#2F6B8A", mech: "#3D7A3A" };
+const PLACE_ICON: Record<Kind, GIconName> = { tow: "car-outline", shop: "storefront-outline", mech: "construct-outline" };
+const HOME: Record<Mode, string> = { tow: "/customer/tow", mechanic: "/customer/mechanics", parts: "/customer/parts", all: "/customer" };
+/** the Home map's layer chips, remembered while the app is open (memory only) */
+const homeLayers: Record<Kind, boolean> = { tow: true, shop: true, mech: true };
 
 type Provider = {
+  kind: Kind;
   id: string;
   name: string;
   city: string;
@@ -40,6 +132,7 @@ type Provider = {
   distanceKm: number | null;
   tow?: TowCompanyRow;
   mech?: MechanicRow;
+  shop?: CatalogShopRow;
 };
 
 type Req = { kind: "tow"; data: CustomerTowRequest } | { kind: "mech"; data: CustomerMechanicRequest };
@@ -62,9 +155,32 @@ function OverlayButton({ icon, label, onPress, on = false }: { icon: IconName; l
   );
 }
 
+/** Home map filter: a check chip per place type, in its pin colour (so the chips are the legend), with the real count. */
+function LayerChip({ kind, label, count, on, onPress }: { kind: Kind; label: string; count: number | null; on: boolean; onPress: () => void }) {
+  const { g, row } = useGarageTheme();
+  return (
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: on }}
+      accessibilityLabel={count === null ? label : `${label}, ${count}`}
+      onPress={onPress}
+      style={({ pressed }) => [
+        row,
+        { minHeight: 44, alignItems: "center", gap: 8, paddingHorizontal: 10, borderRadius: gShape.pill, borderWidth: 1.5, borderColor: on ? PLACE_COLOR[kind] : g.line, backgroundColor: on ? g.card : "transparent", opacity: pressed ? 0.86 : 1 },
+      ]}
+    >
+      <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: on ? PLACE_COLOR[kind] : g.line, alignItems: "center", justifyContent: "center" }}>
+        <GIcon name={on ? "checkmark" : PLACE_ICON[kind]} size={14} color="#FFFFFF" />
+      </View>
+      <GText style={{ fontSize: 13, lineHeight: 18, fontWeight: "700", color: on ? g.ink : g.soft }}>{count === null ? label : `${label} · ${count}`}</GText>
+    </Pressable>
+  );
+}
+
 /**
- * Full-screen map page for tow companies and mechanics: search and filter, pick a pin, request inside the panel,
- * then watch the request and its route. One component for both routes (customer/tow/map, customer/mechanics/map).
+ * Full-screen map page, one screen for every customer map: tow companies (customer/tow/map), mechanics (customer/mechanics/map),
+ * parts shops (customer/parts/map) and all three together (customer/map, with layer chips). Search and filter, pick a pin;
+ * tow / mechanic: request inside the panel, then watch the request and its route; shop: shop card, "View shop", "Directions".
  */
 export function ServiceMapScreen({ mode }: { mode: Mode }) {
   const { c, row, align } = useTheme();
@@ -75,7 +191,8 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
   const { focus: focusParam } = useLocalSearchParams<{ focus?: string }>();
   const { type: truckLabel } = useTruckLabels();
   const skillLabel = useSkillLabel();
-  const isTow = mode === "tow";
+  const kinds = MODE_KINDS[mode];
+  const isAll = mode === "all";
 
   // ---- filters + data ----
   const [q, setQ] = useState("");
@@ -87,6 +204,8 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
   const loc = useCurrentLocation();
   const [tow, setTow] = useState<TowCompanyRow[]>([]);
   const [mech, setMech] = useState<MechanicRow[]>([]);
+  const [shops, setShops] = useState<CatalogShopRow[]>([]);
+  const [layers, setLayersState] = useState<Record<Kind, boolean>>(() => (isAll ? { ...homeLayers } : { tow: true, shop: true, mech: true }));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const seq = useRef(0);
@@ -102,19 +221,16 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
   const radarOn = useDelayed(loc.locating || searching, 300);
 
   useEffect(() => {
-    if (isTow) return;
+    if (mode !== "mechanic") return;
     mechanicCatalog.skills().then((s) => setSkills(s.filter((x) => x.count > 0).map((x) => x.key))).catch(() => {});
-  }, [isTow]);
+  }, [mode]);
 
   const load = useCallback(async () => {
     const mine = ++seq.current;
     setLoading(true);
     setError(null);
     try {
-      if (isTow) {
-        const r = await catalogService.listTowCompanies({ truckType: truckType ?? undefined, availableOnly, sort: me ? "nearest" : "available", ...(me ? { lat: me.lat, lng: me.lng } : {}) });
-        if (mine === seq.current) setTow(r);
-      } else {
+      const mechs = async () => {
         // the map shows every match, so all pages are read (the list is small)
         const all: MechanicRow[] = [];
         for (let page = 1; page <= 10; page++) {
@@ -122,7 +238,17 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
           all.push(...r.mechanics);
           if (!r.hasMore) break;
         }
-        if (mine === seq.current) setMech(all);
+        return all;
+      };
+      const [tw, mc, sh] = await Promise.all([
+        kinds.includes("tow") ? catalogService.listTowCompanies({ truckType: truckType ?? undefined, availableOnly, sort: me ? "nearest" : "available", ...(me ? { lat: me.lat, lng: me.lng } : {}) }) : null,
+        kinds.includes("mech") ? mechs() : null,
+        kinds.includes("shop") ? catalogService.getShops() : null,
+      ]);
+      if (mine === seq.current) {
+        if (tw) setTow(tw);
+        if (mc) setMech(mc);
+        if (sh) setShops(sh);
       }
     } catch (e: any) {
       if (mine === seq.current) setError(e.message);
@@ -132,32 +258,47 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
         setLoadCount((n) => n + 1);
       }
     }
-  }, [isTow, truckType, availableOnly, skill, me]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, truckType, availableOnly, skill, me]);
   useEffect(() => {
     const h = setTimeout(load, 250);
     return () => clearTimeout(h);
   }, [load]);
 
-  const providers = useMemo<Provider[]>(() => {
-    const needle = q.trim().toLowerCase();
-    const hit = (...parts: (string | null | undefined)[]) => !needle || parts.some((x) => x && x.toLowerCase().includes(needle));
-    const out: Provider[] = [];
-    if (isTow) {
+  // every place that can be put on the map, whatever the search and the Home layer chips say
+  const located = useMemo<(Provider & { words: string[] })[]>(() => {
+    const out: (Provider & { words: string[] })[] = [];
+    if (kinds.includes("tow"))
       for (const x of tow) {
-        if (!hit(x.name, x.city, cityLabel(x.city, true), ...x.serviceCities)) continue;
         const base = x.baseLat !== null && x.baseLng !== null ? { lat: x.baseLat, lng: x.baseLng } : null;
         const at = base ?? cityCentre(x.city);
-        if (at) out.push({ id: x.id, name: x.name, city: x.city, ...at, approx: !base, distanceKm: x.distanceKm ?? null, tow: x });
+        if (at) out.push({ kind: "tow", id: x.id, name: x.name, city: x.city, ...at, approx: !base, distanceKm: x.distanceKm ?? null, tow: x, words: [x.name, x.city, cityLabel(x.city, true), ...x.serviceCities] });
       }
-    } else {
+    if (kinds.includes("mech"))
       for (const x of mech) {
-        if (!hit(x.name, x.workshopName, x.city, cityLabel(x.city, true))) continue;
         const at = cityCentre(x.city); // MOTEXA stores no workshop coordinates yet: the pin is the city centre
-        if (at) out.push({ id: x.id, name: x.name, city: x.city, ...at, approx: true, distanceKm: x.distanceKm ?? null, mech: x });
+        if (at) out.push({ kind: "mech", id: x.id, name: x.name, city: x.city, ...at, approx: true, distanceKm: x.distanceKm ?? null, mech: x, words: [x.name, x.workshopName, x.city, cityLabel(x.city, true)] });
       }
-    }
+    if (kinds.includes("shop"))
+      for (const x of shops) {
+        // only a really stored point (rounded ~110 m by the server); a shop without one is never placed at its city centre
+        if (x.baseLat === null || x.baseLng === null) continue;
+        const at = { lat: x.baseLat, lng: x.baseLng };
+        out.push({ kind: "shop", id: x.id, name: (isArabic && x.nameAr) || x.name, city: x.city, ...at, approx: false, distanceKm: me ? haversineKm(me, at) : null, shop: x, words: [x.name, x.nameAr ?? "", x.brandName ?? "", x.city, cityLabel(x.city, true)] });
+      }
     return out;
-  }, [isTow, tow, mech, q]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, tow, mech, shops, me, isArabic]);
+  const counts = useMemo(() => {
+    const n: Record<Kind, number> = { tow: 0, shop: 0, mech: 0 };
+    for (const p of located) n[p.kind]++;
+    return n;
+  }, [located]);
+  const providers = useMemo<Provider[]>(() => {
+    const needle = q.trim().toLowerCase();
+    return located.filter((p) => layers[p.kind] && (!needle || p.words.some((x) => x && x.toLowerCase().includes(needle))));
+  }, [located, layers, q]);
+  const noLayer = isAll && !KINDS.some((k) => layers[k]);
 
   // ---- selection + request flow ----
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -177,6 +318,15 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
   const [mapFailed, setMapFailed] = useState(false);
 
   const selected = step === "select" ? providers.find((p) => p.id === selectedId) ?? null : reqProvider ?? providers.find((p) => p.id === selectedId) ?? null;
+  // the request flow follows the selected place (the Home map mixes tow companies and mechanics)
+  const isTow = selected ? selected.kind === "tow" : mode === "tow";
+  const toggleLayer = (k: Kind) => {
+    const next = { ...layers, [k]: !layers[k] };
+    Object.assign(homeLayers, next);
+    setLayersState(next);
+    // its panel closes with it
+    if (!next[k] && selected?.kind === k && step === "select") setSelectedId(null);
+  };
   const formProvider = { id: selected?.id ?? "", city: selected?.city ?? "" };
   const towForm = useTowRequestForm(formProvider);
   const mechForm = useMechanicRequestForm(formProvider);
@@ -205,7 +355,8 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
   const pickNearest = (list: Provider[]) => {
     const withKm = list.filter((p) => p.distanceKm !== null);
     if (!withKm.length) return null;
-    const pool = isTow && withKm.some((p) => (p.tow?.availableTrucks ?? 0) > 0) ? withKm.filter((p) => (p.tow?.availableTrucks ?? 0) > 0) : withKm;
+    const usable = (p: Provider) => p.kind !== "tow" || (p.tow?.availableTrucks ?? 0) > 0;
+    const pool = withKm.some(usable) ? withKm.filter(usable) : withKm;
     return [...pool].sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0))[0];
   };
   const nearMe = async () => {
@@ -261,7 +412,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
   }, [wantNearest, loading, me, providers]);
 
   const startForm = () => {
-    if (!selected) return;
+    if (!selected || selected.kind === "shop") return;
     setReqProvider(selected);
     setStep("form");
     setSnap("expanded");
@@ -350,15 +501,27 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
   const { route, loading: routing } = useRoute(step === "route" ? reqId : null, pickupPoint, toPoint);
 
   // ---- map props ----
-  const allPins: ServicePin[] = providers.map((p) => ({ id: p.id, name: p.name, lat: p.lat, lng: p.lng, kind: isTow ? "tow" : "mech", dim: isTow && (p.tow?.availableTrucks ?? 0) === 0 }));
-  const pins = step === "select" ? allPins : allPins.filter((p) => p.id === selected?.id).length ? allPins.filter((p) => p.id === selected?.id) : selected ? [{ id: selected.id, name: selected.name, lat: selected.lat, lng: selected.lng, kind: isTow ? "tow" : "mech", dim: false } as ServicePin] : [];
+  const pinOf = (p: Provider, dim: boolean): ServicePin => ({ id: p.id, name: p.name, lat: p.lat, lng: p.lng, kind: p.kind, dim, color: PLACE_COLOR[p.kind] });
+  const allPins: ServicePin[] = providers.map((p) => pinOf(p, p.kind === "tow" && (p.tow?.availableTrucks ?? 0) === 0));
+  const pins = step === "select" ? allPins : allPins.filter((p) => p.id === selected?.id).length ? allPins.filter((p) => p.id === selected?.id) : selected ? [pinOf(selected, false)] : [];
   const fit: [number, number][] =
     step === "select"
       ? [...pins.map((p) => [p.lat, p.lng] as [number, number]), ...(me ? [[me.lat, me.lng] as [number, number]] : [])]
       : [...(toPoint ? [[toPoint.lat, toPoint.lng] as [number, number]] : []), ...(pickupPoint ? [[pickupPoint.lat, pickupPoint.lng] as [number, number]] : [])];
-  const fitKey = step === "select" ? `sel:${isTow}:${pins.map((p) => p.id).join(",")}:${me ? 1 : 0}` : step === "form" ? `form:${selected?.id}:${pickupPoint ? 1 : 0}` : `route:${reqId}:${pickupPoint ? 1 : 0}`;
+  // the Home map does not re-fit when a layer chip is switched: only when the places themselves change
+  const fitKey = step === "select" ? `sel:${mode}:${(isAll ? located : pins).map((p) => p.id).join(",")}:${me ? 1 : 0}` : step === "form" ? `form:${selected?.id}:${pickupPoint ? 1 : 0}` : `route:${reqId}:${pickupPoint ? 1 : 0}`;
   const panelVisible = true;
   const pad = { top: topH, bottom: wide ? 0 : inset, left: wide && panelVisible && !isArabic ? SIDE_PANEL_WIDTH : 0, right: wide && panelVisible && isArabic ? SIDE_PANEL_WIDTH : 0 };
+
+  const titles: Record<Mode, string> = { tow: t("Tow map", "خريطة السحب"), mechanic: t("Mechanics map", "خريطة الميكانيكيين"), parts: t("Parts shops map", "خريطة متاجر القطع"), all: t("Map", "الخريطة") };
+  const searchHint: Record<Mode, string> = {
+    tow: t("Company name or city", "اسم الشركة أو المدينة"),
+    mechanic: t("Mechanic, workshop or city", "ميكانيكي أو ورشة أو مدينة"),
+    parts: t("Shop name or city", "اسم المتجر أو المدينة"),
+    all: t("Name or city", "الاسم أو المدينة"),
+  };
+  const nearbyTitle: Record<Mode, string> = { tow: t("Nearby towing", "سحب قريب"), mechanic: t("Nearby mechanics", "ميكانيكيون قريبون"), parts: t("Nearby shops", "متاجر قريبة"), all: t("Nearby places", "أماكن قريبة") };
+  const layerLabel: Record<Kind, string> = { tow: t("Tow trucks", "شاحنات السحب"), shop: t("Parts shops", "متاجر القطع"), mech: t("Mechanics", "الميكانيكيون") };
 
   // ---- overlay ----
   const startOffset = wide && panelVisible ? SIDE_PANEL_WIDTH + 12 : 12;
@@ -380,15 +543,24 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
       }}
     >
       <View style={[row, { alignItems: "center", gap: 10 }]}>
-        <OverlayButton icon="back" label={t("Back", "رجوع")} onPress={() => goBack(isTow ? "/customer/tow" : "/customer/mechanics")} />
-        <Text numberOfLines={1} style={[{ flex: 1, color: c.ink, fontSize: 20, fontWeight: "700" }, align]}>{isTow ? t("Tow map", "خريطة السحب") : t("Mechanics map", "خريطة الميكانيكيين")}</Text>
+        <OverlayButton icon="back" label={t("Back", "رجوع")} onPress={() => goBack(HOME[mode] as never)} />
+        <Text numberOfLines={1} style={[{ flex: 1, color: c.ink, fontSize: 20, fontWeight: "700" }, align]}>{titles[mode]}</Text>
         <OverlayButton icon="search" label={t("Search", "بحث")} on={showSearch || !!q} onPress={() => setShowSearch(!showSearch)} />
         <OverlayButton icon="pin" label={me ? t("Stop using my location", "إيقاف استخدام موقعي") : t("Use my location", "استخدم موقعي")} on={!!me} onPress={nearMe} />
       </View>
-      {showSearch || q ? <SearchField compact value={q} onChangeText={setQ} placeholder={isTow ? t("Company name or city", "اسم الشركة أو المدينة") : t("Mechanic, workshop or city", "ميكانيكي أو ورشة أو مدينة")} /> : null}
+      {showSearch || q ? <SearchField compact value={q} onChangeText={setQ} placeholder={searchHint[mode]} /> : null}
+      {isAll ? (
+        step === "select" ? (
+          <HScroll>
+            {KINDS.map((k) => (
+              <LayerChip key={k} kind={k} label={layerLabel[k]} count={loadCount ? counts[k] : null} on={layers[k]} onPress={() => toggleLayer(k)} />
+            ))}
+          </HScroll>
+        ) : null
+      ) : (
       <HScroll>
         <Chip icon="spark" label={t("Nearest", "الأقرب")} on={wantNearest} onPress={nearest} />
-        {isTow ? (
+        {mode === "parts" ? null : mode === "tow" ? (
           <>
             <Chip label={t("Available now", "متاح الآن")} on={availableOnly} onPress={() => setAvailableOnly(!availableOnly)} />
             {TOW_TYPES.map((k) => (
@@ -399,6 +571,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
           skills.map((k) => <Chip key={k} label={skillLabel(k)} on={skill === k} onPress={() => setSkill(skill === k ? null : k)} />)
         )}
       </HScroll>
+      )}
       {loc.status === "problem" && !me ? (
         <View style={[row, { alignItems: "center", gap: 10 }]}>
           <Text style={{ flex: 1, color: c.soft, fontSize: 12 }}>{mapCity ? `${t("Showing", "عرض")} ${cityLabel(mapCity, isArabic)}` : t("Location unavailable", "الموقع غير متاح")}</Text>
@@ -449,6 +622,12 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
     </View>
   );
 
+  const emptyText = noLayer
+    ? t("Select at least one type", "اختر نوعًا واحدًا على الأقل")
+    : q.trim() || availableOnly || truckType || skill
+      ? t("No results", "لا توجد نتائج")
+      : t("No places with a location yet", "لا توجد أماكن بموقع محدد بعد");
+
   let header: ReactNode = null;
   let body: ReactNode = null;
   let footer: ReactNode = null;
@@ -456,7 +635,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
   if (step === "select" && !selected) {
     header = (
       <View style={[row, { alignItems: "center", justifyContent: "space-between", marginTop: 6 }]}>
-        <Text style={[{ color: c.ink, fontSize: 20, fontWeight: "700" }, align]}>{isTow ? t("Nearby towing", "سحب قريب") : t("Nearby mechanics", "ميكانيكيون قريبون")}</Text>
+        <Text style={[{ color: c.ink, fontSize: 20, fontWeight: "700" }, align]}>{nearbyTitle[mode]}</Text>
         {!loading ? <Mono>{String(providers.length)}</Mono> : null}
       </View>
     );
@@ -465,7 +644,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
         <RoadLoader label={t("Finding providers…", "جارٍ البحث…")} />
       </View>
     ) : !providers.length ? (
-      <Text style={[{ color: c.soft, fontSize: 14, paddingVertical: 20 }, align]}>{error ?? t("No results", "لا توجد نتائج")}</Text>
+      <Text style={[{ color: c.soft, fontSize: 14, paddingVertical: 20 }, align]}>{error ?? emptyText}</Text>
     ) : (
       <View style={{ marginTop: 4 }}>
         {providers.map((p) => {
@@ -473,11 +652,19 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
           const km = distText(p);
           return (
             <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={p.name} onPress={() => select(p)} style={[row, { alignItems: "center", gap: 12, minHeight: 60, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: alpha(c.line, 0.6) }]}>
-              <View style={{ width: 3, alignSelf: "stretch", borderRadius: 2, backgroundColor: free === null || free > 0 ? c.bronze : c.line }} />
+              <View style={{ width: 3, alignSelf: "stretch", borderRadius: 2, backgroundColor: free === null || free > 0 ? PLACE_COLOR[p.kind] : c.line }} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text numberOfLines={1} style={[{ color: c.ink, fontSize: 15, fontWeight: "700" }, align]}>{p.name}</Text>
                 <Text numberOfLines={1} style={[{ color: c.soft, fontSize: 12 }, align]}>
-                  {[cityLabel(p.city, isArabic), free !== null ? (free > 0 ? `${free} ${free === 1 ? t("truck free", "شاحنة متاحة") : t("trucks free", "شاحنات متاحة")}` : t("No free truck", "لا توجد شاحنة متاحة")) : null, km].filter(Boolean).join(" · ")}
+                  {[
+                    isAll ? layerLabel[p.kind] : null,
+                    cityLabel(p.city, isArabic),
+                    free !== null ? (free > 0 ? `${free} ${free === 1 ? t("truck free", "شاحنة متاحة") : t("trucks free", "شاحنات متاحة")}` : t("No free truck", "لا توجد شاحنة متاحة")) : null,
+                    p.shop ? `${p.shop.productCount} ${p.shop.productCount === 1 ? t("part", "قطعة") : t("parts", "قطع")}` : null,
+                    km,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </Text>
               </View>
               <Icon name="chev" size={16} color={c.soft} />
@@ -492,7 +679,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
       <View>
         <Pressable accessibilityRole="button" onPress={() => setSelectedId(null)} hitSlop={8} style={[row, { alignItems: "center", gap: 4, minHeight: 32 }]}>
           <Icon name="back" size={16} color={c.bronze} />
-          <Text style={{ color: c.bronze, fontSize: 13, fontWeight: "700" }}>{isTow ? t("Nearby towing", "سحب قريب") : t("Nearby mechanics", "ميكانيكيون قريبون")}</Text>
+          <Text style={{ color: c.bronze, fontSize: 13, fontWeight: "700" }}>{nearbyTitle[mode]}</Text>
         </Pressable>
         {nameBlock(
         selected,
@@ -524,11 +711,34 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
             <Text style={[{ color: c.soft, fontSize: 13 }, align]}>{selected.mech.workshopName}</Text>
             <SkillBadges skills={selected.mech.skills} max={4} />
           </>
+        ) : selected.shop ? (
+          <>
+            <Text style={[{ color: c.soft, fontSize: 13 }, align]}>{`${selected.shop.productCount} ${selected.shop.productCount === 1 ? t("part", "قطعة") : t("parts", "قطع")}`}</Text>
+            {selected.shop.categories.length ? (
+              <View style={[row, { flexWrap: "wrap", gap: 6 }]}>
+                {selected.shop.categories.slice(0, 4).map((k) => (
+                  <Pill key={k}>{labelOf(findCategory(k), isArabic)}</Pill>
+                ))}
+              </View>
+            ) : null}
+            {selected.shop.hours ? (
+              <View style={[row, { alignItems: "center", gap: 6 }]}>
+                <GIcon name="time-outline" size={15} color={c.soft} />
+                <Text style={[{ flex: 1, color: c.ink, fontSize: 13 }, align]}>{selected.shop.hours}</Text>
+              </View>
+            ) : null}
+          </>
         ) : null}
         {selected.approx ? <Text style={[{ color: c.soft, fontSize: 11 }, align]}>{t("Approx. location: the pin is at the city centre.", "موقع تقريبي: الدبوس في مركز المدينة.")}</Text> : null}
       </View>
     );
-    footer = (
+    const shopAt = selected.shop ? { lat: selected.lat, lng: selected.lng } : null;
+    footer = shopAt ? (
+      <View style={[row, { gap: 10 }]}>
+        <PrimaryButton style={{ flex: 1 }} label={t("View shop", "عرض المتجر")} onPress={() => router.push(`/customer/shops/${selected.id}`)} />
+        <PrimaryButton style={{ flex: 1 }} variant="outline" icon="pin" label={t("Directions", "الاتجاهات")} onPress={() => void Linking.openURL(mapsDirectionsUrl(shopAt))} />
+      </View>
+    ) : (
       <View style={[row, { gap: 10 }]}>
         <PrimaryButton style={{ flex: 1 }} variant="outline" label={t("View profile", "عرض الملف")} onPress={() => router.push(isTow ? `/customer/tow/${selected.id}` : `/customer/mechanic/${selected.id}`)} />
         <PrimaryButton style={{ flex: 1 }} label={t("Request", "اطلب")} disabled={isTow && (selected.tow?.availableTrucks ?? 0) === 0} onPress={startForm} />
@@ -631,7 +841,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
     return (
       <View style={{ flex: 1, backgroundColor: c.page, alignItems: "center", justifyContent: "center", padding: 24, gap: 16 }}>
         <Text style={{ color: c.ink, fontSize: 15, textAlign: "center" }}>{t("The map is not available on this platform. Use the list instead.", "الخريطة غير متاحة على هذه المنصة. استخدم القائمة.")}</Text>
-        <PrimaryButton label={t("Back", "رجوع")} onPress={() => goBack(isTow ? "/customer/tow" : "/customer/mechanics")} />
+        <PrimaryButton label={t("Back", "رجوع")} onPress={() => goBack(HOME[mode] as never)} />
       </View>
     );
   }
@@ -665,7 +875,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
       />
       {overlay}
       {step === "select" && (loc.locating || (searching && loading)) ? banner(loc.locating ? t("Finding your location…", "جارٍ تحديد موقعك…") : t("Finding the nearest…", "جارٍ البحث عن الأقرب…"), "neutral", <RoadLoader compact />) : null}
-      {!loading && !error && step === "select" && providers.length === 0 && !searching && !loc.locating ? banner(t("No results", "لا توجد نتائج")) : null}
+      {!loading && !error && step === "select" && providers.length === 0 && !searching && !loc.locating ? banner(emptyText) : null}
       {error && step === "select" ? banner(error, "danger", <Pressable accessibilityRole="button" onPress={load} hitSlop={8}><Text style={{ color: c.bronze, fontSize: 12, fontWeight: "700" }}>{t("Retry", "إعادة المحاولة")}</Text></Pressable>) : null}
       {mapFailed ? null : (
         <Text
@@ -679,7 +889,8 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
         visible={citySheet}
         onClose={() => setCitySheet(false)}
         title={t("Choose a city", "اختر مدينة")}
-        value={mapCity}
+        closeLabel={t("Close", "إغلاق")}
+        value={mapCity ?? ""}
         options={CITIES.map((x) => ({ key: x.name as string, label: cityLabel(x.name, isArabic) }))}
         onSelect={(k) => {
           setCitySheet(false);

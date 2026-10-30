@@ -13,7 +13,8 @@ import { CATALOG_GROUPS } from "../../core/constants/categories";
 import { cityLabel } from "../../core/constants/cities";
 import { useLoad } from "../../core/hooks/useLoad";
 import { useReduced } from "../../motion";
-import { MAPS_AVAILABLE, ServiceMap } from "../shared/maps";
+import { ShopPhoto } from "../catalog/partsLanding";
+import { ShopsMap } from "../catalog/ShopsMap";
 import { review } from "../provider/api";
 import type { Verification } from "../parts/partsService";
 import { fmtPoint } from "./LocationRow";
@@ -39,6 +40,7 @@ type Shop = {
   categories: string[];
   productCount: number;
   hiddenProductCount: number;
+  storefrontUri?: string | null;
 };
 type Filter = "ALL" | "PENDING" | "NEEDS_CHANGES" | "APPROVED" | "REJECTED";
 const FILTERS: { k: Filter; en: string; ar: string }[] = [
@@ -161,6 +163,7 @@ export function PartsShopsPage() {
                     <View style={{ flexDirection: d.row, flexWrap: "wrap", gap: 6, marginTop: 10 }}>
                       <StatusChip status={s.verificationStatus} />
                       {s.verificationStatus === "APPROVED" ? <Pill icon="cube-outline" label={`${s.productCount} ${s.productCount === 1 ? d.t("product", "منتج") : d.t("products", "منتجات")}`} /> : null}
+                      {s.baseLat == null || s.baseLng == null ? <Pill tone="amber" icon="location-outline" label={d.t("Location missing", "الموقع غير محدد")} /> : null}
                       {waiting ? <Pill tone="amber" icon="document-text-outline" label={`${waiting} ${d.t("documents to review", "مستندات للمراجعة")}`} /> : null}
                     </View>
                     {cats.length ? (
@@ -188,51 +191,37 @@ export function PartsShopsPage() {
               </View>
               {pins.length === 0 ? (
                 <Empty icon="map-outline" text={d.t("No stored locations to show.", "لا توجد مواقع محفوظة لعرضها.")} hint={d.t("Only locations the shops saved are shown.", "تظهر فقط المواقع التي حفظتها المتاجر.")} />
-              ) : MAPS_AVAILABLE ? (
+              ) : (
                 <View style={{ height: Math.min(460, Math.round(height * 0.5)), borderRadius: 20, overflow: "hidden", borderWidth: 1, borderColor: d.border }}>
-                  <ServiceMap
-                    pins={pins.map(({ id, name, lat, lng, kind, dim }) => ({ id, name, lat, lng, kind, dim }))}
+                  <ShopsMap
+                    pins={pins.map(({ id, name, lat, lng, dim }) => ({ id, name, lat, lng, dim }))}
                     selectedId={sel}
-                    me={null}
-                    fit={pins.map((p) => [p.lat, p.lng] as [number, number])}
                     fitKey={`${filter}|${q}|${pins.length}`}
-                    pad={{ top: 0, bottom: 0, left: 0, right: 0 }}
-                    reduced={reduced}
                     onSelect={setSel}
                     onBackground={() => setSel(null)}
                     height={Math.min(460, Math.round(height * 0.5))}
                   />
                 </View>
-              ) : (
-                <View style={{ gap: 8 }}>
-                  <Text style={{ color: d.muted, fontSize: 12, lineHeight: 19, textAlign: d.align }}>{d.t("The map is shown in the MOTEXA app on your phone. These are the stored locations:", "تظهر الخريطة في تطبيق MOTEXA على هاتفك. هذه هي المواقع المحفوظة:")}</Text>
-                  {pins.map((p) => (
-                    <InteractiveButton
-                      key={p.id}
-                      accessibilityRole="button"
-                      accessibilityLabel={p.name}
-                      onPress={() => setSel(p.id)}
-                      style={{ ...cardStyle(d, sel === p.id ? "warn" : undefined), flexDirection: d.row, alignItems: "center", gap: 10, padding: 10 }}
-                    >
-                      <Ionicons name="storefront" size={18} color={d.accent} />
-                      <Text numberOfLines={1} style={{ flex: 1, color: d.ink, fontSize: 13, fontWeight: "700", textAlign: d.align }}>{p.name}</Text>
-                      <Text style={{ color: d.muted, fontSize: 11, writingDirection: "ltr" }}>{fmtPoint(p.lat, p.lng)}</Text>
-                    </InteractiveButton>
-                  ))}
-                </View>
               )}
               {selected ? (
                 <View style={{ ...cardStyle(d), padding: 14, gap: 8 }} accessibilityLiveRegion="polite">
                   <View style={{ flexDirection: d.row, alignItems: "flex-start", gap: 10 }}>
-                    <Ionicons name="storefront" size={22} color={d.accent} />
+                    <View style={{ width: 64, height: 64, borderRadius: 12, overflow: "hidden" }}>
+                      <ShopPhoto uri={selected.storefrontUri ?? null} height={64} />
+                    </View>
                     <Names s={selected} />
                     <StatusChip status={selected.verificationStatus} />
                   </View>
+                  <Text style={{ color: d.muted, fontSize: 12, lineHeight: 18, textAlign: d.align }}>
+                    {[cityLabel(selected.city, d.ar), selected.address].filter(Boolean).join(" · ")}
+                    {`
+${selected.productCount} ${selected.productCount === 1 ? d.t("product", "منتج") : d.t("products", "منتجات")}${selected.hiddenProductCount ? ` · ${selected.hiddenProductCount} ${d.t("hidden", "مخفية")}` : ""}`}
+                  </Text>
                   {labels(selected).length ? (
                     <Text numberOfLines={2} style={{ color: d.muted, fontSize: 12, lineHeight: 18, textAlign: d.align }}>{labels(selected).slice(0, 4).join(d.ar ? "، " : ", ")}{labels(selected).length > 4 ? ` +${labels(selected).length - 4}` : ""}</Text>
                   ) : null}
                   <Text style={{ color: d.muted, fontSize: 12, textAlign: d.align, writingDirection: "ltr" }}>{fmtPoint(selected.baseLat!, selected.baseLng!)}</Text>
-                  <DButton variant="ghost" icon="eye-outline" label={d.t("View shop", "عرض المتجر")} onPress={() => go(`/dept/review/shop/${selected.id}`)} />
+                  <DButton variant="ghost" icon="eye-outline" label={d.t("View shop & products", "عرض المتجر والمنتجات")} onPress={() => go(`/dept/review/shop/${selected.id}`)} />
                 </View>
               ) : pins.length ? (
                 <Text style={{ color: d.muted, fontSize: 12, textAlign: d.align }}>{d.t("Tap a marker for a summary.", "المس علامة لعرض ملخص.")}</Text>

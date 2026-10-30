@@ -1,15 +1,12 @@
 import { useState } from "react";
-import { Pressable, View } from "react-native";
-import Animated, { FadeIn, LinearTransition } from "react-native-reanimated";
-import { Mono, Panel, Tag } from "../../components/blueprint";
-import { Text } from "../../components/ui/Text";
+import { View } from "react-native";
+import { Card, GIcon, GText, Tap } from "../../components/garage";
 import { useL } from "../../core/hooks/useL";
-import { M } from "../../motion";
-import { useTheme } from "../../theme/useTheme";
+import { gType, useGarageTheme } from "../../theme/garage";
 
-/** Compact safety card for a waiting customer: two tips, then "More safety tips". Lives on the active request, not on Discovery. */
+/** Compact safety card for a waiting customer: two tips, then "More safety tips". */
 export function WhileYouWait() {
-  const { c, row, align } = useTheme();
+  const { g, row, align } = useGarageTheme();
   const { t } = useL();
   const [more, setMore] = useState(false);
   const tips = [
@@ -20,21 +17,24 @@ export function WhileYouWait() {
   ];
   const shown = more ? tips : tips.slice(0, 2);
   return (
-    <Animated.View layout={LinearTransition.duration(M.detail)} style={{ marginTop: 24 }}>
-      <Panel>
-        <Tag color={c.soft} align={align.textAlign}>{t("While you wait", "أثناء الانتظار")}</Tag>
-        <View style={{ marginTop: 8 }}>
-          {shown.map((tip, i) => (
-            <Animated.View key={i} entering={i >= 2 ? FadeIn.duration(M.chip) : undefined} style={[row, { alignItems: "flex-start", gap: 12, paddingVertical: 6 }]}>
-              <Mono color={c.bronze}>{String(i + 1).padStart(2, "0")}</Mono>
-              <Text style={[{ color: c.ink, fontSize: 14, lineHeight: 21, flex: 1 }, align]}>{tip}</Text>
-            </Animated.View>
-          ))}
-        </View>
-        <Pressable accessibilityRole="button" onPress={() => setMore(!more)} hitSlop={8} style={{ minHeight: 40, justifyContent: "center" }}>
-          <Text style={[{ color: c.bronze, fontSize: 13, fontWeight: "700" }, align]}>{more ? t("Fewer tips", "نصائح أقل") : t("More safety tips", "المزيد من نصائح السلامة")}</Text>
-        </Pressable>
-      </Panel>
-    </Animated.View>
+    <Card soft style={{ marginTop: 24 }}>
+      <View style={[row, { alignItems: "center", gap: 8 }]}>
+        <GIcon name="shield-checkmark-outline" size={18} />
+        <GText style={[gType.label, { fontWeight: "800" }, align]}>{t("While you wait", "أثناء الانتظار")}</GText>
+      </View>
+      <View style={{ marginTop: 8 }}>
+        {shown.map((tip, i) => (
+          <View key={i} style={[row, { alignItems: "flex-start", gap: 10, paddingVertical: 6 }]}>
+            <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: g.tint, alignItems: "center", justifyContent: "center" }}>
+              <GText style={{ fontSize: 11, lineHeight: 14, fontWeight: "800", color: g.accentText }}>{String(i + 1)}</GText>
+            </View>
+            <GText style={[gType.bodySm, { flex: 1 }, align]}>{tip}</GText>
+          </View>
+        ))}
+      </View>
+      <Tap label={more ? t("Fewer tips", "نصائح أقل") : t("More safety tips", "المزيد من نصائح السلامة")} onPress={() => setMore(!more)} style={{ minHeight: 44, justifyContent: "center" }}>
+        <GText style={[gType.caption, { color: g.accentText, fontWeight: "800" }, align]}>{more ? t("Fewer tips", "نصائح أقل") : t("More safety tips", "المزيد من نصائح السلامة")}</GText>
+      </Tap>
+    </Card>
   );
 }
