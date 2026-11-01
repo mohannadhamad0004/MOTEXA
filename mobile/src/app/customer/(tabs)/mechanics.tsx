@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
-import { Card, Chip, EmptyState, ErrorState, GarageHero, GaragePage, GButton, GIcon, GText, IconButton, Note, OptionSheet, Rail, SearchBar, SkeletonRows, StatusChip, Tap } from "../../../components/garage";
+import { Card, Chip, EmptyState, ErrorState, GaragePage, HeroLayout, GButton, GIcon, GText, IconButton, Note, OptionSheet, Rail, SearchBar, SkeletonRows, StatusChip, Tap } from "../../../components/garage";
 import { CITIES, cityLabel } from "../../../core/constants/cities";
 import { Point, locationMemory, roundPoint } from "../../../core/constants/geo";
 import { useL } from "../../../core/hooks/useL";
@@ -141,19 +141,16 @@ export default function CustomerMechanics() {
       refreshing={refreshing}
       onRefresh={() => run("refresh")}
       hero={
-        <GarageHero
-          variant="tab"
-          tab="mechanics"
-          onMap={() => router.push("/customer/mechanics/map")}
-          title={t("Mechanics", "الميكانيكيون")}
-          line={line}
-        >
-          {me ? (
-            <GButton variant="secondary" icon="navigate" label={t("Near you", "بالقرب منك")} onPress={forgetLocation} />
-          ) : (
-            <GButton icon="navigate-outline" label={t("Use my location", "استخدم موقعي")} busy={loc.locating} onPress={() => void useMyLocation()} />
-          )}
-        </GarageHero>
+        <HeroLayout
+          config={{
+            tab: "mechanics",
+            title: t("Mechanics", "الميكانيكيون"),
+            line,
+            action: me
+              ? { kind: "toggle", on: true, icon: "navigate", label: t("Near you", "بالقرب منك"), onPress: forgetLocation }
+              : { kind: "toggle", on: false, icon: "navigate-outline", label: t("Use my location", "استخدم موقعي"), busy: loc.locating, onPress: () => void useMyLocation() },
+          }}
+        />
       }
     >
       {loc.dialog}

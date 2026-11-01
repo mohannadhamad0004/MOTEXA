@@ -44,6 +44,21 @@ export const PHOTO_KEYS = [
   "category.HAND_TOOLS",
   "category.JACKS_STANDS",
   "category.DIAGNOSTICS",
+  // sub-categories: 1:1, 600x600
+  "category.BRAKE_PADS",
+  "category.BRAKE_DISCS",
+  "category.SPARK_PLUGS",
+  "category.TIMING_BELTS",
+  "category.OIL_FILTERS",
+  "category.AIR_FILTERS",
+  "category.CABIN_FILTERS",
+  "category.BATTERIES",
+  "category.ALTERNATORS_STARTERS",
+  "category.WIRING_FUSES",
+  "category.HEADLIGHTS",
+  "category.BULBS",
+  "category.FOG_LIGHTS",
+  "category.TAIL_LIGHTS",
 ] as const;
 
 export type PhotoKey = (typeof PHOTO_KEYS)[number];
@@ -84,6 +99,20 @@ export const PHOTOS: Record<PhotoKey, ImageSourcePropType | null> = {
   "category.HAND_TOOLS": null,
   "category.JACKS_STANDS": null,
   "category.DIAGNOSTICS": null,
+  "category.BRAKE_PADS": null,
+  "category.BRAKE_DISCS": null,
+  "category.SPARK_PLUGS": null,
+  "category.TIMING_BELTS": null,
+  "category.OIL_FILTERS": null,
+  "category.AIR_FILTERS": null,
+  "category.CABIN_FILTERS": null,
+  "category.BATTERIES": null,
+  "category.ALTERNATORS_STARTERS": null,
+  "category.WIRING_FUSES": null,
+  "category.HEADLIGHTS": null,
+  "category.BULBS": null,
+  "category.FOG_LIGHTS": null,
+  "category.TAIL_LIGHTS": null,
 };
 
 /** Placeholder icon per key (Ionicons outline name). */

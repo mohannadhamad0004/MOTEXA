@@ -145,6 +145,7 @@ export function ChatScreen({
   markRead,
   send,
   onChange,
+  attachments = true,
 }: {
   title: string;
   subtitle?: string;
@@ -156,6 +157,8 @@ export function ChatScreen({
   markRead: () => Promise<unknown>;
   send: (body: string, attachment?: Attachment) => Promise<Message[]>;
   onChange?: () => void;
+  /** false: text only (order chats) */
+  attachments?: boolean;
 }) {
   const d = useDT();
   const insets = useSafeAreaInsets();
@@ -296,9 +299,11 @@ export function ChatScreen({
             </View>
           ) : null}
           <View style={{ flexDirection: d.row, alignItems: "flex-end", gap: 8, width: "100%", maxWidth: 680, alignSelf: "center" }}>
-            <Pressable accessibilityRole="button" accessibilityLabel={d.t("Attach a photo or PDF", "إرفاق صورة أو PDF")} onPress={attach} style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: d.border, backgroundColor: d.surface }}>
-              <Ionicons name="attach" size={22} color={d.accent} />
-            </Pressable>
+            {attachments ? (
+              <Pressable accessibilityRole="button" accessibilityLabel={d.t("Attach a photo or PDF", "إرفاق صورة أو PDF")} onPress={attach} style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: d.border, backgroundColor: d.surface }}>
+                <Ionicons name="attach" size={22} color={d.accent} />
+              </Pressable>
+            ) : null}
             <TextInput
               value={text}
               onChangeText={setText}

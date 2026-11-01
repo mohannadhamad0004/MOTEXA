@@ -17,6 +17,8 @@ const TOKEN_KEY = "motexa_access_token";
 // UX gating only. These are NOT security: real endpoints must enforce the same rules server-side.
 export const isPartsProvider = (u: SessionUser) => u.role === "PARTS_PROVIDER";
 export const isTowProvider = (u: SessionUser) => u.role === "TOW_PROVIDER";
+/** a tow driver login, or a company owner who also drives (the server checks the TowDriver link) */
+export const isTowDriver = (u: SessionUser) => u.role === "TOW_DRIVER" || u.role === "TOW_PROVIDER";
 const hasPerm = (u: SessionUser, p: string) =>
   u.role === "SUPER_ADMIN" ||
   (u.role === "ADMIN" && u.adminPermissions.some((x) => x.permission === p));

@@ -4,7 +4,7 @@ import { View } from "react-native";
 import { cityCentre } from "../../core/constants/cities";
 import { Point, locationMemory, roundPoint } from "../../core/constants/geo";
 import { useL } from "../../core/hooks/useL";
-import { currentCar } from "../catalog/catalogService";
+import { currentCar } from "../catalog/myCar";
 import { MAPS_AVAILABLE, PinMap } from "../shared/maps";
 import { LocationProblem, reverseGeocode, useCurrentLocation } from "../shared/useCurrentLocation";
 import { useSkillLabel } from "./mechanicBits";

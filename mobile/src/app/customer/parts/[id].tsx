@@ -19,15 +19,22 @@ import {
   Section,
   SkeletonBlock,
   StatusChip,
+  IconButton,
+  Sheet,
   StickyActionBar,
+  Tap,
   cardBadges,
+  fitLine,
 } from "../../../components/garage";
 import { isDevSeedTile } from "../../../core/constants/files";
 import { findCategory, labelOf } from "../../../core/constants/categories";
 import { formatPrice } from "../../../core/constants/money";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
-import { catalogService, currentCar, fitsCar } from "../../../features/catalog/catalogService";
+import { catalogService, fitStatus, fitsCar } from "../../../features/catalog/catalogService";
+import { openMyCarPicker, useMyCar } from "../../../features/catalog/myCar";
+import { addToCart, cartCount, useCart } from "../../../features/orders/cart";
+import { QtyStepper } from "../../../features/orders/orderBits";
 import { usePartLabels } from "../../../features/catalog/partAttrs";
 import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 
@@ -35,7 +42,7 @@ import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 function Similar({ category, shopId, currentId }: { category: string | null; shopId: string; currentId: string }) {
   const { t } = useL();
   const state = useLoad(() => catalogService.searchParts(category ? { category } : { shopId }), [category, shopId]);
-  const car = currentCar();
+  const { car } = useMyCar();
   const others = (state.data?.products ?? []).filter((x) => x.id !== currentId).slice(0, 8);
   if (!others.length) return null;
   return (
@@ -55,7 +62,19 @@ export default function CustomerPartDetail() {
   const { t, isArabic } = useL();
   const state = useLoad(() => catalogService.getPart(id), [id]);
   const [photoOk, setPhotoOk] = useState(true);
-  const car = currentCar();
+  const { car } = useMyCar();
+  // buying: quantity (up to the units the shop can still sell), one shop per cart
+  const cart = useCart();
+  const [qty, setQty] = useState(1);
+  const [otherShop, setOtherShop] = useState(false);
+  const buy = (replace = false) => {
+    const p = state.data;
+    if (!p) return;
+    const r = addToCart({ id: p.shop.id, name: p.shop.name }, { productId: p.id, name: p.name, partNumber: p.partNumber, price: p.price, imageUri: p.imageUri, max: Math.max(1, p.available ?? 1) }, qty, replace);
+    if (r === "other-shop") return setOtherShop(true);
+    setOtherShop(false);
+    router.push("/customer/cart");
+  };
   const labels = usePartLabels();
   const p = state.data;
   const cat = findCategory(p?.category);
@@ -73,7 +92,8 @@ export default function CustomerPartDetail() {
             <View style={{ justifyContent: "center", paddingHorizontal: 4 }}>
               <GText style={{ fontSize: 20, lineHeight: 26, fontWeight: "800", color: g.accentText, writingDirection: "ltr" }}>{formatPrice(p.price)}</GText>
             </View>
-            <GButton flex icon="chatbubble-ellipses-outline" label={t("Ask the shop", "اسأل المتجر")} disabled={soldOut} onPress={() => router.push({ pathname: "/customer/inquiry/new", params: { productId: p.id } })} />
+            <IconButton icon="chatbubble-ellipses-outline" label={t("Ask the shop", "اسأل المتجر")} onPress={() => router.push({ pathname: "/customer/inquiry/new", params: { productId: p.id } })} />
+            <GButton flex icon="bag-add-outline" label={soldOut ? t("Sold out", "نفدت الكمية") : t("Buy", "شراء")} disabled={soldOut} onPress={() => buy()} />
           </StickyActionBar>
         ) : undefined
       }
@@ -89,7 +109,9 @@ export default function CustomerPartDetail() {
       ) : (
         (() => {
           const mine = car ? p.fitments.find((f) => fitsCar({ fitments: [f] }, car)) : undefined;
-          const fits = car ? fitsCar(p, car) : null;
+          // never a fit the data does not support: FITS (a fitment row), UNIVERSAL (shop's flag), else no claim
+          const status = car ? fitStatus(p, car) : null;
+          const fl = status && car ? fitLine(status, car, true, isArabic) : null;
           const old = p.compareAtPrice && p.compareAtPrice > p.price ? p.compareAtPrice : null;
           const badges = cardBadges(p.badges, isArabic, 4);
           const stock = { IN: ["success", t("In stock", "متوفر")], LOW: ["warning", t("Low stock", "كمية محدودة")], OUT: ["danger", t("Out of stock", "نفدت الكمية")] }[p.stock] as ["success" | "warning" | "danger", string];
@@ -120,14 +142,31 @@ export default function CustomerPartDetail() {
                 <View style={[row, { gap: 6, flexWrap: "wrap", marginTop: 10 }]}>
                   <StatusChip tone={stock[0]} label={stock[1]} icon="cube-outline" />
                   <StatusChip tone="neutral" label={labels.condition[p.condition]} icon="sparkles-outline" />
-                  {fits === true ? <StatusChip tone="success" icon="checkmark-circle" label={t("Fits your car", "تناسب سيارتك")} /> : null}
-                  {fits === false ? <StatusChip tone="danger" icon="alert-circle-outline" label={p.fitments.length ? t("May not fit your car", "قد لا تناسب سيارتك") : t("Fitment not listed", "التوافق غير محدد")} /> : null}
+                  {fl ? <StatusChip tone={fl.tone === "soft" ? "neutral" : fl.tone} icon={fl.icon} label={fl.text} /> : null}
                 </View>
+                {!soldOut ? (
+                  <View style={[row, { alignItems: "center", justifyContent: "space-between", marginTop: 12 }]}>
+                    <GText style={[gType.label, align]}>{t("Quantity", "الكمية")}</GText>
+                    <QtyStepper value={qty} max={Math.max(1, p.available ?? 1)} onChange={setQty} />
+                  </View>
+                ) : null}
+                {cart && cart.shopId === p.shop.id ? (
+                  <Tap label={t("View cart", "عرض السلة")} onPress={() => router.push("/customer/cart")} style={[row, { minHeight: 44, alignItems: "center", gap: 6, marginTop: 4 }]}>
+                    <GIcon name="bag-outline" size={16} />
+                    <GText style={[gType.caption, { fontWeight: "800", color: g.accentText }]}>{`${t("View cart", "عرض السلة")} (${cartCount(cart)})`}</GText>
+                  </Tap>
+                ) : null}
+                {!car ? (
+                  <Tap label={t("Check if it fits your car", "تحقق إن كانت تناسب سيارتك")} onPress={openMyCarPicker} style={[row, { minHeight: 44, alignItems: "center", gap: 6, marginTop: 6 }]}>
+                    <GIcon name="car-sport-outline" size={16} />
+                    <GText style={[gType.caption, { fontWeight: "800", color: g.accentText }]}>{t("Check if it fits your car", "تحقق إن كانت تناسب سيارتك")}</GText>
+                  </Tap>
+                ) : null}
               </Card>
 
-              {fits === false ? (
+              {status === "UNKNOWN" || status === "NOT_LISTED" ? (
                 <View style={{ marginTop: 12 }}>
-                  <Note icon="alert-circle-outline">{p.fitments.length === 0 ? t("The shop has not listed which cars this part fits. Ask the shop to confirm.", "لم يحدد المتجر السيارات المناسبة لهذه القطعة. اسأل المتجر للتأكيد.") : t("This part may not fit your car. Check the list below or ask the shop.", "قد لا تناسب هذه القطعة سيارتك. راجع القائمة أدناه أو اسأل المتجر.")}</Note>
+                  <Note icon="help-circle-outline">{status === "UNKNOWN" ? t("The shop has not listed which cars this part fits. Ask the shop to confirm.", "لم يحدد المتجر السيارات المناسبة لهذه القطعة. اسأل المتجر للتأكيد.") : t("Your car is not on this part's list. Check the list below or ask the shop.", "سيارتك غير مدرجة في قائمة هذه القطعة. راجع القائمة أدناه أو اسأل المتجر.")}</Note>
                 </View>
               ) : null}
 
@@ -144,6 +183,14 @@ export default function CustomerPartDetail() {
               </Section>
 
               <Section title={t("Fits these cars", "تناسب هذه السيارات")}>
+                {p.isUniversal ? (
+                  <Card soft style={{ marginBottom: p.fitments.length ? 10 : 0 }}>
+                    <View style={[row, { alignItems: "center", gap: 8 }]}>
+                      <GIcon name="globe-outline" size={18} />
+                      <GText style={[gType.bodySm, { flex: 1 }, align]}>{t("Universal: the shop says it fits any car.", "عامة: يقول المتجر إنها تناسب أي سيارة.")}</GText>
+                    </View>
+                  </Card>
+                ) : null}
                 {p.fitments.length ? (
                   <Card pad={0} style={{ overflow: "hidden" }}>
                     <View style={[row, { paddingHorizontal: 14, paddingVertical: 10, backgroundColor: g.tint }]}>
@@ -165,12 +212,32 @@ export default function CustomerPartDetail() {
                       );
                     })}
                   </Card>
-                ) : (
+                ) : p.isUniversal ? null : (
                   <Card soft>
                     <GText soft style={[gType.bodySm, align]}>{t("No fitment listed", "لا يوجد توافق محدد")}</GText>
                   </Card>
                 )}
               </Section>
+
+              <Sheet
+                visible={otherShop}
+                onClose={() => setOtherShop(false)}
+                closeLabel={t("Close", "إغلاق")}
+                title={t("Start a new cart?", "بدء سلة جديدة؟")}
+                footer={
+                  <View style={[row, { gap: 10 }]}>
+                    <GButton flex variant="secondary" label={t("Keep my cart", "إبقاء سلتي")} onPress={() => setOtherShop(false)} />
+                    <GButton flex label={t("New cart", "سلة جديدة")} onPress={() => buy(true)} />
+                  </View>
+                }
+              >
+                <GText style={[gType.body, align]}>
+                  {t(
+                    `Your cart has parts from ${cart?.shopName ?? ""}. An order goes to one shop, so starting a new cart removes them.`,
+                    `سلتك فيها قطع من ${cart?.shopName ?? ""}. الطلب يذهب إلى متجر واحد، لذا بدء سلة جديدة يزيلها.`
+                  )}
+                </GText>
+              </Sheet>
 
               <Section title={t("Sold by", "يبيعها")}>
                 <Card onPress={() => router.push(`/customer/shops/${p.shop.id}`)} label={p.shop.name} pad={12}>

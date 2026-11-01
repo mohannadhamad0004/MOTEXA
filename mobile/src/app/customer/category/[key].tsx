@@ -1,5 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { GarageHero, Photo, Toggle } from "../../../components/garage";
+import { useState } from "react";
+import { Chip, GarageHero, Photo, Rail, Toggle } from "../../../components/garage";
 import { CATALOG_GROUPS, findCategory, labelOf } from "../../../core/constants/categories";
 import { useL } from "../../../core/hooks/useL";
 import { carName } from "../../../features/catalog/catalogBits";
@@ -11,13 +12,29 @@ export default function CustomerCategory() {
   const { key } = useLocalSearchParams<{ key: string }>();
   const { t, isArabic } = useL();
   const category = findCategory(key);
+  // a category with sub-categories: "All" (itself + every sub-category, each part once) or one sub-category
+  const [sub, setSub] = useState<string | null>(null);
   const group = category ? null : CATALOG_GROUPS.find((g) => g.key === key) ?? null;
   const title = labelOf(category ?? group, isArabic) || t("Category", "الفئة");
   const photo = (category || group ? `category.${(category ?? group)!.key}` : "empty.search") as PhotoKey;
 
   return (
     <ProductBrowser
-      category={category?.key}
+      category={sub ?? category?.key}
+      afterSearch={
+        category?.children ? (
+          <Rail gap={8}>
+            <Chip label={`${t("All", "كل")} ${labelOf(category, isArabic)}`} on={!sub} onPress={() => setSub(null)} />
+            {category.children.map((c) => (
+              <Chip key={c.key} icon={c.icon} label={labelOf(c, isArabic)} on={sub === c.key} onPress={() => setSub(sub === c.key ? null : c.key)} />
+            ))}
+          </Rail>
+        ) : category?.parent ? (
+          <Rail gap={8}>
+            <Chip icon="arrow-up-outline" label={`${t("All", "كل")} ${labelOf(findCategory(category.parent), isArabic)}`} onPress={() => router.replace(`/customer/category/${category.parent}`)} />
+          </Rail>
+        ) : undefined
+      }
       group={group?.key}
       hero={(s) => (
         <GarageHero

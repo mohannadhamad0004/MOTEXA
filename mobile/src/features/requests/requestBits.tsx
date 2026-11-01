@@ -33,11 +33,13 @@ export function InquiryStatusBadge({ value }: { value: InquiryStatus }) {
 
 export function useTowStatusLabels() {
   const { t } = useL();
-  const label: Record<TowStatus, string> = {
+  // ARRIVED is a step, not a stored status (the driver reached the customer while EN_ROUTE)
+  const label: Record<TowStatus | "ARRIVED", string> = {
     REQUESTED: t("Requested", "تم الطلب"),
     ACCEPTED: t("Accepted", "تم القبول"),
     DECLINED: t("Declined", "مرفوض"),
     EN_ROUTE: t("On the way", "في الطريق"),
+    ARRIVED: t("Arrived", "وصل"),
     IN_PROGRESS: t("In progress", "قيد التنفيذ"),
     COMPLETED: t("Completed", "مكتمل"),
     CANCELLED: t("Cancelled", "ملغى"),

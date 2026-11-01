@@ -9,6 +9,7 @@ import { catalogService } from "../../../features/catalog/catalogService";
 import { useProblemLabels } from "../../../features/requests/requestBits";
 import { TOW_PROBLEMS } from "../../../features/requests/requestsService";
 import { useTowRequestForm } from "../../../features/requests/TowRequestForm";
+import { freeDriversOf } from "../../../features/tow/dispatchService";
 import { MAPS_AVAILABLE, PinMap } from "../../../features/shared/maps";
 import { LocationProblem } from "../../../features/shared/useCurrentLocation";
 import { gShape, gType, useGarageTheme } from "../../../theme/garage";
@@ -16,12 +17,18 @@ import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 // The tow request as three steps (pickup + destination, car + problem + phone, confirm) with a sticky bar. The rules live in
 // useTowRequestForm (shared with the map page); a sent request shows a short confirmation, then the status page.
 export default function NewTowRequest() {
-  const { companyId } = useLocalSearchParams<{ companyId: string }>();
+  const { companyId, driverId } = useLocalSearchParams<{ companyId: string; driverId?: string }>();
   const { t, isArabic } = useL();
   const { g, row, align } = useGarageTheme();
   const problem = useProblemLabels();
   const state = useLoad(() => catalogService.getTowCompany(companyId), [companyId]);
   const form = useTowRequestForm({ id: companyId, city: state.data?.company.city ?? "" });
+  // who comes: any driver of the company (it assigns) or one of its FREE drivers
+  const drivers = useLoad(() => freeDriversOf(companyId), [companyId]);
+  useEffect(() => {
+    if (driverId) form.setDriverId(driverId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [driverId]);
   const [step, setStep] = useState(0);
   const [stepErr, setStepErr] = useState<string | null>(null);
   const [sent, setSent] = useState<string | null>(null);
@@ -124,6 +131,18 @@ export default function NewTowRequest() {
           ) : (
             <Card pad={12}>
               <ListRow icon="business-outline" title={t("Company", "الشركة")} sub={`${co.name} · ${cityLabel(co.city, isArabic)}`} />
+              <View style={{ paddingVertical: 8, gap: 8 }}>
+                <GText style={[gType.label, { fontWeight: "800" }, align]}>{t("Who should come?", "من يأتي؟")}</GText>
+                <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
+                  <Chip icon="business-outline" label={t(`Any driver from ${co.name}`, `أي سائق من ${co.name}`)} on={!form.driverId} onPress={() => form.setDriverId(null)} />
+                  {(drivers.data ?? []).map((d) => (
+                    <Chip key={d.id} icon="person-outline" label={d.truck ? `${d.firstName} · ${d.truck.make}` : d.firstName} on={form.driverId === d.id} onPress={() => form.setDriverId(d.id)} />
+                  ))}
+                </View>
+                {form.driverId && drivers.data && !drivers.data.some((d) => d.id === form.driverId) ? (
+                  <Note tone="warning" icon="alert-circle-outline">{t("That driver is no longer free. The company will assign another one.", "هذا السائق لم يعد متاحًا. ستُسند الشركة سائقًا آخر.")}</Note>
+                ) : null}
+              </View>
               <ListRow divider icon="location-outline" title={t("Pickup", "الاستلام")} sub={form.pickup.trim()} />
               <ListRow divider icon="flag-outline" title={t("Destination", "الوجهة")} sub={form.dropoff.trim()} />
               <ListRow divider icon="car-sport-outline" title={t("Car", "السيارة")} sub={[form.make, form.model, form.year].map((x) => x.trim()).filter(Boolean).join(" ")} />

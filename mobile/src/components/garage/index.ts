@@ -4,6 +4,7 @@ export * from "./primitives";
 export * from "./Photo";
 export * from "./MoClip";
 export * from "./GaragePage";
+export * from "./hero/HeroLayout";
 export * from "./cards";
 export * from "./states";
 export * from "./flow";

@@ -9,6 +9,8 @@
     "seed:test": "tsx src/seed/test-accounts.ts",
     "seed:providers": "tsx src/seed/provider-onboarding-demo.ts",
     "seed:mechanics": "tsx src/seed/mechanics-demo.ts",
+    "seed:vehicles": "tsx src/seed/vehicles.ts",
+    "seed:tow-drivers": "tsx src/seed/tow-drivers-demo.ts",
     "start": "node dist/server.js",
     "postinstall": "prisma skills sync || exit 0"
   },

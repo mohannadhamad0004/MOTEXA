@@ -1,13 +1,16 @@
 import { router } from "expo-router";
-import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
-import { Chip, EmptyState, ErrorState, GaragePage, GButton, GIcon, GText, Grid, IconButton, Note, OptionSheet, ProductCard, SearchBar, Sheet, SkeletonCards, Tap } from "../../components/garage";
+import { Chip, EmptyState, ErrorState, GaragePage, GButton, GIcon, GText, Grid, IconButton, Note, OptionSheet, ProductCard, SearchBar, SkeletonCards, Tap } from "../../components/garage";
+import { findCategory, labelOf } from "../../core/constants/categories";
 import { useL } from "../../core/hooks/useL";
 import { gType, useGarageTheme } from "../../theme/garage";
 import { carName } from "./catalogBits";
-import { CatalogProduct, PartSort, catalogService, fitMemory } from "./catalogService";
+import { CatalogProduct, PartSort, appendDistinct, catalogService } from "./catalogService";
 import { ActiveFilters, FilterSheet } from "./FilterSheet";
-import { VehiclePicker } from "./VehiclePicker";
+import { Car, openMyCarPicker, saveMyCar, useMyCar } from "./myCar";
+import { useVehicleList } from "./VehiclePicker";
+import { matchVehicle } from "./vehicleMatch";
 import { EMPTY_FILTERS, PartFilters, countFilters, filterMemory, filterParams } from "./filters";
 
 /** What a page hero may show: the real result count, the car, and the "Fits my car" switch. */
@@ -15,6 +18,8 @@ export type BrowserState = {
   total: number | null;
   car: { make: string; model: string; year: string; trim: string } | null;
   fitOn: boolean;
+  /** the list is filtered by another car the customer searched for (not their own) */
+  browsing: boolean;
   /** turn "Fits my car" on / off (opens the car sheet when no car is set) */
   setFit: (on: boolean) => void;
   openCar: () => void;
@@ -60,17 +65,14 @@ export function ProductBrowser({
   entry?: string;
   emptyText?: string;
 }) {
-  const { t, row } = useL();
+  const { t, row, align, isArabic } = useL();
   const { g } = useGarageTheme();
   const [q, setQ] = useState(initialQ ?? "");
-  // "Fits my car" values live in memory for the app session, so they survive leaving this screen.
-  const [make, setMake] = useState(fitMemory.make);
-  const [model, setModel] = useState(fitMemory.model);
-  const [year, setYear] = useState(fitMemory.year);
-  const [trim, setTrim] = useState(fitMemory.trim);
+  // the account's car (shared by every screen) and, from a search like "elantra 2018", another car being browsed
+  const { car: myCar } = useMyCar();
+  const [browse, setBrowse] = useState<Car | null>(null);
   const [fitEnabled, setFitEnabled] = useState(true);
-  const [carOpen, setCarOpen] = useState(false);
-  const [draft, setDraft] = useState({ make: "", model: "", year: "", trim: "" });
+  const vehicles = useVehicleList().list;
   const [sort, setSort] = useState<PartSort>("relevance");
   const [sortOpen, setSortOpen] = useState(false);
   const [filters, setFilters] = useState<PartFilters>(filterMemory.current);
@@ -103,44 +105,56 @@ export function ProductBrowser({
     if (typeof initialQ === "string") setQ(initialQ);
   }, [initialQ]);
 
-  const yearOk = year.trim() === "" || /^\d{4}$/.test(year.trim());
-  const carSet = !!make.trim() && yearOk;
+  const car = browse ?? myCar;
+  const carSet = !!car;
   const fitOn = fitEnabled && carSet;
-  const car = carSet ? { make, model, year, trim } : null;
+  const { make = "", model = "", year = "", trim = "" } = fitOn && car ? car : {};
 
-  const openCar = () => {
-    setDraft({ make, model, year, trim });
-    setCarOpen(true);
-  };
+  const openCar = openMyCarPicker;
+  // a newly saved car is the one shown (any browsed car is dropped), with the fit on
+  const myKey = myCar ? `${myCar.make}|${myCar.model}|${myCar.year}` : "";
+  useEffect(() => {
+    if (!myKey) return;
+    setBrowse(null);
+    setFitEnabled(true);
+  }, [myKey]);
   useEffect(() => {
     if (!initialFit) return;
     if (carSet) setFitEnabled(true);
     else openCar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialFit]);
-
-  // the car sheet: same rules as before (make first, 4-digit year)
-  const dYearOk = draft.year.trim() === "" || /^\d{4}$/.test(draft.year.trim());
-  const dNeedsMake = !draft.make.trim() && (!!draft.model.trim() || !!draft.year.trim());
-  const dHint = dNeedsMake ? t("Enter the make first.", "أدخل الشركة المصنعة أولًا.") : !dYearOk ? t("The year must be 4 digits, e.g. 2016.", "يجب أن تتكون السنة من 4 أرقام، مثل 2016.") : null;
-  const saveCar = () => {
-    setMake(draft.make);
-    setModel(draft.model);
-    setYear(draft.year);
-    setTrim(draft.trim);
-    setFitEnabled(!!draft.make.trim());
-    setCarOpen(false);
-  };
-  const clearCar = () => {
-    setMake("");
-    setModel("");
-    setYear("");
-    setTrim("");
-    setCarOpen(false);
-  };
   const onFitPress = () => {
     if (!carSet) openCar();
     else setFitEnabled(!fitEnabled);
+  };
+  // "Fits my car" off; a browsed car is simply dropped
+  const clearCar = () => (browse ? setBrowse(null) : setFitEnabled(false));
+
+  // car-aware search: "corolla 2016" / "كورولا 2016" offers that car as a filter (my car is not changed)
+  const hit = useMemo(() => (vehicles && q.trim() ? matchVehicle(q, vehicles) : null), [q, vehicles]);
+  const hitCar: Car | null = hit ? { make: hit.v.make, model: hit.v.model, year: hit.year ? String(hit.year) : "", trim: "" } : null;
+  const hitIsActive = !!hitCar && !!car && fitOn && hitCar.make === car.make && hitCar.model === car.model && (!hitCar.year || hitCar.year === car.year);
+  const carLabel = (c: Car) => {
+    const v = vehicles?.find((x) => x.make === c.make && x.model === c.model);
+    const name = v && isArabic ? `${v.makeAr} ${v.modelAr}` : `${c.make} ${c.model}`;
+    return c.year ? `${name} ${c.year}` : name;
+  };
+  const applyHit = () => {
+    if (!hit || !hitCar) return;
+    setBrowse(hitCar);
+    setFitEnabled(true);
+    setQ(hit.rest);
+  };
+  const [saveErr, setSaveErr] = useState<string | null>(null);
+  const setAsMine = async () => {
+    if (!browse?.year) return;
+    setSaveErr(null);
+    try {
+      await saveMyCar({ make: browse.make, model: browse.model, year: Number(browse.year) });
+    } catch (e: any) {
+      setSaveErr(e.message);
+    }
   };
 
   const run = useCallback(
@@ -162,7 +176,7 @@ export function ProductBrowser({
           page: pageNo,
         });
         if (mine !== seq.current) return;
-        setItems((cur) => (mode === "more" ? [...cur, ...r.products] : r.products));
+        setItems((cur) => (mode === "more" ? appendDistinct(cur, r.products) : r.products));
         setPage(r.page);
         setTotal(r.total);
         setHasMore(r.hasMore);
@@ -181,13 +195,9 @@ export function ProductBrowser({
 
   // Search as the user types, after a short pause.
   useEffect(() => {
-    fitMemory.make = make;
-    fitMemory.model = model;
-    fitMemory.year = year;
-    fitMemory.trim = trim;
     const h = setTimeout(() => run(1, "replace"), 350);
     return () => clearTimeout(h);
-  }, [run, make, model, year, trim]);
+  }, [run]);
 
   const SORTS: { key: PartSort; label: string }[] = [
     { key: "relevance", label: t("Relevance", "الأكثر صلة") },
@@ -199,6 +209,13 @@ export function ProductBrowser({
   const sortLabel = SORTS.find((s) => s.key === sort)!.label;
 
   const visibleItems = items.filter((p) => !broken.includes(p.id));
+  // with a car: grouped by category (in the order the results bring them)
+  const groups = useMemo(() => {
+    if (!fitOn) return null;
+    const by = new Map<string, CatalogProduct[]>();
+    for (const p of visibleItems) by.set(p.category ?? "", [...(by.get(p.category ?? "") ?? []), p]);
+    return [...by.entries()];
+  }, [fitOn, visibleItems]);
 
   return (
     <GaragePage
@@ -206,7 +223,7 @@ export function ProductBrowser({
       entry={entry}
       refreshing={refreshing}
       onRefresh={() => run(1, "refresh")}
-      hero={hero?.({ total, car, fitOn, setFit: (on) => (on && !carSet ? openCar() : setFitEnabled(on)), openCar })}
+      hero={hero?.({ total, car: fitOn ? car : myCar, browsing: fitOn && !!browse, fitOn, setFit: (on) => (on && !myCar ? openCar() : (setBrowse(null), setFitEnabled(on))), openCar })}
     >
       {topExtra}
       <View style={[row, { alignItems: "center", gap: 10 }]}>
@@ -215,20 +232,27 @@ export function ProductBrowser({
         </View>
         <IconButton icon="options-outline" label={t("Filters", "التصفية")} onPress={() => setSheetOpen(true)} tone={activeCount ? "accent" : "card"} badge={activeCount || undefined} />
       </View>
+      {hitCar && !hitIsActive ? (
+        <View style={[row, { marginTop: 10 }]}>
+          <Chip icon="search" label={`${t("Show parts for", "عرض قطع")} ${carLabel(hitCar)}`} onPress={applyHit} />
+        </View>
+      ) : null}
       <View style={[row, { marginTop: 12, alignItems: "center", gap: 8, flexWrap: "wrap" }]}>
         {fitOn && car ? (
           <>
             <View style={{ flexShrink: 1 }}>
-              <Chip icon="car-sport" label={`${t("Parts for", "قطع تناسب")} ${carName(car)}`} on onPress={openCar} />
+              <Chip icon="car-sport" label={`${t("Parts for", "قطع تناسب")} ${carLabel(car)}`} on onPress={browse ? undefined : openCar} />
             </View>
             <Tap label={t("Clear vehicle", "إزالة المركبة")} onPress={clearCar} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
               <GIcon name="close" size={18} color={g.soft} />
             </Tap>
+            {browse?.year ? <GButton variant="ghost" icon="car-sport-outline" label={t("Set as my car", "اجعلها سيارتي")} onPress={() => void setAsMine()} style={{ minHeight: 44 }} /> : null}
           </>
         ) : (
-          <Chip icon="car-sport-outline" label={carSet ? `${t("Show parts for", "عرض قطع")} ${carName(car!)}` : t("Find parts for your car", "ابحث عن قطع لسيارتك")} onPress={carSet ? onFitPress : openCar} />
+          <Chip icon="car-sport-outline" label={carSet ? `${t("Show parts for", "عرض قطع")} ${carLabel(car!)}` : t("Find parts for your car", "ابحث عن قطع لسيارتك")} onPress={carSet ? onFitPress : openCar} />
         )}
       </View>
+      {saveErr ? <Note tone="danger" icon="alert-circle-outline">{saveErr}</Note> : null}
 
       {afterSearch ? <View style={{ marginTop: 8 }}>{afterSearch}</View> : null}
 
@@ -255,11 +279,24 @@ export function ProductBrowser({
         ) : (
           <>
             {error ? <Note tone="danger" icon="alert-circle-outline">{error}</Note> : null}
-            <Grid>
-              {visibleItems.map((p) => (
-                <ProductCard key={p.id} p={p} car={fitOn ? car : null} onBroken={dropBroken} onPress={() => router.push(`/customer/parts/${p.id}`)} />
-              ))}
-            </Grid>
+            {groups ? (
+              groups.map(([cat, list]) => (
+                <View key={cat || "none"} style={{ marginTop: 8 }}>
+                  <GText style={[gType.title, align, { marginBottom: 10 }]}>{cat ? labelOf(findCategory(cat), isArabic) || t("Other parts", "قطع أخرى") : t("Other parts", "قطع أخرى")}</GText>
+                  <Grid>
+                    {list.map((p) => (
+                      <ProductCard key={p.id} p={p} car={car} mine={!browse} onBroken={dropBroken} onPress={() => router.push(`/customer/parts/${p.id}`)} />
+                    ))}
+                  </Grid>
+                </View>
+              ))
+            ) : (
+              <Grid>
+                {visibleItems.map((p) => (
+                  <ProductCard key={p.id} p={p} car={null} onBroken={dropBroken} onPress={() => router.push(`/customer/parts/${p.id}`)} />
+                ))}
+              </Grid>
+            )}
             {hasMore && (
               <View style={{ marginTop: 16 }}>
                 <GButton variant="secondary" icon="chevron-down-outline" label={loadingMore ? t("Loading…", "جارٍ التحميل…") : t("Load more", "تحميل المزيد")} disabled={loadingMore} onPress={() => run(page + 1, "more")} />
@@ -273,21 +310,6 @@ export function ProductBrowser({
 
       <FilterSheet visible={sheetOpen} value={filters} category={category} group={group} onApply={applyFilters} onClose={() => setSheetOpen(false)} />
       <OptionSheet visible={sortOpen} onClose={() => setSortOpen(false)} closeLabel={t("Close", "إغلاق")} title={t("Sort by", "ترتيب حسب")} value={sort} options={SORTS} onSelect={(k) => { setSort(k); setSortOpen(false); }} />
-      <Sheet
-        visible={carOpen}
-        onClose={() => setCarOpen(false)}
-        closeLabel={t("Close", "إغلاق")}
-        title={t("Your car", "سيارتك")}
-        footer={
-          <View style={[row, { gap: 12 }]}>
-            <GButton flex variant="secondary" label={t("Clear", "مسح")} disabled={!carSet && !draft.make && !draft.model && !draft.year && !draft.trim} onPress={clearCar} />
-            <GButton flex label={t("Show parts that fit", "عرض القطع المناسبة")} disabled={!draft.make.trim() || !!dHint} onPress={saveCar} />
-          </View>
-        }
-      >
-        <VehiclePicker value={draft} onChange={(v) => setDraft(v)} />
-        {dHint ? <Note>{dHint}</Note> : null}
-      </Sheet>
     </GaragePage>
   );
 }

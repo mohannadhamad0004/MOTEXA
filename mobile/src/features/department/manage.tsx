@@ -83,7 +83,7 @@ export function ProductEditor({ id, shopId }: { id: string; shopId?: string }) {
               admin
               isNew={false}
               product={p}
-              initial={{ name: p.name, brand: p.brand, partNumber: p.partNumber, description: p.description, price: p.price, stock: p.stock, category: p.category, condition: p.condition, partType: p.partType, imageUri: p.imageUri, fitments: p.fitments }}
+              initial={{ name: p.name, brand: p.brand, partNumber: p.partNumber, description: p.description, price: p.price, stock: p.stock, category: p.category, condition: p.condition, partType: p.partType, imageUri: p.imageUri, fitments: p.fitments, isUniversal: p.isUniversal }}
               onSubmit={(i) => partsAdminService.updateProduct(ACTOR, id, i)}
               onDone={() => goBack(back)}
             />

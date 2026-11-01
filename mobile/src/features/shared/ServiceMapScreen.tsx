@@ -1,12 +1,12 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Linking, Pressable, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Pressable, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Chip as GChip, GButton, GIcon, GIconName, GText, Note, OptionSheet, Rail, SearchBar, StatusChip, Tone } from "../../components/garage";
 import { useDelayed, useReduced } from "../../motion";
 import { CITIES, cityCentre, cityLabel } from "../../core/constants/cities";
 import { findCategory, labelOf } from "../../core/constants/categories";
-import { Point, haversineKm, locationMemory, mapsDirectionsUrl } from "../../core/constants/geo";
+import { Point, haversineKm, locationMemory } from "../../core/constants/geo";
 import { goBack } from "../../core/hooks/nav";
 import { useL } from "../../core/hooks/useL";
 import { alpha } from "../../theme/tokens";
@@ -180,7 +180,8 @@ function LayerChip({ kind, label, count, on, onPress }: { kind: Kind; label: str
 /**
  * Full-screen map page, one screen for every customer map: tow companies (customer/tow/map), mechanics (customer/mechanics/map),
  * parts shops (customer/parts/map) and all three together (customer/map, with layer chips). Search and filter, pick a pin;
- * tow / mechanic: request inside the panel, then watch the request and its route; shop: shop card, "View shop", "Directions".
+ * tow / mechanic: request inside the panel, then watch the request and its route; shop: shop card, "View shop", "Directions"
+ * (drawn here: the road route from your location, distance + approximate time; never handed off to another maps app).
  */
 export function ServiceMapScreen({ mode }: { mode: Mode }) {
   const { c, row, align } = useTheme();
@@ -333,6 +334,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
   const form = isTow ? towForm : mechForm;
 
   const select = (p: Provider) => {
+    setDirId(null);
     setHighlight((h) => (h && h.id !== p.id ? null : h));
     setSelectedId(p.id);
     setStep("select");
@@ -500,16 +502,38 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
   const toPoint = selected ? { lat: selected.lat, lng: selected.lng } : null;
   const { route, loading: routing } = useRoute(step === "route" ? reqId : null, pickupPoint, toPoint);
 
+  // ---- directions to a shop, inside MOTEXA: your location (asked once if needed) -> road route (straight line if the router fails) ----
+  const [dirId, setDirId] = useState<string | null>(null);
+  const [dirBusy, setDirBusy] = useState(false);
+  const [dirDenied, setDirDenied] = useState(false);
+  const dirTarget = step === "select" && selected?.shop && selected.id === dirId ? selected : null;
+  const dir = useRoute(dirTarget && me ? `dir:${dirTarget.id}` : null, dirTarget ? me : null, dirTarget ? { lat: dirTarget.lat, lng: dirTarget.lng } : null);
+  const startDirections = async () => {
+    if (!selected) return;
+    const id = selected.id;
+    setDirDenied(false);
+    if (!me) {
+      setDirBusy(true);
+      const p = await loc.locate();
+      setDirBusy(false);
+      if (!p) return setDirDenied(true);
+      setMe(p);
+    }
+    setDirId(id);
+    setSnap("collapsed");
+  };
+
   // ---- map props ----
   const pinOf = (p: Provider, dim: boolean): ServicePin => ({ id: p.id, name: p.name, lat: p.lat, lng: p.lng, kind: p.kind, dim, color: PLACE_COLOR[p.kind] });
   const allPins: ServicePin[] = providers.map((p) => pinOf(p, p.kind === "tow" && (p.tow?.availableTrucks ?? 0) === 0));
-  const pins = step === "select" ? allPins : allPins.filter((p) => p.id === selected?.id).length ? allPins.filter((p) => p.id === selected?.id) : selected ? [pinOf(selected, false)] : [];
-  const fit: [number, number][] =
-    step === "select"
+  const pins = dirTarget ? [pinOf(dirTarget, false)] : step === "select" ? allPins : allPins.filter((p) => p.id === selected?.id).length ? allPins.filter((p) => p.id === selected?.id) : selected ? [pinOf(selected, false)] : [];
+  const fit: [number, number][] = dirTarget
+    ? dir.route?.coords ?? [...(me ? [[me.lat, me.lng] as [number, number]] : []), [dirTarget.lat, dirTarget.lng]]
+    : step === "select"
       ? [...pins.map((p) => [p.lat, p.lng] as [number, number]), ...(me ? [[me.lat, me.lng] as [number, number]] : [])]
       : [...(toPoint ? [[toPoint.lat, toPoint.lng] as [number, number]] : []), ...(pickupPoint ? [[pickupPoint.lat, pickupPoint.lng] as [number, number]] : [])];
   // the Home map does not re-fit when a layer chip is switched: only when the places themselves change
-  const fitKey = step === "select" ? `sel:${mode}:${(isAll ? located : pins).map((p) => p.id).join(",")}:${me ? 1 : 0}` : step === "form" ? `form:${selected?.id}:${pickupPoint ? 1 : 0}` : `route:${reqId}:${pickupPoint ? 1 : 0}`;
+  const fitKey = dirTarget ? `dir:${dirTarget.id}:${dir.route?.kind ?? "-"}` : step === "select" ? `sel:${mode}:${(isAll ? located : pins).map((p) => p.id).join(",")}:${me ? 1 : 0}` : step === "form" ? `form:${selected?.id}:${pickupPoint ? 1 : 0}` : `route:${reqId}:${pickupPoint ? 1 : 0}`;
   const panelVisible = true;
   const pad = { top: topH, bottom: wide ? 0 : inset, left: wide && panelVisible && !isArabic ? SIDE_PANEL_WIDTH : 0, right: wide && panelVisible && isArabic ? SIDE_PANEL_WIDTH : 0 };
 
@@ -730,13 +754,23 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
           </>
         ) : null}
         {selected.approx ? <Text style={[{ color: c.soft, fontSize: 11 }, align]}>{t("Approx. location: the pin is at the city centre.", "موقع تقريبي: الدبوس في مركز المدينة.")}</Text> : null}
+        {dirTarget ? <RouteSummary route={dir.route} loading={dir.loading} /> : null}
+        {selected.shop && dirDenied && !dirTarget ? (
+          <>
+            <Text style={[{ color: c.ink, fontSize: 13 }, align]}>{t("MOTEXA needs your location to show the way. You can still browse the map.", "يحتاج MOTEXA إلى موقعك لعرض الطريق. يمكنك متابعة تصفح الخريطة.")}</Text>
+            <LocationProblem loc={loc} />
+          </>
+        ) : null}
       </View>
     );
-    const shopAt = selected.shop ? { lat: selected.lat, lng: selected.lng } : null;
-    footer = shopAt ? (
+    footer = selected.shop ? (
       <View style={[row, { gap: 10 }]}>
         <PrimaryButton style={{ flex: 1 }} label={t("View shop", "عرض المتجر")} onPress={() => router.push(`/customer/shops/${selected.id}`)} />
-        <PrimaryButton style={{ flex: 1 }} variant="outline" icon="pin" label={t("Directions", "الاتجاهات")} onPress={() => void Linking.openURL(mapsDirectionsUrl(shopAt))} />
+        {dirTarget ? (
+          <PrimaryButton style={{ flex: 1 }} variant="outline" label={t("Close route", "إغلاق المسار")} onPress={() => setDirId(null)} />
+        ) : (
+          <PrimaryButton style={{ flex: 1 }} variant="outline" icon="pin" label={me ? t("Directions", "الاتجاهات") : t("Directions (use my location)", "الاتجاهات (موقعي)")} loading={dirBusy} onPress={() => void startDirections()} />
+        )}
       </View>
     ) : (
       <View style={[row, { gap: 10 }]}>
@@ -856,7 +890,13 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
         me={me}
         pickup={step === "select" ? null : pickupPoint}
         movePickup={step === "form"}
-        route={step === "route" && route ? { coords: route.coords, dashed: route.kind === "line", key: reqId ?? "" } : null}
+        route={
+          step === "route" && route
+            ? { coords: route.coords, dashed: route.kind === "line", key: reqId ?? "" }
+            : dirTarget && dir.route
+              ? { coords: dir.route.coords, dashed: dir.route.kind === "line", key: `dir:${dirTarget.id}` }
+              : null
+        }
         radar={step === "select" && radarOn}
         highlight={step === "select" ? highlight : null}
         reduced={reduced}
@@ -869,7 +909,11 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
           const p = providers.find((x) => x.id === id);
           if (p) select(p);
         }}
-        onBackground={() => step === "select" && setSelectedId(null)}
+        onBackground={() => {
+          if (step !== "select") return;
+          setSelectedId(null);
+          setDirId(null);
+        }}
         onPickupMove={(p) => form.place(p, false)}
         onFailedChange={setMapFailed}
       />

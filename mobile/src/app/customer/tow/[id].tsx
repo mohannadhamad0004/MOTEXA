@@ -9,6 +9,7 @@ import { useLoad } from "../../../core/hooks/useLoad";
 import { catalogService } from "../../../features/catalog/catalogService";
 import { MAPS_AVAILABLE, PinMap } from "../../../features/shared/maps";
 import { useTruckLabels } from "../../../features/tow/truckBits";
+import { freeDriversOf } from "../../../features/tow/dispatchService";
 import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 
 // Customers see approved trucks only, never plate numbers, documents or contact data.
@@ -20,6 +21,8 @@ export default function CustomerTowCompany() {
   const state = useLoad(() => catalogService.getTowCompany(id, locationMemory.current), [id]);
   const co = state.data?.company;
   const trucks = state.data?.trucks ?? [];
+  // FREE drivers a customer may ask directly (first name + truck type only)
+  const drivers = useLoad(() => freeDriversOf(id), [id], 30_000);
   const opLabel = { AVAILABLE: t("Available", "متاحة"), BUSY: t("Busy", "مشغولة"), OUT_OF_SERVICE: t("Out of service", "خارج الخدمة") };
   const opTone = { AVAILABLE: "success", BUSY: "warning", OUT_OF_SERVICE: "neutral" } as const;
 
@@ -82,6 +85,25 @@ export default function CustomerTowCompany() {
               </View>
             ) : null}
           </Section>
+
+          {drivers.data?.length ? (
+            <Section title={t("Free drivers", "السائقون المتاحون")}>
+              <Card pad={12}>
+                {drivers.data.map((d, i) => (
+                  <ListRow
+                    key={d.id}
+                    divider={i > 0}
+                    icon="person-circle-outline"
+                    title={d.firstName}
+                    sub={d.truck ? `${type[d.truck.type]} · ${d.truck.make} ${d.truck.model}` : undefined}
+                    end={<GText style={[gType.caption, { color: g.accentText, fontWeight: "800" }]}>{t("Request", "اطلب")}</GText>}
+                    onPress={() => router.push({ pathname: "/customer/towrequest/new", params: { companyId: id, driverId: d.id } })}
+                  />
+                ))}
+              </Card>
+              <GText soft style={[gType.caption, align, { marginTop: 6 }]}>{t("Or request the company: it sends whichever driver is free.", "أو اطلب الشركة: ترسل أي سائق متاح.")}</GText>
+            </Section>
+          ) : null}
 
           <Section title={`${t("Trucks", "الشاحنات")} (${trucks.length})`}>
             {trucks.length ? (

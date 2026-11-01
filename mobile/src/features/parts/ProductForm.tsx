@@ -14,11 +14,12 @@ import { Fitment, Product, ProductInput } from "./partsService";
 import { Chip } from "../catalog/catalogBits";
 import { CONDITIONS, PART_TYPES, usePartLabels } from "../catalog/partAttrs";
 import { CATALOG_GROUPS, labelOf } from "../../core/constants/categories";
+import { VehiclePicker, useVehicleList } from "../catalog/VehiclePicker";
 
 // The product form shared by the shop (provider) screen and the MOTEXA admin editor. It knows nothing about who is
 // saving: the caller passes onSubmit (provider or admin service) and onDone.
 export const blankProduct: ProductInput = {
-  name: "", brand: "", partNumber: "", description: "", price: 0, stock: 0, category: null, condition: "NEW", partType: null, imageUri: null, fitments: [],
+  name: "", brand: "", partNumber: "", description: "", price: 0, stock: 0, category: null, condition: "NEW", partType: null, imageUri: null, fitments: [], isUniversal: false,
 };
 
 export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin = false }: { initial: ProductInput; product?: Product; isNew: boolean; onSubmit: (input: ProductInput) => Promise<unknown>; onDone: () => void; /** MOTEXA admin editing on behalf of the shop: no provider-only wording */ admin?: boolean }) {
@@ -31,24 +32,32 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const picked = f.imageUri !== initial.imageUri; // a local photo chosen in this session, not saved yet
+  // "Fits these cars": picked from the vehicle list (no free text), each with its own year range
+  const vehicles = useVehicleList().list;
+  const listed = (x: Fitment) => !vehicles || vehicles.some((v) => v.make === x.make && v.model === x.model);
+  const [adding, setAdding] = useState<{ make: string; model: string; year: string } | null>(null);
+  const addCar = (make: string, model: string) => {
+    const v = vehicles?.find((x) => x.make === make && x.model === model);
+    if (!v) return;
+    const top = Math.min(v.yearTo, new Date().getFullYear() + 1);
+    if (!f.fitments.some((x) => x.make === make && x.model === model)) setF({ ...f, fitments: [...f.fitments, { make, model, yearFrom: Math.max(v.yearFrom, top - 8), yearTo: top }] });
+    setAdding(null);
+  };
 
   const setFit = (i: number, patch: Partial<Fitment>) =>
     setF({ ...f, fitments: f.fitments.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
 
   const save = async () => {
-    // A completely empty fitment row is ignored; a half-filled one blocks saving and says which row.
-    const isEmptyRow = (x: Fitment) => !x.make.trim() && !x.model.trim() && !(x.trim ?? "").trim();
-    const badRow = f.fitments.findIndex((x) => !isEmptyRow(x) && (!x.make.trim() || !x.model.trim()));
-    if (badRow >= 0) {
-      const n = badRow + 1;
-      return setErr(
-        t(
-          `Fitment row ${n} is incomplete: enter both the make and the model, or remove the row.`,
-          `صف التوافق رقم ${n} غير مكتمل: أدخل الشركة المصنعة والطراز معًا، أو أزل الصف.`
-        )
-      );
-    }
+    // at least one car or Universal; every car from the vehicle list with a valid year range (the server checks the same)
+    const isEmptyRow = (x: Fitment) => !x.make.trim() && !x.model.trim();
+    const cars = f.fitments.filter((x) => !isEmptyRow(x));
+    if (!cars.length && !f.isUniversal) return setErr(t("Add at least one car this part fits, or mark it Universal.", "أضف سيارة واحدة على الأقل تناسبها القطعة، أو حدّدها كعامة."));
+    const bad = cars.find((x) => !listed(x));
+    if (bad) return setErr(t(`${bad.make} ${bad.model} is not on the vehicle list. Remove it and add the car from the list.`, `${bad.make} ${bad.model} غير موجودة في قائمة المركبات. أزلها وأضف السيارة من القائمة.`));
+    const badYears = cars.find((x) => !x.yearFrom || !x.yearTo || x.yearFrom > x.yearTo);
+    if (badYears) return setErr(t(`Check the years for ${badYears.make} ${badYears.model}: "from" must be before "to".`, `تحقق من سنوات ${badYears.make} ${badYears.model}: يجب أن تكون "من" قبل "إلى".`));
     if (!f.category) return setErr(t("Choose a category.", "اختر فئة."));
+    if (CATALOG_GROUPS.some((g) => g.categories.some((c) => c.key === f.category && c.children))) return setErr(t("Choose a more specific category (for example Bulbs or Headlights under Lighting).", "اختر فئة أدق (مثل اللمبات أو الأضواء الأمامية ضمن الإضاءة)."));
     setBusy(true);
     setErr(null);
     try {
@@ -56,7 +65,7 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
         ...f,
         price: parseFloat(price || "0"),
         stock: parseInt(stock || "0", 10),
-        fitments: f.fitments.filter((x) => !isEmptyRow(x)),
+        fitments: cars,
       };
       await onSubmit(input);
       onDone();
@@ -135,24 +144,48 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
       {!f.category && !isNew ? (
         <Notice tone="accent" icon="information-circle-outline">{t("This part has no category yet. Choose one to save changes.", "ليس لهذه القطعة فئة بعد. اختر فئة لحفظ التغييرات.")}</Notice>
       ) : null}
+      {f.category && CATALOG_GROUPS.some((g) => g.categories.some((c) => c.key === f.category && c.children)) ? (
+        <Notice tone="accent" icon="information-circle-outline">{t("Pick the exact type below (for example Bulbs or Headlights), so the part shows in one place only.", "اختر النوع الدقيق أدناه (مثل اللمبات أو الأضواء الأمامية) حتى تظهر القطعة في مكان واحد فقط.")}</Notice>
+      ) : null}
       <Card>
+        {/* ONE category per part: a category with sub-categories only offers its sub-categories */}
         {CATALOG_GROUPS.map((g) => (
           <View key={g.key} style={{ marginBottom: 12 }}>
             <Text style={[{ color: col.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 1, marginBottom: 7 }, align]}>{labelOf(g, isArabic)}</Text>
             <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
-              {g.categories.map((c) => (
+              {g.categories.filter((c) => !c.children).map((c) => (
                 <Chip key={c.key} icon={c.icon} label={labelOf(c, isArabic)} on={f.category === c.key} onPress={() => setF({ ...f, category: c.key })} />
               ))}
             </View>
+            {g.categories.filter((c) => c.children).map((c) => (
+              <View key={c.key} style={{ marginTop: 10 }}>
+                <Text style={[{ color: col.text, fontSize: 13, fontWeight: "700", marginBottom: 6 }, align]}>{labelOf(c, isArabic)}</Text>
+                <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
+                  {c.children!.map((k) => (
+                    <Chip key={k.key} icon={k.icon} label={labelOf(k, isArabic)} on={f.category === k.key} onPress={() => setF({ ...f, category: k.key })} />
+                  ))}
+                </View>
+              </View>
+            ))}
           </View>
         ))}
       </Card>
 
-      <SectionHeader title={t("Vehicle fitment", "توافق المركبات")} />
+      <SectionHeader title={t("Fits these cars", "تناسب هذه السيارات")} />
+      <Card>
+        <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
+          <Chip icon="globe-outline" label={t("Universal: fits every car", "عامة: تناسب كل السيارات")} on={f.isUniversal} onPress={() => setF({ ...f, isUniversal: !f.isUniversal })} />
+        </View>
+        <Text style={[{ color: col.textMuted, fontSize: 12, marginTop: 8 }, align]}>
+          {t("Add every car this part fits, or mark it Universal (oil, bulbs, accessories). Customers only see a fit you list here.", "أضف كل سيارة تناسبها هذه القطعة، أو حدّدها كعامة (زيوت، لمبات، إكسسوارات). لا يرى العملاء توافقًا إلا ما تحدده هنا.")}
+        </Text>
+      </Card>
       {f.fitments.map((x, i) => (
-        <Card key={i}>
-          <Input label={t("Make", "الشركة المصنعة")} value={x.make} onChangeText={(v) => setFit(i, { make: v })} />
-          <Input label={t("Model", "الطراز")} value={x.model} onChangeText={(v) => setFit(i, { model: v })} />
+        <Card key={`${x.make}|${x.model}|${i}`}>
+          <Text style={[{ color: col.text, fontSize: 16, fontWeight: "800", marginBottom: 8 }, align]}>{`${x.make} ${x.model}`}</Text>
+          {!listed(x) ? (
+            <Notice tone="warning" icon="alert-circle-outline">{t("Not on the vehicle list. Remove this row and add the car from the list.", "غير موجودة في قائمة المركبات. أزل هذا الصف وأضف السيارة من القائمة.")}</Notice>
+          ) : null}
           <View style={[row, { gap: 10 }]}>
             <View style={{ flex: 1 }}>
               <Input label={t("Year from", "من سنة")} value={String(x.yearFrom || "")} keyboardType="number-pad" onChangeText={(v) => setFit(i, { yearFrom: parseInt(v || "0", 10) })} />
@@ -162,15 +195,18 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
             </View>
           </View>
           <Input label={t("Engine / trim (optional)", "المحرك / الفئة (اختياري)")} value={x.trim ?? ""} onChangeText={(v) => setFit(i, { trim: v })} />
-          <Button variant="danger" label={t("Remove fitment", "إزالة التوافق")} onPress={() => setF({ ...f, fitments: f.fitments.filter((_, j) => j !== i) })} />
+          <Button variant="danger" label={t("Remove car", "إزالة السيارة")} onPress={() => setF({ ...f, fitments: f.fitments.filter((_, j) => j !== i) })} />
         </Card>
       ))}
-      <Button
-        variant="ghost"
-        icon="add-outline"
-        label={t("Add fitment", "إضافة توافق")}
-        onPress={() => setF({ ...f, fitments: [...f.fitments, { make: "", model: "", yearFrom: 2010, yearTo: 2020 }] })}
-      />
+      {adding ? (
+        <Card>
+          {/* make -> model from the list; picking the model adds the car (years are set on its row) */}
+          <VehiclePicker value={adding} onChange={(v) => (v.model ? addCar(v.make, v.model) : setAdding(v))} />
+          <Button variant="ghost" label={t("Cancel", "إلغاء")} onPress={() => setAdding(null)} />
+        </Card>
+      ) : (
+        <Button variant="ghost" icon="add-outline" label={t("Add a car", "إضافة سيارة")} onPress={() => setAdding({ make: "", model: "", year: "" })} />
+      )}
 
       <View style={{ height: 20 }} />
       {err ? <Notice tone="danger" icon="alert-circle-outline">{err}</Notice> : null}

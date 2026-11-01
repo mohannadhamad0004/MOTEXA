@@ -1,6 +1,6 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { GarageHero, Toggle } from "../../../components/garage";
+import { HeroLayout } from "../../../components/garage";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { carName } from "../../../features/catalog/catalogBits";
@@ -27,23 +27,24 @@ export default function CustomerParts() {
       initialFit={params.fit === "1"}
       group={group}
       hero={(s) => (
-        <GarageHero
-          variant="tab"
-          tab="parts"
-          onMap={() => router.push("/customer/parts/map")}
-          title={t("Parts", "القطع")}
-          line={
+        <HeroLayout
+          config={{
+            tab: "parts",
+            title: t("Parts", "القطع"),
+            line:
             s.total === null
               ? undefined
               : s.fitOn && s.car
-                ? t(`${s.total} ${s.total === 1 ? "part fits" : "parts fit"} your ${carName({ ...s.car, year: "" })}`, `${s.total} قطعة تناسب ${carName({ ...s.car, year: "" })}`)
+                ? s.browsing
+                  ? t(`${s.total} ${s.total === 1 ? "part fits" : "parts fit"} the ${carName(s.car)}`, `${s.total} قطعة تناسب ${carName(s.car)}`)
+                  : t(`${s.total} ${s.total === 1 ? "part fits" : "parts fit"} your ${carName({ ...s.car, year: "" })}`, `${s.total} قطعة تناسب ${carName({ ...s.car, year: "" })}`)
                 : shops.data
                   ? t(`${s.total} ${s.total === 1 ? "part" : "parts"} from ${shopCount} ${shopCount === 1 ? "shop" : "shops"}`, `${s.total} قطعة من ${shopCount} متاجر`)
-                  : undefined
-          }
-        >
-          <Toggle label={t("Fits my car", "تناسب سيارتي")} sub={s.car ? carName(s.car) : t("Set your car", "حدّد سيارتك")} value={s.fitOn} onChange={s.setFit} />
-        </GarageHero>
+                  : undefined,
+            // no car yet: setFit(true) opens the car picker
+            action: { kind: "toggle", icon: "car-sport-outline", label: t("Fits my car", "تناسب سيارتي"), on: s.fitOn && !s.browsing, onPress: () => s.setFit(!(s.fitOn && !s.browsing)) },
+          }}
+        />
       )}
       afterSearch={
         <>

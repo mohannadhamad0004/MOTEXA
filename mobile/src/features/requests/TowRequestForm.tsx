@@ -4,7 +4,7 @@ import { View } from "react-native";
 import { cityCentre } from "../../core/constants/cities";
 import { Point, locationMemory, roundPoint } from "../../core/constants/geo";
 import { useL } from "../../core/hooks/useL";
-import { currentCar } from "../catalog/catalogService";
+import { currentCar } from "../catalog/myCar";
 import { MAPS_AVAILABLE, PinMap } from "../shared/maps";
 import { LocationProblem, reverseGeocode, useCurrentLocation } from "../shared/useCurrentLocation";
 import { useProblemLabels } from "./requestBits";
@@ -56,6 +56,8 @@ export function useTowRequestForm(company: { id: string; city: string }) {
   const [problem, setProblem] = useState<TowProblem | null>(null);
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  // null = any driver of the company; else one FREE driver the customer picked
+  const [driverId, setDriverId] = useState<string | null>(null);
   // Where the car is: read only when you tap "Use my current location" (or place the pin yourself). Sent with the request, nowhere else.
   const [spot, setSpot] = useState<Point | null>(null);
   const [auto, setAuto] = useState(false); // the pickup text was filled in from the map, so moving the pin may refresh it
@@ -145,6 +147,7 @@ export function useTowRequestForm(company: { id: string; city: string }) {
         ...(spot ? { pickupLat: spot.lat, pickupLng: spot.lng } : {}),
         problemType: problem,
         notes: notes.trim(),
+        ...(driverId ? { driverId } : {}),
       });
       return { id: r.id, existing: false, request: r };
     } catch (e: any) {
@@ -161,7 +164,7 @@ export function useTowRequestForm(company: { id: string; city: string }) {
     return null;
   };
 
-  return { loc, spot, place, useHere, editPickup, removePin, startPin, finding, busy, err, submit, setErr, pickup, dropoff, setDropoff, make, setMake, model, setModel, year, setYear, problem, setProblem, phone, setPhone, notes, setNotes, cancelLookup };
+  return { loc, spot, place, useHere, editPickup, removePin, startPin, finding, busy, err, submit, setErr, pickup, dropoff, setDropoff, make, setMake, model, setModel, year, setYear, problem, setProblem, phone, setPhone, notes, setNotes, driverId, setDriverId, cancelLookup };
 }
 export type TowForm = ReturnType<typeof useTowRequestForm>;
 

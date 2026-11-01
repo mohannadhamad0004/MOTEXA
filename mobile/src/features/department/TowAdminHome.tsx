@@ -166,7 +166,15 @@ export function TowAdminHome() {
         <Kpi i={3} icon="business-outline" value={num(stats.data?.approvedCompanies, !!stats.data)} label={d.t("Tow companies", "شركات السحب")} onPress={() => go("/dept/directory")} />
       </View>
 
-      <Head title={d.t("Fleet status", "حالة الأسطول")} caption={d.t("Approved trucks. Live positions are not reported.", "الشاحنات المعتمدة. المواقع المباشرة غير متاحة.")} action={d.t("All", "الكل")} onAction={() => go("/dept/directory")} />
+      {/* active tow jobs: drivers' live points (when their job screen is open), customer pins and routes */}
+      <Head title={d.t("Active tows", "عمليات السحب الجارية")} caption={d.t("Every active job on the map, read only", "كل مهمة جارية على الخريطة، للقراءة فقط")} action={d.t("Open", "فتح")} onAction={() => go("/dept/tows")} />
+      <Pressable accessibilityRole="button" accessibilityLabel={d.t("Active tows", "عمليات السحب الجارية")} onPress={() => go("/dept/tows")} style={{ ...cardStyle(d), flexDirection: d.row, alignItems: "center", gap: 12, padding: 14, marginBottom: 22 }}>
+        <Ionicons name="map-outline" size={24} color="#E0A36F" />
+        <Text style={{ flex: 1, color: d.ink, fontSize: 14, fontWeight: "800", textAlign: d.align }}>{d.t("Open the active tows map", "افتح خريطة عمليات السحب الجارية")}</Text>
+        <Ionicons name={d.ar ? "chevron-back" : "chevron-forward"} size={18} color={d.muted} />
+      </Pressable>
+
+      <Head title={d.t("Fleet status", "حالة الأسطول")} caption={d.t("Approved trucks.", "الشاحنات المعتمدة.")} action={d.t("All", "الكل")} onAction={() => go("/dept/directory")} />
       {fleet.data ? (
         fleetRows.length === 0 ? (
           <Empty icon="car-outline" text={d.t("No approved trucks yet.", "لا توجد شاحنات معتمدة بعد.")} hint={d.t("Trucks appear here once a company's truck is approved.", "تظهر الشاحنات هنا بعد اعتماد شاحنة الشركة.")} />

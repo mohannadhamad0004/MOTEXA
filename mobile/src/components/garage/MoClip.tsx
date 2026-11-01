@@ -1,8 +1,8 @@
 // Mo as a short bundled clip (expo-video). Plays muted from the start EVERY time its screen comes into focus (opening the page
 // or switching back to its tab) and on every tap; never loops by itself, rests on its last frame, pauses when the screen loses
 // focus. Reduced motion: the last frame as a still, no autoplay. The generator's watermark strip at the bottom is cropped away.
-// Cut-out clips (`blend`) sit straight on the hero in light mode (their background IS heroTone) and in a cream spotlight card in
-// dark mode; scene clips are shown as a rounded picture in both. Never mirrored: in Arabic the hero places it on the other side.
+// In a fixed `box` (the main-tab hero) every clip fills the box edge to edge; the hero draws the frame. Without a box, cut-out
+// clips (`blend`) sit straight on the page in light mode and in a cream spotlight card in dark mode. Never mirrored.
 import { useEventListener } from "expo";
 import { useFocusEffect } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
@@ -21,8 +21,6 @@ export type MoClipSource = {
   crop: { x: number; y: number; w: number; h: number };
   /** cut-out clip whose background is the hero colour (blends in light, spotlight card in dark) */
   blend: boolean;
-  /** where Mo stands across the crop window (0 = start, 1 = end); a fixed box is cover-cropped around it. Default 0.5 */
-  focusX?: number;
 };
 
 export const MO_CLIPS = {
@@ -35,11 +33,13 @@ export const MO_CLIPS = {
     crop: { x: 0, y: 0, w: 572, h: 650 },
     blend: true,
   },
-  // the Parts clip from before Step Garage (was PartsShopHero): 2944 x 1248, watermark in the bottom strip
+  // 444 x 558 = exactly the HERO_BOX ratio, watermark already removed: the whole frame is shown
   parts: {
-    video: require("../../../assets/vedio/parts shop owner.mp4"),
-    frame: { w: 2944, h: 1248 },
-    crop: { x: 0, y: 0, w: 2944, h: 1040 },
+    video: require("../../../assets/mo/customer/parts/mo-parts-customer.mp4"),
+    first: require("../../../assets/mo/customer/parts/mo-parts-customer-first.jpg"),
+    last: require("../../../assets/mo/customer/parts/mo-parts-customer-last.jpg"),
+    frame: { w: 444, h: 558 },
+    crop: { x: 0, y: 0, w: 444, h: 558 },
     blend: false,
   },
   tow: {
@@ -59,37 +59,68 @@ const layer = (c: MoClipSource, width: number) => {
   return { position: "absolute", left: -c.crop.x * k, top: -c.crop.y * k, width: c.frame.w * k, height: c.frame.h * k } as const;
 };
 export const moClipHeight = (key: MoClipKey, width: number) => (width * MO_CLIPS[key].crop.h) / MO_CLIPS[key].crop.w;
-/** crop window scaled to COVER a w x h box, centred on Mo (focusX) vertically centred; the watermark strip stays outside */
-const cover = (c: MoClipSource, w: number, h: number) => {
-  const k = Math.max(w / c.crop.w, h / c.crop.h);
-  const spare = c.crop.w * k - w;
-  return { position: "absolute", left: -c.crop.x * k - spare * (c.focusX ?? 0.5), top: -c.crop.y * k - (c.crop.h * k - h) / 2, width: c.frame.w * k, height: c.frame.h * k } as const;
+/**
+ * How a clip sits in a fixed box. focusX / focusY: Mo's centre inside the crop window (0..1). scale: zoom, where 1 = the whole
+ * crop window fits the box and 2 = twice that; never less than what fills the box (cover). The visible part never leaves the
+ * crop window, so the watermark strip is never shown.
+ */
+export type MoFraming = { focusX: number; focusY: number; scale: number };
+const framed = (c: MoClipSource, w: number, h: number, f: MoFraming) => {
+  const k = Math.max(Math.min(w / c.crop.w, h / c.crop.h) * f.scale, w / c.crop.w, h / c.crop.h);
+  const vw = w / k;
+  const vh = h / k;
+  // the visible window (source px), centred on Mo, kept inside the crop window (or, when bigger, around it)
+  const place = (start: number, size: number, focus: number, view: number) => {
+    const v = start + focus * size - view / 2;
+    return view <= size ? Math.min(Math.max(v, start), start + size - view) : Math.min(Math.max(v, start + size - view), start);
+  };
+  const vx = place(c.crop.x, c.crop.w, f.focusX, vw);
+  const vy = place(c.crop.y, c.crop.h, f.focusY, vh);
+  // what of the crop window is inside the box: only this part is drawn
+  const ix = Math.max(vx, c.crop.x);
+  const iy = Math.max(vy, c.crop.y);
+  const iw = Math.min(vx + vw, c.crop.x + c.crop.w) - ix;
+  const ih = Math.min(vy + vh, c.crop.y + c.crop.h) - iy;
+  return {
+    window: { position: "absolute", overflow: "hidden", left: (ix - vx) * k, top: (iy - vy) * k, width: iw * k, height: ih * k } as const,
+    media: { position: "absolute", left: -ix * k, top: -iy * k, width: c.frame.w * k, height: c.frame.h * k } as const,
+  };
 };
 
 export type HeroTab = "home" | "parts" | "mechanics" | "tow";
 /**
- * The ONE place that says which clip each main tab's hero plays. null = no clip yet: the same-size box shows that tab's photo
- * placeholder (theme/photos.ts "hero.<tab>"). Adding a clip later = add it to MO_CLIPS and put its key here.
+ * The ONE place that says which clip each main tab's hero plays, and how it is framed (see MoFraming; values measured on the
+ * clips' frames so Mo's cap, face and hands stay inside the box). null = no clip yet: the same-size box shows that tab's photo
+ * placeholder (theme/photos.ts "hero.<tab>"). Adding a clip later = add it to MO_CLIPS and put it here.
  */
-export const HERO_CLIPS: Record<HeroTab, MoClipKey | null> = { home: "home", parts: "parts", mechanics: null, tow: "tow" };
+export const HERO_CLIPS: Record<HeroTab, ({ clip: MoClipKey } & MoFraming) | null> = {
+  // cut-out clip: Mo at the desk (cap ~y 125, shoes ~x 145 / y 600 of 572 x 650), a light zoom, desk edges may crop
+  home: { clip: "home", focusX: 0.55, focusY: 0.5, scale: 1.25 },
+  // already framed for the box: no zoom, centred
+  parts: { clip: "parts", focusX: 0.5, focusY: 0.5, scale: 1 },
+  mechanics: null,
+  // Mo beside the truck: raised fist ~x 450 to hand on hip ~x 900 of 1280, cap from ~y 55
+  tow: { clip: "tow", focusX: 0.52, focusY: 0.52, scale: 2.45 },
+};
 
 /** The four main tabs' hero box: every clip (or its photo placeholder) is shown at exactly this size. */
-export const HERO_BOX = { w: 140, h: 180 } as const;
+export const HERO_BOX = { w: 148, h: 186 } as const;
 
 /**
  * `width` is the clip's outer width (in dark mode a blend clip's cream card takes 12 px of it on each side). With `box` the clip
- * fills exactly that box instead (cover, centred on Mo), whatever the source resolution.
+ * fills exactly that box instead, framed by `framing` (default: whole clip, centred), whatever the source resolution.
  */
-export function MoClip({ clip, width = HERO_BOX.w, box, label, radius = gShape.cardLg }: { clip: MoClipKey; width?: number; box?: { w: number; h: number }; label: string; radius?: number }) {
+export function MoClip({ clip, width = HERO_BOX.w, box, framing = { focusX: 0.5, focusY: 0.5, scale: 1 }, label, radius = gShape.cardLg }: { clip: MoClipKey; width?: number; box?: { w: number; h: number }; framing?: MoFraming; label: string; radius?: number }) {
   const { dark } = useGarageTheme();
   const reduced = useReduced();
   const src: MoClipSource = MO_CLIPS[clip];
-  const spotlight = src.blend && dark;
-  const pad = box ? 10 : 12;
+  const spotlight = src.blend && dark && !box;
+  const pad = 12;
   const outerW = box ? box.w : width;
   const inner = spotlight ? outerW - pad * 2 : outerW;
-  const innerH = box ? (spotlight ? box.h - pad * 2 : box.h) : (inner * src.crop.h) / src.crop.w;
-  const full = box ? cover(src, inner, innerH) : layer(src, inner);
+  const innerH = box ? box.h : (inner * src.crop.h) / src.crop.w;
+  const fr = box ? framed(src, inner, innerH, framing) : { window: { position: "absolute", left: 0, top: 0, width: inner, height: innerH, overflow: "hidden" } as const, media: layer(src, inner) };
+  const full = fr.media;
 
   const player = useVideoPlayer(src.video, (p) => {
     p.loop = false;
@@ -135,13 +166,15 @@ export function MoClip({ clip, width = HERO_BOX.w, box, label, radius = gShape.c
 
   const still = failed || reduced || ended ? src.last ?? src.first : !shown ? src.first : undefined;
   const view = (
-    <View style={{ width: inner, height: innerH, overflow: "hidden", borderRadius: src.blend && !dark ? 0 : spotlight ? radius - pad : radius, backgroundColor: src.blend ? SPOTLIGHT : "#2A1D16" }}>
-      {!failed ? <VideoView player={player} nativeControls={false} fullscreenOptions={{ enable: false }} allowsPictureInPicture={false} contentFit="cover" onFirstFrameRender={() => setShown(true)} style={full} /> : null}
-      {still ? <Image source={still} style={full} resizeMode="cover" /> : null}
+    <View style={{ width: inner, height: innerH, overflow: "hidden", borderRadius: box ? radius : src.blend && !dark ? 0 : spotlight ? radius - pad : radius, backgroundColor: src.blend ? SPOTLIGHT : "#2A1D16" }}>
+      <View style={fr.window}>
+        {!failed ? <VideoView player={player} nativeControls={false} fullscreenOptions={{ enable: false }} allowsPictureInPicture={false} contentFit="cover" onFirstFrameRender={() => setShown(true)} style={full} /> : null}
+        {still ? <Image source={still} style={full} resizeMode="cover" /> : null}
+      </View>
     </View>
   );
   return (
-    <Pressable accessibilityRole="image" accessibilityLabel={label} accessibilityHint="Tap to replay" disabled={reduced || failed} onPress={replay} style={spotlight ? { padding: pad, borderRadius: box ? radius : gShape.spotlight, backgroundColor: SPOTLIGHT } : undefined}>
+    <Pressable accessibilityRole="image" accessibilityLabel={label} accessibilityHint="Tap to replay" disabled={reduced || failed} onPress={replay} style={spotlight ? { padding: pad, borderRadius: gShape.spotlight, backgroundColor: SPOTLIGHT } : undefined}>
       {view}
     </Pressable>
   );

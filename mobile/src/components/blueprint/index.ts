@@ -17,4 +17,3 @@ export * from "./TowHero";
 export * from "./BottomSheet";
 export * from "./MechanicScene";
 export * from "./mascot/MoHero";
-export * from "./mascot/HomeHero";

@@ -69,6 +69,19 @@ export function PartsAdminHome() {
         <Kpi i={3} icon="eye-off-outline" value={num(stats.data?.hiddenProducts)} label={d.t("Hidden products", "منتجات مخفية")} onPress={() => go("/dept/directory")} />
       </View>
 
+      {/* parts orders (read only): all orders, and the deliveries in progress on the map */}
+      <Head title={d.t("Orders", "الطلبات")} caption={d.t("Customer orders across all shops", "طلبات الزبائن في كل المتاجر")} action={d.t("All", "الكل")} onAction={() => go("/dept/orders")} />
+      <View style={{ flexDirection: d.row, gap: 10, marginBottom: 22 }}>
+        <Tap label={d.t("All orders", "كل الطلبات")} onPress={() => go("/dept/orders")} style={{ ...cardStyle(d), flex: 1, padding: 14, gap: 6 }}>
+          <Ionicons name="receipt-outline" size={22} color="#E0A36F" />
+          <Text style={{ color: d.ink, fontSize: 14, fontWeight: "800", textAlign: d.align }}>{d.t("All orders", "كل الطلبات")}</Text>
+        </Tap>
+        <Tap label={d.t("Active deliveries", "التوصيلات الجارية")} onPress={() => go("/dept/orders/map")} style={{ ...cardStyle(d), flex: 1, padding: 14, gap: 6 }}>
+          <Ionicons name="bicycle-outline" size={22} color="#E0A36F" />
+          <Text style={{ color: d.ink, fontSize: 14, fontWeight: "800", textAlign: d.align }}>{d.t("Active deliveries", "التوصيلات الجارية")}</Text>
+        </Tap>
+      </View>
+
       <Head title={d.t("Needs review", "بحاجة إلى مراجعة")} caption={d.t("Shop applications waiting for a decision", "طلبات متاجر بانتظار القرار")} action={d.t("All", "الكل")} onAction={() => go("/dept/requests")} />
       {queue.data ? (
         queue.data.length === 0 ? (
