@@ -32,7 +32,7 @@ export default function PartDetail() {
               onDone={() => goBack("/provider/parts")}
               initial={{
                 name: p.name, brand: p.brand, partNumber: p.partNumber, description: p.description,
-                price: p.price, stock: p.stock, category: p.category, condition: p.condition, partType: p.partType, imageUri: p.imageUri, fitments: p.fitments,
+                price: p.price, stock: p.stock, category: p.category, condition: p.condition, partType: p.partType, imageUri: p.imageUri, fitments: p.fitments, isUniversal: p.isUniversal,
               }}
             />
           )}

@@ -59,6 +59,7 @@ export default function MyParts() {
                   { label: t("Out of stock", "نفد المخزون"), value: products.filter((x) => stockState(x.stock) === "OUT").length, tone: "danger" },
                 ]}
               />
+              <Button label={t("Orders", "الطلبات")} icon="receipt-outline" onPress={() => router.push("/provider/parts/orders")} />
               <Button variant="ghost" label={t("Customer questions", "أسئلة العملاء")} icon="chatbubbles-outline" onPress={() => router.push("/provider/parts/inquiries")} />
               <View style={{ height: 10 }} />
               <Button label={t("Add part", "إضافة قطعة")} icon="add-circle-outline" onPress={() => router.push("/provider/parts/new")} />

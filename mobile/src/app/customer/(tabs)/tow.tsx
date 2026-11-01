@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
-import { Card, Chip, EmptyState, ErrorState, GarageHero, GaragePage, GButton, GIcon, GText, Note, OptionSheet, SearchBar, SkeletonRows, StatusChip, Tap } from "../../../components/garage";
+import { Card, Chip, EmptyState, ErrorState, GaragePage, HeroLayout, GButton, GIcon, GText, Note, OptionSheet, SearchBar, SkeletonRows, StatusChip, Tap } from "../../../components/garage";
 import { CITIES, cityLabel, cityToEnglish } from "../../../core/constants/cities";
 import { Point, locationMemory } from "../../../core/constants/geo";
 import { useL } from "../../../core/hooks/useL";
@@ -149,7 +149,6 @@ export default function CustomerTow() {
   const cityEn = cityToEnglish(city);
   const freeTrucks = items.reduce((n, x) => n + x.availableTrucks, 0);
   const nearestFree = me ? items.filter((x) => x.availableTrucks > 0 && x.distanceKm != null).sort((x, y) => (x.distanceKm ?? 0) - (y.distanceKm ?? 0))[0] : undefined;
-  const where = me ? t("near you", "بالقرب منك") : cityEn ? `${t("in", "في")} ${cityLabel(cityEn, isArabic)}` : "";
   const line =
     loading && !items.length
       ? t("Looking for trucks…", "جارٍ البحث عن شاحنات…")
@@ -157,12 +156,14 @@ export default function CustomerTow() {
         ? t("No tow companies found", "لا توجد شركات سحب")
         : freeTrucks === 0
           ? t("No free truck right now", "لا توجد شاحنة متاحة الآن")
-          : [
-              `${freeTrucks} ${freeTrucks === 1 ? t("truck free", "شاحنة متاحة") : t("trucks free", "شاحنات متاحة")}${where ? " " + where : ""}`,
-              nearestFree?.distanceKm != null ? `${t("nearest", "الأقرب")} ${kmShort(nearestFree.distanceKm, isArabic)}` : null,
-            ]
-              .filter(Boolean)
-              .join(" · ");
+          : !me
+            ? t("Turn on location to find the nearest", "شغّل الموقع لإيجاد الأقرب")
+            : [
+                `${freeTrucks} ${freeTrucks === 1 ? t("truck free", "شاحنة متاحة") : t("trucks free", "شاحنات متاحة")}`,
+                nearestFree?.distanceKm != null ? `${t("nearest", "الأقرب")} ${kmShort(nearestFree.distanceKm, isArabic)}` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ");
 
   const sortLabel: Record<Sort, string> = { nearest: t("Nearest", "الأقرب"), available: t("Most trucks", "الأكثر شاحنات"), name: t("Name", "الاسم") };
   const cityPillLabel = me ? t("Near me", "بالقرب مني") : cityEn ? cityLabel(cityEn, isArabic) : t("City", "المدينة");
@@ -174,15 +175,14 @@ export default function CustomerTow() {
       refreshing={refreshing}
       onRefresh={() => run("refresh")}
       hero={
-        <GarageHero
-          variant="tab"
-          tab="tow"
-          onMap={() => router.push("/customer/tow/map")}
-          title={t("Tow trucks", "شاحنات السحب")}
-          line={line}
-        >
-          <GButton icon="navigate" label={t("Request nearest", "اطلب الأقرب")} busy={nearBusy || loc.locating} onPress={requestNearest} />
-        </GarageHero>
+        <HeroLayout
+          config={{
+            tab: "tow",
+            title: t("Tow trucks", "شاحنات السحب"),
+            line,
+            action: { kind: "button", icon: "navigate", label: t("Request nearest", "اطلب الأقرب"), busy: nearBusy || loc.locating, onPress: requestNearest },
+          }}
+        />
       }
     >
       {loc.dialog}

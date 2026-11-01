@@ -9,12 +9,15 @@ import { customerMechanicRequests } from "../../features/mechanics/mechanicsServ
 import { inquiryTone, mechTone, towTone } from "../../features/requests/garageBits";
 import { fmtDateTime, useTowStatusLabels } from "../../features/requests/requestBits";
 import { customerInquiries, customerTowRequests } from "../../features/requests/requestsService";
+import { customerOrders } from "../../features/orders/ordersService";
+import { orderTone, useOrderLabels } from "../../features/orders/orderBits";
+import { formatPrice } from "../../core/constants/money";
 import { gShape, gType, useGarageTheme } from "../../theme/garage";
 import type { PhotoKey } from "../../theme/photos";
 
-type Row = { key: string; photo: PhotoKey; title: string; sub: string; status: string; tone: Tone; at: string; href: string; active: boolean; fresh: boolean };
+type Row = { key: string; photo: PhotoKey; title: string; sub: string; status: string; tone: Tone; at: string; href: string; active: boolean; fresh: boolean; badge?: string };
 
-// "My requests": part questions, tow requests and mechanic service requests in one list, split into Active and Past.
+// "My requests": parts orders, part questions, tow requests and mechanic service requests in one list, split into Active and Past.
 export default function MyRequests() {
   const { g, shadow, row, align } = useGarageTheme();
   const { t } = useL();
@@ -22,11 +25,26 @@ export default function MyRequests() {
   const questions = useLoad(() => customerInquiries.list(), []);
   const tows = useLoad(() => customerTowRequests.list(), []);
   const mechs = useLoad(() => customerMechanicRequests.list(), []);
+  const orders = useLoad(() => customerOrders.list(), []);
+  const orderLabel = useOrderLabels();
   const towLabel = useTowStatusLabels();
   const mechLabel = useMechanicStatusLabels();
   const askLabel = { OPEN: t("Open", "مفتوح"), ANSWERED: t("Answered", "تم الرد"), CLOSED: t("Closed", "مغلق") };
 
   const rows: Row[] = [
+    ...(orders.data ?? []).map((o) => ({
+      key: "o" + o.id,
+      photo: "service.parts" as PhotoKey,
+      title: `${t("Order", "طلب")} · ${o.shop.name}`,
+      sub: `${o.items.reduce((n, i) => n + i.quantity, 0)} ${t("items", "قطع")} · ${formatPrice(o.total)} · ${orderLabel.fulfilment[o.fulfilment]}`,
+      status: orderLabel.status[o.status],
+      tone: orderTone(o.status),
+      at: o.updatedAt,
+      href: `/customer/order/${o.id}`,
+      active: !["PICKED_UP", "DELIVERED", "CANCELLED", "REJECTED"].includes(o.status),
+      fresh: o.unread > 0,
+      badge: o.unread ? `${o.unread} ${t("new", "جديدة")}` : undefined,
+    })),
     ...(questions.data ?? []).map((q) => ({
       key: "q" + q.id,
       photo: "service.parts" as PhotoKey,
@@ -66,12 +84,12 @@ export default function MyRequests() {
     })),
   ].sort((a, b) => b.at.localeCompare(a.at));
 
-  const loading = (questions.loading && !questions.data) || (tows.loading && !tows.data) || (mechs.loading && !mechs.data);
-  const error = questions.error || tows.error || mechs.error;
+  const loading = (questions.loading && !questions.data) || (tows.loading && !tows.data) || (mechs.loading && !mechs.data) || (orders.loading && !orders.data);
+  const error = questions.error || tows.error || mechs.error || orders.error;
   const active = rows.filter((r) => r.active);
   const past = rows.filter((r) => !r.active);
   const shown = tab === "ACTIVE" ? active : past;
-  const reload = () => Promise.allSettled([questions.reload(), tows.reload(), mechs.reload()]);
+  const reload = () => Promise.allSettled([questions.reload(), tows.reload(), mechs.reload(), orders.reload()]);
 
   return (
     <GaragePage
@@ -112,7 +130,7 @@ export default function MyRequests() {
               <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
                 <View style={[row, { alignItems: "center", gap: 6 }]}>
                   <GText numberOfLines={1} style={[gType.label, { fontWeight: "800", flexShrink: 1 }, align]}>{r.title}</GText>
-                  {r.fresh ? <Badge label={t("New reply", "رد جديد")} tone="accent" /> : null}
+                  {r.fresh ? <Badge label={r.badge ?? t("New reply", "رد جديد")} tone="accent" /> : null}
                 </View>
                 <GText soft numberOfLines={1} style={[gType.caption, align]}>{r.sub}</GText>
                 <View style={[row, { alignItems: "center", justifyContent: "space-between", gap: 8 }]}>

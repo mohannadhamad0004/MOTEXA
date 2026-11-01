@@ -1,4 +1,4 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { expiredDocuments } from "../services/truck-eligibility.js";
@@ -6,11 +6,12 @@ import { PROVIDER_STORAGE_DIR, hasPhoto } from "../uploads/providerFiles.js";
 import { type SaleFields, discountPct, productBadges, saleWas } from "../services/catalog-badges.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
-import { CATALOG_GROUPS, categoriesOfGroup, isCategory, isGroup } from "../catalogCategories.js";
+import { CATALOG_GROUPS, SUBCATEGORIES, categoriesOfGroup, categoryFamily, isAnyCategory, isCategory, isGroup } from "../catalogCategories.js";
 import { SERVICE_CITIES, canonicalCity } from "../cities.js";
 import { GEO_BOX_MESSAGE, cityCentre, haversineKm, inBox, round3 } from "../geo.js";
 import { CONDITIONS, PART_TYPES } from "../partAttributes.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
+import { fitWhere } from "../services/fitment.js";
 
 // Read-only customer catalog: parts and tow companies. Any logged-in (ACTIVE) account may read it.
 //
@@ -56,16 +57,20 @@ const shapeProduct = (p: ProductRow, withDescription = false) => ({
   partNumber: p.partNumber,
   ...(withDescription ? { description: p.description } : {}),
   price: Number(p.price),
-  stock: stockState(p.stock),
+  // what a customer can still buy: units held for accepted orders are not offered again
+  stock: stockState(p.stock - p.reservedStock),
+  /** units free to order (stock minus reserved), capped for the quantity picker; never an exact warehouse count above 99 */
+  available: Math.max(0, Math.min(99, p.stock - p.reservedStock)),
   category: p.category,
   condition: p.condition,
   partType: p.partType,
   imageUri: p.files[0] ? `/files/public/${p.files[0].id}` : null,
   fitments: p.fitments.map((f) => ({ make: f.make, model: f.model, yearFrom: f.yearFrom, yearTo: f.yearTo, ...(f.trim ? { trim: f.trim } : {}) })),
+  isUniversal: p.isUniversal,
   shop: { id: p.shop.id, name: p.shop.shopName, city: p.shop.city },
   compareAtPrice: saleWas(p),
   warrantyMonths: p.warrantyMonths,
-  badges: productBadges(p),
+  badges: productBadges({ ...p, stock: p.stock - p.reservedStock }),
 });
 
 const PART_SORTS = ["relevance", "price_asc", "price_desc", "newest", "discount"] as const;
@@ -112,7 +117,7 @@ router.get("/parts", async (req, res) => {
     const sort = sortRaw as PartSort;
     const shopId = text(req.query.shopId, 64);
     const category = typeof req.query.category === "string" ? req.query.category : "";
-    if (category && !isCategory(category)) return bad(res, 400, "Unknown category.");
+    if (category && !isAnyCategory(category)) return bad(res, 400, "Unknown category.");
     const group = typeof req.query.group === "string" ? req.query.group : "";
     if (group && !isGroup(group)) return bad(res, 400, "Unknown group.");
 
@@ -156,6 +161,8 @@ router.get("/parts", async (req, res) => {
       );
     }
     if (city) and.push({ shop: { city: { equals: city, mode: "insensitive" } } });
+    // the car: a matching fitment row OR a universal part (services/fitment.ts)
+    if (make) and.push(fitWhere({ make, model, year, trim }));
     // Search: every word must match something real of the product: its name, brand, part / OEM number (formatting ignored,
     // 4+ characters, no fuzzy matching) or the make / model of one of its fitment records (so "W202 brake pads" = model W202 + name).
     for (const w of q ? normText(q).split(" ").filter(Boolean).slice(0, 6) : []) {
@@ -173,20 +180,9 @@ router.get("/parts", async (req, res) => {
     const where: Prisma.PartsProductWhereInput = {
       ...visible,
       ...(shopId ? { shopId } : {}),
-      ...(category ? { category } : {}),
+      // a category matches itself + its sub-categories; one stored key per product, so every product appears once
+      ...(category ? { category: { in: categoryFamily(category) } } : {}),
       ...(and.length ? { AND: and } : {}),
-      ...(make
-        ? {
-            fitments: {
-              some: {
-                makeNormalized: normText(make),
-                ...(model ? { modelNormalized: normText(model) } : {}),
-                ...(year !== null ? { yearFrom: { lte: year }, yearTo: { gte: year } } : {}),
-                ...(trim ? { trim: { equals: trim, mode: "insensitive" as const } } : {}),
-              },
-            },
-          }
-        : {}),
     };
 
     // ponytail: ids are sorted in memory (default: in stock first, then name) because Prisma can't order by "stock > 0".
@@ -214,11 +210,11 @@ router.get("/parts", async (req, res) => {
 router.get("/brands", async (req, res) => {
   try {
     const category = typeof req.query.category === "string" ? req.query.category : "";
-    if (category && !isCategory(category)) return bad(res, 400, "Unknown category.");
+    if (category && !isAnyCategory(category)) return bad(res, 400, "Unknown category.");
     const group = typeof req.query.group === "string" ? req.query.group : "";
     if (group && !isGroup(group)) return bad(res, 400, "Unknown group.");
     const rows = await prisma.partsProduct.findMany({
-      where: { ...visible, ...(category ? { category } : {}), ...(group ? { AND: [{ category: { in: [...categoriesOfGroup(group)] } }] } : {}) },
+      where: { ...visible, ...(category ? { category: { in: categoryFamily(category) } } : {}), ...(group ? { AND: [{ category: { in: [...categoriesOfGroup(group)] } }] } : {}) },
       select: { brand: true },
       distinct: ["brand"],
     });
@@ -238,7 +234,11 @@ router.get("/categories", async (_req, res) => {
     const rows = await prisma.partsProduct.groupBy({ by: ["category"], where: { ...visible, category: { not: null } }, _count: { _all: true } });
     const count = new Map(rows.map((r) => [r.category as string, r._count._all]));
     const groups = CATALOG_GROUPS.map((g) => {
-      const categories = g.categories.map((key) => ({ key, count: count.get(key) ?? 0 }));
+      // a category's count = its own products (not yet moved to a sub-category) + its sub-categories'; each product counted once
+      const categories = g.categories.map((key) => {
+        const subs = (SUBCATEGORIES[key] ?? []).map((k) => ({ key: k, count: count.get(k) ?? 0 }));
+        return { key, count: categoryFamily(key).reduce((n, k) => n + (count.get(k) ?? 0), 0), ...(subs.length ? { subcategories: subs } : {}) };
+      });
       return { key: g.key, count: categories.reduce((n, c) => n + c.count, 0), categories };
     });
     return res.json({ success: true, groups });
@@ -289,6 +289,7 @@ router.get("/shops/:id", async (req, res) => {
       where: { id: idParam(req.params.id), verificationStatus: "APPROVED" },
       select: {
         id: true, shopName: true, shopNameAr: true, brandName: true, branchName: true, city: true, address: true, locationAddress: true, categories: true, baseLat: true, baseLng: true, workingHours: true,
+        deliveryEnabled: true, deliveryFee: true, deliveryAreaNote: true,
         files: { where: { purpose: "PARTS_SHOP_DOCUMENT", docKind: "STOREFRONT_PHOTO" }, select: { id: true }, take: 1 },
       },
     });
@@ -309,6 +310,8 @@ router.get("/shops/:id", async (req, res) => {
         baseLng: round3(s.baseLng),
         storefrontUri: s.files[0] ? `/catalog/shops/${s.id}/storefront` : null,
         workingHours: s.workingHours,
+        // orders: whether the owner delivers, his fee (null = agreed with the shop) and where he delivers
+        delivery: { enabled: s.deliveryEnabled, fee: s.deliveryFee === null ? null : Number(s.deliveryFee), areaNote: s.deliveryAreaNote },
       },
       products: products.map((p) => shapeProduct(p)),
     });
@@ -336,6 +339,66 @@ router.get("/shops/:id/storefront", async (req, res) => {
 });
 
 // Vehicles that really appear in the fitment data of visible products (no separate vehicle catalogue exists). ?q= is split into
+// The whole vehicle list (makes -> models -> year ranges, EN + AR) for the car pickers and the car-aware search. Small and
+// fixed, so it is sent in one go and the client narrows it.
+router.get("/vehicle-list", async (_req, res) => {
+  try {
+    const vehicles = await prisma.vehicle.findMany({
+      select: { make: true, makeAr: true, model: true, modelAr: true, yearFrom: true, yearTo: true },
+      orderBy: [{ make: "asc" }, { model: "asc" }],
+    });
+    return res.json({ success: true, vehicles });
+  } catch (e) {
+    return fail(res, "Vehicle list error", e);
+  }
+});
+
+// "My car": one per account, from the vehicle list, so every screen (and every device) reads the same car.
+// bodyType comes from the vehicle list (picks the 3D model); color is the customer's paint for it ("#rrggbb", null = silver)
+const myCarShape = async (c: { make: string; model: string; year: number; color: string | null } | null) => {
+  if (!c) return null;
+  const v = await prisma.vehicle.findUnique({ where: { makeNormalized_modelNormalized: { makeNormalized: normText(c.make), modelNormalized: normText(c.model) } }, select: { bodyType: true } });
+  return { make: c.make, model: c.model, year: c.year, color: c.color, bodyType: v?.bodyType ?? null };
+};
+const HEX = /^#[0-9a-f]{6}$/i;
+router.get("/my-car", async (_req, res) => {
+  try {
+    const me = res.locals.authUser as { id: string };
+    return res.json({ success: true, car: await myCarShape(await prisma.customerCar.findUnique({ where: { userId: me.id } })) });
+  } catch (e) {
+    return fail(res, "My car error", e);
+  }
+});
+router.put("/my-car", express.json({ limit: "4kb" }), async (req, res) => {
+  try {
+    const me = res.locals.authUser as { id: string };
+    const make = text(req.body?.make, 60);
+    const model = text(req.body?.model, 60);
+    const year = req.body?.year;
+    const color = req.body?.color;
+    if (!make || !model || !Number.isInteger(year)) return bad(res, 400, "Choose a make, a model and a year.");
+    if (color != null && (typeof color !== "string" || !HEX.test(color))) return bad(res, 400, "Choose a colour from the list.");
+    const v = await prisma.vehicle.findUnique({ where: { makeNormalized_modelNormalized: { makeNormalized: normText(make), modelNormalized: normText(model) } } });
+    if (!v) return bad(res, 400, "Choose a car from the list.");
+    if (year < v.yearFrom || year > v.yearTo) return bad(res, 400, `The ${v.make} ${v.model} is listed for ${v.yearFrom}-${v.yearTo}.`);
+    // the list's exact strings are stored, so they compare equal to fitment rows
+    const data = { make: v.make, model: v.model, year, color: color ? color.toLowerCase() : null };
+    const car = await prisma.customerCar.upsert({ where: { userId: me.id }, update: data, create: { userId: me.id, ...data } });
+    return res.json({ success: true, car: await myCarShape(car) });
+  } catch (e) {
+    return fail(res, "My car error", e);
+  }
+});
+router.delete("/my-car", async (_req, res) => {
+  try {
+    const me = res.locals.authUser as { id: string };
+    await prisma.customerCar.deleteMany({ where: { userId: me.id } });
+    return res.json({ success: true, car: null });
+  } catch (e) {
+    return fail(res, "My car error", e);
+  }
+});
+
 // words and every word must be part of the make or the model, so "mercedes w202" finds make Mercedes, model W202. Each row
 // carries the exact make / model strings the /parts filter expects, the years covered and how many parts fit.
 router.get("/vehicles", async (req, res) => {

@@ -1,12 +1,11 @@
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { router } from "expo-router";
+import { useState } from "react";
 import { View } from "react-native";
 import {
   Card,
   ErrorState,
-  GarageHero,
   GaragePage,
-  GButton,
+  HeroLayout,
   GIcon,
   GText,
   PrivatePhoto,
@@ -20,7 +19,9 @@ import {
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { carName } from "../../../features/catalog/catalogBits";
-import { CatalogShopRow, catalogService, currentCar } from "../../../features/catalog/catalogService";
+import { CatalogShopRow, catalogService } from "../../../features/catalog/catalogService";
+import { useMyCar } from "../../../features/catalog/myCar";
+import { CarPreview } from "../../../features/car3d/CarPreview";
 import { mechanicCatalog } from "../../../features/mechanics/mechanicsService";
 import { Active, useActiveRequest } from "../../../features/requests/activeRequest";
 import { useSessionUser } from "../../../features/shared/session";
@@ -79,10 +80,8 @@ export default function CustomerHome() {
   const { g, row, align } = useGarageTheme();
   const [refreshing, setRefreshing] = useState(false);
 
-  // "Fits my car" lives in session memory; read it again every time Home comes back into view.
-  const [, setSeen] = useState(0);
-  useFocusEffect(useCallback(() => setSeen((n) => n + 1), []));
-  const car = currentCar();
+  // the account's car: set anywhere (Home, Parts, Profile), every screen updates at once
+  const { car } = useMyCar();
   const carKey = car ? `${car.make}|${car.model}|${car.year}` : "";
 
   const fit = useLoad(() => (car ? catalogService.searchParts({ make: car.make, model: car.model, year: car.year }) : Promise.resolve(null)), [carKey]);
@@ -99,8 +98,6 @@ export default function CustomerHome() {
   };
 
   const firstName = user.fullName.trim().split(/\s+/)[0] || user.fullName;
-  const carChip = car ? [carName({ make: car.make, model: car.model, year: "" }), car.year].filter(Boolean).join(" · ") : t("Set your car", "حدّد سيارتك");
-  const setCar = () => router.navigate({ pathname: "/customer/parts", params: { fit: "1" } });
 
   // real counts only; a subline is left out until its number is known
   const trucksFree = tow.data ? tow.data.reduce((n, c) => n + c.availableTrucks, 0) : null;
@@ -109,11 +106,8 @@ export default function CustomerHome() {
   const mechCount = mechs.data ? mechs.data.total : null;
   const shopList = (shops.data ?? []).filter((s) => s.productCount > 0);
 
-  const line = car && fitCount !== null
-    ? t(`${fitCount} ${fitCount === 1 ? "part fits" : "parts fit"} your ${carName({ ...car, year: "" })}`, `${fitCount} قطعة تناسب ${carName({ ...car, year: "" })}`)
-    : partCount !== null && shops.data
-      ? t(`${partCount} ${partCount === 1 ? "part" : "parts"} from ${shopList.length} ${shopList.length === 1 ? "shop" : "shops"}`, `${partCount} قطعة من ${shopList.length} متاجر`)
-      : undefined;
+  // about the user, not the catalogue
+  const line = car ? t(`Your ${carName(car)}`, `سيارتك ${carName(car)}`) : t("Set your car to get matching parts", "حدّد سيارتك لتظهر القطع المناسبة");
 
   const rail = car ? fit : recent;
   const railItems = rail.data?.products.slice(0, 10) ?? [];
@@ -125,24 +119,24 @@ export default function CustomerHome() {
       refreshing={refreshing}
       onRefresh={refresh}
       hero={
-        <GarageHero
-          variant="tab"
-          tab="home"
-          title={greeting(t, firstName)}
-          line={line}
-          chip={{ label: carChip, icon: "car-sport-outline", onPress: setCar }}
-          action={{ icon: "notifications-outline", label: t("My requests", "طلباتي"), onPress: () => router.push("/customer/requests") }}
-          onMap={() => router.push("/customer/map")}
-        >
-          {active ? (
-            <GButton icon="pulse-outline" label={active.stage} onPress={() => router.push(active.href as never)} />
-          ) : (
-            <GButton icon="car-outline" label={t("Request a tow", "اطلب سحبًا")} onPress={() => router.navigate("/customer/tow")} />
-          )}
-        </GarageHero>
+        <HeroLayout
+          config={{
+            tab: "home",
+            title: greeting(t, firstName),
+            line,
+            action: active
+              ? { kind: "button", icon: "pulse-outline", label: active.stage, onPress: () => router.push(active.href as never) }
+              : { kind: "button", icon: "car-outline", label: t("Request a tow", "اطلب سحبًا"), onPress: () => router.navigate("/customer/tow") },
+          }}
+        />
       }
     >
-      {active ? <ActiveCard key={active.key} a={active} /> : null}
+      {car ? <CarPreview key="car3d" /> : null}
+      {active ? (
+        <View key={active.key} style={car ? { marginTop: 12 } : undefined}>
+          <ActiveCard a={active} />
+        </View>
+      ) : null}
 
       <Section title={t("What does your car need?", "ماذا تحتاج سيارتك؟")} style={active ? undefined : { marginTop: 4 }}>
         <View style={[row, { gap: 10 }]}>

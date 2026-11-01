@@ -5,7 +5,8 @@ import { useAppearance } from "../../../components/Appearance";
 import { useL } from "../../../core/hooks/useL";
 import { useLanguage } from "../../../i18n/LanguageContext";
 import { carName } from "../../../features/catalog/catalogBits";
-import { currentCar } from "../../../features/catalog/catalogService";
+import { openMyCarPicker, useMyCar } from "../../../features/catalog/myCar";
+import { CarPreview } from "../../../features/car3d/CarPreview";
 import { signOut, useSessionUser } from "../../../features/shared/session";
 import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 
@@ -15,8 +16,8 @@ export default function CustomerProfile() {
   const { t } = useL();
   const { language, setLanguage } = useLanguage();
   const { mode, setMode } = useAppearance();
-  const car = currentCar();
-  const setCar = () => router.navigate({ pathname: "/customer/parts", params: { fit: "1" } });
+  const { car } = useMyCar();
+  const setCar = openMyCarPicker;
   const initial = (user.fullName.trim()[0] ?? "?").toUpperCase();
 
   return (
@@ -48,6 +49,11 @@ export default function CustomerProfile() {
           <GIcon name="chevron-forward" size={18} color={g.soft} flip />
         </View>
       </Card>
+      {car ? (
+        <View style={{ marginTop: 10 }}>
+          <CarPreview />
+        </View>
+      ) : null}
 
       <Section title={t("Activity", "النشاط")}>
         <Card pad={12}>

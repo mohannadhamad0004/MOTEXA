@@ -39,7 +39,10 @@ export default function MyFleet() {
             />
             <Button variant="ghost" label={t("Company profile", "ملف الشركة")} icon="business-outline" onPress={() => router.push("/provider/tow/company")} />
             <View style={{ height: 10 }} />
-            <Button variant="ghost" label={t("Tow requests", "طلبات السحب")} icon="navigate-outline" onPress={() => router.push("/provider/tow/requests")} />
+            <Button label={t("Tow requests", "طلبات السحب")} icon="navigate-outline" onPress={() => router.push("/provider/tow/dispatch")} />
+            <Button variant="ghost" label={t("Drivers", "السائقون")} icon="people-outline" onPress={() => router.push("/provider/tow/drivers")} />
+            <Button variant="ghost" label={t("Live map", "الخريطة المباشرة")} icon="map-outline" onPress={() => router.push("/provider/tow/live")} />
+            <Button variant="ghost" label={t("My driver jobs (if you drive)", "مهامي كسائق (إن كنت تقود)")} icon="car-outline" onPress={() => router.push("/driver" as never)} />
             <View style={{ height: 10 }} />
             <Button label={t("Add truck", "إضافة شاحنة")} icon="add-circle-outline" onPress={() => router.push("/provider/tow/new")} />
             <View style={{ height: 16 }} />

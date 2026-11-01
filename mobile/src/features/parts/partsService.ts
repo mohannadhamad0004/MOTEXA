@@ -26,6 +26,8 @@ export type Product = {
   partType: PartType | null; // null = not specified
   category: string | null; // key from shared/categories.ts; null on products made before categories existed
   fitments: Fitment[];
+  /** fits every car (no fitment rows needed) */
+  isUniversal: boolean;
   // Moderation is owned by MOTEXA admins; providers can read it but never write it.
   hidden: boolean;
   hiddenReason?: string | null;
@@ -88,6 +90,7 @@ type ApiProduct = {
   updatedAt?: string;
   imageUri: string | null;
   fitments: Fitment[];
+  isUniversal?: boolean;
 };
 
 type ApiShop = {
@@ -118,6 +121,7 @@ const toProduct = (p: ApiProduct): Product => ({
   condition: p.condition ?? "NEW",
   partType: p.partType ?? null,
   fitments: p.fitments,
+  isUniversal: !!p.isUniversal,
   hidden: p.isHidden,
   hiddenReason: p.hiddenReason,
   hasPhoto: p.hasPhoto,
@@ -154,6 +158,7 @@ async function toBody(i: ProductInput) {
     partType: i.partType, // null clears it ("not specified")
     // Always sent: the server replaces the stored set with this one.
     fitments: i.fitments.map((f) => ({ make: f.make, model: f.model, yearFrom: f.yearFrom, yearTo: f.yearTo, trim: f.trim?.trim() || null })),
+    isUniversal: i.isUniversal,
   };
   if (i.imageUri && !isServerFile(i.imageUri) && !i.imageUri.startsWith("http")) {
     body.image = { name: fileNameOf(i.imageUri, "product-image.jpg"), dataBase64: await localFileToBase64(i.imageUri) };

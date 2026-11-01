@@ -16,9 +16,11 @@ import { RequestRouteMap } from "../../../features/shared/RequestRouteMap";
 import { MAPS_AVAILABLE } from "../../../features/shared/maps";
 import { RouteSummary, useRoute } from "../../../features/shared/useRoute";
 import { useTruckLabels } from "../../../features/tow/truckBits";
+import { liveLabel } from "../../../features/tow/dispatchService";
 import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 
-const PATH: TowStatus[] = ["REQUESTED", "ACCEPTED", "EN_ROUTE", "IN_PROGRESS", "COMPLETED"];
+// ARRIVED is a step between "on the way" and towing (the status stays EN_ROUTE)
+const PATH: (TowStatus | "ARRIVED")[] = ["REQUESTED", "ACCEPTED", "EN_ROUTE", "ARRIVED", "IN_PROGRESS", "COMPLETED"];
 const OPEN: TowStatus[] = ["REQUESTED", "ACCEPTED", "EN_ROUTE", "IN_PROGRESS"];
 
 export default function TowRequestStatus() {
@@ -28,13 +30,14 @@ export default function TowRequestStatus() {
   const { type } = useTruckLabels();
   const problem = useProblemLabels();
   const statusLabel = useTowStatusLabels();
-  // The server is re-read every 15 s while this screen is focused; same keys, so the status changes in place (no remount).
-  const state = useLoad(() => customerTowRequests.get(id), [id], REFRESH_MS);
+  // The server is re-read every 10 s while this screen is focused (the truck's live point); same keys, so the status and the map
+  // change in place (no remount).
+  const state = useLoad(() => customerTowRequests.get(id), [id], Math.min(REFRESH_MS, 10_000));
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [mapOpen, setMapOpen] = useState(false);
+  const [mapChoice, setMapOpen] = useState<boolean | null>(null);
 
   const cancel = async () => {
     setBusy(true);
@@ -54,8 +57,14 @@ export default function TowRequestStatus() {
   // the company base point (else its city centre) is the other end of the route
   const company = useLoad(() => (r ? catalogService.getTowCompany(r.company.id) : Promise.resolve(null)), [r?.company.id]);
   const co = company.data?.company;
-  const provider = co ? (co.baseLat !== null && co.baseLng !== null ? { lat: co.baseLat, lng: co.baseLng } : cityCentre(co.city)) : null;
-  const { route, loading: routing } = useRoute(r?.id ?? null, r?.pickup ?? null, provider);
+  const base = co ? (co.baseLat !== null && co.baseLng !== null ? { lat: co.baseLat, lng: co.baseLng } : cityCentre(co.city)) : null;
+  // once a driver works on it: the truck's live point (route from the truck), else the company base
+  const live = r?.driver?.live ?? null;
+  const r3 = (n: number) => Math.round(n * 1000) / 1000;
+  const provider = live ? { lat: r3(live.lat), lng: r3(live.lng) } : base;
+  const { route, loading: routing } = useRoute(r ? `${r.id}:${provider ? `${provider.lat},${provider.lng}` : "-"}` : null, r?.pickup ?? null, provider);
+  // the map opens by itself while the truck is live; the customer can still hide it
+  const mapOpen = mapChoice ?? !!live;
   const canMap = MAPS_AVAILABLE && !!r?.pickup && !!provider;
 
   return (
@@ -90,9 +99,10 @@ export default function TowRequestStatus() {
               <ListRow icon="map-outline" title={mapOpen ? t("Hide map", "إخفاء الخريطة") : t("View on map", "عرض على الخريطة")} onPress={() => setMapOpen(!mapOpen)} />
               {mapOpen ? (
                 <View style={{ marginTop: 8, borderRadius: gShape.small, overflow: "hidden" }}>
-                  <RequestRouteMap reqId={r.id} kind="tow" height={280} provider={{ ...provider!, name: r.company.name }} pickup={r.pickup!} route={route} />
+                  <RequestRouteMap reqId={r.id} kind="tow" height={280} provider={{ ...provider!, name: r.driver ? r.driver.firstName : r.company.name }} pickup={r.pickup!} route={route} />
                 </View>
               ) : null}
+              {r.driver ? <ListRow divider icon="person-circle-outline" title={`${t("Your driver", "سائقك")}: ${r.driver.firstName}`} sub={liveLabel(live, t)} /> : null}
               <View style={{ paddingTop: 8 }}>
                 <RouteSummary route={route} loading={routing} />
               </View>
@@ -101,7 +111,7 @@ export default function TowRequestStatus() {
 
           <Section title={t("Status", "الحالة")}>
             <Card>
-              <Timeline steps={toSteps(buildTimeline(PATH, r.timeline, r.status, statusLabel))} />
+              <Timeline steps={toSteps(buildTimeline(PATH, r.timeline as { status: TowStatus | "ARRIVED"; at: string }[], r.status === "EN_ROUTE" && r.arrivedAt ? "ARRIVED" : r.status, statusLabel))} />
               {OPEN.includes(r.status) ? <GText soft style={[gType.tiny, align, { marginTop: 12 }]}>{t("Updates automatically", "يتحدّث تلقائياً")}</GText> : null}
             </Card>
           </Section>

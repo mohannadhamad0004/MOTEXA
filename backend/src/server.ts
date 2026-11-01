@@ -7,6 +7,8 @@ import mechanicApplicationRoutes from "./routes/mechanic-applications.routes.js"
 import mechanicReviewRoutes from "./routes/mechanic-review.routes.js";
 import towRoutes from "./routes/tow.routes.js";
 import partsRoutes from "./routes/parts.routes.js";
+import partsOrderRoutes from "./routes/parts-orders.routes.js";
+import towDriverRoutes from "./routes/tow-drivers.routes.js";
 import filesRoutes from "./routes/files.routes.js";
 import catalogRoutes from "./routes/catalog.routes.js";
 import partInquiryRoutes from "./routes/part-inquiries.routes.js";
@@ -18,6 +20,7 @@ import providerSignupRoutes from "./routes/provider-signup.routes.js";
 import providerOnboardingRoutes, { notificationsRouter } from "./routes/provider-onboarding.routes.js";
 import { partsReviewRouter, towReviewRouter } from "./routes/provider-review.routes.js";
 import express from "express";
+import { fileURLToPath } from "node:url";
 import cors from "cors";
 import dotenv from "dotenv";
 import adminRoutes from "./routes/admin.routes.js";
@@ -28,10 +31,14 @@ const app = express();
 const PORT = Number(process.env.PORT) || 5000;
 
 app.use(cors());
+// Public 3D car models (backend/public/3d, optimised GLBs; no customer data). Long cache: a new model gets a new file name.
+app.use("/api/3d", express.static(fileURLToPath(new URL("../public/3d", import.meta.url)), { maxAge: "30d", immutable: true, fallthrough: false }));
 // Mounted before the global JSON parser: it carries larger (base64 image) bodies with its own limit.
 app.use("/api/mechanic-applications", mechanicApplicationRoutes);
 // Tow and parts providers upload base64 images: these routers parse their own body (after auth), so they sit above the global parser too.
 app.use("/api", towRoutes);
+app.use("/api", towDriverRoutes); // tow drivers, assignment, live jobs
+app.use("/api", partsOrderRoutes); // parts orders (customer, shop owner, parts admins)
 app.use("/api", partsRoutes);
 app.use("/api/files", filesRoutes);
 app.use("/api/catalog", catalogRoutes);

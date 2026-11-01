@@ -10,7 +10,7 @@ import type { PartCondition, PartType } from "./partAttrs";
 
 export type StockLevel = "IN" | "LOW" | "OUT";
 
-export type CategoryCounts = { groups: { key: string; count: number; categories: { key: string; count: number }[] }[] };
+export type CategoryCounts = { groups: { key: string; count: number; categories: { key: string; count: number; subcategories?: { key: string; count: number }[] }[] }[] };
 
 export type CatalogShopRef = { id: string; name: string; city: string };
 
@@ -22,11 +22,15 @@ export type CatalogProduct = {
   description?: string | null;
   price: number;
   stock: StockLevel;
+  /** units free to order (stock minus reserved, at most 99) */
+  available?: number;
   category: string | null;
   condition: PartCondition;
   partType: PartType | null;
   imageUri: string | null;
   fitments: Fitment[];
+  /** the shop marked it as fitting every car */
+  isUniversal?: boolean;
   shop: CatalogShopRef;
   /** "was" price while a sale runs (server only sends it when it is higher than price and the sale window is open) */
   compareAtPrice?: number | null;
@@ -62,6 +66,9 @@ export type CatalogShopRow = {
   hours: string | null;
 };
 
+/** One model of the vehicle list (makes -> models -> year range), EN + AR names. */
+export type VehicleRow = { make: string; makeAr: string; model: string; modelAr: string; yearFrom: number; yearTo: number };
+
 /** A vehicle that really appears in the fitment data of visible parts; make / model are the exact strings the parts filter expects. */
 export type CatalogVehicle = { make: string; model: string; yearFrom: number; yearTo: number; partCount: number; /** engine / variant labels shops entered for this vehicle */ trims: string[] };
 
@@ -82,6 +89,8 @@ export type CatalogShop = {
   storefrontUri: string | null;
   /** as the shop typed it, e.g. "Sat–Thu 08:00–18:00"; null when not set */
   workingHours?: string | null;
+  /** orders: whether the owner delivers, his fee (null = agreed with the shop), where */
+  delivery?: { enabled: boolean; fee: number | null; areaNote: string | null };
 };
 
 export type TowCompanyRow = {
@@ -115,6 +124,15 @@ export type TowTruck = {
   maxWeightKg: number | null;
   photoUri: string | null;
   operationalStatus: Operational;
+};
+
+type MyCarRow = { make: string; model: string; year: number; color?: string | null; bodyType?: string | null };
+let vehicleList: Promise<VehicleRow[]> | null = null;
+
+/** Append a page to a list, each product once (a product can shift pages while the list is read). */
+export const appendDistinct = (cur: CatalogProduct[], more: CatalogProduct[]) => {
+  const seen = new Set(cur.map((p) => p.id));
+  return [...cur, ...more.filter((p) => !seen.has(p.id) && seen.add(p.id))];
 };
 
 const withImage = (p: CatalogProduct): CatalogProduct => ({ ...p, imageUri: publicImageUrl(p.imageUri) });
@@ -151,6 +169,26 @@ export const catalogService = {
   async getVehicles(q = "") {
     return (await api<{ vehicles: CatalogVehicle[] }>("GET", `/catalog/vehicles${qs({ q })}`)).vehicles;
   },
+  /** The whole vehicle list, read once per app session (it is small and fixed). */
+  getVehicleList() {
+    vehicleList ??= api<{ vehicles: VehicleRow[] }>("GET", "/catalog/vehicle-list")
+      .then((r) => r.vehicles)
+      .catch((e) => {
+        vehicleList = null; // a failed read is retried next time
+        throw e;
+      });
+    return vehicleList;
+  },
+  async getMyCar() {
+    return (await api<{ car: MyCarRow | null }>("GET", "/catalog/my-car")).car;
+  },
+  async putMyCar(car: MyCarRow) {
+    return (await api<{ car: MyCarRow }>("PUT", "/catalog/my-car", car)).car;
+  },
+  async deleteMyCar() {
+    await api("DELETE", "/catalog/my-car");
+    return null;
+  },
   async getShop(id: string) {
     const r = await api<{ shop: CatalogShop; products: CatalogProduct[] }>("GET", `/catalog/shops/${id}`);
     return { shop: r.shop, products: r.products.map(withImage) };
@@ -165,10 +203,7 @@ export const catalogService = {
   },
 };
 
-/** Last "fits my car" values, kept in memory for the current app session only. */
-export const fitMemory = { make: "", model: "", year: "", trim: "" };
-
-/** Same rule as the server's fitment filter: make must match, model and year only when given. */
+/** One fitment row matches the car: make must match, model and year only when given. (Universal is not a row: see fitStatus.) */
 export function fitsCar(p: { fitments: Fitment[] }, car: { make: string; model: string; year: string; trim?: string }) {
   const n = (v: string) => v.trim().toLowerCase().replace(/\s+/g, " ");
   const year = car.year.trim() ? Number(car.year.trim()) : null;
@@ -177,10 +212,13 @@ export function fitsCar(p: { fitments: Fitment[] }, car: { make: string; model: 
   );
 }
 
-/** The car from "Fits my car", or null when none (or an invalid year) is set. */
-export function currentCar() {
-  const { make, model, year, trim } = fitMemory;
-  if (!make.trim()) return null;
-  if (year.trim() && !/^\d{4}$/.test(year.trim())) return null;
-  return { make, model, year, trim };
+/**
+ * Same rule as the server (backend/src/services/fitment.ts): FITS = a fitment row matches; UNIVERSAL = the shop marked it as
+ * fitting every car; NOT_LISTED = it lists cars, not this one; UNKNOWN = no fitment data at all (never shown as a fit).
+ */
+export type FitStatus = "FITS" | "UNIVERSAL" | "NOT_LISTED" | "UNKNOWN";
+export function fitStatus(p: { fitments: Fitment[]; isUniversal?: boolean }, car: { make: string; model: string; year: string; trim?: string }): FitStatus {
+  if (fitsCar(p, car)) return "FITS";
+  if (p.isUniversal) return "UNIVERSAL";
+  return p.fitments.length ? "NOT_LISTED" : "UNKNOWN";
 }

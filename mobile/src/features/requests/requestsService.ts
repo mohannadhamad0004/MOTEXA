@@ -85,18 +85,28 @@ type TowBase = {
   cancelReason: string | null;
   cancelledBy: "CUSTOMER" | "COMPANY" | null;
   timeline: { status: TowStatus; at: string }[];
+  /** the driver reached the customer (the status stays EN_ROUTE until towing starts) */
+  arrivedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };
+/** a driver's last point; `stale` = older than 2 minutes (shown as "last seen") */
+export type DriverLive = { lat: number; lng: number; at: string; stale: boolean };
 type AssignedTruck = { type: TruckType; make: string | null; model: string | null; year: number | null };
 
 export type CustomerTowRequest = TowBase & {
   company: { id: string; name: string; city: string };
   truck: AssignedTruck | null; // never a plate
   canCancel: boolean;
+  /** first name only; his live point only during this job */
+  driver?: { id: string; firstName: string; live: DriverLive | null } | null;
+  requestedDriver?: { id: string; firstName: string } | null;
 };
 export type CompanyTowRequest = TowBase & {
   customerName: string; // never the email
+  driver?: { id: string; name: string; phone: string; live: DriverLive | null } | null;
+  requestedDriver?: { id: string; name: string } | null;
+  canReassign?: boolean;
   truck: (AssignedTruck & { id: string | null; plateNumber: string | null }) | null;
 };
 
@@ -114,6 +124,8 @@ export type TowRequestInput = {
   pickupLng?: number | null;
   dropoffLat?: number | null;
   dropoffLng?: number | null;
+  /** one FREE driver of that company (else the request goes to the company) */
+  driverId?: string | null;
 };
 
 export const customerTowRequests = {

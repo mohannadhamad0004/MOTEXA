@@ -9,9 +9,6 @@ import { gShape, useGarageTheme } from "../../theme/garage";
 import { GIcon, GIconName, GText } from "./text";
 import { IconButton, Tap } from "./primitives";
 import { gType } from "../../theme/garage";
-import { useL } from "../../core/hooks/useL";
-import { HERO_BOX, HERO_CLIPS, HeroTab, MoClip } from "./MoClip";
-import { Photo } from "./Photo";
 
 type Mode = "first" | "again" | "detail" | "none";
 
@@ -94,8 +91,8 @@ export function GaragePage({
 
 /**
  * Top of a page on heroTone with rounded bottom corners. Main: greeting/title + one real data line + chip + icon button + a big visual
- * (MoClip or Photo) on the end side. Detail: back button + compact title + optional visual. Tab: the shared hero of the four
- * main tabs (see TabHero).
+ * (MoClip or Photo) on the end side. Detail: back button + compact title + optional visual. The four main tabs use
+ * hero/HeroLayout instead.
  */
 export function GarageHero({
   title,
@@ -108,8 +105,6 @@ export function GarageHero({
   onBack,
   children,
   overlap = 22,
-  tab,
-  onMap,
 }: {
   title: string;
   line?: string;
@@ -118,18 +113,13 @@ export function GarageHero({
   visual?: ReactNode;
   /** full-width visual under the title row (wide clips / photos) */
   banner?: ReactNode;
-  variant?: "main" | "detail" | "tab";
+  variant?: "main" | "detail";
   onBack?: () => void;
   children?: ReactNode;
   overlap?: number;
-  /** variant "tab": which main tab (picks its clip from HERO_CLIPS) */
-  tab?: HeroTab;
-  /** variant "tab": the round Map button, always in the hero's top end corner */
-  onMap?: () => void;
 }) {
   const { g, row, align } = useGarageTheme();
   const insets = useSafeAreaInsets();
-  if (variant === "tab" && tab) return <TabHero {...{ tab, title, line, chip, action, onMap, overlap }}>{children}</TabHero>;
   const main = variant === "main";
   return (
     <View style={{ backgroundColor: g.heroTone, borderBottomLeftRadius: gShape.hero, borderBottomRightRadius: gShape.hero, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 + overlap, overflow: "hidden" }}>
@@ -161,82 +151,6 @@ export function GarageHero({
         {visual ? <View>{visual}</View> : null}
       </View>
       {banner ? <View style={{ marginTop: 14, alignItems: "center" }}>{banner}</View> : null}
-    </View>
-  );
-}
-
-const HERO_LABEL: Record<HeroTab, [string, string]> = {
-  home: ["Mo, the MOTEXA mechanic", "مو، ميكانيكي موتكسا"],
-  parts: ["Mo at the parts shop", "مو في متجر القطع"],
-  mechanics: ["Mechanics", "الميكانيكيون"],
-  tow: ["Mo with the tow truck", "مو مع شاحنة السحب"],
-};
-
-/**
- * The ONE hero of Home, Parts, Mechanics and Tow: identical height and layout, only the content changes. Top row: optional chip
- * (start) + optional icon button + the Map button in the top END corner. Body (exactly HERO_BOX tall): title + one real data line
- * at the top of the START side, the tab's one action pinned to its bottom; Mo (or the photo placeholder) on the END side.
- * Arabic mirrors the sides; Mo is never flipped.
- */
-function TabHero({
-  tab,
-  title,
-  line,
-  chip,
-  action,
-  onMap,
-  overlap,
-  children,
-}: {
-  tab: HeroTab;
-  title: string;
-  line?: string;
-  chip?: { label: string; icon?: GIconName; onPress?: () => void };
-  action?: { icon: GIconName; label: string; onPress: () => void; badge?: number };
-  onMap?: () => void;
-  overlap: number;
-  children?: ReactNode;
-}) {
-  const { g, row, align } = useGarageTheme();
-  const { t } = useL();
-  const insets = useSafeAreaInsets();
-  const clip = HERO_CLIPS[tab];
-  const label = t(...HERO_LABEL[tab]);
-  return (
-    <View style={{ backgroundColor: g.heroTone, borderBottomLeftRadius: gShape.hero, borderBottomRightRadius: gShape.hero, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 + overlap, overflow: "hidden" }}>
-      <View style={[row, { height: 44, alignItems: "center", gap: 10 }]}>
-        <View style={[row, { flex: 1, minWidth: 0, alignItems: "center" }]}>
-          {chip ? (
-            <Tap
-              label={chip.label}
-              onPress={chip.onPress}
-              style={[row, { minHeight: 44, alignItems: "center", gap: 6, paddingHorizontal: 14, borderRadius: gShape.pill, backgroundColor: g.card, flexShrink: 1 }]}
-            >
-              <GIcon name={chip.icon ?? "car-sport-outline"} size={16} />
-              <GText numberOfLines={1} style={[gType.caption, { fontWeight: "700", flexShrink: 1 }]}>{chip.label}</GText>
-              {chip.onPress ? <GIcon name="chevron-down" size={14} color={g.soft} /> : null}
-            </Tap>
-          ) : null}
-        </View>
-        {action ? <IconButton icon={action.icon} label={action.label} onPress={action.onPress} badge={action.badge} /> : null}
-        {onMap ? <IconButton icon="map-outline" label={t("Map", "الخريطة")} onPress={onMap} /> : null}
-      </View>
-      <View style={[row, { height: HERO_BOX.h, gap: 12, marginTop: 10 }]}>
-        <View style={{ flex: 1, minWidth: 0, justifyContent: "space-between" }}>
-          <View>
-            <GText accessibilityRole="header" numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75} style={[gType.display, align]}>
-              {title}
-            </GText>
-            {line ? <GText soft numberOfLines={2} style={[gType.bodySm, align, { marginTop: 4 }]}>{line}</GText> : null}
-          </View>
-          {children}
-        </View>
-        {clip ? (
-          <MoClip clip={clip} box={HERO_BOX} label={label} />
-        ) : (
-          <Photo k={`hero.${tab}` as "hero.parts"} radius={gShape.cardLg} style={{ width: HERO_BOX.w, height: HERO_BOX.h }} />
-        )}
-      </View>
     </View>
   );
 }

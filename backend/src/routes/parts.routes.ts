@@ -2,7 +2,7 @@ import { Router } from "express";
 import express from "express";
 import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
-import { isCategory } from "../catalogCategories.js";
+import { SUBCATEGORIES, isCategory, isProductCategory } from "../catalogCategories.js";
 import { CONDITIONS, PART_TYPES } from "../partAttributes.js";
 import { requireAuth, requirePartsAdmin, requirePartsProvider } from "../middleware/auth.middleware.js";
 import { MIN_PHOTO_BYTES, type ParsedUpload, hasPhoto, filePath, parseUpload, removeStoredFiles, storeFile } from "../uploads/providerFiles.js";
@@ -126,6 +126,7 @@ const shapeProduct = (p: ProductRow) => ({
     return f ? filePath(f) : null;
   })(),
   fitments: p.fitments.map((f) => ({ make: f.make, model: f.model, yearFrom: f.yearFrom, yearTo: f.yearTo, ...(f.trim ? { trim: f.trim } : {}) })),
+  isUniversal: p.isUniversal,
 });
 
 // ---- product input ----
@@ -159,7 +160,9 @@ function parseProduct(body: any, full: boolean, allowEmpty = false): { data: Par
     data.stock = s;
   }
   if (has("category")) {
-    if (!isCategory(body.category)) return { error: "Choose a valid category." };
+    // exactly one category per product, always the most specific one (a sub-category when the category has them)
+    if (SUBCATEGORIES[body.category]) return { error: "Choose a more specific category (for example Bulbs or Headlights under Lighting)." };
+    if (!isProductCategory(body.category)) return { error: "Choose a valid category." };
     data.category = body.category;
   }
   if (has("condition")) {
@@ -216,6 +219,31 @@ function parseFitments(body: any): { rows?: FitRow[] } | { error: string } {
 
 const fitKey = (f: { make: string; model: string; yearFrom: number; yearTo: number; trim: string | null }) =>
   [f.make, f.model, f.yearFrom, f.yearTo, f.trim ?? ""].join("|");
+
+/** isUniversal?: boolean (absent = unchanged). */
+function parseUniversal(body: any): { value?: boolean } | { error: string } {
+  if (body?.isUniversal === undefined) return {};
+  if (typeof body.isUniversal !== "boolean") return { error: "isUniversal must be true or false." };
+  return { value: body.isUniversal };
+}
+
+/**
+ * Every fitment row must be a car from the vehicle list (no free text): its make / model are replaced by the list's exact
+ * strings so they compare equal to customers' cars. Returns an error naming the first unknown row.
+ */
+async function toListedCars(rows: FitRow[]): Promise<{ rows: FitRow[] } | { error: string }> {
+  if (!rows.length) return { rows };
+  const list = await prisma.vehicle.findMany({ where: { OR: rows.map((r) => ({ makeNormalized: r.makeNormalized, modelNormalized: r.modelNormalized })) } });
+  const by = new Map(list.map((v) => [`${v.makeNormalized}|${v.modelNormalized}`, v]));
+  const out: FitRow[] = [];
+  for (const [i, r] of rows.entries()) {
+    const v = by.get(`${r.makeNormalized}|${r.modelNormalized}`);
+    if (!v) return { error: `Fitment row ${i + 1}: choose the car from the vehicle list (${r.make} ${r.model} is not on it).` };
+    out.push({ ...r, make: v.make, model: v.model });
+  }
+  return { rows: out };
+}
+const NO_FIT_MSG = "Add at least one car this part fits, or mark it Universal.";
 
 // =====================================================================
 // Parts shop (PARTS_PROVIDER)
@@ -335,8 +363,13 @@ const createProduct = async (req: any, res: any) => {
     const d = parsed.data as ProductFields;
     const img = parseImage(req.body);
     if ("error" in img) return bad(res, 400, img.error);
-    const fit = parseFitments(req.body);
+    const fitIn = parseFitments(req.body);
+    if ("error" in fitIn) return bad(res, 400, fitIn.error);
+    const uni = parseUniversal(req.body);
+    if ("error" in uni) return bad(res, 400, uni.error);
+    const fit = await toListedCars(fitIn.rows ?? []);
     if ("error" in fit) return bad(res, 400, fit.error);
+    if (!fit.rows.length && !uni.value) return bad(res, 400, NO_FIT_MSG);
 
     let imageRow: Prisma.ProviderFileCreateWithoutProductInput[] = [];
     if (img.image) {
@@ -359,7 +392,7 @@ const createProduct = async (req: any, res: any) => {
     // Moderation fields are never taken from the body: a new product is always visible.
     const product = await prisma.$transaction(async (tx) => {
       const created = await tx.partsProduct.create({
-        data: { ...d, partNumberNormalized: normalizePart(d.partNumber), shopId: s.id, isHidden: false, files: { create: imageRow }, fitments: { create: fit.rows ?? [] } },
+        data: { ...d, partNumberNormalized: normalizePart(d.partNumber), shopId: s.id, isHidden: false, isUniversal: !!uni.value, files: { create: imageRow }, fitments: { create: fit.rows } },
         include: withFiles,
       });
       await tx.auditLog.create({
@@ -385,9 +418,14 @@ const editProduct = async (req: any, res: any) => {
     // Only content fields are read from the body; isHidden/hiddenReason can never be set here.
     const img = parseImage(req.body);
     if ("error" in img) return bad(res, 400, img.error);
-    const fit = parseFitments(req.body);
-    if ("error" in fit) return bad(res, 400, fit.error);
-    const parsed = parseProduct(req.body, false, !!img.image || fit.rows !== undefined);
+    const fitIn = parseFitments(req.body);
+    if ("error" in fitIn) return bad(res, 400, fitIn.error);
+    const uni = parseUniversal(req.body);
+    if ("error" in uni) return bad(res, 400, uni.error);
+    const listed = fitIn.rows !== undefined ? await toListedCars(fitIn.rows) : null;
+    if (listed && "error" in listed) return bad(res, 400, listed.error);
+    const fit = { rows: listed?.rows };
+    const parsed = parseProduct(req.body, false, !!img.image || fit.rows !== undefined || uni.value !== undefined);
     if ("error" in parsed) return bad(res, 400, parsed.error);
     const data = parsed.data;
     const p = own.product;
@@ -399,6 +437,10 @@ const editProduct = async (req: any, res: any) => {
     // Fitment is replaced as a set; only a real difference counts as a change. It never touches hidden status.
     const fitChanged = fit.rows !== undefined && fit.rows.map(fitKey).join("~") !== p.fitments.map(fitKey).join("~");
     if (fitChanged) changed.push("fitments");
+    const uniChanged = uni.value !== undefined && uni.value !== p.isUniversal;
+    if (uniChanged) changed.push("isUniversal");
+    // whenever fitment is sent, the product must end up with a car or Universal
+    if ((fit.rows !== undefined || uni.value !== undefined) && !(fit.rows ?? p.fitments).length && !(uni.value ?? p.isUniversal)) return bad(res, 400, NO_FIT_MSG);
     if (!changed.length) return res.json({ success: true, product: shapeProduct(p) });
 
     // Replacing the image changes nothing else (no re-verification, visibility untouched).
@@ -431,7 +473,7 @@ const editProduct = async (req: any, res: any) => {
       }
       await tx.partsProduct.update({
         where: { id: p.id },
-        data: { ...data, ...(data.partNumber ? { partNumberNormalized: normalizePart(data.partNumber) } : {}) },
+        data: { ...data, ...(data.partNumber ? { partNumberNormalized: normalizePart(data.partNumber) } : {}), ...(uniChanged ? { isUniversal: uni.value } : {}) },
       });
       await tx.auditLog.create({ data: { actorId: actor.id, action: acted(res, "PARTS_PRODUCT_EDITED"), targetId: p.id, details: { fields: changed, shopId: p.shopId, ...adminMark(res) } } });
     });

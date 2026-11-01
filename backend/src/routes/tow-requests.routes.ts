@@ -5,7 +5,8 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
 import { readPair } from "../geo.js";
 import { requireAuth, requireCustomer, requireTowProvider } from "../middleware/auth.middleware.js";
-import { requireApprovedProvider } from "../services/provider-onboarding.js";
+import { notify, requireApprovedProvider } from "../services/provider-onboarding.js";
+import { DispatchError, checkRequestedDriver, livePoint, routeNewRequest } from "../services/tow-dispatch.js";
 
 // Tow requests: a customer asks one approved tow company for a tow; the company accepts with one of its trucks.
 //  - /api/requests/tow/*     CUSTOMER, only their own requests.
@@ -20,6 +21,10 @@ import { requireApprovedProvider } from "../services/provider-onboarding.js";
 //   REQUESTED | ACCEPTED -> CANCELLED   customer (reason optional)
 //   ACCEPTED   -> CANCELLED    company  (reason required; the truck is released)
 // A released truck becomes AVAILABLE only if it is still APPROVED, otherwise OUT_OF_SERVICE.
+// Drivers (services/tow-dispatch.ts): a request may go to one FREE driver of the company (driverId) or to the company (auto-assigned
+// when exactly one driver is free, else the owner assigns). A job with a driver is accepted and moved ONLY by that driver
+// (/driver/jobs/*); the company endpoints below then refuse accept / status, but the company still cancels and reassigns.
+// Every change notifies the other side.
 // Privacy: the company sees the customer's NAME and what they typed (phone, addresses); never the email.
 // The customer never sees plates, the company's phone, or documents.
 const router = Router();
@@ -44,6 +49,7 @@ const text = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v
 const idParam = (v: unknown) => String(v);
 const send = (res: any, e: unknown, label: string) => {
   if (e instanceof HttpError) return res.status(e.code).json({ success: false, message: e.message, ...e.extra });
+  if (e instanceof DispatchError) return res.status(e.code).json({ success: false, message: e.message });
   console.error(`${label}:`, e);
   return res.status(500).json({ success: false, message: "Internal server error." });
 };
@@ -58,6 +64,8 @@ const include = {
   company: { select: { id: true, companyName: true, city: true, verificationStatus: true } },
   customer: { select: { id: true, fullName: true } }, // never the email
   assignedTruck: { select: { id: true, plateNumber: true } },
+  driver: { select: { id: true, phone: true, userId: true, lastLat: true, lastLng: true, lastAt: true, user: { select: { fullName: true } } } },
+  requestedDriver: { select: { id: true, user: { select: { fullName: true } } } },
 };
 type Row = Prisma.TowRequestGetPayload<{ include: typeof include }>;
 
@@ -68,6 +76,7 @@ const timeline = (r: Row) =>
       ["ACCEPTED", r.acceptedAt],
       ["DECLINED", r.declinedAt],
       ["EN_ROUTE", r.enRouteAt],
+      ["ARRIVED", r.arrivedAt],
       ["IN_PROGRESS", r.inProgressAt],
       ["COMPLETED", r.completedAt],
       ["CANCELLED", r.cancelledAt],
@@ -95,6 +104,7 @@ const common = (r: Row) => ({
   cancelReason: r.cancelReason,
   cancelledBy: r.cancelledBy,
   timeline: timeline(r),
+  arrivedAt: r.arrivedAt,
   createdAt: r.createdAt,
   updatedAt: r.updatedAt,
 });
@@ -105,6 +115,9 @@ const customerView = (r: Row) => ({
   company: { id: r.company.id, name: r.company.companyName, city: r.company.city },
   truck: truckSnapshot(r),
   canCancel: r.status === "REQUESTED" || r.status === "ACCEPTED",
+  // the driver's first name, and his live point only while he works on THIS job (stale = "last seen")
+  driver: r.driver ? { id: r.driver.id, firstName: r.driver.user.fullName.trim().split(/\s+/)[0], live: ["ACCEPTED", "EN_ROUTE", "IN_PROGRESS"].includes(r.status) ? livePoint(r.driver) : null } : null,
+  requestedDriver: r.requestedDriver ? { id: r.requestedDriver.id, firstName: r.requestedDriver.user.fullName.trim().split(/\s+/)[0] } : null,
 });
 
 /** What the company sees: the customer's name (not email) and its own truck, plate included. */
@@ -112,6 +125,9 @@ const companyView = (r: Row) => ({
   ...common(r),
   customerName: r.customer.fullName,
   truck: truckSnapshot(r) ? { ...truckSnapshot(r), id: r.assignedTruck?.id ?? null, plateNumber: r.assignedTruck?.plateNumber ?? null } : null,
+  driver: r.driver ? { id: r.driver.id, name: r.driver.user.fullName, phone: r.driver.phone, live: ["ACCEPTED", "EN_ROUTE", "IN_PROGRESS"].includes(r.status) ? livePoint(r.driver) : null } : null,
+  requestedDriver: r.requestedDriver ? { id: r.requestedDriver.id, name: r.requestedDriver.user.fullName } : null,
+  canReassign: r.status === "REQUESTED" || r.status === "ACCEPTED",
 });
 
 const statusFilter = (q: unknown) => {
@@ -150,6 +166,8 @@ router.post("/requests/tow", ...customerSide, async (req, res) => {
     const vehicleMake = text(b.vehicleMake, 60);
     const vehicleModel = text(b.vehicleModel, 60);
     const notes = b.notes === undefined || b.notes === null || b.notes === "" ? null : text(b.notes, 500);
+    // optional: one FREE driver of that company (else the request goes to the company)
+    const driverId = b.driverId === undefined || b.driverId === null || b.driverId === "" ? null : text(b.driverId, 64);
     if (!companyId) throw new HttpError(400, "companyId is required.");
     if (!pickupAddress || pickupAddress.length < 3) throw new HttpError(400, "Pickup address is required.");
     if (!dropoffAddress || dropoffAddress.length < 3) throw new HttpError(400, "Destination address is required.");
@@ -171,12 +189,14 @@ router.post("/requests/tow", ...customerSide, async (req, res) => {
       if (!available) throw new HttpError(409, "This company has no available truck right now.");
       const active = await tx.towRequest.findFirst({ where: { customerId: me.id, companyId: company.id, status: { in: [...ACTIVE] } }, select: { id: true } });
       if (active) throw new HttpError(409, "You already have an active request with this company.", { existingRequestId: active.id });
+      if (driverId) await checkRequestedDriver(tx, company.id, driverId);
       const created = await tx.towRequest.create({
-        data: { customerId: me.id, companyId: company.id, pickupAddress, dropoffAddress, contactPhone, vehicleMake, vehicleModel, vehicleYear: y ?? null, problemType, notes, pickupLat: pickup.lat, pickupLng: pickup.lng, dropoffLat: dropoff.lat, dropoffLng: dropoff.lng },
+        data: { customerId: me.id, companyId: company.id, ...(driverId ? { driverId, requestedDriverId: driverId } : {}), pickupAddress, dropoffAddress, contactPhone, vehicleMake, vehicleModel, vehicleYear: y ?? null, problemType, notes, pickupLat: pickup.lat, pickupLng: pickup.lng, dropoffLat: dropoff.lat, dropoffLng: dropoff.lng },
       });
-      await log(tx, me.id, "TOW_REQUEST_CREATED", created.id, { companyId: company.id });
+      await log(tx, me.id, "TOW_REQUEST_CREATED", created.id, { companyId: company.id, driverId });
       return created.id;
     });
+    await routeNewRequest(id);
     const row = await prisma.towRequest.findUniqueOrThrow({ where: { id }, include });
     return res.status(201).json({ success: true, request: customerView(row) });
   } catch (e) {
@@ -226,6 +246,8 @@ router.patch("/requests/tow/:id/cancel", ...customerSide, async (req, res) => {
       await releaseTruck(tx, fresh.assignedTruckId);
       await log(tx, me.id, "TOW_REQUEST_CANCELLED", current.id, { by: "CUSTOMER", reason });
     });
+    const owner = await prisma.towCompanyProfile.findUniqueOrThrow({ where: { id: current.companyId }, select: { userId: true } });
+    await notify([owner.userId, ...(current.driver ? [current.driver.userId] : [])], ["Tow request cancelled", "تم إلغاء طلب سحب"], ["The customer cancelled the request.", "ألغى الزبون الطلب."]);
     return res.json({ success: true, request: customerView(await ownRequest(res, current.id)) });
   } catch (e) {
     return send(res, e, "Tow request cancel error");
@@ -275,6 +297,7 @@ router.patch("/tow/me/requests/:id/accept", ...companySide, async (req, res) => 
     const me = res.locals.authUser as { id: string };
     const { company, row } = await companyRequest(res, idParam(req.params.id));
     if (company.verificationStatus === "REJECTED") throw new HttpError(403, REJECTED_MSG);
+    if (row.driverId) throw new HttpError(409, "This job is with a driver: the driver accepts it (or reassign it).");
     const truckId = text(req.body?.truckId, 64);
     if (!truckId) throw new HttpError(400, "truckId is required.");
     await prisma.$transaction(async (tx) => {
@@ -307,6 +330,7 @@ router.patch("/tow/me/requests/:id/accept", ...companySide, async (req, res) => 
       if (!moved.count) throw new HttpError(409, "This request is no longer waiting for an answer."); // rolls the truck claim back
       await log(tx, me.id, "TOW_REQUEST_ACCEPTED", row.id, { truckId: truck.id });
     });
+    await notify([row.customerId], ["Your tow is accepted", "تم قبول طلب السحب"], [`${row.company.companyName} accepted your request.`, `قبلت ${row.company.companyName} طلبك.`]);
     return res.json({ success: true, request: companyView((await companyRequest(res, row.id)).row) });
   } catch (e) {
     return send(res, e, "Tow request accept error");
@@ -325,6 +349,7 @@ router.patch("/tow/me/requests/:id/decline", ...companySide, async (req, res) =>
       if (!done.count) throw new HttpError(409, "This request is no longer waiting for an answer.");
       await log(tx, me.id, "TOW_REQUEST_DECLINED", row.id, { reason });
     });
+    await notify([row.customerId, ...(row.driver && row.driver.userId !== me.id ? [row.driver.userId] : [])], ["Tow request declined", "تم رفض طلب السحب"], [reason, reason]);
     return res.json({ success: true, request: companyView((await companyRequest(res, row.id)).row) });
   } catch (e) {
     return send(res, e, "Tow request decline error");
@@ -338,19 +363,21 @@ router.patch("/tow/me/requests/:id/status", ...companySide, async (req, res) => 
     const to = req.body?.status;
     const step = typeof to === "string" ? NEXT[to] : undefined;
     if (!step) throw new HttpError(400, "status must be EN_ROUTE, IN_PROGRESS or COMPLETED.");
+    if (row.driverId) throw new HttpError(409, "Only the assigned driver updates this job.");
     await prisma.$transaction(async (tx) => {
       const done = await tx.towRequest.updateMany({ where: { id: row.id, companyId: row.companyId, status: step.from }, data: { status: to as Status, [step.stamp]: new Date() } });
       if (!done.count) throw new HttpError(409, `A request can only move to ${to} from ${step.from}.`);
       if (to === "COMPLETED") await releaseTruck(tx, row.assignedTruckId);
       await log(tx, me.id, `TOW_REQUEST_${to}`, row.id, {});
     });
+    await notify([row.customerId], ["Your tow was updated", "تم تحديث طلب السحب"], [`Status: ${String(to).toLowerCase().replace("_", " ")}.`, `الحالة: ${to}.`]);
     return res.json({ success: true, request: companyView((await companyRequest(res, row.id)).row) });
   } catch (e) {
     return send(res, e, "Tow request status error");
   }
 });
 
-// The company may cancel an ACCEPTED job (before it is on the way). Reason required; the truck is released.
+// The company may cancel an ACCEPTED or EN_ROUTE job (not once towing started). Reason required; the truck is released.
 router.patch("/tow/me/requests/:id/cancel", ...companySide, async (req, res) => {
   try {
     const me = res.locals.authUser as { id: string };
@@ -359,13 +386,14 @@ router.patch("/tow/me/requests/:id/cancel", ...companySide, async (req, res) => 
     if (!reason) throw new HttpError(400, "A reason is required to cancel.");
     await prisma.$transaction(async (tx) => {
       const done = await tx.towRequest.updateMany({
-        where: { id: row.id, companyId: row.companyId, status: "ACCEPTED" },
+        where: { id: row.id, companyId: row.companyId, status: { in: ["ACCEPTED", "EN_ROUTE"] } },
         data: { status: "CANCELLED", cancelledAt: new Date(), cancelledBy: "COMPANY", cancelReason: reason },
       });
-      if (!done.count) throw new HttpError(409, "Only an accepted request that is not yet on the way can be cancelled.");
+      if (!done.count) throw new HttpError(409, "Only an accepted or on-the-way request can be cancelled.");
       await releaseTruck(tx, row.assignedTruckId);
       await log(tx, me.id, "TOW_REQUEST_CANCELLED", row.id, { by: "COMPANY", reason });
     });
+    await notify([row.customerId, ...(row.driver && row.driver.userId !== me.id ? [row.driver.userId] : [])], ["Tow request cancelled", "تم إلغاء طلب السحب"], [reason, reason]);
     return res.json({ success: true, request: companyView((await companyRequest(res, row.id)).row) });
   } catch (e) {
     return send(res, e, "Tow request company cancel error");

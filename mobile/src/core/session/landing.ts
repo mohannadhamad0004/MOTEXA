@@ -14,6 +14,8 @@ export function landingFor(role: string, permissions: string[]): Href | null {
       return permissions.length ? ("/dept" as Href) : null;
     case "TOW_PROVIDER":
       return "/provider/tow";
+    case "TOW_DRIVER":
+      return "/driver" as Href;
     case "PARTS_PROVIDER":
       return "/provider/parts";
     case "CUSTOMER":

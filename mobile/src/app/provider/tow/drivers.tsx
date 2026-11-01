@@ -1,0 +1,158 @@
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
+import { View } from "react-native";
+import { Card, Chip, EmptyState, ErrorState, Field, GarageHero, GaragePage, GButton, GText, ListRow, Note, Section, Sheet, SkeletonRows, StatusChip, Toggle, Tone } from "../../../components/garage";
+import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
+import { CompanyDriver, companyDispatch, liveLabel } from "../../../features/tow/dispatchService";
+import { asActor, useSessionUser } from "../../../features/shared/session";
+import { towFleetService } from "../../../features/tow/towService";
+import { useTruckLabels } from "../../../features/tow/truckBits";
+import { useTowStatusLabels } from "../../../features/requests/requestBits";
+import { gType, useGarageTheme } from "../../../theme/garage";
+
+/**
+ * The company's drivers: FREE / BUSY / OFFLINE (BUSY is automatic), their truck and current job, an offline switch, a truck
+ * picker, and "Add a driver" (a login the owner creates: name, email, phone, password, truck) or "I drive too" (no new login).
+ */
+export default function CompanyDrivers() {
+  const { row, align } = useGarageTheme();
+  const { t } = useL();
+  const user = useSessionUser();
+  const { type } = useTruckLabels();
+  const L = useTowStatusLabels();
+  const [list, setList] = useState<CompanyDriver[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const fleet = useLoad(() => towFleetService.getMyFleet(asActor(user)), [user.id]);
+  const trucks = (fleet.data?.trucks ?? []).filter((x) => x.verification === "APPROVED");
+  const load = useCallback(async () => {
+    try {
+      setList(await companyDispatch.drivers());
+      setError(null);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+      const h = setInterval(load, 15_000);
+      return () => clearInterval(h);
+    }, [load])
+  );
+
+  const [form, setForm] = useState<{ self: boolean; fullName: string; email: string; password: string; phone: string; truckId: string | null } | null>(null);
+  const [truckFor, setTruckFor] = useState<CompanyDriver | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [formErr, setFormErr] = useState<string | null>(null);
+  const run = async (fn: () => Promise<unknown>, after?: () => void) => {
+    setBusy(true);
+    setFormErr(null);
+    try {
+      await fn();
+      after?.();
+      await load();
+    } catch (e: any) {
+      setFormErr(e.message);
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const tone: Record<string, Tone> = { FREE: "success", BUSY: "accent", OFFLINE: "neutral", NO_TRUCK: "warning" };
+  const label: Record<string, string> = { FREE: t("Free", "متاح"), BUSY: t("Busy", "مشغول"), OFFLINE: t("Offline", "غير متصل"), NO_TRUCK: t("No truck ready", "لا شاحنة جاهزة") };
+  const ownerDrives = !!list?.some((d) => d.isOwner);
+
+  return (
+    <GaragePage
+      onRefresh={load}
+      hero={
+        <GarageHero
+          variant="detail"
+          onBack={() => (router.canGoBack() ? router.back() : router.navigate("/provider/tow"))}
+          title={t("Drivers", "السائقون")}
+          line={list ? t(`${list.filter((d) => d.status === "FREE").length} free · ${list.filter((d) => d.status === "BUSY").length} busy`, `${list.filter((d) => d.status === "FREE").length} متاح · ${list.filter((d) => d.status === "BUSY").length} مشغول`) : undefined}
+        />
+      }
+    >
+      {error && !list ? <ErrorState text={error} onRetry={load} retryLabel={t("Retry", "إعادة المحاولة")} /> : null}
+      {!list && !error ? <SkeletonRows count={3} /> : null}
+      {list ? (
+        <>
+          <View style={[row, { gap: 10 }]}>
+            <GButton flex icon="person-add-outline" label={t("Add a driver", "إضافة سائق")} onPress={() => setForm({ self: false, fullName: "", email: "", password: "", phone: "", truckId: null })} />
+            {!ownerDrives ? <GButton flex variant="secondary" icon="car-outline" label={t("I drive too", "أنا أقود أيضًا")} onPress={() => setForm({ self: true, fullName: "", email: "", password: "", phone: "", truckId: null })} /> : null}
+          </View>
+          <Note>{t("Only free drivers can be chosen by customers. Busy is set automatically from accept until the job ends.", "يمكن للزبائن اختيار السائقين المتاحين فقط. يُضبط «مشغول» تلقائيًا من القبول حتى انتهاء المهمة.")}</Note>
+          {!list.length ? (
+            <EmptyState photo="empty.requests" text={t("No drivers yet. Add your first driver.", "لا يوجد سائقون بعد. أضف سائقك الأول.")} />
+          ) : (
+            <View style={{ gap: 12, marginTop: 12 }}>
+              {list.map((d) => (
+                <Card key={d.id}>
+                  <View style={[row, { alignItems: "center", gap: 8 }]}>
+                    <GText style={[gType.title, { flex: 1 }, align]}>{d.isOwner ? `${d.name} (${t("you", "أنت")})` : d.name}</GText>
+                    <StatusChip tone={tone[d.status]} label={label[d.status]} />
+                  </View>
+                  <GText soft style={[gType.caption, align, { writingDirection: "ltr" }]}>{`${d.phone} · ${d.email}`}</GText>
+                  <ListRow icon="car-outline" title={d.truck ? `${type[d.truck.type]} · ${d.truck.plate}` : t("No truck linked", "لا توجد شاحنة")} sub={t("Change truck", "تغيير الشاحنة")} onPress={() => setTruckFor(d)} />
+                  {d.job ? (
+                    <ListRow divider icon="navigate-outline" title={`${t("Job", "مهمة")}: ${d.job.customerFirstName}`} sub={`${L[d.job.status]} · ${liveLabel(d.live, t)}`} onPress={() => router.push({ pathname: "/provider/tow/dispatch/[id]", params: { id: d.job!.id } })} />
+                  ) : null}
+                  <Toggle label={t("Online", "متصل")} value={!d.offline} onChange={(v) => !busy && void run(() => companyDispatch.updateDriver(d.id, { offline: !v }))} />
+                </Card>
+              ))}
+            </View>
+          )}
+        </>
+      ) : null}
+
+      <Sheet
+        visible={!!form}
+        onClose={() => setForm(null)}
+        closeLabel={t("Close", "إغلاق")}
+        title={form?.self ? t("I drive too", "أنا أقود أيضًا") : t("Add a driver", "إضافة سائق")}
+        tall
+        footer={<GButton label={t("Save", "حفظ")} busy={busy} onPress={() => form && void run(() => companyDispatch.addDriver(form.self ? { self: true, phone: form.phone, truckId: form.truckId } : form), () => setForm(null))} />}
+      >
+        {form ? (
+          <View>
+            {!form.self ? (
+              <>
+                <Field label={t("Full name", "الاسم الكامل")} value={form.fullName} onChangeText={(v) => setForm({ ...form, fullName: v })} maxLength={80} />
+                <Field label={t("Email (the driver signs in with it)", "البريد الإلكتروني (يسجّل السائق الدخول به)")} value={form.email} onChangeText={(v) => setForm({ ...form, email: v })} autoCapitalize="none" maxLength={120} />
+                <Field label={t("Password (give it to the driver)", "كلمة المرور (أعطها للسائق)")} value={form.password} onChangeText={(v) => setForm({ ...form, password: v })} autoCapitalize="none" maxLength={128} />
+                <GText soft style={[gType.caption, align, { marginBottom: 10 }]}>{t("8+ characters with uppercase, lowercase, a number and a symbol.", "8 أحرف أو أكثر مع حرف كبير وصغير ورقم ورمز.")}</GText>
+              </>
+            ) : null}
+            <Field label={t("Phone", "الهاتف")} value={form.phone} onChangeText={(v) => setForm({ ...form, phone: v })} keyboardType="phone-pad" maxLength={24} />
+            <GText style={[gType.label, align, { marginBottom: 8 }]}>{t("Truck", "الشاحنة")}</GText>
+            <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
+              <Chip label={t("None", "بدون")} on={!form.truckId} onPress={() => setForm({ ...form, truckId: null })} />
+              {trucks.map((tr) => (
+                <Chip key={tr.id} label={`${tr.plate} · ${type[tr.type]}`} on={form.truckId === tr.id} onPress={() => setForm({ ...form, truckId: tr.id })} />
+              ))}
+            </View>
+            {formErr ? <View style={{ marginTop: 12 }}><Note tone="danger" icon="alert-circle-outline">{formErr}</Note></View> : null}
+          </View>
+        ) : null}
+      </Sheet>
+
+      <Sheet visible={!!truckFor} onClose={() => setTruckFor(null)} closeLabel={t("Close", "إغلاق")} title={t("Truck for", "شاحنة") + (truckFor ? ` ${truckFor.name}` : "")}>
+        {truckFor ? (
+          <View style={{ gap: 8 }}>
+            <Section title={t("Approved trucks", "الشاحنات المعتمدة")} style={{ marginTop: 0 }}>
+              <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
+                <Chip label={t("None", "بدون")} on={!truckFor.truck} onPress={() => void run(() => companyDispatch.updateDriver(truckFor.id, { truckId: null }), () => setTruckFor(null))} />
+                {trucks.map((tr) => (
+                  <Chip key={tr.id} label={`${tr.plate} · ${type[tr.type]}`} on={truckFor.truck?.id === tr.id} onPress={() => void run(() => companyDispatch.updateDriver(truckFor.id, { truckId: tr.id }), () => setTruckFor(null))} />
+                ))}
+              </View>
+            </Section>
+            {formErr ? <Note tone="danger" icon="alert-circle-outline">{formErr}</Note> : null}
+          </View>
+        ) : null}
+      </Sheet>
+    </GaragePage>
+  );
+}

@@ -8,7 +8,8 @@ import { cityLabel } from "../../../core/constants/cities";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { carName } from "../../../features/catalog/catalogBits";
-import { CatalogProduct, catalogService, currentCar, fitMemory } from "../../../features/catalog/catalogService";
+import { CatalogProduct, appendDistinct, catalogService } from "../../../features/catalog/catalogService";
+import { useMyCar } from "../../../features/catalog/myCar";
 import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 
 const CARD_W = 152; // two cards and a peek of the third at 390 px, so the row reads as scrollable
@@ -35,10 +36,11 @@ export default function CustomerShop() {
   const [all, setAll] = useState(false);
   const [broken, setBroken] = useState<string[]>([]);
   const dropBroken = useCallback((id: string) => setBroken((b) => (b.includes(id) ? b : [...b, id])), []);
-  // the vehicle chosen on the Parts tab (kept in memory for the session); filtering is server-side, together with category and paging
-  const [carTick, setCarTick] = useState(0);
-  const car = currentCar();
-  const carKey = car ? `${car.make}|${car.model}|${car.year}|${carTick}` : "";
+  // the account's car filters this shop's parts (server-side, with category and paging); "x" shows all of them here only
+  const { car: myCar } = useMyCar();
+  const [useCar, setUseCar] = useState(true);
+  const car = useCar ? myCar : null;
+  const carKey = car ? `${car.make}|${car.model}|${car.year}` : "";
   const [items, setItems] = useState<CatalogProduct[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -55,7 +57,7 @@ export default function CustomerShop() {
       try {
         const r = await catalogService.searchParts({ shopId: id, ...(cat ? { category: cat } : {}), ...(car ? { make: car.make, model: car.model, year: car.year, trim: car.trim } : {}), sort: "newest", page: pageNo });
         if (mine !== seq.current) return;
-        setItems((cur) => (pageNo === 1 ? r.products : [...cur, ...r.products]));
+        setItems((cur) => (pageNo === 1 ? r.products : appendDistinct(cur, r.products)));
         setPage(r.page);
         setHasMore(r.hasMore);
       } catch (e: any) {
@@ -150,7 +152,7 @@ export default function CustomerShop() {
               <View style={{ flexShrink: 1 }}>
                 <Chip icon="car-sport" on label={`${t("Parts for", "قطع تناسب")} ${carName(car)}`} />
               </View>
-              <Tap label={t("Clear vehicle", "إزالة المركبة")} onPress={() => { fitMemory.make = ""; fitMemory.model = ""; fitMemory.year = ""; setCarTick((n) => n + 1); }} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+              <Tap label={t("Clear vehicle", "إزالة المركبة")} onPress={() => setUseCar(false)} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
                 <GIcon name="close" size={16} color={g.soft} />
               </Tap>
             </View>

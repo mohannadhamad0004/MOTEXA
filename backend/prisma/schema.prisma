@@ -14,6 +14,7 @@ enum UserRole {
   MECHANIC
   PARTS_PROVIDER
   TOW_PROVIDER
+  TOW_DRIVER // a driver account added by a tow company owner; linked to that company (TowDriver)
 }
 
 enum AccountStatus {
@@ -69,6 +70,12 @@ model User {
 
   sentInvitations    AdminInvitation[] @relation("InvitationSender")
   acceptedInvitation AdminInvitation?  @relation("InvitationRecipient")
+
+  car CustomerCar?
+
+  towDriver          TowDriver?
+  partsOrders        PartsOrder[]
+  partsOrderMessages PartsOrderMessage[]
 
   @@index([role, status])
 }
@@ -326,6 +333,7 @@ model TowCompanyProfile {
   files       ProviderFile[]
   towRequests TowRequest[]
   messages    ProviderMessage[]
+  drivers     TowDriver[]
 }
 
 model Truck {
@@ -362,9 +370,37 @@ model Truck {
 
   files       ProviderFile[]
   towRequests TowRequest[]
+  drivers     TowDriver[]
 
   @@index([companyId])
   @@index([verificationStatus])
+}
+
+// ---- Tow drivers: a login added by the company owner (or the owner himself, "I drive too"), one company, optionally one truck.
+// Status is FREE / BUSY / OFFLINE: OFFLINE is the driver's switch, BUSY is computed (an accepted job not finished yet).
+model TowDriver {
+  id        String            @id @default(uuid())
+  userId    String            @unique
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId String
+  company   TowCompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  truckId   String?
+  truck     Truck?            @relation(fields: [truckId], references: [id], onDelete: SetNull)
+  phone     String
+  offline   Boolean           @default(false)
+
+  // last position, sent every ~10 s while the driver's job screen is open on an active job (foreground only)
+  lastLat Float?
+  lastLng Float?
+  lastAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  jobs      TowRequest[] @relation("TowRequestDriver")
+  requested TowRequest[] @relation("TowRequestRequestedDriver")
+
+  @@index([companyId])
 }
 
 // ---- Parts shops + products. Product images and vehicle fitment are a later step. ----
@@ -405,10 +441,16 @@ model PartsShopProfile {
   submissionVersion Int       @default(0)
   flaggedFields     String[]  @default([])
 
+  // orders: the owner delivers himself. deliveryFee null = "agreed with the shop" (shown to customers as such)
+  deliveryEnabled  Boolean  @default(false)
+  deliveryFee      Decimal? @db.Decimal(12, 2)
+  deliveryAreaNote String?
+
   products  PartsProduct[]
   files     ProviderFile[]
   inquiries PartInquiry[]
   messages  ProviderMessage[]
+  orders    PartsOrder[]
 }
 
 enum PartCondition {
@@ -434,9 +476,12 @@ model PartsProduct {
   description          String?
   price                Decimal       @db.Decimal(12, 2)
   stock                Int           @default(0)
+  // units held for accepted orders; customers can buy stock - reservedStock. Delivered/picked up: both go down; cancel/reject: released
+  reservedStock        Int           @default(0)
   condition            PartCondition @default(NEW)
   partType             PartType? // null = not specified
   category             String? // key from src/catalogCategories.ts; null only for products made before categories existed
+  legacyCategory       String? // the category before sub-categories existed (kept as it was; nothing reads it)
 
   // Sale: the "was" price. Customers only see it while the optional window is open and it is higher than price.
   compareAtPrice Decimal?  @db.Decimal(12, 2)
@@ -453,9 +498,13 @@ model PartsProduct {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  files     ProviderFile[]
-  fitments  PartsFitment[]
-  inquiries PartInquiry[]
+  // fits every car (oil, bulbs, accessories): shown to any customer car as "Universal", never as a specific fit
+  isUniversal Boolean @default(false)
+
+  files      ProviderFile[]
+  fitments   PartsFitment[]
+  inquiries  PartInquiry[]
+  orderItems PartsOrderItem[]
 
   @@index([shopId])
   @@index([partNumberNormalized])
@@ -576,6 +625,146 @@ model PartsFitment {
   @@index([productId])
 }
 
+// ---- Parts orders: a customer buys from ONE shop, cash only; pickup at the shop or the owner delivers himself ----
+
+enum PartsOrderStatus {
+  PLACED
+  ACCEPTED
+  PREPARING
+  READY_FOR_PICKUP
+  OUT_FOR_DELIVERY
+  PICKED_UP
+  DELIVERED
+  CANCELLED
+  REJECTED
+}
+
+enum PartsFulfilment {
+  PICKUP
+  DELIVERY
+}
+
+enum PartsPayment {
+  CASH_ON_DELIVERY
+  PAY_AT_SHOP
+}
+
+model PartsOrder {
+  id         String           @id @default(uuid())
+  customerId String
+  customer   User             @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  shopId     String
+  shop       PartsShopProfile @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  fulfilment PartsFulfilment
+  payment    PartsPayment
+  status     PartsOrderStatus @default(PLACED)
+
+  // money is computed by the server from its own prices when the order is placed, then kept as it was
+  subtotal    Decimal  @db.Decimal(12, 2)
+  deliveryFee Decimal? @db.Decimal(12, 2) // null = agreed with the shop
+  total       Decimal  @db.Decimal(12, 2) // subtotal + fee (fee 0 when agreed)
+
+  // delivery only: the customer's pin, the nearest service city ("area") and a note
+  deliveryLat  Float?
+  deliveryLng  Float?
+  deliveryArea String?
+  deliveryNote String?
+
+  rejectReason  String?
+  cancelReason  String?
+  cancelledBy   String? // "CUSTOMER" | "SHOP"
+  stockReserved Boolean @default(false)
+
+  // the owner's live position while OUT_FOR_DELIVERY and his delivery screen is open (foreground only)
+  courierLat Float?
+  courierLng Float?
+  courierAt  DateTime?
+
+  // last time each side opened the chat (unread badges)
+  customerReadAt DateTime?
+  shopReadAt     DateTime?
+
+  createdAt   DateTime  @default(now())
+  acceptedAt  DateTime?
+  preparingAt DateTime?
+  readyAt     DateTime?
+  outAt       DateTime?
+  completedAt DateTime?
+  cancelledAt DateTime?
+  rejectedAt  DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  items    PartsOrderItem[]
+  messages PartsOrderMessage[]
+
+  @@index([customerId, status])
+  @@index([shopId, status])
+  @@index([status])
+}
+
+model PartsOrderItem {
+  id         String        @id @default(uuid())
+  orderId    String
+  order      PartsOrder    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  // the line outlives a deleted product: name, number and price are copied when the order is placed
+  productId  String?
+  product    PartsProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name       String
+  partNumber String
+  unitPrice  Decimal       @db.Decimal(12, 2)
+  quantity   Int
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model PartsOrderMessage {
+  id        String     @id @default(uuid())
+  orderId   String
+  order     PartsOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  senderId  String? // null = a status update written by MOTEXA
+  sender    User?      @relation(fields: [senderId], references: [id], onDelete: SetNull)
+  body      String
+  createdAt DateTime   @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+// ---- Vehicle list: the cars customers and shops pick from (seeded from src/vehicleCatalog.ts). ----
+// make / model are the exact strings fitment rows store; the *Normalized pair is the match key.
+
+model Vehicle {
+  id              String   @id @default(uuid())
+  make            String
+  makeAr          String
+  model           String
+  modelAr         String
+  makeNormalized  String
+  modelNormalized String
+  yearFrom        Int
+  yearTo          Int
+  /// sedan | hatchback | suv | van | pickup (seed/vehicle-body-types.csv); picks the 3D model
+  bodyType        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([makeNormalized, modelNormalized])
+}
+
+// ---- A customer's own car ("my car"), one per account, picked from the vehicle list. ----
+
+model CustomerCar {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  make      String
+  model     String
+  year      Int
+  /// paint colour "#rrggbb" for the 3D view; null = default silver
+  color     String?
+  updatedAt DateTime @updatedAt
+}
+
 // ---- Requests v1: customer questions to parts shops, and tow requests to tow companies ----
 
 enum PartInquiryStatus {
@@ -671,6 +860,13 @@ model TowRequest {
   pickupLng      Float?
   dropoffLat     Float?
   dropoffLng     Float?
+  // drivers: the one doing the job (set by the company, auto-assignment or the customer's pick) and the one the customer asked for
+  driverId          String?
+  driver            TowDriver? @relation("TowRequestDriver", fields: [driverId], references: [id], onDelete: SetNull)
+  requestedDriverId String?
+  requestedDriver   TowDriver? @relation("TowRequestRequestedDriver", fields: [requestedDriverId], references: [id], onDelete: SetNull)
+  // the driver reached the customer (status stays EN_ROUTE until towing starts)
+  arrivedAt         DateTime?
   // Required by the API for new requests; the column default only gives rows that existed before it OTHER.
   problemType    TowProblemType @default(OTHER)
   notes          String?
@@ -692,6 +888,7 @@ model TowRequest {
   @@index([customerId, status])
   @@index([companyId, status])
   @@index([assignedTruckId])
+  @@index([driverId, status])
 }
 
 // ---- Mechanic service requests: a customer asks one public mechanic for help; the mechanic accepts, starts and completes ----

@@ -3,7 +3,7 @@ import { formatPrice } from "../../core/constants/money";
 import { gShape, gType, useGarageTheme } from "../../theme/garage";
 import { PhotoKey } from "../../theme/photos";
 import { PartPhoto } from "../../features/catalog/PartPhoto";
-import { fitsCar, type CatalogProduct, type ProductBadge } from "../../features/catalog/catalogService";
+import { fitStatus, type CatalogProduct, type FitStatus, type ProductBadge } from "../../features/catalog/catalogService";
 import { Photo } from "./Photo";
 import { Badge, Tap, Tone } from "./primitives";
 import { GIcon, GText } from "./text";
@@ -43,15 +43,35 @@ export function cardBadges(badges: ProductBadge[] | undefined, isArabic: boolean
 type Car = { make: string; model: string; year: string; trim?: string };
 
 /**
+ * The fit line for a car. Only FITS claims a fit (from a fitment row); UNIVERSAL is the shop's "fits every car"; a part with no
+ * fitment data never claims anything ("Not sure? Ask the shop"). `mine` = the customer's own car (vs another car they browse).
+ */
+export function fitLine(status: FitStatus, car: Car, mine: boolean, isArabic: boolean) {
+  const t = t2(isArabic);
+  const name = [car.model, car.year].filter(Boolean).join(" ");
+  switch (status) {
+    case "FITS":
+      return { icon: "checkmark-circle", tone: "success", text: mine ? t(`Fits your ${name}`, `تناسب ${name} الخاصة بك`) : t(`Fits ${name}`, `تناسب ${name}`) } as const;
+    case "UNIVERSAL":
+      return { icon: "globe-outline", tone: "accent", text: t("Universal", "عامة لكل السيارات") } as const;
+    case "NOT_LISTED":
+      return { icon: "alert-circle-outline", tone: "warning", text: mine ? t(`Not listed for your ${name}`, `غير مدرجة لـ ${name}`) : t(`Not listed for ${name}`, `غير مدرجة لـ ${name}`) } as const;
+    default:
+      return { icon: "help-circle-outline", tone: "soft", text: t("Not sure? Ask the shop", "غير متأكد؟ اسأل المتجر") } as const;
+  }
+}
+
+/**
  * Photo-first product card (two-column grid or a rail). Keeps the catalogue's real-photo handling (PartPhoto: whole picture,
  * never stretched; a failed load calls onBroken so the list can drop it).
  */
-export function ProductCard({ p, onPress, car = null, onBroken, width, compact }: { p: CatalogProduct; onPress: () => void; car?: Car | null; onBroken?: (id: string) => void; width?: number | `${number}%`; compact?: boolean }) {
+export function ProductCard({ p, onPress, car = null, mine = true, onBroken, width, compact }: { p: CatalogProduct; onPress: () => void; car?: Car | null; /** car is the customer's own (not a browsed one) */ mine?: boolean; onBroken?: (id: string) => void; width?: number | `${number}%`; compact?: boolean }) {
   const { g, shadow, row, align } = useGarageTheme();
   const { isArabic } = useLanguage();
   const t = t2(isArabic);
   const badges = cardBadges(p.badges, isArabic);
-  const fits = car ? fitsCar(p, car) : null;
+  const fit = car ? fitLine(fitStatus(p, car), car, mine, isArabic) : null;
+  const fitColor = fit ? { success: g.success, accent: g.accentText, warning: g.warning, soft: g.soft }[fit.tone] : g.soft;
   const old = p.compareAtPrice && p.compareAtPrice > p.price ? p.compareAtPrice : null;
   const stock = { IN: [g.success, t("In stock", "متوفر")], LOW: [g.warning, t("Low stock", "كمية محدودة")], OUT: [g.danger, t("Out of stock", "نفدت الكمية")] }[p.stock];
   const cond = p.condition === "USED" ? t("Used", "مستعمل") : p.condition === "REFURBISHED" ? t("Refurbished", "مجدّد") : t("New", "جديد");
@@ -79,10 +99,10 @@ export function ProductCard({ p, onPress, car = null, onBroken, width, compact }
           <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: stock[0] }} />
           <GText numberOfLines={1} style={[gType.tiny, { fontWeight: "700", color: stock[0] }]}>{stock[1]}</GText>
         </View>
-        {fits !== null ? (
+        {fit ? (
           <View style={[row, { alignItems: "center", gap: 4, marginTop: 2 }]}>
-            <GIcon name={fits ? "checkmark-circle" : "alert-circle-outline"} size={14} color={fits ? g.success : g.danger} />
-            <GText numberOfLines={1} style={[gType.tiny, { fontWeight: "600", color: fits ? g.success : g.danger, flexShrink: 1 }]}>{fits ? t("Fits your car", "تناسب سيارتك") : t("Doesn't fit your car", "لا تناسب سيارتك")}</GText>
+            <GIcon name={fit.icon} size={14} color={fitColor} />
+            <GText numberOfLines={1} style={[gType.tiny, { fontWeight: "600", color: fitColor, flexShrink: 1 }]}>{fit.text}</GText>
           </View>
         ) : null}
       </View>
