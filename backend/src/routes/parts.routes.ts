@@ -125,7 +125,7 @@ const shapeProduct = (p: ProductRow) => ({
     const f = realPhoto(p);
     return f ? filePath(f) : null;
   })(),
-  fitments: p.fitments.map((f) => ({ make: f.make, model: f.model, yearFrom: f.yearFrom, yearTo: f.yearTo, ...(f.trim ? { trim: f.trim } : {}) })),
+  fitments: p.fitments.map((f) => ({ make: f.make, model: f.model, yearFrom: f.yearFrom, yearTo: f.yearTo, ...(f.trim ? { trim: f.trim } : {}), ...(f.generationId ? { generationId: f.generationId } : {}) })),
   isUniversal: p.isUniversal,
 });
 
@@ -184,12 +184,13 @@ function parseProduct(body: any, full: boolean, allowEmpty = false): { data: Par
   return { data };
 }
 
-// ---- fitment input: fitments?: [{ make, model, yearFrom, yearTo, trim? }] (absent = unchanged, [] = clear) ----
+// ---- fitment input: fitments?: [{ make, model, yearFrom, yearTo, trim?, generationId? }] (absent = unchanged, [] = clear) ----
+// generationId ("Fits W202"): the row then takes that generation's years (toListedCars), so matching stays a year range.
 
 const MAX_FITMENTS = 50;
 /** Lowercase, trimmed, inner spaces collapsed: the form used for matching. */
 const normText = (v: string) => v.trim().toLowerCase().replace(/\s+/g, " ");
-type FitRow = { make: string; model: string; makeNormalized: string; modelNormalized: string; yearFrom: number; yearTo: number; trim: string | null; position: number };
+type FitRow = { make: string; model: string; makeNormalized: string; modelNormalized: string; yearFrom: number; yearTo: number; trim: string | null; generationId: string | null; position: number };
 
 function parseFitments(body: any): { rows?: FitRow[] } | { error: string } {
   if (body?.fitments === undefined) return {};
@@ -209,16 +210,18 @@ function parseFitments(body: any): { rows?: FitRow[] } | { error: string } {
     if (yearFrom > yearTo) return { error: `${at}: "year from" cannot be after "year to".` };
     if (raw.trim !== undefined && raw.trim !== null && typeof raw.trim !== "string") return { error: `${at}: trim is invalid.` };
     const trim = typeof raw.trim === "string" && raw.trim.trim() ? raw.trim.trim().slice(0, 60) : null;
-    const key = [normText(make), normText(model), yearFrom, yearTo, (trim ?? "").toLowerCase()].join("|");
+    if (raw.generationId != null && typeof raw.generationId !== "string") return { error: `${at}: generation is invalid.` };
+    const generationId: string | null = raw.generationId || null;
+    const key = [normText(make), normText(model), yearFrom, yearTo, (trim ?? "").toLowerCase(), generationId ?? ""].join("|");
     if (seen.has(key)) continue; // identical rows are stored once
     seen.add(key);
-    rows.push({ make, model, makeNormalized: normText(make), modelNormalized: normText(model), yearFrom, yearTo, trim, position: rows.length });
+    rows.push({ make, model, makeNormalized: normText(make), modelNormalized: normText(model), yearFrom, yearTo, trim, generationId, position: rows.length });
   }
   return { rows };
 }
 
-const fitKey = (f: { make: string; model: string; yearFrom: number; yearTo: number; trim: string | null }) =>
-  [f.make, f.model, f.yearFrom, f.yearTo, f.trim ?? ""].join("|");
+const fitKey = (f: { make: string; model: string; yearFrom: number; yearTo: number; trim: string | null; generationId: string | null }) =>
+  [f.make, f.model, f.yearFrom, f.yearTo, f.trim ?? "", f.generationId ?? ""].join("|");
 
 /** isUniversal?: boolean (absent = unchanged). */
 function parseUniversal(body: any): { value?: boolean } | { error: string } {
@@ -233,13 +236,17 @@ function parseUniversal(body: any): { value?: boolean } | { error: string } {
  */
 async function toListedCars(rows: FitRow[]): Promise<{ rows: FitRow[] } | { error: string }> {
   if (!rows.length) return { rows };
-  const list = await prisma.vehicle.findMany({ where: { OR: rows.map((r) => ({ makeNormalized: r.makeNormalized, modelNormalized: r.modelNormalized })) } });
+  const list = await prisma.vehicle.findMany({ where: { OR: rows.map((r) => ({ makeNormalized: r.makeNormalized, modelNormalized: r.modelNormalized })) }, include: { generations: { select: { id: true, yearFrom: true, yearTo: true } } } });
   const by = new Map(list.map((v) => [`${v.makeNormalized}|${v.modelNormalized}`, v]));
   const out: FitRow[] = [];
   for (const [i, r] of rows.entries()) {
     const v = by.get(`${r.makeNormalized}|${r.modelNormalized}`);
     if (!v) return { error: `Fitment row ${i + 1}: choose the car from the vehicle list (${r.make} ${r.model} is not on it).` };
-    out.push({ ...r, make: v.make, model: v.model });
+    if (r.generationId) {
+      const g = v.generations.find((x) => x.id === r.generationId);
+      if (!g) return { error: `Fitment row ${i + 1}: that generation is not a ${v.make} ${v.model}.` };
+      out.push({ ...r, make: v.make, model: v.model, yearFrom: g.yearFrom, yearTo: g.yearTo }); // a generation = its year range
+    } else out.push({ ...r, make: v.make, model: v.model });
   }
   return { rows: out };
 }

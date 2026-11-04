@@ -24,8 +24,7 @@ export default function AdminActiveDeliveries() {
   const chosen = list.find((o) => o.id === sel) ?? null;
   const dest = (o: (typeof list)[number]) => (o.delivery?.lat != null && o.delivery.lng != null ? { lat: o.delivery.lat, lng: o.delivery.lng } : null);
   const from = chosen ? (chosen.live ?? (chosen.shop.lat != null && chosen.shop.lng != null ? { lat: chosen.shop.lat, lng: chosen.shop.lng } : null)) : null;
-  const r3 = (p: { lat: number; lng: number } | null) => (p ? { lat: Math.round(p.lat * 1000) / 1000, lng: Math.round(p.lng * 1000) / 1000 } : null);
-  const { route, loading } = useRoute(chosen ? `admin:${chosen.id}` : null, r3(from), chosen ? dest(chosen) : null);
+  const { route, loading } = useRoute(chosen ? `admin:${chosen.id}` : null, from, chosen ? dest(chosen) : null, 50);
 
   const pins: ServicePin[] = list.flatMap((o) => [
     ...(o.live ? [{ id: `c:${o.id}`, name: o.shop.name, lat: o.live.lat, lng: o.live.lng, kind: "tow" as const, dim: false, color: "#B5541C" }] : []),

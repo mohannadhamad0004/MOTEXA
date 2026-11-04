@@ -72,6 +72,7 @@ model User {
   acceptedInvitation AdminInvitation?  @relation("InvitationRecipient")
 
   car CustomerCar?
+  garageCars CustomerGarageCar[]
 
   towDriver          TowDriver?
   partsOrders        PartsOrder[]
@@ -618,6 +619,8 @@ model PartsFitment {
   yearFrom        Int
   yearTo          Int
   trim            String?
+  /// set when the shop ticked a generation ("Fits W202"); yearFrom / yearTo are then that generation's years
+  generationId    String?
   position        Int      @default(0) // keeps the order the form entered
   createdAt       DateTime @default(now())
 
@@ -746,14 +749,66 @@ model Vehicle {
   yearTo          Int
   /// sedan | hatchback | suv | van | pickup (seed/vehicle-body-types.csv); picks the 3D model
   bodyType        String?
+  generations     VehicleGeneration[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@unique([makeNormalized, modelNormalized])
 }
 
-// ---- A customer's own car ("my car"), one per account, picked from the vehicle list. ----
+// ---- A model generation ("C-Class W202", 1993-2000), seeded from docs/3d/generations-master.tsv (src/seed/generations.ts).
+// Years may overlap (Octavia Mk1 / Mk2): then the customer picks. A shop ticking a generation = fits its year range.
 
+model VehicleGeneration {
+  garageCars     CustomerGarageCar[]
+  id             String   @id @default(uuid())
+  vehicleId      String
+  vehicle        Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  /// the TSV's Generation column, e.g. "W202", "E170/E180", "Mk2 / 1Z"
+  code           String
+  nameEn         String
+  nameAr         String
+  yearFrom       Int
+  yearTo         Int
+  bodyType       String?
+  /// one Wikimedia Commons photo (scripts/fetch-generation-photos.ts), served from /api/cars/
+  photoUrl       String?
+  photoCredit    String?
+  photoLicense   String?
+  photoSourceUrl String?
+  /// key of the real 3D model (mobile features/car3d/models.ts, backend/public/3d/<key>.glb); null = coming soon
+  model3dKey     String?
+  modelSourceUrl String?
+  modelLicense   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([vehicleId, code])
+}
+
+// ---- Saved garage cars; the active one powers the single-car compatibility API. ----
+
+model CustomerGarageCar {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nickname       String?  @db.VarChar(40)
+  make           String
+  model          String
+  year           Int
+  color          String?
+  generationId   String?
+  generation     VehicleGeneration? @relation(fields: [generationId], references: [id], onDelete: Restrict)
+  /// At most one active per user: partial unique index in the garage migration.
+  isActive       Boolean  @default(false)
+  lastSelectedAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// Legacy migration-era car data. Do not remove or synchronize with the garage.
 model CustomerCar {
   userId    String   @id
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -762,6 +817,8 @@ model CustomerCar {
   year      Int
   /// paint colour "#rrggbb" for the 3D view; null = default silver
   color     String?
+  /// the generation of make + model + year (picked by the customer when two overlap); no FK: a reseed never breaks a car
+  generationId String?
   updatedAt DateTime @updatedAt
 }
 

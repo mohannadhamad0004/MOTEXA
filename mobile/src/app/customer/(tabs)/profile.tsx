@@ -49,6 +49,7 @@ export default function CustomerProfile() {
           <GIcon name="chevron-forward" size={18} color={g.soft} flip />
         </View>
       </Card>
+      <GButton variant="ghost" icon="car-sport-outline" label={t("My Garage", "كراجي")} onPress={() => router.push("/customer/garage" as never)} />
       {car ? (
         <View style={{ marginTop: 10 }}>
           <CarPreview />
@@ -75,7 +76,7 @@ export default function CustomerProfile() {
             <Chip icon="moon-outline" label={t("Dark", "داكن")} on={mode === "dark"} onPress={() => setMode("dark")} />
             <Chip icon="phone-portrait-outline" label={t("System", "النظام")} on={mode === "system"} onPress={() => setMode("system")} />
           </View>
-          <ListRow divider icon="car-sport-outline" title={t("My car", "سيارتي")} sub={car ? carName(car) : t("Not set", "غير محددة")} onPress={setCar} />
+          <ListRow divider icon="car-sport-outline" title={t("My Garage", "كراجي")} sub={car ? carName(car) : t("Not set", "غير محددة")} onPress={() => router.push("/customer/garage" as never)} />
         </Card>
       </Section>
 

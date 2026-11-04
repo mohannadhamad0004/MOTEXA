@@ -36,7 +36,7 @@ export default function ShopDeliveryMap() {
     }, [load])
   );
   const sharing = o?.status === "OUT_FOR_DELIVERY";
-  const { me, problem } = useShareLocation(id, sharing, (p) => shopOrders.ping(id, p));
+  const { me, meFresh, problem, canOpenSettings, openSettings } = useShareLocation(id, sharing, (p) => shopOrders.ping(id, p));
   const move = async (to: OrderStatus) => {
     setBusy(to);
     try {
@@ -65,8 +65,9 @@ export default function ShopDeliveryMap() {
         <View style={{ gap: 12 }}>
           {error ? <Note tone="danger" icon="alert-circle-outline">{error}</Note> : null}
           {problem ? <Note tone="danger" icon="location-outline">{problem}</Note> : null}
+          {problem && canOpenSettings ? <GButton variant="secondary" icon="settings-outline" label={t("Open Settings", "فتح الإعدادات")} onPress={() => void openSettings()} /> : null}
           {sharing && me ? <Note icon="radio-outline">{t("Sharing your location with the customer while this screen is open.", "تتم مشاركة موقعك مع الزبون أثناء فتح هذه الشاشة.")}</Note> : null}
-          <OrderMap orderId={o.id} height={Math.round(height * 0.5)} delivery={delivery} shop={o.shopPoint} courier={null} me={me} />
+          <OrderMap orderId={o.id} height={Math.round(height * 0.5)} delivery={delivery} shop={o.shopPoint} courier={null} me={me} meFresh={meFresh} />
           {steps.map((s) => (
             <GButton key={s} label={s === "OUT_FOR_DELIVERY" ? t("Leave now: out for delivery", "انطلق الآن: خرج للتوصيل") : t("Delivered, cash received", "تم التوصيل واستلام النقد")} busy={busy === s} disabled={!!busy} onPress={() => void move(s)} />
           ))}

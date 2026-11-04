@@ -3,10 +3,11 @@ import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { Card, ErrorState, Field, GarageHero, GaragePage, GButton, GIcon, GText, ListRow, Note, Section, SkeletonBlock, StickyActionBar, Tap } from "../../components/garage";
 import { cityCentre, cityLabel } from "../../core/constants/cities";
-import { Point, locationMemory } from "../../core/constants/geo";
+import { Point } from "../../core/constants/geo";
 import { formatPrice } from "../../core/constants/money";
 import { useL } from "../../core/hooks/useL";
 import { useLoad } from "../../core/hooks/useLoad";
+import { useSessionUser } from "../../core/session/session";
 import { catalogService } from "../../features/catalog/catalogService";
 import { cartSubtotal, clearCart, useCart } from "../../features/orders/cart";
 import { Fulfilment, customerOrders } from "../../features/orders/ordersService";
@@ -19,6 +20,7 @@ import { gShape, gType, useGarageTheme } from "../../theme/garage";
  * + a note), cash payment (card is "coming soon"), the delivery fee or "agreed with the shop", review, place order.
  */
 export default function CustomerCheckout() {
+  const user = useSessionUser();
   const { g, row, align } = useGarageTheme();
   const { t, isArabic } = useL();
   const cart = useCart();
@@ -26,11 +28,11 @@ export default function CustomerCheckout() {
   const s = shop.data?.shop ?? null;
   const delivers = !!s?.delivery?.enabled;
   const [mode, setMode] = useState<Fulfilment>("PICKUP");
-  const [pin, setPin] = useState<Point | null>(locationMemory.current);
+  const [pin, setPin] = useState<Point | null>(null);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const loc = useCurrentLocation("directions");
+  const loc = useCurrentLocation("directions", user.id);
   const back = () => (router.canGoBack() ? router.back() : router.navigate("/customer/cart"));
 
   // the pin starts at your known position, else at the shop's city centre
@@ -107,6 +109,8 @@ export default function CustomerCheckout() {
 
       {s ? (
         <>
+          {loc.message ? <LocationProblem loc={loc} /> : null}
+          {loc.dialog}
           <Section title={t("How do you get it?", "كيف تستلم طلبك؟")} style={{ marginTop: 4 }}>
             <View style={[row, { gap: 10 }]}>
               {option("PICKUP", "storefront-outline", t("Pick up from shop", "الاستلام من المتجر"), t("Pay at the shop", "الدفع في المتجر"))}

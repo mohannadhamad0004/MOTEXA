@@ -1,5 +1,6 @@
+import { jobAfterLocationError } from "../../../features/shared/locationPolicy";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Linking, View, useWindowDimensions } from "react-native";
 import { Card, ErrorState, Field, GarageHero, GaragePage, GButton, ListRow, Note, SkeletonBlock, StatusChip, Timeline } from "../../../components/garage";
 import { useL } from "../../../core/hooks/useL";
@@ -27,11 +28,17 @@ export default function DriverJob() {
   const [busy, setBusy] = useState<string | null>(null);
   const [stop, setStop] = useState<"decline" | "cancel" | null>(null);
   const [reason, setReason] = useState("");
+  const loadSequence = useRef(0);
   const load = useCallback(async () => {
+    const sequence = ++loadSequence.current;
     try {
-      setJ(await driverApi.job(id));
+      const job = await driverApi.job(id);
+      if (sequence !== loadSequence.current) return;
+      setJ(job);
       setError(null);
     } catch (e: any) {
+      if (sequence !== loadSequence.current) return;
+      setJ(previous => jobAfterLocationError(previous, e));
       setError(e.message);
     }
   }, [id]);
@@ -39,11 +46,11 @@ export default function DriverJob() {
     useCallback(() => {
       void load();
       const h = setInterval(load, 15_000);
-      return () => clearInterval(h);
+      return () => { clearInterval(h); loadSequence.current++; };
     }, [load])
   );
-  const working = !!j && ["ACCEPTED", "EN_ROUTE", "IN_PROGRESS"].includes(j.status);
-  const { me, problem: locProblem } = useShareLocation(id, working, (p) => driverApi.ping(id, p));
+  const working = !!j && j.id === id && ["ACCEPTED", "EN_ROUTE", "IN_PROGRESS"].includes(j.status);
+  const { me, meFresh, problem: locProblem, canOpenSettings, openSettings } = useShareLocation(id, working, (p) => driverApi.ping(id, p));
 
   const act = async (key: string, fn: () => Promise<unknown>) => {
     setBusy(key);
@@ -90,9 +97,10 @@ export default function DriverJob() {
         <View style={{ gap: 12 }}>
           {error ? <Note tone="danger" icon="alert-circle-outline">{error}</Note> : null}
           {locProblem ? <Note tone="danger" icon="location-outline">{locProblem}</Note> : null}
+          {locProblem && canOpenSettings ? <GButton variant="secondary" icon="settings-outline" label={t("Open Settings", "فتح الإعدادات")} onPress={() => void openSettings()} /> : null}
           {working && me ? <Note icon="radio-outline">{t("Sharing your location with the customer and your company while this screen is open.", "تتم مشاركة موقعك مع الزبون وشركتك أثناء فتح هذه الشاشة.")}</Note> : null}
 
-          <OrderMap orderId={`tow:${j.id}`} height={Math.round(height * 0.5)} delivery={target} shop={null} courier={null} me={me} />
+          <OrderMap orderId={`tow:${j.id}`} height={Math.round(height * 0.5)} delivery={target} shop={null} courier={null} me={me} meFresh={meFresh} />
 
           {j.status === "REQUESTED" ? (
             <View style={[row, { gap: 10 }]}>

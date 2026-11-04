@@ -103,6 +103,7 @@ export function GarageHero({
   banner,
   variant = "main",
   onBack,
+  backLabel = "Back",
   children,
   overlap = 22,
 }: {
@@ -115,6 +116,7 @@ export function GarageHero({
   banner?: ReactNode;
   variant?: "main" | "detail";
   onBack?: () => void;
+  backLabel?: string;
   children?: ReactNode;
   overlap?: number;
 }) {
@@ -125,7 +127,7 @@ export function GarageHero({
     <View style={{ backgroundColor: g.heroTone, borderBottomLeftRadius: gShape.hero, borderBottomRightRadius: gShape.hero, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 + overlap, overflow: "hidden" }}>
       <View style={[row, { alignItems: "center", justifyContent: "space-between", gap: 10, minHeight: onBack || chip || action ? 44 : 0 }]}>
         <View style={[row, { alignItems: "center", gap: 10, flexShrink: 1 }]}>
-          {onBack ? <IconButton icon="arrow-back" label="Back" onPress={onBack} flip /> : null}
+          {onBack ? <IconButton icon="arrow-back" label={backLabel} onPress={onBack} flip /> : null}
           {chip ? (
             <Tap
               label={chip.label}

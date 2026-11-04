@@ -1,3 +1,4 @@
+import { towRoutePhase } from "../shared/locationPolicy";
 // The "live" view of tow jobs (company Live map and the tow admins' Active tows): every active job on our map (the driver's
 // point when he shares it, the customer's pin), a list beside it, and the road route + distance / time for the job you tap.
 import { useState } from "react";
@@ -18,10 +19,9 @@ export function LiveJobsMap({ jobs, onOpen, showCompany = false }: { jobs: TowJo
   const { height } = useWindowDimensions();
   const [sel, setSel] = useState<string | null>(null);
   const chosen = jobs.find((j) => j.id === sel) ?? null;
-  const r3 = (p: { lat: number; lng: number } | null | undefined) => (p ? { lat: Math.round(p.lat * 1000) / 1000, lng: Math.round(p.lng * 1000) / 1000 } : null);
-  const from = chosen ? r3(chosen.driver?.live ?? chosen.company.base) : null;
+  const from = chosen ? chosen.driver?.live ?? chosen.company.base : null;
   const to = chosen ? (chosen.status === "IN_PROGRESS" && chosen.dropoff ? chosen.dropoff : chosen.pickup) : null;
-  const { route, loading } = useRoute(chosen && from ? `live:${chosen.id}:${from.lat},${from.lng}` : null, from, to);
+  const { route, loading } = useRoute(chosen ? `live:${chosen.id}:${towRoutePhase(chosen.status, !!chosen.dropoff)}` : null, from, to, 50);
   const pins: ServicePin[] = jobs.flatMap((j) => [
     ...(j.driver?.live ? [{ id: `d:${j.id}`, name: j.driver.name, lat: j.driver.live.lat, lng: j.driver.live.lng, kind: "tow" as const, dim: j.driver.live.stale, color: "#B5541C" }] : []),
     ...(j.pickup ? [{ id: `p:${j.id}`, name: j.customer.firstName, lat: j.pickup.lat, lng: j.pickup.lng, kind: "hq" as const, dim: false }] : []),
