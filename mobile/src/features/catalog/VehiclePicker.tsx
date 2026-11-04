@@ -1,10 +1,12 @@
+import { Image } from "expo-image";
 import { useEffect, useMemo, useState } from "react";
 import { TextInput, View } from "react-native";
-import { GButton, GIcon, GText, Note, SearchBar, Sheet, SkeletonRows, Tap } from "../../components/garage";
+import { apiUrl } from "../../core/config/api";
+import { Field, GButton, GIcon, GText, Note, SearchBar, Sheet, SkeletonRows, Tap } from "../../components/garage";
 import { gShape, gType, useGarageTheme } from "../../theme/garage";
 import { useL } from "../../core/hooks/useL";
-import { VehicleRow, catalogService } from "./catalogService";
-import { closeMyCarPicker, saveMyCar, useMyCar, useMyCarPickerOpen } from "./myCar";
+import { GenerationRow, VehicleRow, catalogService } from "./catalogService";
+import { addGarageCar, updateGarageCar, closeMyCarPicker, useGarage, useGaragePicker, garageError, canAddGarageCar, matchingGarageCars, openMyCarPicker } from "./myCar";
 import { normSearch } from "./vehicleMatch";
 import { CAR_COLORS, DEFAULT_COLOR } from "../car3d/car3d";
 
@@ -110,55 +112,97 @@ export function VehiclePicker({ value, onChange }: { value: PickedCar; onChange:
   );
 }
 
-/** The ONE "Your car" sheet of the customer app (mounted in customer/_layout, opened with openMyCarPicker()). */
+/** Explicit add/edit sheet; saved-car selection lives in GarageSheets. */
 export function MyCarSheet() {
-  const open = useMyCarPickerOpen();
-  const { car } = useMyCar();
-  const { t, row } = useL();
+  const picker = useGaragePicker();
+  const { garageCars, busy, loaded, error } = useGarage();
+  const editing = picker?.mode === "edit" ? garageCars.find(c => c.id === picker.id) : undefined;
+  const open = picker?.mode === "add" || picker?.mode === "edit";
+  const { t } = useL();
   const [draft, setDraft] = useState<PickedCar>({ make: "", model: "", year: "" });
-  const [color, setColor] = useState(DEFAULT_COLOR);
-  const [busy, setBusy] = useState(false);
+  const [nickname, setNickname] = useState("");
+  const [color, setColor] = useState<string | null>(DEFAULT_COLOR);
+  const [genId, setGenId] = useState<string | null | undefined>(undefined);
+  const { list, error: listError, retry } = useVehicleList();
+  const gens = (list ?? []).find(v => v.make === draft.make && v.model === draft.model)?.generations?.filter(x => draft.year && x.yearFrom <= +draft.year && +draft.year <= x.yearTo) ?? [];
+  const gen = genId === undefined && gens.length === 1 ? gens[0].id : genId;
+  const genDone = gens.length <= 1 || genId !== undefined;
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => {
-    if (open) {
-      setDraft(car ? { make: car.make, model: car.model, year: car.year } : { make: "", model: "", year: "" });
-      setColor(car?.color ?? DEFAULT_COLOR);
-      setErr(null);
-    }
+    if (!open) return;
+    const initial = picker?.mode === "add" ? picker.draft : editing;
+    setDraft(initial ? { make: initial.make, model: initial.model, year: String(initial.year) } : { make: "", model: "", year: "" });
+    setColor(initial?.color === undefined ? DEFAULT_COLOR : initial.color);
+    setNickname(initial?.nickname ?? "");
+    setGenId(initial?.generationId);
+    setErr(null);
+    // Snapshot the selected ID once; refreshes must not overwrite a draft.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-  const save = async (next: PickedCar | null) => {
-    setBusy(true);
+  }, [picker]);
+  const duplicate = !editing && !!draft.year && matchingGarageCars(garageCars, { ...draft, generationId: gen ?? null }).length > 0;
+  const atLimit = !editing && !canAddGarageCar(garageCars);
+  const missing = picker?.mode === "edit" && !editing;
+  const save = async () => {
     setErr(null);
     try {
-      await saveMyCar(next ? { make: next.make, model: next.model, year: Number(next.year), color } : null);
+      const input = { make: draft.make, model: draft.model, year: Number(draft.year), color, nickname: nickname.trim() || null, generationId: gen ?? null };
+      if (editing) await updateGarageCar(editing.id, input);
+      else await addGarageCar(input);
       closeMyCarPicker();
-    } catch (e: any) {
-      setErr(e.message);
-    } finally {
-      setBusy(false);
-    }
+    } catch (e) { setErr(garageError(e, t)); }
   };
+  const close = () => { if (!busy) closeMyCarPicker(); };
   return (
-    <Sheet
-      visible={open}
-      tall
-      onClose={closeMyCarPicker}
-      closeLabel={t("Close", "إغلاق")}
-      title={t("Your car", "سيارتك")}
-      footer={
-        <View style={{ gap: 8 }}>
-          {err ? <Note tone="danger" icon="alert-circle-outline">{err}</Note> : null}
-          <View style={[row, { gap: 12 }]}>
-            {car ? <GButton flex variant="secondary" label={t("Remove", "إزالة")} disabled={busy} onPress={() => void save(null)} /> : null}
-            <GButton flex label={t("Save my car", "حفظ سيارتي")} busy={busy} disabled={!draft.year} onPress={() => void save(draft)} />
-          </View>
-        </View>
-      }
-    >
-      <VehiclePicker value={draft} onChange={setDraft} />
-      {draft.year ? <ColorStep value={color} onChange={setColor} /> : null}
+    <Sheet visible={open} tall onClose={close} closeLabel={t("Close", "إغلاق")} title={editing ? t("Edit car", "تعديل السيارة") : t("Add car", "إضافة سيارة")}
+      footer={<View style={{ gap: 8 }}>
+        {err ? <Note tone="danger">{err}</Note> : null}
+        {error ? <Note tone="danger">{t("Refresh your Garage before saving.", "حدّث كراجك قبل الحفظ.")}</Note> : null}
+        {missing ? <Note tone="danger">{t("This car is no longer saved.", "لم تعد هذه السيارة محفوظة.")}</Note> : null}
+        {atLimit ? <Note>{t("You've reached the 10-car Garage limit.", "وصلت إلى الحد الأقصى للكراج: 10 سيارات.")}</Note> : null}
+        {duplicate ? <GButton variant="secondary" label={t("Already saved — choose from Garage", "محفوظة بالفعل — اختر من الكراج")} onPress={openMyCarPicker} /> : null}
+        <GButton label={editing ? t("Save changes", "حفظ التغييرات") : t("Add to Garage", "إضافة إلى الكراج")} busy={busy} disabled={!loaded || !!error || !list || !!listError || !draft.year || !genDone || atLimit || duplicate || missing} onPress={() => void save()} />
+      </View>}>
+      <Field label={t("Nickname (optional)", "اسم السيارة (اختياري)")} value={nickname} onChangeText={setNickname} maxLength={40} />
+      <VehiclePicker value={draft} onChange={v => { if (v.make !== draft.make || v.model !== draft.model || v.year !== draft.year) setGenId(undefined); setDraft(v); }} />
+      {listError ? <GButton variant="secondary" label={t("Retry vehicle list", "إعادة تحميل قائمة المركبات")} onPress={retry} /> : null}
+      {draft.year && gens.length ? <GenerationStep gens={gens} value={gen} onChange={setGenId} /> : null}
+      {draft.year && genDone ? <ColorStep key={picker?.mode === "edit" ? picker.id : "add"} value={color ?? DEFAULT_COLOR} onChange={setColor} /> : null}
     </Sheet>
+  );
+}
+
+/** "Is this your car?": the generation(s) covering the picked year, each with its photo. Two overlap -> pick one, or "not sure". */
+function GenerationStep({ gens, value, onChange }: { gens: GenerationRow[]; value: string | null | undefined; onChange: (id: string | null) => void }) {
+  const { g } = useGarageTheme();
+  const { t, row, align, isArabic } = useL();
+  const many = gens.length > 1;
+  return (
+    <View style={{ gap: 10, marginTop: 18 }}>
+      <GText style={[gType.title, align]}>{many ? t("Which one is your car?", "أيّ واحدة سيارتك؟") : t("Is this your car?", "هل هذه سيارتك؟")}</GText>
+      {gens.map((x) => {
+        const on = value === x.id;
+        const name = isArabic ? x.nameAr : x.nameEn;
+        return (
+          <Tap key={x.id} label={name} onPress={() => onChange(x.id)} style={[row, { alignItems: "center", gap: 12, padding: 8, borderRadius: gShape.small, borderWidth: on ? 2 : 1, borderColor: on ? g.accent : g.line, backgroundColor: on ? g.tint : g.card }]}>
+            <View style={{ width: 112, height: 72, borderRadius: gShape.small, overflow: "hidden", backgroundColor: g.cardSoft, alignItems: "center", justifyContent: "center" }}>
+              {x.photoUrl ? <Image source={{ uri: apiUrl(x.photoUrl) }} contentFit="cover" style={{ width: "100%", height: "100%" }} accessibilityLabel={name} /> : <GIcon name="car-sport-outline" size={28} color={g.soft} />}
+            </View>
+            <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+              <GText style={[gType.label, { fontWeight: "800" }, align]}>{name}</GText>
+              <GText soft style={[gType.caption, align]}>{`${x.yearFrom}–${Math.min(x.yearTo, new Date().getFullYear() + 1)}`}</GText>
+              {x.photoUrl && x.photoCredit ? <GText soft numberOfLines={1} style={[gType.tiny, align]}>{`${t("Photo", "صورة")}: ${x.photoCredit} (${x.photoLicense ?? ""})`}</GText> : null}
+            </View>
+            {many ? <GIcon name={on ? "checkmark-circle" : "ellipse-outline"} size={20} color={on ? g.accent : g.soft} /> : null}
+          </Tap>
+        );
+      })}
+      {gens.length ? (
+        <Tap label={t("Not sure", "لست متأكدًا")} onPress={() => onChange(null)} style={[row, { minHeight: 44, alignItems: "center", gap: 8, paddingHorizontal: 12, borderRadius: gShape.pill, borderWidth: 1, borderColor: value === null ? g.accent : g.line, alignSelf: isArabic ? "flex-end" : "flex-start" }]}>
+          <GIcon name={value === null ? "checkmark-circle" : "help-circle-outline"} size={18} color={value === null ? g.accent : g.soft} />
+          <GText style={[gType.label, { fontWeight: "700" }]}>{t("Not sure", "لست متأكدًا")}</GText>
+        </Tap>
+      ) : null}
+    </View>
   );
 }
 
@@ -169,6 +213,7 @@ function ColorStep({ value, onChange }: { value: string; onChange: (hex: string)
   const preset = CAR_COLORS.some((c) => c.hex === value);
   const [other, setOther] = useState(!preset);
   const [hex, setHex] = useState(preset ? "" : value);
+  useEffect(() => { setOther(!CAR_COLORS.some(c => c.hex === value)); setHex(value); }, [value]);
   const swatch = (key: string, label: string, fill: string | null, on: boolean, onPress: () => void) => (
     <Tap key={key} label={label} onPress={onPress} style={{ width: 64, alignItems: "center", gap: 4 }}>
       <View style={{ width: 44, height: 44, borderRadius: 22, borderWidth: on ? 3 : 1, borderColor: on ? g.accent : g.line, padding: 3 }}>

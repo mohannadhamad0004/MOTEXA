@@ -67,7 +67,9 @@ export type CatalogShopRow = {
 };
 
 /** One model of the vehicle list (makes -> models -> year range), EN + AR names. */
-export type VehicleRow = { make: string; makeAr: string; model: string; modelAr: string; yearFrom: number; yearTo: number };
+/** A model generation ("Corolla E210"); years may overlap with the next one. photoUrl is an /api/cars/... path (CC photo, credited). */
+export type GenerationRow = { id: string; code: string; nameEn: string; nameAr: string; yearFrom: number; yearTo: number; photoUrl: string | null; photoCredit: string | null; photoLicense: string | null; model3dKey: string | null };
+export type VehicleRow = { make: string; makeAr: string; model: string; modelAr: string; yearFrom: number; yearTo: number; generations?: GenerationRow[] };
 
 /** A vehicle that really appears in the fitment data of visible parts; make / model are the exact strings the parts filter expects. */
 export type CatalogVehicle = { make: string; model: string; yearFrom: number; yearTo: number; partCount: number; /** engine / variant labels shops entered for this vehicle */ trims: string[] };
@@ -126,7 +128,10 @@ export type TowTruck = {
   operationalStatus: Operational;
 };
 
-type MyCarRow = { make: string; model: string; year: number; color?: string | null; bodyType?: string | null };
+type MyCarRow = { make: string; model: string; year: number; color?: string | null; bodyType?: string | null; generationId?: string | null; generation?: GenerationRow | null };
+export type GarageInput = { make: string; model: string; year: number; nickname?: string | null; color?: string | null; generationId?: string | null };
+export type GarageCarScalar = GarageInput & { id: string; userId: string; nickname: string | null; color: string | null; generationId: string | null; isActive: boolean; lastSelectedAt: string | null; createdAt: string; updatedAt: string };
+export type GarageCar = Omit<GarageCarScalar, "userId"> & { generation: GenerationRow | null };
 let vehicleList: Promise<VehicleRow[]> | null = null;
 
 /** Append a page to a list, each product once (a product can shift pages while the list is read). */
@@ -145,6 +150,21 @@ const qs = (params: Record<string, string | number | undefined>) => {
 };
 
 export const catalogService = {
+  async getGarage(): Promise<GarageCar[]> {
+    return (await api<{ success: boolean; cars: GarageCar[] }>("GET", "/catalog/garage")).cars;
+  },
+  async addGarageCar(input: GarageInput): Promise<GarageCarScalar> {
+    return (await api<{ car: GarageCarScalar }>("POST", "/catalog/garage", input)).car;
+  },
+  async updateGarageCar(id: string, input: Partial<GarageInput>): Promise<GarageCarScalar> {
+    return (await api<{ car: GarageCarScalar }>("PATCH", `/catalog/garage/${encodeURIComponent(id)}`, input)).car;
+  },
+  async deleteGarageCar(id: string): Promise<void> {
+    await api("DELETE", `/catalog/garage/${encodeURIComponent(id)}`);
+  },
+  async activateGarageCar(id: string): Promise<GarageCarScalar> {
+    return (await api<{ car: GarageCarScalar }>("POST", `/catalog/garage/${encodeURIComponent(id)}/activate`)).car;
+  },
   async searchParts(query: PartsQuery): Promise<PartsPage> {
     const r = await api<PartsPage>("GET", `/catalog/parts${qs({ ...query })}`);
     return { ...r, products: r.products.map(withImage) };
@@ -186,8 +206,7 @@ export const catalogService = {
     return (await api<{ car: MyCarRow }>("PUT", "/catalog/my-car", car)).car;
   },
   async deleteMyCar() {
-    await api("DELETE", "/catalog/my-car");
-    return null;
+    return (await api<{ car: MyCarRow | null }>("DELETE", "/catalog/my-car")).car;
   },
   async getShop(id: string) {
     const r = await api<{ shop: CatalogShop; products: CatalogProduct[] }>("GET", `/catalog/shops/${id}`);

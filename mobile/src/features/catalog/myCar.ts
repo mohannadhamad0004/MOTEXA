@@ -1,54 +1,45 @@
-// "My car": ONE store for the whole customer app. It lives on the account (GET/PUT/DELETE /catalog/my-car), so it survives a
-// reload and a new login, and every screen that calls useMyCar() re-renders the moment it changes anywhere. Set / change it
-// only through openMyCarPicker() (the one car sheet, mounted in customer/_layout).
+﻿// Garage is the source of truth; old consumers still see only the active car.
 import { useEffect, useSyncExternalStore } from "react";
 import { useSessionUser } from "../shared/session";
-import { catalogService } from "./catalogService";
-
-/** year is a string ("" = any year) because the browse-another-car filter may leave it out; my car always has one */
-export type Car = { make: string; model: string; year: string; trim: string; color?: string | null; bodyType?: string | null };
-
-type State = { car: Car | null; userId: string | null; loaded: boolean; pickerOpen: boolean };
-let state: State = { car: null, userId: null, loaded: false, pickerOpen: false };
-const listeners = new Set<() => void>();
-const put = (patch: Partial<State>) => {
-  state = { ...state, ...patch };
-  listeners.forEach((l) => l());
-};
-const subscribe = (l: () => void) => {
-  listeners.add(l);
-  return () => listeners.delete(l);
-};
-
-const toCar = (c: { make: string; model: string; year: number; color?: string | null; bodyType?: string | null } | null): Car | null =>
-  c ? { make: c.make, model: c.model, year: String(c.year), trim: "", color: c.color ?? null, bodyType: c.bodyType ?? null } : null;
-
-function loadFor(userId: string) {
-  if (state.userId === userId) return;
-  put({ userId, car: null, loaded: false });
-  catalogService
-    .getMyCar()
-    .then((c) => state.userId === userId && put({ car: toCar(c), loaded: true }))
-    .catch(() => state.userId === userId && put({ loaded: true }));
-}
-
-/** The signed-in customer's car (null = none yet), plus whether it has been read from the account. */
-export function useMyCar() {
+import { catalogService, type GarageInput } from "./catalogService";
+import { createGarageStore } from "./garageStore";
+export type { Car } from "./garageStore";
+export { MAX_GARAGE_CARS, matchingGarageCars, canAddGarageCar } from "./garageStore";
+export const garageStore = createGarageStore(catalogService);
+export function useGarage() {
   const user = useSessionUser();
-  useEffect(() => loadFor(user.id), [user.id]);
-  const s = useSyncExternalStore(subscribe, () => state, () => state);
-  return { car: s.userId === user.id ? s.car : null, loaded: s.userId === user.id && s.loaded };
+  const s = useSyncExternalStore(garageStore.subscribe, garageStore.getSnapshot, garageStore.getSnapshot);
+  useEffect(() => { void garageStore.hydrate(user.id); }, [user.id]);
+  return s.userId === user.id ? s : { ...s, garageCars: [], activeCar: null, loaded: false, loading: true, error: null };
 }
+export function useMyCar() { const s = useGarage(); return { car: s.activeCar, loaded: s.loaded }; }
+export const useActiveCar = () => useGarage().activeCar;
+export const currentCar = () => garageStore.getSnapshot().activeCar;
+export const refreshGarage = () => garageStore.refresh();
+export const activateCar = (id: string) => garageStore.activate(id);
+export const addGarageCar = (input: GarageInput) => garageStore.add(input);
+export const updateGarageCar = (id: string, input: Partial<GarageInput>) => garageStore.update(id, input);
+export const deleteGarageCar = (id: string) => garageStore.remove(id);
 
-/** Save (or clear) the car on the account; every screen updates at once. Throws the server's message on failure. */
-export async function saveMyCar(car: { make: string; model: string; year: number; color?: string | null } | null) {
-  const saved = car ? await catalogService.putMyCar(car) : await catalogService.deleteMyCar();
-  put({ car: toCar(saved) });
+type Picker = { mode: "select" } | { mode: "add"; draft?: GarageInput } | { mode: "edit"; id: string } | null;
+let picker: Picker = null;
+const listeners = new Set<() => void>();
+const show = (next: Picker) => { picker = next; listeners.forEach(l => l()); };
+export const openMyCarPicker = () => show({ mode: "select" });
+export const openAddGarageCar = (draft?: GarageInput) => show({ mode: "add", draft });
+export const openEditGarageCar = (id: string) => show({ mode: "edit", id });
+export const closeMyCarPicker = () => show(null);
+const subscribePicker = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
+const pickerSnapshot = () => picker;
+export const useGaragePicker = () => useSyncExternalStore(subscribePicker, pickerSnapshot, pickerSnapshot);
+
+export function garageError(error: unknown, t: (en: string, ar: string) => string) {
+  const e = error as { message?: string; data?: { code?: string } };
+  const code = e?.data?.code ?? e?.message;
+  if (code === "GARAGE_LIMIT_REACHED") return t("You've reached the 10-car Garage limit.", "وصلت إلى الحد الأقصى للكراج: 10 سيارات.");
+  if (code === "GARAGE_ALREADY_SAVED") return t("This car is already saved. Choose it from your Garage.", "هذه السيارة محفوظة بالفعل. اخترها من كراجك.");
+  if (code === "GARAGE_BUSY") return t("Please wait for the current change to finish.", "انتظر حتى يكتمل التغيير الحالي.");
+  if (code === "GARAGE_CAR_NOT_FOUND") return t("This car is no longer in your Garage. Refresh and try again.", "لم تعد هذه السيارة في كراجك. حدّث القائمة وحاول مجددًا.");
+  if (code === "GARAGE_INVALID_CAR") return t("Check the vehicle, year, generation, nickname and colour.", "تحقق من المركبة والسنة والجيل والاسم واللون.");
+  return t("Could not update your Garage. Check your connection and try again.", "تعذّر تحديث كراجك. تحقق من اتصالك وحاول مجددًا.");
 }
-
-export const openMyCarPicker = () => put({ pickerOpen: true });
-export const closeMyCarPicker = () => put({ pickerOpen: false });
-export const useMyCarPickerOpen = () => useSyncExternalStore(subscribe, () => state.pickerOpen, () => state.pickerOpen);
-
-/** Sync read for code outside React render (request forms prefill). */
-export const currentCar = () => state.car;

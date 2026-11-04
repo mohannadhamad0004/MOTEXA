@@ -12,6 +12,8 @@ import { GEO_BOX_MESSAGE, cityCentre, haversineKm, inBox, round3 } from "../geo.
 import { CONDITIONS, PART_TYPES } from "../partAttributes.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 import { fitWhere } from "../services/fitment.js";
+import { GEN_FIELDS } from "../services/garage.js";
+import { createGarageRouter } from "./garage.routes.js";
 
 // Read-only customer catalog: parts and tow companies. Any logged-in (ACTIVE) account may read it.
 //
@@ -65,7 +67,7 @@ const shapeProduct = (p: ProductRow, withDescription = false) => ({
   condition: p.condition,
   partType: p.partType,
   imageUri: p.files[0] ? `/files/public/${p.files[0].id}` : null,
-  fitments: p.fitments.map((f) => ({ make: f.make, model: f.model, yearFrom: f.yearFrom, yearTo: f.yearTo, ...(f.trim ? { trim: f.trim } : {}) })),
+  fitments: p.fitments.map((f) => ({ make: f.make, model: f.model, yearFrom: f.yearFrom, yearTo: f.yearTo, ...(f.trim ? { trim: f.trim } : {}), ...(f.generationId ? { generationId: f.generationId } : {}) })),
   isUniversal: p.isUniversal,
   shop: { id: p.shop.id, name: p.shop.shopName, city: p.shop.city },
   compareAtPrice: saleWas(p),
@@ -340,11 +342,11 @@ router.get("/shops/:id/storefront", async (req, res) => {
 
 // Vehicles that really appear in the fitment data of visible products (no separate vehicle catalogue exists). ?q= is split into
 // The whole vehicle list (makes -> models -> year ranges, EN + AR) for the car pickers and the car-aware search. Small and
-// fixed, so it is sent in one go and the client narrows it.
+// fixed, so it is sent in one go and the client narrows it. Each model carries its generations (years may overlap).
 router.get("/vehicle-list", async (_req, res) => {
   try {
     const vehicles = await prisma.vehicle.findMany({
-      select: { make: true, makeAr: true, model: true, modelAr: true, yearFrom: true, yearTo: true },
+      select: { make: true, makeAr: true, model: true, modelAr: true, yearFrom: true, yearTo: true, generations: { select: GEN_FIELDS, orderBy: { yearFrom: "asc" } } },
       orderBy: [{ make: "asc" }, { model: "asc" }],
     });
     return res.json({ success: true, vehicles });
@@ -353,51 +355,8 @@ router.get("/vehicle-list", async (_req, res) => {
   }
 });
 
-// "My car": one per account, from the vehicle list, so every screen (and every device) reads the same car.
-// bodyType comes from the vehicle list (picks the 3D model); color is the customer's paint for it ("#rrggbb", null = silver)
-const myCarShape = async (c: { make: string; model: string; year: number; color: string | null } | null) => {
-  if (!c) return null;
-  const v = await prisma.vehicle.findUnique({ where: { makeNormalized_modelNormalized: { makeNormalized: normText(c.make), modelNormalized: normText(c.model) } }, select: { bodyType: true } });
-  return { make: c.make, model: c.model, year: c.year, color: c.color, bodyType: v?.bodyType ?? null };
-};
-const HEX = /^#[0-9a-f]{6}$/i;
-router.get("/my-car", async (_req, res) => {
-  try {
-    const me = res.locals.authUser as { id: string };
-    return res.json({ success: true, car: await myCarShape(await prisma.customerCar.findUnique({ where: { userId: me.id } })) });
-  } catch (e) {
-    return fail(res, "My car error", e);
-  }
-});
-router.put("/my-car", express.json({ limit: "4kb" }), async (req, res) => {
-  try {
-    const me = res.locals.authUser as { id: string };
-    const make = text(req.body?.make, 60);
-    const model = text(req.body?.model, 60);
-    const year = req.body?.year;
-    const color = req.body?.color;
-    if (!make || !model || !Number.isInteger(year)) return bad(res, 400, "Choose a make, a model and a year.");
-    if (color != null && (typeof color !== "string" || !HEX.test(color))) return bad(res, 400, "Choose a colour from the list.");
-    const v = await prisma.vehicle.findUnique({ where: { makeNormalized_modelNormalized: { makeNormalized: normText(make), modelNormalized: normText(model) } } });
-    if (!v) return bad(res, 400, "Choose a car from the list.");
-    if (year < v.yearFrom || year > v.yearTo) return bad(res, 400, `The ${v.make} ${v.model} is listed for ${v.yearFrom}-${v.yearTo}.`);
-    // the list's exact strings are stored, so they compare equal to fitment rows
-    const data = { make: v.make, model: v.model, year, color: color ? color.toLowerCase() : null };
-    const car = await prisma.customerCar.upsert({ where: { userId: me.id }, update: data, create: { userId: me.id, ...data } });
-    return res.json({ success: true, car: await myCarShape(car) });
-  } catch (e) {
-    return fail(res, "My car error", e);
-  }
-});
-router.delete("/my-car", async (_req, res) => {
-  try {
-    const me = res.locals.authUser as { id: string };
-    await prisma.customerCar.deleteMany({ where: { userId: me.id } });
-    return res.json({ success: true, car: null });
-  } catch (e) {
-    return fail(res, "My car error", e);
-  }
-});
+// Garage and single-car compatibility routes share one transactional source of truth.
+router.use(createGarageRouter());
 
 // words and every word must be part of the make or the model, so "mercedes w202" finds make Mercedes, model W202. Each row
 // carries the exact make / model strings the /parts filter expects, the years covered and how many parts fit.

@@ -3,9 +3,10 @@ import { router, useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
 import { Card, Chip, EmptyState, ErrorState, GarageHero, GaragePage, GButton, GIcon, GText, ListRow, Note, Section, SkeletonBlock, StatusChip, StickyActionBar } from "../../../components/garage";
 import { cityLabel } from "../../../core/constants/cities";
-import { distanceLabel, locationMemory } from "../../../core/constants/geo";
+import { distanceLabel, getLocationMemory } from "../../../core/constants/geo";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
+import { useSessionUser } from "../../../core/session/session";
 import { catalogService } from "../../../features/catalog/catalogService";
 import { MAPS_AVAILABLE, PinMap } from "../../../features/shared/maps";
 import { useTruckLabels } from "../../../features/tow/truckBits";
@@ -14,11 +15,13 @@ import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 
 // Customers see approved trucks only, never plate numbers, documents or contact data.
 export default function CustomerTowCompany() {
+  const user = useSessionUser();
   const { g, row, align } = useGarageTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, isArabic } = useL();
   const { type } = useTruckLabels();
-  const state = useLoad(() => catalogService.getTowCompany(id, locationMemory.current), [id]);
+  const from = getLocationMemory(user.id)?.point ?? null;
+  const state = useLoad(() => catalogService.getTowCompany(id, from), [id, user.id]);
   const co = state.data?.company;
   const trucks = state.data?.trucks ?? [];
   // FREE drivers a customer may ask directly (first name + truck type only)

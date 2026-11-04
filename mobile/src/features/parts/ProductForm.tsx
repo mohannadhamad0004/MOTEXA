@@ -46,6 +46,16 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
 
   const setFit = (i: number, patch: Partial<Fitment>) =>
     setF({ ...f, fitments: f.fitments.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
+  const gensOf = (x: Fitment) => vehicles?.find((v) => v.make === x.make && v.model === x.model)?.generations ?? [];
+  /** Tick a generation: this row takes it (and its years) when it has none, else it becomes a new row. Untick: back to plain years. */
+  const tickGen = (i: number, g: { id: string; yearFrom: number; yearTo: number }) => {
+    const x = f.fitments[i];
+    const at = f.fitments.findIndex((r) => r.make === x.make && r.model === x.model && r.generationId === g.id);
+    if (at >= 0) return setFit(at, { generationId: undefined });
+    const years = { generationId: g.id, yearFrom: g.yearFrom, yearTo: Math.min(g.yearTo, new Date().getFullYear() + 1) };
+    if (!x.generationId) return setFit(i, years);
+    setF({ ...f, fitments: [...f.fitments, { make: x.make, model: x.model, ...years }] });
+  };
 
   const save = async () => {
     // at least one car or Universal; every car from the vehicle list with a valid year range (the server checks the same)
@@ -182,16 +192,24 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
       </Card>
       {f.fitments.map((x, i) => (
         <Card key={`${x.make}|${x.model}|${i}`}>
-          <Text style={[{ color: col.text, fontSize: 16, fontWeight: "800", marginBottom: 8 }, align]}>{`${x.make} ${x.model}`}</Text>
+          <Text style={[{ color: col.text, fontSize: 16, fontWeight: "800", marginBottom: 8 }, align]}>{`${x.make} ${x.model}${x.generationId ? ` ${gensOf(x).find((g) => g.id === x.generationId)?.code ?? ""}` : ""}`}</Text>
           {!listed(x) ? (
             <Notice tone="warning" icon="alert-circle-outline">{t("Not on the vehicle list. Remove this row and add the car from the list.", "غير موجودة في قائمة المركبات. أزل هذا الصف وأضف السيارة من القائمة.")}</Notice>
           ) : null}
+          {gensOf(x).length ? (
+            <View style={[row, { flexWrap: "wrap", gap: 8, marginBottom: 8 }]}>
+              {/* "Fits W202": a generation = its year range on the server */}
+              {gensOf(x).map((g) => (
+                <Chip key={g.id} label={`${t("Fits", "تناسب")} ${g.code}`} on={f.fitments.some((r) => r.make === x.make && r.model === x.model && r.generationId === g.id)} onPress={() => tickGen(i, g)} />
+              ))}
+            </View>
+          ) : null}
           <View style={[row, { gap: 10 }]}>
             <View style={{ flex: 1 }}>
-              <Input label={t("Year from", "من سنة")} value={String(x.yearFrom || "")} keyboardType="number-pad" onChangeText={(v) => setFit(i, { yearFrom: parseInt(v || "0", 10) })} />
+              <Input label={t("Year from", "من سنة")} value={String(x.yearFrom || "")} keyboardType="number-pad" onChangeText={(v) => setFit(i, { yearFrom: parseInt(v || "0", 10), generationId: undefined })} />
             </View>
             <View style={{ flex: 1 }}>
-              <Input label={t("Year to", "إلى سنة")} value={String(x.yearTo || "")} keyboardType="number-pad" onChangeText={(v) => setFit(i, { yearTo: parseInt(v || "0", 10) })} />
+              <Input label={t("Year to", "إلى سنة")} value={String(x.yearTo || "")} keyboardType="number-pad" onChangeText={(v) => setFit(i, { yearTo: parseInt(v || "0", 10), generationId: undefined })} />
             </View>
           </View>
           <Input label={t("Engine / trim (optional)", "المحرك / الفئة (اختياري)")} value={x.trim ?? ""} onChangeText={(v) => setFit(i, { trim: v })} />

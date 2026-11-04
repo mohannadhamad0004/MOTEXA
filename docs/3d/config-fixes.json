@@ -1,0 +1,48 @@
+{
+  "bmw-x5-e70": {
+    "paintMaterials": []
+  },
+  "hyundai-i30-fd": {
+    "preRotateX": -1.5707963267948966,
+    "rotateY": 0
+  },
+  "hyundai-sonata-nf": {},
+  "mercedes-a-class-w169": {
+    "preRotateX": -1.5707963267948966
+  },
+  "mercedes-c-class-w203": {
+    "preRotateX": -1.5707963267948966,
+    "rotateY": 0
+  },
+  "mercedes-e-class-w212": {
+    "rotateY": 3.141592653589793
+  },
+  "opel-corsa-b": {
+    "preRotateX": -1.5707963267948966
+  },
+  "peugeot-207-207": {
+    "rotateY": 1.5707926535897931,
+    "paintMaterials": []
+  },
+  "renault-clio-mk2": {
+    "paintMaterials": []
+  },
+  "renault-fluence-l38": {
+    "preRotateX": -1.5707963267948966,
+    "rotateY": 0
+  },
+  "toyota-camry-xv20": {
+    "preRotateX": -1.5707963267948966,
+    "rotateY": 0
+  },
+  "toyota-camry-xv30": {
+    "rotateY": 1.5707926535897931
+  },
+  "toyota-prius-xw30": {
+    "rotateY": 3.141592653589793
+  },
+  "volkswagen-polo-mk4-9n": {
+    "preRotateX": -1.5707963267948966,
+    "rotateY": 0
+  }
+}

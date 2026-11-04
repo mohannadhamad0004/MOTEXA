@@ -1,0 +1,3560 @@
+{
+  "toyota-corolla-e170-e180": {
+    "key": "toyota-corolla-e170-e180",
+    "file": "toyota-corolla-e170-e180",
+    "make": "Toyota",
+    "model": "Corolla",
+    "code": "E170/E180",
+    "title": "2014 Toyota Corolla E180 EU (with interior)",
+    "author": "Armored Wave",
+    "authorUrl": "https://sketchfab.com/armoredwave",
+    "url": "https://sketchfab.com/3d-models/2014-toyota-corolla-e180-eu-with-interior-36f95efb0585464cae43a25a3b3392e8",
+    "license": "CC BY 4.0",
+    "bytesBefore": 78601236,
+    "bytesAfter": 746092,
+    "textures": 8,
+    "lengthM": 4.6,
+    "rotateY": 0,
+    "paintMaterials": [
+      "main_paint",
+      "main_paint.001"
+    ],
+    "rimsSwappable": false,
+    "removed": 7,
+    "flags": [],
+    "check": [],
+    "manual": true
+  },
+  "bmw-1-series-f20-f21": {
+    "key": "bmw-1-series-f20-f21",
+    "file": "bmw-1-series-f20-f21",
+    "make": "BMW",
+    "model": "1 Series",
+    "code": "F20/F21",
+    "title": "BMW 1er F20 lowpoly",
+    "author": "isdkv",
+    "authorUrl": "https://sketchfab.com/isdkv",
+    "url": "https://sketchfab.com/3d-models/bmw-1er-f20-lowpoly-5c2335d831844ed4b4f3adadcc3544c7",
+    "license": "CC BY 4.0",
+    "bytesBefore": 87356,
+    "bytesAfter": 34304,
+    "textures": 3,
+    "lengthM": 4.3,
+    "rotateY": 0,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 1,
+    "flags": [
+      "scan",
+      "low-poly"
+    ],
+    "check": [
+      "no paint found",
+      "front"
+    ],
+    "review": [
+      "scan",
+      "low-poly"
+    ],
+    "inApp": false
+  },
+  "bmw-3-series-e36": {
+    "key": "bmw-3-series-e36",
+    "file": "bmw-3-series-e36",
+    "make": "BMW",
+    "model": "3 Series",
+    "code": "E36",
+    "title": "BMW 3-Series e36 [Street]",
+    "author": "Black Snow",
+    "authorUrl": "https://sketchfab.com/BlackSnow02",
+    "url": "https://sketchfab.com/3d-models/bmw-3-series-e36-street-13d0a12ecda04317b96ce1e618300412",
+    "license": "CC BY 4.0",
+    "bytesBefore": 28474648,
+    "bytesAfter": 3246180,
+    "textures": 10,
+    "lengthM": 4.65,
+    "rotateY": 0,
+    "paintMaterials": [
+      "BMWE36_paint",
+      "BMWE36_paint.002",
+      "BMWE36_paint.004",
+      "BMWE36_paint.001"
+    ],
+    "rimsSwappable": true,
+    "removed": 62,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true
+  },
+  "bmw-3-series-e46": {
+    "key": "bmw-3-series-e46",
+    "file": "bmw-3-series-e46",
+    "make": "BMW",
+    "model": "3 Series",
+    "code": "E46",
+    "title": "BMW 3-Series E46 1998-2006",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/bmw-3-series-e46-1998-2006-2e32a3e273ab482b83970603539de06a",
+    "license": "CC BY 4.0",
+    "bytesBefore": 31437992,
+    "bytesAfter": 6326436,
+    "textures": 0,
+    "lengthM": 4.65,
+    "rotateY": 0,
+    "paintMaterials": [
+      "e46racing_body",
+      "e46racing_body_parts",
+      "e46racing_body_2"
+    ],
+    "rimsSwappable": false,
+    "removed": 11,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true
+  },
+  "bmw-5-series-e34": {
+    "key": "bmw-5-series-e34",
+    "file": "bmw-5-series-e34",
+    "make": "BMW",
+    "model": "5 Series",
+    "code": "E34",
+    "title": "BMW 5 Series (E34) 1987-1996",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/bmw-5-series-e34-1987-1996-9583d81dd7c84dd5854a4d3286894746",
+    "license": "CC BY 4.0",
+    "bytesBefore": 19067380,
+    "bytesAfter": 3508924,
+    "textures": 0,
+    "lengthM": 4.9,
+    "rotateY": 0,
+    "paintMaterials": [
+      "e34_body"
+    ],
+    "rimsSwappable": true,
+    "removed": 8,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "bmw-5-series-e39": {
+    "key": "bmw-5-series-e39",
+    "file": "bmw-5-series-e39",
+    "make": "BMW",
+    "model": "5 Series",
+    "code": "E39",
+    "title": "BMW 5 Series E39 MK4 1995-2003",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/bmw-5-series-e39-mk4-1995-2003-710e67f808cc42ada12eb867e2963d00",
+    "license": "CC BY 4.0",
+    "bytesBefore": 43507108,
+    "bytesAfter": 6698772,
+    "textures": 0,
+    "lengthM": 4.9,
+    "rotateY": 0,
+    "paintMaterials": [
+      "pab_e39"
+    ],
+    "rimsSwappable": false,
+    "removed": 51,
+    "flags": [],
+    "check": [
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "bmw-5-series-e60-e61": {
+    "key": "bmw-5-series-e60-e61",
+    "file": "bmw-5-series-e60-e61",
+    "make": "BMW",
+    "model": "5 Series",
+    "code": "E60/E61",
+    "title": "BMW 5 Series E60 2004-2010",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/bmw-5-series-e60-2004-2010-1473389ddc0c4da685432debe52e2dfc",
+    "license": "CC BY 4.0",
+    "bytesBefore": 101859880,
+    "bytesAfter": 10159308,
+    "textures": 1,
+    "lengthM": 4.9,
+    "rotateY": -1.5708,
+    "paintMaterials": [
+      "body4",
+      "chassis.014"
+    ],
+    "rimsSwappable": false,
+    "removed": 17,
+    "flags": [],
+    "check": [
+      "front",
+      "over 8 MB"
+    ],
+    "review": [
+      "over 8 MB"
+    ],
+    "inApp": false
+  },
+  "bmw-5-series-g30-g31": {
+    "key": "bmw-5-series-g30-g31",
+    "file": "bmw-5-series-g30-g31",
+    "make": "BMW",
+    "model": "5 Series",
+    "code": "G30/G31",
+    "title": "BMW 5 Series G30 MK7 2017-2024",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/bmw-5-series-g30-mk7-2017-2024-280225d4a2074738b54e6b8cdca9c923",
+    "license": "CC BY 4.0",
+    "bytesBefore": 50363540,
+    "bytesAfter": 7430076,
+    "textures": 5,
+    "lengthM": 4.9,
+    "rotateY": -1.5708,
+    "paintMaterials": [
+      "m550isp_body"
+    ],
+    "rimsSwappable": false,
+    "removed": 37,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "bmw-x1-f48": {
+    "key": "bmw-x1-f48",
+    "file": "bmw-x1-f48",
+    "make": "BMW",
+    "model": "X1",
+    "code": "F48",
+    "title": "BMW-X1-F48",
+    "author": "teenlin3",
+    "authorUrl": "https://sketchfab.com/teenlin3",
+    "url": "https://sketchfab.com/3d-models/bmw-x1-f48-aaf574b459234145a1a6ccfabb8f936c",
+    "license": "CC BY 4.0",
+    "bytesBefore": 65045248,
+    "bytesAfter": 10386328,
+    "textures": 3,
+    "lengthM": 4.45,
+    "rotateY": 0,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [
+      "AI",
+      "game"
+    ],
+    "check": [
+      "no paint found",
+      "front",
+      "over 8 MB"
+    ],
+    "review": [
+      "AI",
+      "game",
+      "over 8 MB"
+    ],
+    "inApp": false
+  },
+  "bmw-x1-u11": {
+    "key": "bmw-x1-u11",
+    "file": "bmw-x1-u11",
+    "make": "BMW",
+    "model": "X1",
+    "code": "U11",
+    "title": "BMW-X1-U11",
+    "author": "teenlin3",
+    "authorUrl": "https://sketchfab.com/teenlin3",
+    "url": "https://sketchfab.com/3d-models/bmw-x1-u11-c793a3a1a2cf439d80e3ea4365daa35c",
+    "license": "CC BY 4.0",
+    "bytesBefore": 66031408,
+    "bytesAfter": 10481164,
+    "textures": 3,
+    "lengthM": 4.45,
+    "rotateY": 0,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [
+      "AI"
+    ],
+    "check": [
+      "no paint found",
+      "front",
+      "over 8 MB"
+    ],
+    "review": [
+      "AI",
+      "over 8 MB"
+    ],
+    "inApp": false
+  },
+  "bmw-x3-e83": {
+    "key": "bmw-x3-e83",
+    "file": "bmw-x3-e83",
+    "make": "BMW",
+    "model": "X3",
+    "code": "E83",
+    "title": "BMW X3 E83 2004 (IRL-Spec)",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/bmw-x3-e83-2004-irl-spec-6480d53c0859427aaf4ea2228f040298",
+    "license": "CC BY 4.0",
+    "bytesBefore": 49579860,
+    "bytesAfter": 5369672,
+    "textures": 0,
+    "lengthM": 4.7,
+    "rotateY": 0,
+    "paintMaterials": [
+      "carpaint.074"
+    ],
+    "rimsSwappable": false,
+    "removed": 1,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "bmw-x3-g01": {
+    "key": "bmw-x3-g01",
+    "file": "bmw-x3-g01",
+    "make": "BMW",
+    "model": "X3",
+    "code": "G01",
+    "title": "2020 BMW X3",
+    "author": "tonielpro520",
+    "authorUrl": "https://sketchfab.com/tonielpro520",
+    "url": "https://sketchfab.com/3d-models/2020-bmw-x3-5142078aebec406688e19401985050ec",
+    "license": "CC BY 4.0",
+    "bytesBefore": 10241420,
+    "bytesAfter": 1861948,
+    "textures": 6,
+    "lengthM": 4.7,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Carro_Pintura"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "bmw-x5-e53": {
+    "key": "bmw-x5-e53",
+    "file": "bmw-x5-e53",
+    "make": "BMW",
+    "model": "X5",
+    "code": "E53",
+    "title": "BMW X5 E53 RESTYLING | High Quality",
+    "author": "takeover",
+    "authorUrl": "https://sketchfab.com/takeoverteam",
+    "url": "https://sketchfab.com/3d-models/bmw-x5-e53-restyling-high-quality-1dfdb422f05d44b287e332bec4311c50",
+    "license": "CC BY 4.0",
+    "bytesBefore": 29224656,
+    "bytesAfter": 4414956,
+    "textures": 20,
+    "lengthM": 4.9,
+    "rotateY": 0,
+    "paintMaterials": [
+      "paint"
+    ],
+    "rimsSwappable": true,
+    "removed": 34,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true
+  },
+  "bmw-x5-e70": {
+    "key": "bmw-x5-e70",
+    "file": "bmw-x5-e70",
+    "make": "BMW",
+    "model": "X5",
+    "code": "E70",
+    "title": "BMW X5 E70",
+    "author": "LEON elenaisakova248",
+    "authorUrl": "https://sketchfab.com/elenaisakova248",
+    "url": "https://sketchfab.com/3d-models/bmw-x5-e70-d515af89f6c6414b93c537ee1fcfc800",
+    "license": "CC BY 4.0",
+    "bytesBefore": 685692,
+    "bytesAfter": 120784,
+    "textures": 3,
+    "lengthM": 4.9,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Material.001"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "interior kept (names unclear)",
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "configurationOverride": {
+      "paintMaterials": []
+    }
+  },
+  "bmw-x5-g05": {
+    "key": "bmw-x5-g05",
+    "file": "bmw-x5-g05",
+    "make": "BMW",
+    "model": "X5",
+    "code": "G05",
+    "title": "BMW X5 G05",
+    "author": "Nieve5677",
+    "authorUrl": "https://sketchfab.com/niev",
+    "url": "https://sketchfab.com/3d-models/bmw-x5-g05-349d0204c0044528aff481ec19d33be2",
+    "license": "CC BY 4.0",
+    "bytesBefore": 49387224,
+    "bytesAfter": 5523108,
+    "textures": 0,
+    "lengthM": 4.9,
+    "rotateY": 0,
+    "paintMaterials": [
+      "carpaint.076"
+    ],
+    "rimsSwappable": false,
+    "removed": 1,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "ford-fiesta-mk6": {
+    "key": "ford-fiesta-mk6",
+    "file": "ford-fiesta-mk6",
+    "make": "Ford",
+    "model": "Fiesta",
+    "code": "Mk6",
+    "title": "Ford Fiesta MK6 2008-2019",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/ford-fiesta-mk6-2008-2019-b57e5114d605433abf6c6b9f7749b473",
+    "license": "CC BY 4.0",
+    "bytesBefore": 5377696,
+    "bytesAfter": 1085468,
+    "textures": 0,
+    "lengthM": 4,
+    "rotateY": 0,
+    "paintMaterials": [
+      "am5eunew1"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "ford-focus-mk1": {
+    "key": "ford-focus-mk1",
+    "file": "ford-focus-mk1",
+    "make": "Ford",
+    "model": "Focus",
+    "code": "Mk1",
+    "title": "Ford Focus MK1 1998-2008",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/ford-focus-mk1-1998-2008-dc9b58b6114d4a7b8b25812533f9cbbd",
+    "license": "CC BY 4.0",
+    "bytesBefore": 34241640,
+    "bytesAfter": 5960792,
+    "textures": 0,
+    "lengthM": 4.4,
+    "rotateY": -1.5708,
+    "paintMaterials": [
+      "body"
+    ],
+    "rimsSwappable": false,
+    "removed": 3,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "ford-focus-mk2": {
+    "key": "ford-focus-mk2",
+    "file": "ford-focus-mk2",
+    "make": "Ford",
+    "model": "Focus",
+    "code": "Mk2",
+    "title": "Ford Focus Sedan",
+    "author": "BHP3D",
+    "authorUrl": "https://sketchfab.com/BHP3D",
+    "url": "https://sketchfab.com/3d-models/ford-focus-sedan-9bc5e9e5edd5487f97d8501a22c3c8b5",
+    "license": "CC BY 4.0",
+    "bytesBefore": 35272896,
+    "bytesAfter": 5684356,
+    "textures": 5,
+    "lengthM": 4.4,
+    "rotateY": 3.1416,
+    "paintMaterials": [
+      "zad_far.1"
+    ],
+    "rimsSwappable": true,
+    "removed": 8,
+    "flags": [
+      "game"
+    ],
+    "check": [
+      "paint"
+    ],
+    "review": [
+      "game"
+    ],
+    "inApp": false
+  },
+  "ford-focus-mk3": {
+    "key": "ford-focus-mk3",
+    "file": "ford-focus-mk3",
+    "make": "Ford",
+    "model": "Focus",
+    "code": "Mk3",
+    "title": "Ford Focus ST (MK3)",
+    "author": "Savelliy 07",
+    "authorUrl": "https://sketchfab.com/savelliy07",
+    "url": "https://sketchfab.com/3d-models/ford-focus-st-mk3-9a4b0859a3484e2ebfbc9eb54537b5eb",
+    "license": "CC BY 4.0",
+    "bytesBefore": 9291092,
+    "bytesAfter": 1844660,
+    "textures": 0,
+    "lengthM": 4.4,
+    "rotateY": 0,
+    "paintMaterials": [
+      "body1"
+    ],
+    "rimsSwappable": false,
+    "removed": 55,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "ford-focus-mk4": {
+    "key": "ford-focus-mk4",
+    "file": "ford-focus-mk4",
+    "make": "Ford",
+    "model": "Focus",
+    "code": "Mk4",
+    "title": "Ford Focus",
+    "author": "pyrzegeclb",
+    "authorUrl": "https://sketchfab.com/pyrzegeclb",
+    "url": "https://sketchfab.com/3d-models/ford-focus-1599280cc1954572a22a724d1031aec2",
+    "license": "CC BY 4.0",
+    "bytesBefore": 55335716,
+    "bytesAfter": 5983336,
+    "textures": 3,
+    "lengthM": 4.4,
+    "rotateY": -1.5708,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "no paint found",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "ford-kuga-mk2": {
+    "key": "ford-kuga-mk2",
+    "file": "ford-kuga-mk2",
+    "make": "Ford",
+    "model": "Kuga",
+    "code": "Mk2",
+    "title": "Ford Kuga",
+    "author": "MattDoesBlender",
+    "authorUrl": "https://sketchfab.com/MattDoesBlender",
+    "url": "https://sketchfab.com/3d-models/ford-kuga-3412188f796f46bc8db90b5e59827548",
+    "license": "CC BY 4.0",
+    "bytesBefore": 28503228,
+    "bytesAfter": 2983012,
+    "textures": 0,
+    "lengthM": 4.55,
+    "rotateY": 0,
+    "paintMaterials": [
+      "silver_PRIMARY"
+    ],
+    "rimsSwappable": true,
+    "removed": 44,
+    "flags": [],
+    "check": [
+      "paint"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "ford-ranger-t6": {
+    "key": "ford-ranger-t6",
+    "file": "ford-ranger-t6",
+    "make": "Ford",
+    "model": "Ranger",
+    "code": "T6",
+    "title": "FORD RANGER",
+    "author": "MS STUDIO 3D MODEL",
+    "authorUrl": "https://sketchfab.com/soysean96",
+    "url": "https://sketchfab.com/3d-models/ford-ranger-4fd18d06c92448ec8ffa78f611c40ffe",
+    "license": "CC BY 4.0",
+    "bytesBefore": 32618000,
+    "bytesAfter": 5571496,
+    "textures": 0,
+    "lengthM": 5.35,
+    "rotateY": 0,
+    "paintMaterials": [
+      "carpaint"
+    ],
+    "rimsSwappable": true,
+    "removed": 2,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "ford-transit-8th-gen-facelift": {
+    "key": "ford-transit-8th-gen-facelift",
+    "file": "ford-transit-8th-gen-facelift",
+    "make": "Ford",
+    "model": "Transit",
+    "code": "8th gen facelift",
+    "title": "3D Scanned Ford Transit Luton Van (2020) [Free]",
+    "author": "agent",
+    "authorUrl": "https://sketchfab.com/agentmooshroom5",
+    "url": "https://sketchfab.com/3d-models/3d-scanned-ford-transit-luton-van-2020-free-93af3cf315a3408b9bfb785a83142b7c",
+    "license": "CC BY 4.0",
+    "bytesBefore": 2901304,
+    "bytesAfter": 506108,
+    "textures": 1,
+    "lengthM": 5.5,
+    "rotateY": 0,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [
+      "scan",
+      "game"
+    ],
+    "check": [
+      "no paint found",
+      "front"
+    ],
+    "review": [
+      "scan",
+      "game"
+    ],
+    "inApp": false
+  },
+  "ford-transit-8th-gen-pre-facelift": {
+    "key": "ford-transit-8th-gen-pre-facelift",
+    "file": "ford-transit-8th-gen-pre-facelift",
+    "make": "Ford",
+    "model": "Transit",
+    "code": "8th gen pre-facelift",
+    "title": "3D Scanned Ford Transit Dropside (2014) [Free]",
+    "author": "agent",
+    "authorUrl": "https://sketchfab.com/agentmooshroom5",
+    "url": "https://sketchfab.com/3d-models/3d-scanned-ford-transit-dropside-2014-free-2a1e08023c234bcfa8cea4417b715d6e",
+    "license": "CC BY 4.0",
+    "bytesBefore": 4367220,
+    "bytesAfter": 791472,
+    "textures": 1,
+    "lengthM": 5.5,
+    "rotateY": 0,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [
+      "scan",
+      "game"
+    ],
+    "check": [
+      "no paint found",
+      "front"
+    ],
+    "review": [
+      "scan",
+      "game"
+    ],
+    "inApp": false
+  },
+  "hyundai-accent-lc": {
+    "key": "hyundai-accent-lc",
+    "file": "hyundai-accent-lc",
+    "make": "Hyundai",
+    "model": "Accent",
+    "code": "LC",
+    "title": "Hyundai Accent (TaGAZ) 2004",
+    "author": "panderlaike_design",
+    "authorUrl": "https://sketchfab.com/panderlaike_design",
+    "url": "https://sketchfab.com/3d-models/hyundai-accent-tagaz-2004-b00b5faebc314e54aef423e46230e963",
+    "license": "CC BY 4.0",
+    "bytesBefore": 31480984,
+    "bytesAfter": 3525040,
+    "textures": 3,
+    "lengthM": 4.3,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Kuzov"
+    ],
+    "rimsSwappable": false,
+    "removed": 20,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "hyundai-accent-x3": {
+    "key": "hyundai-accent-x3",
+    "file": "hyundai-accent-x3",
+    "make": "Hyundai",
+    "model": "Accent",
+    "code": "X3",
+    "title": "HYUNDAI ACCENT 1995",
+    "author": "teenlin3",
+    "authorUrl": "https://sketchfab.com/teenlin3",
+    "url": "https://sketchfab.com/3d-models/hyundai-accent-1995-abc5bf4f7c294e21883a9748c6e418b0",
+    "license": "CC BY 4.0",
+    "bytesBefore": 65045992,
+    "bytesAfter": 9707660,
+    "textures": 3,
+    "lengthM": 4.3,
+    "rotateY": 0,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [
+      "AI",
+      "game"
+    ],
+    "check": [
+      "no paint found",
+      "front",
+      "over 8 MB"
+    ],
+    "review": [
+      "AI",
+      "game",
+      "over 8 MB"
+    ],
+    "inApp": false
+  },
+  "hyundai-elantra-j2-rd": {
+    "key": "hyundai-elantra-j2-rd",
+    "file": "hyundai-elantra-j2-rd",
+    "make": "Hyundai",
+    "model": "Elantra",
+    "code": "J2/RD",
+    "title": "Hyundai Elantra 1996 Wagon",
+    "author": "teenlin3",
+    "authorUrl": "https://sketchfab.com/teenlin3",
+    "url": "https://sketchfab.com/3d-models/hyundai-elantra-1996-wagon-913f654c4d274cd0b14876034b126940",
+    "license": "CC BY 4.0",
+    "bytesBefore": 62511700,
+    "bytesAfter": 9115396,
+    "textures": 3,
+    "lengthM": 4.6,
+    "rotateY": 0,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [
+      "AI",
+      "game"
+    ],
+    "check": [
+      "no paint found",
+      "front",
+      "over 8 MB"
+    ],
+    "review": [
+      "AI",
+      "game",
+      "over 8 MB"
+    ],
+    "inApp": false
+  },
+  "hyundai-i10-ac3-ai3": {
+    "key": "hyundai-i10-ac3-ai3",
+    "file": "hyundai-i10-ac3-ai3",
+    "make": "Hyundai",
+    "model": "i10",
+    "code": "AC3/AI3",
+    "title": "2020 Hyundai i10",
+    "author": "tonielpro520",
+    "authorUrl": "https://sketchfab.com/tonielpro520",
+    "url": "https://sketchfab.com/3d-models/2020-hyundai-i10-0841ac63900940fab35629b4bae75c18",
+    "license": "CC BY 4.0",
+    "bytesBefore": 47521400,
+    "bytesAfter": 4757196,
+    "textures": 0,
+    "lengthM": 3.65,
+    "rotateY": 0,
+    "paintMaterials": [
+      "M_2020_Hyundai_i20_Alpha_Blue"
+    ],
+    "rimsSwappable": false,
+    "removed": 4,
+    "flags": [],
+    "check": [
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "hyundai-i20-pb": {
+    "key": "hyundai-i20-pb",
+    "file": "hyundai-i20-pb",
+    "make": "Hyundai",
+    "model": "i20",
+    "code": "PB",
+    "title": "hyundai_i20",
+    "author": "9810264190",
+    "authorUrl": "https://sketchfab.com/9810264190",
+    "url": "https://sketchfab.com/3d-models/hyundai-i20-09f69b16a298460f96269d3074a88ea4",
+    "license": "CC BY 4.0",
+    "bytesBefore": 9899548,
+    "bytesAfter": 2696036,
+    "textures": 8,
+    "lengthM": 4,
+    "rotateY": -1.5708,
+    "paintMaterials": [
+      "00576200__env_4_spec"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "hyundai-i30-fd": {
+    "key": "hyundai-i30-fd",
+    "file": "hyundai-i30-fd",
+    "make": "Hyundai",
+    "model": "i30",
+    "code": "FD",
+    "title": "Hyundai i30 2010",
+    "author": "Nieve5677",
+    "authorUrl": "https://sketchfab.com/niev",
+    "url": "https://sketchfab.com/3d-models/hyundai-i30-2010-28a62ae0e7af4b408c82daa57c990b8f",
+    "license": "CC BY 4.0",
+    "bytesBefore": 41469308,
+    "bytesAfter": 7579188,
+    "textures": 0,
+    "lengthM": 4.3,
+    "rotateY": -1.5708,
+    "paintMaterials": [
+      "carpaint"
+    ],
+    "rimsSwappable": false,
+    "removed": 5,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "configurationOverride": {
+      "preRotateX": -1.5707963267948966,
+      "rotateY": 0
+    }
+  },
+  "hyundai-kona-os": {
+    "key": "hyundai-kona-os",
+    "file": "hyundai-kona-os",
+    "make": "Hyundai",
+    "model": "Kona",
+    "code": "OS",
+    "title": "Hyundai Kona",
+    "author": "Mona x Supercars",
+    "authorUrl": "https://sketchfab.com/Car2022",
+    "url": "https://sketchfab.com/3d-models/hyundai-kona-343a128d7284471b91e7c4575910722e",
+    "license": "CC BY 4.0",
+    "bytesBefore": 14844756,
+    "bytesAfter": 3653592,
+    "textures": 4,
+    "lengthM": 4.2,
+    "rotateY": 0,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 5,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "hyundai-santa-fe-mx5": {
+    "key": "hyundai-santa-fe-mx5",
+    "file": "hyundai-santa-fe-mx5",
+    "make": "Hyundai",
+    "model": "Santa Fe",
+    "code": "MX5",
+    "title": "2024 Hyundai Santa Fe",
+    "author": "Nazh Design ✔",
+    "authorUrl": "https://sketchfab.com/NazhDesign",
+    "url": "https://sketchfab.com/3d-models/2024-hyundai-santa-fe-61d49eecdf7648659c8f091e63dcfca9",
+    "license": "CC BY 4.0",
+    "bytesBefore": 55180772,
+    "bytesAfter": 5594544,
+    "textures": 0,
+    "lengthM": 4.7,
+    "rotateY": -1.5708,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "no paint found",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "hyundai-sonata-nf": {
+    "key": "hyundai-sonata-nf",
+    "file": "hyundai-sonata-nf",
+    "make": "Hyundai",
+    "model": "Sonata",
+    "code": "NF",
+    "title": "Photoscanned Hyundai Sonata",
+    "author": "Spiicy",
+    "authorUrl": "https://sketchfab.com/spiiiiicy",
+    "url": "https://sketchfab.com/3d-models/photoscanned-hyundai-sonata-d07c8d3c2a7a4d7b91f6c1196241061d",
+    "license": "CC BY 4.0",
+    "bytesBefore": 2673912,
+    "bytesAfter": 492180,
+    "textures": 1,
+    "lengthM": 4.85,
+    "rotateY": 0,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [
+      "scan",
+      "game"
+    ],
+    "check": [
+      "no paint found",
+      "front"
+    ],
+    "review": [
+      "scan",
+      "game"
+    ],
+    "inApp": false,
+    "configurationOverride": {}
+  },
+  "hyundai-tucson-lm-ix35": {
+    "key": "hyundai-tucson-lm-ix35",
+    "file": "hyundai-tucson-lm-ix35",
+    "make": "Hyundai",
+    "model": "Tucson",
+    "code": "LM/ix35",
+    "title": "Hyundai ix35 (Tucson)",
+    "author": "Savelliy 07",
+    "authorUrl": "https://sketchfab.com/savelliy07",
+    "url": "https://sketchfab.com/3d-models/hyundai-ix35-tucson-e239ad27c5854f4189fe467ffb1ec303",
+    "license": "CC BY 4.0",
+    "bytesBefore": 13307216,
+    "bytesAfter": 1195192,
+    "textures": 0,
+    "lengthM": 4.5,
+    "rotateY": 1.5708,
+    "paintMaterials": [
+      "Body_Color",
+      "FrontColor"
+    ],
+    "rimsSwappable": false,
+    "removed": 108,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true
+  },
+  "kia-cerato-yd": {
+    "key": "kia-cerato-yd",
+    "file": "kia-cerato-yd",
+    "make": "Kia",
+    "model": "Cerato",
+    "code": "YD",
+    "title": "Kia Forte",
+    "author": "Power Lice",
+    "authorUrl": "https://sketchfab.com/power.lice",
+    "url": "https://sketchfab.com/3d-models/kia-forte-af0249da2e374e059cae35f4f905c1ee",
+    "license": "CC BY 4.0",
+    "bytesBefore": 24470612,
+    "bytesAfter": 6665688,
+    "textures": 3,
+    "lengthM": 4.55,
+    "rotateY": 0,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "no paint found",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "kia-optima-mg": {
+    "key": "kia-optima-mg",
+    "file": "kia-optima-mg",
+    "make": "Kia",
+    "model": "Optima",
+    "code": "MG",
+    "title": "3D Scanned Kia Optima (2005) [Free]",
+    "author": "agent",
+    "authorUrl": "https://sketchfab.com/agentmooshroom5",
+    "url": "https://sketchfab.com/3d-models/3d-scanned-kia-optima-2005-free-227d57be3ae54f7abf73b743f67bbb7c",
+    "license": "CC BY 4.0",
+    "bytesBefore": 3628960,
+    "bytesAfter": 625768,
+    "textures": 1,
+    "lengthM": 4.85,
+    "rotateY": 0,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [
+      "scan",
+      "game"
+    ],
+    "check": [
+      "no paint found",
+      "front"
+    ],
+    "review": [
+      "scan",
+      "game"
+    ],
+    "inApp": false
+  },
+  "kia-optima-tf": {
+    "key": "kia-optima-tf",
+    "file": "kia-optima-tf",
+    "make": "Kia",
+    "model": "Optima",
+    "code": "TF",
+    "title": "KIA Optima",
+    "author": "devPilot",
+    "authorUrl": "https://sketchfab.com/devPilot0615",
+    "url": "https://sketchfab.com/3d-models/kia-optima-d677a6fb59e440a59e040a52e7585476",
+    "license": "CC BY 4.0",
+    "bytesBefore": 1856968,
+    "bytesAfter": 444560,
+    "textures": 3,
+    "lengthM": 4.85,
+    "rotateY": -1.5708,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [
+      "game"
+    ],
+    "check": [
+      "no paint found",
+      "front"
+    ],
+    "review": [
+      "game"
+    ],
+    "inApp": false
+  },
+  "kia-rio-yb-sc": {
+    "key": "kia-rio-yb-sc",
+    "file": "kia-rio-yb-sc",
+    "make": "Kia",
+    "model": "Rio",
+    "code": "YB/SC",
+    "title": "2021 Kia Rio",
+    "author": "tonielpro520",
+    "authorUrl": "https://sketchfab.com/tonielpro520",
+    "url": "https://sketchfab.com/3d-models/2021-kia-rio-82803d9c4afb4cf2867ef364d31e6528",
+    "license": "CC BY 4.0",
+    "bytesBefore": 43689752,
+    "bytesAfter": 4110756,
+    "textures": 0,
+    "lengthM": 4.1,
+    "rotateY": 0,
+    "paintMaterials": [
+      "M_2021_Kia_Rio_Hatchback_Steel_Gray"
+    ],
+    "rimsSwappable": false,
+    "removed": 2,
+    "flags": [],
+    "check": [
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "kia-sorento-um": {
+    "key": "kia-sorento-um",
+    "file": "kia-sorento-um",
+    "make": "Kia",
+    "model": "Sorento",
+    "code": "UM",
+    "title": "Kia Sorento",
+    "author": "MattDoesBlender",
+    "authorUrl": "https://sketchfab.com/MattDoesBlender",
+    "url": "https://sketchfab.com/3d-models/kia-sorento-47a0016ba8b842c780d79ded8fa0a891",
+    "license": "CC BY 4.0",
+    "bytesBefore": 18780960,
+    "bytesAfter": 2546332,
+    "textures": 0,
+    "lengthM": 4.75,
+    "rotateY": 0,
+    "paintMaterials": [
+      "vehicle_generic_smallspecmap_PRIMARY.011"
+    ],
+    "rimsSwappable": false,
+    "removed": 14,
+    "flags": [],
+    "check": [
+      "paint"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "kia-sportage-sl": {
+    "key": "kia-sportage-sl",
+    "file": "kia-sportage-sl",
+    "make": "Kia",
+    "model": "Sportage",
+    "code": "SL",
+    "title": "Kia Sportage",
+    "author": "karaman.arman",
+    "authorUrl": "https://sketchfab.com/karaman.arman",
+    "url": "https://sketchfab.com/3d-models/kia-sportage-98a84407998a4bc6b4dee912b289f15b",
+    "license": "CC BY 4.0",
+    "bytesBefore": 22757000,
+    "bytesAfter": 6758984,
+    "textures": 2,
+    "lengthM": 4.5,
+    "rotateY": 0,
+    "paintMaterials": [],
+    "rimsSwappable": true,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "no paint found"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "mercedes-a-class-w169": {
+    "key": "mercedes-a-class-w169",
+    "file": "mercedes-a-class-w169",
+    "make": "Mercedes-Benz",
+    "model": "A-Class",
+    "code": "W169",
+    "title": "Mercedes-Benz A-Class (W169) 2004-2012",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/mercedes-benz-a-class-w169-2004-2012-842e5669e54b49debebfa7b7b5ae2c15",
+    "license": "CC BY 4.0",
+    "bytesBefore": 4190496,
+    "bytesAfter": 841368,
+    "textures": 3,
+    "lengthM": 4.3,
+    "rotateY": -1.5708,
+    "paintMaterials": [
+      "body",
+      "car_paint"
+    ],
+    "rimsSwappable": false,
+    "removed": 1,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "configurationOverride": {
+      "preRotateX": -1.5707963267948966
+    }
+  },
+  "mercedes-a-class-w176": {
+    "key": "mercedes-a-class-w176",
+    "file": "mercedes-a-class-w176",
+    "make": "Mercedes-Benz",
+    "model": "A-Class",
+    "code": "W176",
+    "title": "Mercedes- Benz A45 AMG",
+    "author": "DR1KING100K",
+    "authorUrl": "https://sketchfab.com/DR1KING100K",
+    "url": "https://sketchfab.com/3d-models/mercedes-benz-a45-amg-f0ae7b2720ea4f429bcd2f74c132717a",
+    "license": "CC BY 4.0",
+    "bytesBefore": 90392108,
+    "bytesAfter": 5009168,
+    "textures": 1,
+    "lengthM": 4.3,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Body"
+    ],
+    "rimsSwappable": true,
+    "removed": 86,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true
+  },
+  "mercedes-c-class-w202": {
+    "key": "mercedes-c-class-w202",
+    "file": "mercedes-c-class-w202",
+    "make": "Mercedes-Benz",
+    "model": "C-Class",
+    "code": "W202",
+    "title": "1997 Mercedes C-class W202",
+    "author": "Res1n",
+    "authorUrl": "https://sketchfab.com/Res1n",
+    "url": "https://sketchfab.com/3d-models/1997-mercedes-c-class-w202-d367d28eee22450da57ab4b7a2f0c56d",
+    "license": "CC BY 4.0",
+    "bytesBefore": 40464668,
+    "bytesAfter": 7782792,
+    "textures": 0,
+    "lengthM": 4.7,
+    "rotateY": -1.5708,
+    "paintMaterials": [
+      "carpaint"
+    ],
+    "rimsSwappable": false,
+    "removed": 3,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "mercedes-c-class-w203": {
+    "key": "mercedes-c-class-w203",
+    "file": "mercedes-c-class-w203",
+    "make": "Mercedes-Benz",
+    "model": "C-Class",
+    "code": "W203",
+    "title": "Mercedes- Benz C-class W203 sedan",
+    "author": "Nieve5677",
+    "authorUrl": "https://sketchfab.com/niev",
+    "url": "https://sketchfab.com/3d-models/mercedes-benz-c-class-w203-sedan-ff9ba755fc884fb88b5e73c3df1296e1",
+    "license": "CC BY 4.0",
+    "bytesBefore": 21008124,
+    "bytesAfter": 4097140,
+    "textures": 0,
+    "lengthM": 4.7,
+    "rotateY": -1.5708,
+    "paintMaterials": [
+      "carpaint"
+    ],
+    "rimsSwappable": false,
+    "removed": 2,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "configurationOverride": {
+      "preRotateX": -1.5707963267948966,
+      "rotateY": 0
+    }
+  },
+  "mercedes-c-class-w204": {
+    "key": "mercedes-c-class-w204",
+    "file": "mercedes-c-class-w204",
+    "make": "Mercedes-Benz",
+    "model": "C-Class",
+    "code": "W204",
+    "title": "Mercedes-Benz C-Class MK3 (W204) 2007-2014",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/mercedes-benz-c-class-mk3-w204-2007-2014-c91f15e9518f4dd2b7574002778cfc28",
+    "license": "CC BY 4.0",
+    "bytesBefore": 29594860,
+    "bytesAfter": 4802336,
+    "textures": 0,
+    "lengthM": 4.7,
+    "rotateY": 0,
+    "paintMaterials": [
+      "w204_paint",
+      "chassis.4"
+    ],
+    "rimsSwappable": true,
+    "removed": 15,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true
+  },
+  "mercedes-e-class-w212": {
+    "key": "mercedes-e-class-w212",
+    "file": "mercedes-e-class-w212",
+    "make": "Mercedes-Benz",
+    "model": "E-Class",
+    "code": "W212",
+    "title": "Mercedes E Class W212",
+    "author": "Peter_D",
+    "authorUrl": "https://sketchfab.com/better_peter",
+    "url": "https://sketchfab.com/3d-models/mercedes-e-class-w212-119c5e10733142b197aa53b86f6aeb04",
+    "license": "CC BY 4.0",
+    "bytesBefore": 37334564,
+    "bytesAfter": 6793852,
+    "textures": 39,
+    "lengthM": 4.9,
+    "rotateY": 0,
+    "paintMaterials": [
+      "mat_body"
+    ],
+    "rimsSwappable": true,
+    "removed": 14,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "configurationOverride": {
+      "rotateY": 3.141592653589793
+    }
+  },
+  "mercedes-vito-w447": {
+    "key": "mercedes-vito-w447",
+    "file": "mercedes-vito-w447",
+    "make": "Mercedes-Benz",
+    "model": "Vito",
+    "code": "W447",
+    "title": "Mercedes Vito Utility Car",
+    "author": "solid3DDD",
+    "authorUrl": "https://sketchfab.com/solid3ddd",
+    "url": "https://sketchfab.com/3d-models/mercedes-vito-utility-car-fe704a2aa87a4921990d4973a6eef36d",
+    "license": "CC BY 4.0",
+    "bytesBefore": 42008148,
+    "bytesAfter": 5711740,
+    "textures": 25,
+    "lengthM": 5,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Body"
+    ],
+    "rimsSwappable": false,
+    "removed": 12,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "mercedes-vito-w638": {
+    "key": "mercedes-vito-w638",
+    "file": "mercedes-vito-w638",
+    "make": "Mercedes-Benz",
+    "model": "Vito",
+    "code": "W638",
+    "title": "Mercedes-Benz Vito MK1 (W638) 1996-2003",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/mercedes-benz-vito-mk1-w638-1996-2003-55df50faff8e4918b47a00c6e013d37b",
+    "license": "CC BY 4.0",
+    "bytesBefore": 8712932,
+    "bytesAfter": 1214600,
+    "textures": 0,
+    "lengthM": 5,
+    "rotateY": 0,
+    "paintMaterials": [
+      "body1"
+    ],
+    "rimsSwappable": false,
+    "removed": 3,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "mitsubishi-l200-3rd-gen-k60-k70": {
+    "key": "mitsubishi-l200-3rd-gen-k60-k70",
+    "file": "mitsubishi-l200-3rd-gen-k60-k70",
+    "make": "Mitsubishi",
+    "model": "L200",
+    "code": "3rd gen / K60-K70",
+    "title": "MITSUBISHI L200",
+    "author": "GeopilotXYZ Drone Hizmetleri",
+    "authorUrl": "https://sketchfab.com/uygarkuzuoglu",
+    "url": "https://sketchfab.com/3d-models/mitsubishi-l200-07d7cfcb32ee41868dbc56f535cd90be",
+    "license": "CC BY 4.0",
+    "bytesBefore": 47340876,
+    "bytesAfter": 8019676,
+    "textures": 1,
+    "lengthM": 5.3,
+    "rotateY": 0,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "no paint found",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "mitsubishi-l200-4th-gen-ka-kb": {
+    "key": "mitsubishi-l200-4th-gen-ka-kb",
+    "file": "mitsubishi-l200-4th-gen-ka-kb",
+    "make": "Mitsubishi",
+    "model": "L200",
+    "code": "4th gen / KA-KB",
+    "title": "mitsubishi L200 red offroader v4",
+    "author": "zairiq-123",
+    "authorUrl": "https://sketchfab.com/zairiq-123",
+    "url": "https://sketchfab.com/3d-models/mitsubishi-l200-red-offroader-v4-be9ca7ccb0334bd592d5ddd85a3b0a0c",
+    "license": "CC BY 4.0",
+    "bytesBefore": 1955524,
+    "bytesAfter": 565448,
+    "textures": 1,
+    "lengthM": 5.3,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Material_30"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "mitsubishi-lancer-5th-6th-era-evo-iii": {
+    "key": "mitsubishi-lancer-5th-6th-era-evo-iii",
+    "file": "mitsubishi-lancer-5th-6th-era-evo-iii",
+    "make": "Mitsubishi",
+    "model": "Lancer",
+    "code": "5th/6th-era Evo III",
+    "title": "1995 Mitsubishi Lancer Evolution III [Low-Poly]",
+    "author": "claries",
+    "authorUrl": "https://sketchfab.com/R1peer",
+    "url": "https://sketchfab.com/3d-models/1995-mitsubishi-lancer-evolution-iii-low-poly-d5b432c526234d03acd117a7aa9ec8f1",
+    "license": "CC BY 4.0",
+    "bytesBefore": 1199928,
+    "bytesAfter": 151224,
+    "textures": 11,
+    "lengthM": 4.57,
+    "rotateY": -1.5708,
+    "paintMaterials": [
+      "Lancer0071Mtl"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [
+      "low-poly"
+    ],
+    "check": [
+      "paint",
+      "front"
+    ],
+    "review": [
+      "low-poly"
+    ],
+    "inApp": false
+  },
+  "mitsubishi-outlander-4th-gen-gm-gn": {
+    "key": "mitsubishi-outlander-4th-gen-gm-gn",
+    "file": "mitsubishi-outlander-4th-gen-gm-gn",
+    "make": "Mitsubishi",
+    "model": "Outlander",
+    "code": "4th gen / GM/GN",
+    "title": "Mitsubishi Outlander 2022",
+    "author": "Nieve5677",
+    "authorUrl": "https://sketchfab.com/niev",
+    "url": "https://sketchfab.com/3d-models/mitsubishi-outlander-2022-bc2dabd5a1454c9f967bdf680102352c",
+    "license": "CC BY 4.0",
+    "bytesBefore": 17696856,
+    "bytesAfter": 3296496,
+    "textures": 0,
+    "lengthM": 4.7,
+    "rotateY": -1.5708,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "no paint found",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "mitsubishi-pajero-2nd-gen-v20": {
+    "key": "mitsubishi-pajero-2nd-gen-v20",
+    "file": "mitsubishi-pajero-2nd-gen-v20",
+    "make": "Mitsubishi",
+    "model": "Pajero",
+    "code": "2nd gen / V20",
+    "title": "Mitsubishi pajero 1998 4x4",
+    "author": "haraldina",
+    "authorUrl": "https://sketchfab.com/haraldina",
+    "url": "https://sketchfab.com/3d-models/mitsubishi-pajero-1998-4x4-335c7377813a4ff682a3e5d7a676852a",
+    "license": "CC BY 4.0",
+    "bytesBefore": 4896252,
+    "bytesAfter": 1315796,
+    "textures": 1,
+    "lengthM": 4.9,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Material.013"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "interior kept (names unclear)",
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "mitsubishi-pajero-4th-gen-v80": {
+    "key": "mitsubishi-pajero-4th-gen-v80",
+    "file": "mitsubishi-pajero-4th-gen-v80",
+    "make": "Mitsubishi",
+    "model": "Pajero",
+    "code": "4th gen / V80",
+    "title": "Mitsubishi Pajero MK4 2006-2021",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/mitsubishi-pajero-mk4-2006-2021-c21994c767b34212b5ad8bcb80bb7ffb",
+    "license": "CC BY 4.0",
+    "bytesBefore": 18621820,
+    "bytesAfter": 2130056,
+    "textures": 0,
+    "lengthM": 4.9,
+    "rotateY": 3.1416,
+    "paintMaterials": [
+      "pajerik_paint",
+      "kuzov1.011"
+    ],
+    "rimsSwappable": false,
+    "removed": 1,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true
+  },
+  "nissan-juke-f15": {
+    "key": "nissan-juke-f15",
+    "file": "nissan-juke-f15",
+    "make": "Nissan",
+    "model": "Juke",
+    "code": "F15",
+    "title": "Nissan Juke",
+    "author": "Ford mondeo",
+    "authorUrl": "https://sketchfab.com/tnikita",
+    "url": "https://sketchfab.com/3d-models/nissan-juke-62cb9919523947caa4cdef27da902d04",
+    "license": "CC BY 4.0",
+    "bytesBefore": 15418480,
+    "bytesAfter": 2864332,
+    "textures": 0,
+    "lengthM": 4.2,
+    "rotateY": 0,
+    "paintMaterials": [
+      "body"
+    ],
+    "rimsSwappable": false,
+    "removed": 1,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "nissan-micra-k12": {
+    "key": "nissan-micra-k12",
+    "file": "nissan-micra-k12",
+    "make": "Nissan",
+    "model": "Micra",
+    "code": "K12",
+    "title": "Nissan Micra",
+    "author": "BHP3D",
+    "authorUrl": "https://sketchfab.com/BHP3D",
+    "url": "https://sketchfab.com/3d-models/nissan-micra-4920e8c5856848afb577d8a022fe5980",
+    "license": "CC BY 4.0",
+    "bytesBefore": 12251000,
+    "bytesAfter": 2081788,
+    "textures": 10,
+    "lengthM": 3.85,
+    "rotateY": 3.1416,
+    "paintMaterials": [
+      "chassis_cleber.4",
+      "chassis_cleber.2",
+      "chassis_cleber.1",
+      "chassis_cleber.3",
+      "chassis_cleber.5",
+      "Chassis.7",
+      "Chassis.10",
+      "Chassis.9",
+      "Chassis.8"
+    ],
+    "rimsSwappable": true,
+    "removed": 9,
+    "flags": [
+      "AI",
+      "game"
+    ],
+    "check": [],
+    "review": [
+      "AI",
+      "game"
+    ],
+    "inApp": false
+  },
+  "nissan-micra-k13": {
+    "key": "nissan-micra-k13",
+    "file": "nissan-micra-k13",
+    "make": "Nissan",
+    "model": "Micra",
+    "code": "K13",
+    "title": "Nissan Micra K13 2010-2018",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/nissan-micra-k13-2010-2018-d59c474d37894f75bd74a7487215cce7",
+    "license": "CC BY 4.0",
+    "bytesBefore": 6068228,
+    "bytesAfter": 1145488,
+    "textures": 0,
+    "lengthM": 3.85,
+    "rotateY": 0,
+    "paintMaterials": [
+      "am5eunew1"
+    ],
+    "rimsSwappable": false,
+    "removed": 2,
+    "flags": [],
+    "check": [
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "nissan-navara-d22": {
+    "key": "nissan-navara-d22",
+    "file": "nissan-navara-d22",
+    "make": "Nissan",
+    "model": "Navara",
+    "code": "D22",
+    "title": "1997-2004 Nissan Navara(Nissan Frontier) D22",
+    "author": "DCP",
+    "authorUrl": "https://sketchfab.com/Danzell.Cayabyab",
+    "url": "https://sketchfab.com/3d-models/1997-2004-nissan-navaranissan-frontier-d22-c33cf3349fa54e3d8a3f004d443887a0",
+    "license": "CC BY 4.0",
+    "bytesBefore": 5695372,
+    "bytesAfter": 898288,
+    "textures": 3,
+    "lengthM": 5.25,
+    "rotateY": 0,
+    "paintMaterials": [
+      "chassis_hi.004",
+      "chassis_hi.4",
+      "chassis_hi.5",
+      "body1",
+      "body2",
+      "chassis_hi.003",
+      "chassis_hi.002",
+      "body2.001",
+      "chassis_hi.006",
+      "chassis_hi.007",
+      "body2.002",
+      "chassis_hi.008",
+      "chassis_hi.009",
+      "body2.003",
+      "chassis_hi.010",
+      "chassis_hi.011",
+      "chassis_hi.000",
+      "chassis_hi.1"
+    ],
+    "rimsSwappable": true,
+    "removed": 9,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true
+  },
+  "nissan-navara-d40": {
+    "key": "nissan-navara-d40",
+    "file": "nissan-navara-d40",
+    "make": "Nissan",
+    "model": "Navara",
+    "code": "D40",
+    "title": "2004 Nissan Navara (D40) - Driving School 2017",
+    "author": "Villanueva-Jonatan-32621",
+    "authorUrl": "https://sketchfab.com/vj32621",
+    "url": "https://sketchfab.com/3d-models/2004-nissan-navara-d40-driving-school-2017-ee11a32001dc45d7850497c79ff7779e",
+    "license": "CC BY 4.0",
+    "bytesBefore": 2778080,
+    "bytesAfter": 592380,
+    "textures": 5,
+    "lengthM": 5.25,
+    "rotateY": 0,
+    "paintMaterials": [
+      "color_garage"
+    ],
+    "rimsSwappable": true,
+    "removed": 0,
+    "flags": [
+      "game"
+    ],
+    "check": [
+      "interior kept (names unclear)"
+    ],
+    "review": [
+      "game"
+    ],
+    "inApp": false
+  },
+  "nissan-x-trail-t32": {
+    "key": "nissan-x-trail-t32",
+    "file": "nissan-x-trail-t32",
+    "make": "Nissan",
+    "model": "X-Trail",
+    "code": "T32",
+    "title": "Nissan X-Trail MK3 T32 2013-2021",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/nissan-x-trail-mk3-t32-2013-2021-30663a0fbc9e4e32b6f7adacca2b603c",
+    "license": "CC BY 4.0",
+    "bytesBefore": 27991872,
+    "bytesAfter": 4584764,
+    "textures": 0,
+    "lengthM": 4.65,
+    "rotateY": 3.1416,
+    "paintMaterials": [
+      "chassis.0",
+      "chassis.2",
+      "chassis.3"
+    ],
+    "rimsSwappable": false,
+    "removed": 14,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true
+  },
+  "peugeot-2008-1st-gen-a94": {
+    "key": "peugeot-2008-1st-gen-a94",
+    "file": "peugeot-2008-1st-gen-a94",
+    "make": "Peugeot",
+    "model": "2008",
+    "code": "1st gen / A94",
+    "title": "Peugeot 2008 MK1 2013-2019",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/peugeot-2008-mk1-2013-2019-e7fefd93776e4b0e903debb88306961d",
+    "license": "CC BY 4.0",
+    "bytesBefore": 24029048,
+    "bytesAfter": 3045720,
+    "textures": 3,
+    "lengthM": 4.2,
+    "rotateY": 0,
+    "paintMaterials": [
+      "p2008a94_body"
+    ],
+    "rimsSwappable": false,
+    "removed": 20,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "peugeot-206-206": {
+    "key": "peugeot-206-206",
+    "file": "peugeot-206-206",
+    "make": "Peugeot",
+    "model": "206",
+    "code": "206",
+    "title": "VEHICLE - PEUGEOT 206",
+    "author": "Thcyrax",
+    "authorUrl": "https://sketchfab.com/thcyrax",
+    "url": "https://sketchfab.com/3d-models/vehicle-peugeot-206-f342081c28304bf9a7c3322defc33e95",
+    "license": "CC BY 4.0",
+    "bytesBefore": 244236,
+    "bytesAfter": 74116,
+    "textures": 1,
+    "lengthM": 4.5,
+    "rotateY": 0,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [
+      "game"
+    ],
+    "check": [
+      "no paint found",
+      "front",
+      "length"
+    ],
+    "review": [
+      "game"
+    ],
+    "inApp": false
+  },
+  "peugeot-207-207": {
+    "key": "peugeot-207-207",
+    "file": "peugeot-207-207",
+    "make": "Peugeot",
+    "model": "207",
+    "code": "207",
+    "title": "Peugeot 207",
+    "author": "IggyPaz",
+    "authorUrl": "https://sketchfab.com/IggyPaz",
+    "url": "https://sketchfab.com/3d-models/peugeot-207-3f21205aaeca44f2871e027e331b68d7",
+    "license": "CC BY 4.0",
+    "bytesBefore": 12832872,
+    "bytesAfter": 2216772,
+    "textures": 0,
+    "lengthM": 4.5,
+    "rotateY": -1.5708,
+    "paintMaterials": [
+      "Material.009"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "interior kept (names unclear)",
+      "paint",
+      "front",
+      "length"
+    ],
+    "review": [],
+    "inApp": true,
+    "configurationOverride": {
+      "rotateY": 1.5707926535897931,
+      "paintMaterials": []
+    }
+  },
+  "peugeot-208-1st-gen-a9": {
+    "key": "peugeot-208-1st-gen-a9",
+    "file": "peugeot-208-1st-gen-a9",
+    "make": "Peugeot",
+    "model": "208",
+    "code": "1st gen / A9",
+    "title": "Peugeot 208 3-Door 2012-2019",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/peugeot-208-3-door-2012-2019-e564b1d9486d4c818b97b301303c08bf",
+    "license": "CC BY 4.0",
+    "bytesBefore": 61123992,
+    "bytesAfter": 6599392,
+    "textures": 0,
+    "lengthM": 4.05,
+    "rotateY": 0,
+    "paintMaterials": [
+      "RRpbrPaintPrimary"
+    ],
+    "rimsSwappable": false,
+    "removed": 18,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true
+  },
+  "peugeot-208-2nd-gen-p21": {
+    "key": "peugeot-208-2nd-gen-p21",
+    "file": "peugeot-208-2nd-gen-p21",
+    "make": "Peugeot",
+    "model": "208",
+    "code": "2nd gen / P21",
+    "title": "2021 Peugeot 208",
+    "author": "tonielpro520",
+    "authorUrl": "https://sketchfab.com/tonielpro520",
+    "url": "https://sketchfab.com/3d-models/2021-peugeot-208-c3a458884cf7434fa99b2172c96061a4",
+    "license": "CC BY 4.0",
+    "bytesBefore": 54386072,
+    "bytesAfter": 5497264,
+    "textures": 3,
+    "lengthM": 4.05,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Carro_Pintura"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "peugeot-301-m3": {
+    "key": "peugeot-301-m3",
+    "file": "peugeot-301-m3",
+    "make": "Peugeot",
+    "model": "301",
+    "code": "M3",
+    "title": "Peugeot 301 FREE",
+    "author": "ArturSigma2342",
+    "authorUrl": "https://sketchfab.com/arturalmakaew",
+    "url": "https://sketchfab.com/3d-models/peugeot-301-free-53d2c65814524692a618bdad9921c06d",
+    "license": "CC BY 4.0",
+    "bytesBefore": 11850568,
+    "bytesAfter": 2175952,
+    "textures": 0,
+    "lengthM": 4.44,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Default1Mtl"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "peugeot-308-1st-gen-t7": {
+    "key": "peugeot-308-1st-gen-t7",
+    "file": "peugeot-308-1st-gen-t7",
+    "make": "Peugeot",
+    "model": "308",
+    "code": "1st gen / T7",
+    "title": "Peugeot 308 MK1 2007-2021",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/peugeot-308-mk1-2007-2021-2ac96482c96f4416a8523e8768c01bcc",
+    "license": "CC BY 4.0",
+    "bytesBefore": 5111588,
+    "bytesAfter": 997928,
+    "textures": 0,
+    "lengthM": 4.3,
+    "rotateY": 0,
+    "paintMaterials": [
+      "am5eunew1"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "peugeot-308-2nd-gen-t9": {
+    "key": "peugeot-308-2nd-gen-t9",
+    "file": "peugeot-308-2nd-gen-t9",
+    "make": "Peugeot",
+    "model": "308",
+    "code": "2nd gen / T9",
+    "title": "2018 Peugeot 308",
+    "author": "tonielpro520",
+    "authorUrl": "https://sketchfab.com/tonielpro520",
+    "url": "https://sketchfab.com/3d-models/2018-peugeot-308-4676332e370b4333b76ddc9910ceae7e",
+    "license": "CC BY 4.0",
+    "bytesBefore": 4794004,
+    "bytesAfter": 533056,
+    "textures": 1,
+    "lengthM": 4.3,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Carro_Pintura",
+      "FrontColor"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "renault-captur-2nd-gen-jb-je": {
+    "key": "renault-captur-2nd-gen-jb-je",
+    "file": "renault-captur-2nd-gen-jb-je",
+    "make": "Renault",
+    "model": "Captur",
+    "code": "2nd gen / JB/JE",
+    "title": "2025 Renault Captur [Read Desc.]",
+    "author": "tonielpro520",
+    "authorUrl": "https://sketchfab.com/tonielpro520",
+    "url": "https://sketchfab.com/3d-models/2025-renault-captur-read-desc-9f1c61486653471e94b7ec0bcb0f56a0",
+    "license": "CC BY 4.0",
+    "bytesBefore": 35040152,
+    "bytesAfter": 3245060,
+    "textures": 0,
+    "lengthM": 4.2,
+    "rotateY": 0,
+    "paintMaterials": [
+      "vehicle_generic_smallspecmap__PAINT_1"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "renault-clio-mk2": {
+    "key": "renault-clio-mk2",
+    "file": "renault-clio-mk2",
+    "make": "Renault",
+    "model": "Clio",
+    "code": "Mk2",
+    "title": "1997 Renault Clio Mk.2",
+    "author": "ImperialBlue3D",
+    "authorUrl": "https://sketchfab.com/ImperialBlue3D",
+    "url": "https://sketchfab.com/3d-models/1997-renault-clio-mk2-e3bbb96f7a61412086868ea3b136de2c",
+    "license": "CC BY 4.0",
+    "bytesBefore": 419908,
+    "bytesAfter": 76272,
+    "textures": 1,
+    "lengthM": 4.05,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Material"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [
+      "low-poly"
+    ],
+    "check": [
+      "interior kept (names unclear)",
+      "paint",
+      "front"
+    ],
+    "review": [
+      "low-poly"
+    ],
+    "inApp": false,
+    "configurationOverride": {
+      "paintMaterials": []
+    }
+  },
+  "renault-fluence-l38": {
+    "key": "renault-fluence-l38",
+    "file": "renault-fluence-l38",
+    "make": "Renault",
+    "model": "Fluence",
+    "code": "L38",
+    "title": "Renault Fluence",
+    "author": "Nieve5677",
+    "authorUrl": "https://sketchfab.com/niev",
+    "url": "https://sketchfab.com/3d-models/renault-fluence-473adbb15922457bb9fa247bc89c4cb9",
+    "license": "CC BY 4.0",
+    "bytesBefore": 25767012,
+    "bytesAfter": 4549784,
+    "textures": 0,
+    "lengthM": 4.5,
+    "rotateY": -1.5708,
+    "paintMaterials": [
+      "carpaint"
+    ],
+    "rimsSwappable": false,
+    "removed": 3,
+    "flags": [],
+    "check": [
+      "front",
+      "length"
+    ],
+    "review": [],
+    "inApp": true,
+    "configurationOverride": {
+      "preRotateX": -1.5707963267948966,
+      "rotateY": 0
+    }
+  },
+  "renault-kangoo-2nd-gen-x61": {
+    "key": "renault-kangoo-2nd-gen-x61",
+    "file": "renault-kangoo-2nd-gen-x61",
+    "make": "Renault",
+    "model": "Kangoo",
+    "code": "2nd gen / X61",
+    "title": "Renault Kangoo MK2 2011-2021",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/renault-kangoo-mk2-2011-2021-b41aca99878c4ffb8d7171b1f5df20d5",
+    "license": "CC BY 4.0",
+    "bytesBefore": 46920564,
+    "bytesAfter": 6741248,
+    "textures": 0,
+    "lengthM": 4.3,
+    "rotateY": 0,
+    "paintMaterials": [
+      "kangoo_paint"
+    ],
+    "rimsSwappable": false,
+    "removed": 16,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true
+  },
+  "renault-megane-mk2": {
+    "key": "renault-megane-mk2",
+    "file": "renault-megane-mk2",
+    "make": "Renault",
+    "model": "Megane",
+    "code": "Mk2",
+    "title": "Renault Megane MK2 2002-2009",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/renault-megane-mk2-2002-2009-02e1c77abd4748cf8b8abe2db51b40b3",
+    "license": "CC BY 4.0",
+    "bytesBefore": 26429320,
+    "bytesAfter": 5312184,
+    "textures": 0,
+    "lengthM": 4.35,
+    "rotateY": 1.5708,
+    "paintMaterials": [
+      "megan_chassis",
+      "megan_body",
+      "megan_chassis_hrom",
+      "Chassis.0"
+    ],
+    "rimsSwappable": true,
+    "removed": 14,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true
+  },
+  "seat-ibiza-mk4-6j": {
+    "key": "seat-ibiza-mk4-6j",
+    "file": "seat-ibiza-mk4-6j",
+    "make": "SEAT",
+    "model": "Ibiza",
+    "code": "Mk4 / 6J",
+    "title": "Seat Ibiza",
+    "author": "Fratzica",
+    "authorUrl": "https://sketchfab.com/vasilebetivu62",
+    "url": "https://sketchfab.com/3d-models/seat-ibiza-3cca9404a94d4c89ac109014bbd7d495",
+    "license": "CC BY 4.0",
+    "bytesBefore": 260320,
+    "bytesAfter": 63916,
+    "textures": 0,
+    "lengthM": 4.06,
+    "rotateY": 0,
+    "paintMaterials": [
+      "MeshesseatIbiza1Mtl"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "skoda-fabia-mk2-5j": {
+    "key": "skoda-fabia-mk2-5j",
+    "file": "skoda-fabia-mk2-5j",
+    "make": "Skoda",
+    "model": "Fabia",
+    "code": "Mk2 / 5J",
+    "title": "Skoda Fabia Mk.2",
+    "author": "barking_dogo",
+    "authorUrl": "https://sketchfab.com/barking_dogo",
+    "url": "https://sketchfab.com/3d-models/skoda-fabia-mk2-e2e0be2c52994e3bb6cae225f3e7482d",
+    "license": "CC BY 4.0",
+    "bytesBefore": 21347388,
+    "bytesAfter": 3991588,
+    "textures": 3,
+    "lengthM": 4,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Blue_Car_Paint"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "skoda-octavia-mk2-1z": {
+    "key": "skoda-octavia-mk2-1z",
+    "file": "skoda-octavia-mk2-1z",
+    "make": "Skoda",
+    "model": "Octavia",
+    "code": "Mk2 / 1Z",
+    "title": "2005 Skoda Octavia",
+    "author": "tonielpro520",
+    "authorUrl": "https://sketchfab.com/tonielpro520",
+    "url": "https://sketchfab.com/3d-models/2005-skoda-octavia-c31169ccfd354b6c9b6f09964c113ae3",
+    "license": "CC BY 4.0",
+    "bytesBefore": 14261492,
+    "bytesAfter": 3096288,
+    "textures": 1,
+    "lengthM": 4.65,
+    "rotateY": 0,
+    "paintMaterials": [
+      "car_paint"
+    ],
+    "rimsSwappable": false,
+    "removed": 1,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "skoda-octavia-mk4-nx": {
+    "key": "skoda-octavia-mk4-nx",
+    "file": "skoda-octavia-mk4-nx",
+    "make": "Skoda",
+    "model": "Octavia",
+    "code": "Mk4 / NX",
+    "title": "2020 Skoda Octavia RS Combi",
+    "author": "tonielpro520",
+    "authorUrl": "https://sketchfab.com/tonielpro520",
+    "url": "https://sketchfab.com/3d-models/2020-skoda-octavia-rs-combi-44bb15f06124464ba6d4ef3a1d3b95a5",
+    "license": "CC BY 4.0",
+    "bytesBefore": 42926732,
+    "bytesAfter": 8264880,
+    "textures": 0,
+    "lengthM": 4.65,
+    "rotateY": 0,
+    "paintMaterials": [
+      "body"
+    ],
+    "rimsSwappable": false,
+    "removed": 3,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "toyota-c-hr-1st-gen": {
+    "key": "toyota-c-hr-1st-gen",
+    "file": "toyota-c-hr-1st-gen",
+    "make": "Toyota",
+    "model": "C-HR",
+    "code": "1st gen",
+    "title": "2022_Toyota_C-HR_3D_model",
+    "author": "Xeeter",
+    "authorUrl": "https://sketchfab.com/Xeetert",
+    "url": "https://sketchfab.com/3d-models/2022-toyota-c-hr-3d-model-1f66a3fdb7da421cafb089467b5a6140",
+    "license": "CC BY 4.0",
+    "bytesBefore": 10253524,
+    "bytesAfter": 2255816,
+    "textures": 5,
+    "lengthM": 4.36,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Paint_Color"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "toyota-camry-xv20": {
+    "key": "toyota-camry-xv20",
+    "file": "toyota-camry-xv20",
+    "make": "Toyota",
+    "model": "Camry",
+    "code": "XV20",
+    "title": "Toyota Camry (Mk4)(XV20) 1997",
+    "author": "Nieve5677",
+    "authorUrl": "https://sketchfab.com/niev",
+    "url": "https://sketchfab.com/3d-models/toyota-camry-mk4xv20-1997-196829bf4cbc4b8cb26c50964f35ff27",
+    "license": "CC BY 4.0",
+    "bytesBefore": 36967316,
+    "bytesAfter": 7113560,
+    "textures": 0,
+    "lengthM": 4.85,
+    "rotateY": -1.5708,
+    "paintMaterials": [
+      "carpaint"
+    ],
+    "rimsSwappable": false,
+    "removed": 1,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "configurationOverride": {
+      "preRotateX": -1.5707963267948966,
+      "rotateY": 0
+    }
+  },
+  "toyota-camry-xv30": {
+    "key": "toyota-camry-xv30",
+    "file": "toyota-camry-xv30",
+    "make": "Toyota",
+    "model": "Camry",
+    "code": "XV30",
+    "title": "Toyota Camry XV30 sedan 2001",
+    "author": "Abdelrahman Elbaqsawi 🇵🇸🇪🇬",
+    "authorUrl": "https://sketchfab.com/abdelrahmanbesso82",
+    "url": "https://sketchfab.com/3d-models/toyota-camry-xv30-sedan-2001-bfe908d3fc2b48ecad9741f8be09d42e",
+    "license": "CC BY 4.0",
+    "bytesBefore": 29829800,
+    "bytesAfter": 6836040,
+    "textures": 1,
+    "lengthM": 4.85,
+    "rotateY": -1.5708,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [
+      "AI"
+    ],
+    "check": [
+      "no paint found",
+      "front"
+    ],
+    "review": [
+      "AI"
+    ],
+    "inApp": false,
+    "configurationOverride": {
+      "rotateY": 1.5707926535897931
+    }
+  },
+  "toyota-camry-xv40": {
+    "key": "toyota-camry-xv40",
+    "file": "toyota-camry-xv40",
+    "make": "Toyota",
+    "model": "Camry",
+    "code": "XV40",
+    "title": "2006 Toyota Camry 24 G Dignis Edition",
+    "author": "tonielpro520",
+    "authorUrl": "https://sketchfab.com/tonielpro520",
+    "url": "https://sketchfab.com/3d-models/2006-toyota-camry-24-g-dignis-edition-c3181c2d916b4298a6eab78ecfdcb7a6",
+    "license": "CC BY 4.0",
+    "bytesBefore": 4352148,
+    "bytesAfter": 627444,
+    "textures": 5,
+    "lengthM": 4.85,
+    "rotateY": 1.5708,
+    "paintMaterials": [
+      "BODY_PAINT",
+      "FrontColor"
+    ],
+    "rimsSwappable": false,
+    "removed": 4,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true
+  },
+  "toyota-camry-xv70": {
+    "key": "toyota-camry-xv70",
+    "file": "toyota-camry-xv70",
+    "make": "Toyota",
+    "model": "Camry",
+    "code": "XV70",
+    "title": "Toyota Camry 2020",
+    "author": "ItsDiyor",
+    "authorUrl": "https://sketchfab.com/ItsDiyor",
+    "url": "https://sketchfab.com/3d-models/toyota-camry-2020-236a5a6e2fa6420fbdf641f4800cd544",
+    "license": "CC BY 4.0",
+    "bytesBefore": 14050228,
+    "bytesAfter": 2704936,
+    "textures": 8,
+    "lengthM": 4.85,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Paint_Color"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "toyota-corolla-e100": {
+    "key": "toyota-corolla-e100",
+    "file": "toyota-corolla-e100",
+    "make": "Toyota",
+    "model": "Corolla",
+    "code": "E100",
+    "title": "1995 Toyota Corolla DX (E100)",
+    "author": "ImperialBlue3D",
+    "authorUrl": "https://sketchfab.com/ImperialBlue3D",
+    "url": "https://sketchfab.com/3d-models/1995-toyota-corolla-dx-e100-6ed25676dd3e460d849dfce9beb73972",
+    "license": "CC BY 4.0",
+    "bytesBefore": 666560,
+    "bytesAfter": 185388,
+    "textures": 2,
+    "lengthM": 4.6,
+    "rotateY": 0,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "no paint found",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "toyota-corolla-e210": {
+    "key": "toyota-corolla-e210",
+    "file": "toyota-corolla-e210",
+    "make": "Toyota",
+    "model": "Corolla",
+    "code": "E210",
+    "title": "Toyota Corolla 2020",
+    "author": "ItsDiyor",
+    "authorUrl": "https://sketchfab.com/ItsDiyor",
+    "url": "https://sketchfab.com/3d-models/toyota-corolla-2020-6d7d34ee42734d1ab28a6b1f1c5fc4fc",
+    "license": "CC BY 4.0",
+    "bytesBefore": 17243928,
+    "bytesAfter": 2736980,
+    "textures": 10,
+    "lengthM": 4.6,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Paint_Color"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "toyota-hilux-8th-gen": {
+    "key": "toyota-hilux-8th-gen",
+    "file": "toyota-hilux-8th-gen",
+    "make": "Toyota",
+    "model": "Hilux",
+    "code": "8th gen",
+    "title": "2022 Toyota Hilux",
+    "author": "BHP3D",
+    "authorUrl": "https://sketchfab.com/BHP3D",
+    "url": "https://sketchfab.com/3d-models/2022-toyota-hilux-82bd37c5065040098fb0b86e07fcb959",
+    "license": "CC BY 4.0",
+    "bytesBefore": 41606800,
+    "bytesAfter": 7426880,
+    "textures": 13,
+    "lengthM": 5.3,
+    "rotateY": 3.1416,
+    "paintMaterials": [
+      "primary"
+    ],
+    "rimsSwappable": true,
+    "removed": 3,
+    "flags": [
+      "AI",
+      "game"
+    ],
+    "check": [
+      "paint"
+    ],
+    "review": [
+      "AI",
+      "game"
+    ],
+    "inApp": false
+  },
+  "toyota-land-cruiser-j100": {
+    "key": "toyota-land-cruiser-j100",
+    "file": "toyota-land-cruiser-j100",
+    "make": "Toyota",
+    "model": "Land Cruiser",
+    "code": "J100",
+    "title": "Toyota Land Cruiser 100 series",
+    "author": "mavogen1",
+    "authorUrl": "https://sketchfab.com/mavogen1",
+    "url": "https://sketchfab.com/3d-models/toyota-land-cruiser-100-series-8c6e399714754b31b2bc5208c926204a",
+    "license": "CC BY 4.0",
+    "bytesBefore": 7104624,
+    "bytesAfter": 1771624,
+    "textures": 0,
+    "lengthM": 4.95,
+    "rotateY": 0,
+    "paintMaterials": [
+      "vehicle"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "toyota-land-cruiser-j200": {
+    "key": "toyota-land-cruiser-j200",
+    "file": "toyota-land-cruiser-j200",
+    "make": "Toyota",
+    "model": "Land Cruiser",
+    "code": "J200",
+    "title": "Toyota Land Cruiser J200 2017",
+    "author": "David_Holiday",
+    "authorUrl": "https://sketchfab.com/David_Holiday",
+    "url": "https://sketchfab.com/3d-models/toyota-land-cruiser-j200-2017-374e85a6e18743429f6d9c0e7bbffb3c",
+    "license": "CC BY 4.0",
+    "bytesBefore": 14717432,
+    "bytesAfter": 3932532,
+    "textures": 2,
+    "lengthM": 4.95,
+    "rotateY": -1.5708,
+    "paintMaterials": [
+      "body"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "toyota-prius-xw20": {
+    "key": "toyota-prius-xw20",
+    "file": "toyota-prius-xw20",
+    "make": "Toyota",
+    "model": "Prius",
+    "code": "XW20",
+    "title": "2003 Toyota Prius",
+    "author": "ImperialBlue3D",
+    "authorUrl": "https://sketchfab.com/ImperialBlue3D",
+    "url": "https://sketchfab.com/3d-models/2003-toyota-prius-b2e9d973613a428fb405838456be4902",
+    "license": "CC BY 4.0",
+    "bytesBefore": 228672,
+    "bytesAfter": 40748,
+    "textures": 1,
+    "lengthM": 4.5,
+    "rotateY": 0,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [
+      "game",
+      "low-poly"
+    ],
+    "check": [
+      "no paint found",
+      "front"
+    ],
+    "review": [
+      "game",
+      "low-poly"
+    ],
+    "inApp": false
+  },
+  "toyota-prius-xw30": {
+    "key": "toyota-prius-xw30",
+    "file": "toyota-prius-xw30",
+    "make": "Toyota",
+    "model": "Prius",
+    "code": "XW30",
+    "title": "TOYOTA PRIUS 2012",
+    "author": "WolfGames36",
+    "authorUrl": "https://sketchfab.com/WolfGames36",
+    "url": "https://sketchfab.com/3d-models/toyota-prius-2012-101e2683571946d89f055543150412d7",
+    "license": "CC BY 4.0",
+    "bytesBefore": 4023940,
+    "bytesAfter": 1365332,
+    "textures": 8,
+    "lengthM": 4.5,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Fwiperay95s41Mtl.002"
+    ],
+    "rimsSwappable": true,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "configurationOverride": {
+      "rotateY": 3.141592653589793
+    }
+  },
+  "toyota-rav4-xa40": {
+    "key": "toyota-rav4-xa40",
+    "file": "toyota-rav4-xa40",
+    "make": "Toyota",
+    "model": "RAV4",
+    "code": "XA40",
+    "title": "Toyota Rav4 AWD 2015",
+    "author": "SideLine_777",
+    "authorUrl": "https://sketchfab.com/SideLine_777",
+    "url": "https://sketchfab.com/3d-models/toyota-rav4-awd-2015-28e93488e507472ea0f555aa880d4865",
+    "license": "CC BY 4.0",
+    "bytesBefore": 103934884,
+    "bytesAfter": 10422244,
+    "textures": 0,
+    "lengthM": 4.6,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Toyota_RAV4_HQinterior_2013_carpaint"
+    ],
+    "rimsSwappable": true,
+    "removed": 24,
+    "flags": [],
+    "check": [
+      "over 8 MB"
+    ],
+    "review": [
+      "over 8 MB"
+    ],
+    "inApp": false
+  },
+  "toyota-yaris-xp130": {
+    "key": "toyota-yaris-xp130",
+    "file": "toyota-yaris-xp130",
+    "make": "Toyota",
+    "model": "Yaris",
+    "code": "XP130",
+    "title": "Toyota Yaris MK3 2011-2020",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/toyota-yaris-mk3-2011-2020-a735fe6fe72049299c186e5db62a8d23",
+    "license": "CC BY 4.0",
+    "bytesBefore": 3643312,
+    "bytesAfter": 700760,
+    "textures": 0,
+    "lengthM": 3.9,
+    "rotateY": 0,
+    "paintMaterials": [
+      "am5eunew1"
+    ],
+    "rimsSwappable": false,
+    "removed": 2,
+    "flags": [],
+    "check": [
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "toyota-yaris-xp90": {
+    "key": "toyota-yaris-xp90",
+    "file": "toyota-yaris-xp90",
+    "make": "Toyota",
+    "model": "Yaris",
+    "code": "XP90",
+    "title": "\"low poly\" Toyota Yaris",
+    "author": "Monki",
+    "authorUrl": "https://sketchfab.com/monkiiiii",
+    "url": "https://sketchfab.com/3d-models/low-poly-toyota-yaris-0322499daee0412b8ffe4c9048373881",
+    "license": "CC BY 4.0",
+    "bytesBefore": 1837616,
+    "bytesAfter": 157948,
+    "textures": 1,
+    "lengthM": 3.9,
+    "rotateY": 0,
+    "paintMaterials": [
+      "yaris.paint"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "volkswagen-caddy-sb-latest": {
+    "key": "volkswagen-caddy-sb-latest",
+    "file": "volkswagen-caddy-sb-latest",
+    "make": "Volkswagen",
+    "model": "Caddy",
+    "code": "SB / latest",
+    "title": "2022 Volkswagen Caddy",
+    "author": "tonielpro520",
+    "authorUrl": "https://sketchfab.com/tonielpro520",
+    "url": "https://sketchfab.com/3d-models/2022-volkswagen-caddy-b737cd468d114792aaee9e68480adfbb",
+    "license": "CC BY 4.0",
+    "bytesBefore": 39056672,
+    "bytesAfter": 3549960,
+    "textures": 5,
+    "lengthM": 4.4,
+    "rotateY": 0,
+    "paintMaterials": [
+      "M_2022_Volkswagen_Caddy_Copper_Bronze_Metallic"
+    ],
+    "rimsSwappable": false,
+    "removed": 4,
+    "flags": [],
+    "check": [
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "volkswagen-golf-mk3": {
+    "key": "volkswagen-golf-mk3",
+    "file": "volkswagen-golf-mk3",
+    "make": "Volkswagen",
+    "model": "Golf",
+    "code": "Mk3",
+    "title": "Volkswagen Golf MK3 GTi 1991-2003",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/volkswagen-golf-mk3-gti-1991-2003-ebeb34bc1c0b4fd188ccdeca04389580",
+    "license": "CC BY 4.0",
+    "bytesBefore": 31392840,
+    "bytesAfter": 6509340,
+    "textures": 50,
+    "lengthM": 4.25,
+    "rotateY": 0,
+    "paintMaterials": [
+      "carpet_29"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [
+      "game"
+    ],
+    "check": [
+      "interior kept (names unclear)",
+      "paint",
+      "front"
+    ],
+    "review": [
+      "game"
+    ],
+    "inApp": false
+  },
+  "volkswagen-golf-mk5": {
+    "key": "volkswagen-golf-mk5",
+    "file": "volkswagen-golf-mk5",
+    "make": "Volkswagen",
+    "model": "Golf",
+    "code": "Mk5",
+    "title": "3D Scanned Volkswagen Golf Mk5 (2003) [Free]",
+    "author": "agent",
+    "authorUrl": "https://sketchfab.com/agentmooshroom5",
+    "url": "https://sketchfab.com/3d-models/3d-scanned-volkswagen-golf-mk5-2003-free-682a6bc4c3e0430db33c7fcd02ee1e3f",
+    "license": "CC BY 4.0",
+    "bytesBefore": 2653652,
+    "bytesAfter": 524024,
+    "textures": 1,
+    "lengthM": 4.25,
+    "rotateY": 0,
+    "paintMaterials": [],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [
+      "scan",
+      "game"
+    ],
+    "check": [
+      "no paint found",
+      "front"
+    ],
+    "review": [
+      "scan",
+      "game"
+    ],
+    "inApp": false
+  },
+  "volkswagen-golf-mk7": {
+    "key": "volkswagen-golf-mk7",
+    "file": "volkswagen-golf-mk7",
+    "make": "Volkswagen",
+    "model": "Golf",
+    "code": "Mk7",
+    "title": "Volkswagen Golf 7 mk7",
+    "author": "DR1KING100K",
+    "authorUrl": "https://sketchfab.com/DR1KING100K",
+    "url": "https://sketchfab.com/3d-models/volkswagen-golf-7-mk7-3c86d324d56f4027b08cbd7ba5f10bbb",
+    "license": "CC BY 4.0",
+    "bytesBefore": 78324732,
+    "bytesAfter": 6699392,
+    "textures": 46,
+    "lengthM": 4.25,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Carpaint"
+    ],
+    "rimsSwappable": true,
+    "removed": 123,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true
+  },
+  "volkswagen-polo-mk4-9n": {
+    "key": "volkswagen-polo-mk4-9n",
+    "file": "volkswagen-polo-mk4-9n",
+    "make": "Volkswagen",
+    "model": "Polo",
+    "code": "Mk4 / 9N",
+    "title": "Volkswagen Polo 3-door MK4 2001 – 2009",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/volkswagen-polo-3-door-mk4-2001-2009-6fd9f1259b8248059e32f983cf5b0cf7",
+    "license": "CC BY 4.0",
+    "bytesBefore": 20707236,
+    "bytesAfter": 4019636,
+    "textures": 0,
+    "lengthM": 4,
+    "rotateY": -1.5708,
+    "paintMaterials": [
+      "carpaint"
+    ],
+    "rimsSwappable": true,
+    "removed": 3,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "configurationOverride": {
+      "preRotateX": -1.5707963267948966,
+      "rotateY": 0
+    }
+  },
+  "volkswagen-transporter-t4": {
+    "key": "volkswagen-transporter-t4",
+    "file": "volkswagen-transporter-t4",
+    "make": "Volkswagen",
+    "model": "Transporter",
+    "code": "T4",
+    "title": "Volkswagen Transporter MK4 (T4) 1990-2003",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/volkswagen-transporter-mk4-t4-1990-2003-10911ab0b9914409b11649f688a3ebfd",
+    "license": "CC BY 4.0",
+    "bytesBefore": 25691656,
+    "bytesAfter": 3514852,
+    "textures": 0,
+    "lengthM": 4.9,
+    "rotateY": 0,
+    "paintMaterials": [
+      "vt4_color"
+    ],
+    "rimsSwappable": false,
+    "removed": 15,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "audi-a3-8l": {
+    "key": "audi-a3-8l",
+    "file": "audi-a3-8l",
+    "make": "Audi",
+    "model": "A3",
+    "code": "8L",
+    "title": "Audi A3 8L MK1 1999-2006",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/audi-a3-8l-mk1-1999-2006-92ad1307f3d045d181ee9d9d940d2814",
+    "license": "CC BY 4.0",
+    "bytesBefore": 15410160,
+    "bytesAfter": 2537780,
+    "textures": 28,
+    "lengthM": 4.3,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Material_baixo_car"
+    ],
+    "rimsSwappable": true,
+    "removed": 4,
+    "flags": [
+      "game"
+    ],
+    "check": [
+      "paint"
+    ],
+    "review": [
+      "game"
+    ],
+    "inApp": false
+  },
+  "audi-a3-8v": {
+    "key": "audi-a3-8v",
+    "file": "audi-a3-8v",
+    "make": "Audi",
+    "model": "A3",
+    "code": "8V",
+    "title": "AUDI A3",
+    "author": "Mixmamo.studio:   An effortless 3D collections.",
+    "authorUrl": "https://sketchfab.com/mixmamo.studio",
+    "url": "https://sketchfab.com/3d-models/audi-a3-5e47cd3377d0480498e70d1beeffcdf3",
+    "license": "CC BY 4.0",
+    "bytesBefore": 9193664,
+    "bytesAfter": 2102648,
+    "textures": 3,
+    "lengthM": 4.3,
+    "rotateY": 0,
+    "paintMaterials": [
+      "New_Material"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "audi-a4-b5": {
+    "key": "audi-a4-b5",
+    "file": "audi-a4-b5",
+    "make": "Audi",
+    "model": "A4",
+    "code": "B5",
+    "title": "Audi A4 (B5)",
+    "author": "MMC Works",
+    "authorUrl": "https://sketchfab.com/mmcworks",
+    "url": "https://sketchfab.com/3d-models/audi-a4-b5-b5861ddefcb8478b858b3150aa44cd7f",
+    "license": "CC BY 4.0",
+    "bytesBefore": 12336688,
+    "bytesAfter": 1476844,
+    "textures": 7,
+    "lengthM": 4.75,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Car_Paint_-_All_Colors"
+    ],
+    "rimsSwappable": false,
+    "removed": 8,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "audi-a4-b6": {
+    "key": "audi-a4-b6",
+    "file": "audi-a4-b6",
+    "make": "Audi",
+    "model": "A4",
+    "code": "B6",
+    "title": "Audi A4 B6 Cabrio 2004",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/audi-a4-b6-cabrio-2004-e9da893d283345c9b0970e06d1fa15a7",
+    "license": "CC BY 4.0",
+    "bytesBefore": 2227536,
+    "bytesAfter": 630560,
+    "textures": 0,
+    "lengthM": 4.75,
+    "rotateY": 0,
+    "paintMaterials": [
+      "color__prim_env1",
+      "body__env_4_1"
+    ],
+    "rimsSwappable": false,
+    "removed": 1,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "audi-a4-b8": {
+    "key": "audi-a4-b8",
+    "file": "audi-a4-b8",
+    "make": "Audi",
+    "model": "A4",
+    "code": "B8",
+    "title": "Audi A4 B8",
+    "author": "シRuletăシ",
+    "authorUrl": "https://sketchfab.com/romanian_guy_0069",
+    "url": "https://sketchfab.com/3d-models/audi-a4-b8-70f0688e077b4933a740150e9d946642",
+    "license": "CC BY 4.0",
+    "bytesBefore": 11695260,
+    "bytesAfter": 980308,
+    "textures": 2,
+    "lengthM": 4.75,
+    "rotateY": 0,
+    "paintMaterials": [
+      "chassis.1",
+      "chassis.2",
+      "chassis.3",
+      "chassis.006",
+      "chassis.004",
+      "chassis.005"
+    ],
+    "rimsSwappable": false,
+    "removed": 4,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true
+  },
+  "audi-a4-b9": {
+    "key": "audi-a4-b9",
+    "file": "audi-a4-b9",
+    "make": "Audi",
+    "model": "A4",
+    "code": "B9",
+    "title": "Audi A4 B9",
+    "author": "Nieve5677",
+    "authorUrl": "https://sketchfab.com/niev",
+    "url": "https://sketchfab.com/3d-models/audi-a4-b9-7ba4f7fa8f32436a9685a8abaa5da302",
+    "license": "CC BY 4.0",
+    "bytesBefore": 9559932,
+    "bytesAfter": 2379920,
+    "textures": 0,
+    "lengthM": 4.75,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Color_M02"
+    ],
+    "rimsSwappable": false,
+    "removed": 1,
+    "flags": [],
+    "check": [
+      "paint"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "audi-a6-c6": {
+    "key": "audi-a6-c6",
+    "file": "audi-a6-c6",
+    "make": "Audi",
+    "model": "A6",
+    "code": "C6",
+    "title": "Audi A6 C6 2004-2012",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/audi-a6-c6-2004-2012-5203b45dbdb642d7a7e8e184cda5cb43",
+    "license": "CC BY 4.0",
+    "bytesBefore": 30839936,
+    "bytesAfter": 6163476,
+    "textures": 23,
+    "lengthM": 4.95,
+    "rotateY": 0,
+    "paintMaterials": [
+      "material"
+    ],
+    "rimsSwappable": false,
+    "removed": 16,
+    "flags": [],
+    "check": [
+      "paint"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "audi-a6-c7": {
+    "key": "audi-a6-c7",
+    "file": "audi-a6-c7",
+    "make": "Audi",
+    "model": "A6",
+    "code": "C7",
+    "title": "Audi A6 C7 MK4 2010-2018",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/audi-a6-c7-mk4-2010-2018-acd23af5d41d4096833643aaa20cb6fe",
+    "license": "CC BY 4.0",
+    "bytesBefore": 15963532,
+    "bytesAfter": 2573756,
+    "textures": 4,
+    "lengthM": 4.95,
+    "rotateY": 0,
+    "paintMaterials": [
+      "a6c7_paint",
+      "a6c7_paint_2"
+    ],
+    "rimsSwappable": false,
+    "removed": 32,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "audi-q3-8u": {
+    "key": "audi-q3-8u",
+    "file": "audi-q3-8u",
+    "make": "Audi",
+    "model": "Q3",
+    "code": "8U",
+    "title": "2014 Audi Q3",
+    "author": "tonielpro520",
+    "authorUrl": "https://sketchfab.com/tonielpro520",
+    "url": "https://sketchfab.com/3d-models/2014-audi-q3-d95e025603c9449997be95048d10af68",
+    "license": "CC BY 4.0",
+    "bytesBefore": 53650588,
+    "bytesAfter": 5926508,
+    "textures": 4,
+    "lengthM": 4.4,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Carro_Pintura"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "audi-q5-8r": {
+    "key": "audi-q5-8r",
+    "file": "audi-q5-8r",
+    "make": "Audi",
+    "model": "Q5",
+    "code": "8R",
+    "title": "Audi Q5",
+    "author": "Nieve5677",
+    "authorUrl": "https://sketchfab.com/niev",
+    "url": "https://sketchfab.com/3d-models/audi-q5-73734fc8804544719f557b5e89e712d3",
+    "license": "CC BY 4.0",
+    "bytesBefore": 32390188,
+    "bytesAfter": 5942900,
+    "textures": 0,
+    "lengthM": 4.65,
+    "rotateY": 0,
+    "paintMaterials": [
+      "carpaint.084"
+    ],
+    "rimsSwappable": false,
+    "removed": 1,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "audi-q7-4l": {
+    "key": "audi-q7-4l",
+    "file": "audi-q7-4l",
+    "make": "Audi",
+    "model": "Q7",
+    "code": "4L",
+    "title": "Audi Q7",
+    "author": "Bryan Roger",
+    "authorUrl": "https://sketchfab.com/eainthithtoo620",
+    "url": "https://sketchfab.com/3d-models/audi-q7-3e07d83bc9b242a38cbb03a609ea2358",
+    "license": "CC BY 4.0",
+    "bytesBefore": 1324188,
+    "bytesAfter": 327268,
+    "textures": 0,
+    "lengthM": 5.05,
+    "rotateY": 0,
+    "paintMaterials": [
+      "material_51"
+    ],
+    "rimsSwappable": false,
+    "removed": 1,
+    "flags": [],
+    "check": [
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "opel-astra-f": {
+    "key": "opel-astra-f",
+    "file": "opel-astra-f",
+    "make": "Opel",
+    "model": "Astra",
+    "code": "F",
+    "title": "Opel Astra F 3-Door 1991-2002",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/opel-astra-f-3-door-1991-2002-bb236980955643ee90a4f8eb37b9115a",
+    "license": "CC BY 4.0",
+    "bytesBefore": 13683804,
+    "bytesAfter": 2331244,
+    "textures": 0,
+    "lengthM": 4.37,
+    "rotateY": 0,
+    "paintMaterials": [
+      "astraf_color",
+      "astraf_color.002",
+      "astra_gsi_body__spec",
+      "Peugeot_406_color.004",
+      "astra_gsi_body__spec_.006",
+      "astra_gsi_body.005",
+      "astraf_color.001"
+    ],
+    "rimsSwappable": false,
+    "removed": 15,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true
+  },
+  "opel-astra-g": {
+    "key": "opel-astra-g",
+    "file": "opel-astra-g",
+    "make": "Opel",
+    "model": "Astra",
+    "code": "G",
+    "title": "Opel Astra G 1998-2004",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/opel-astra-g-1998-2004-90ffb23daea049168975e68b09f9b92d",
+    "license": "CC BY 4.0",
+    "bytesBefore": 15858796,
+    "bytesAfter": 3021204,
+    "textures": 1,
+    "lengthM": 4.37,
+    "rotateY": 0,
+    "paintMaterials": [
+      "body"
+    ],
+    "rimsSwappable": false,
+    "removed": 1,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "opel-astra-h": {
+    "key": "opel-astra-h",
+    "file": "opel-astra-h",
+    "make": "Opel",
+    "model": "Astra",
+    "code": "H",
+    "title": "Opel Astra H 5-Door 2004-2014",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/opel-astra-h-5-door-2004-2014-77d6c5963a364c7d9d481f0e6209287a",
+    "license": "CC BY 4.0",
+    "bytesBefore": 35629988,
+    "bytesAfter": 5093404,
+    "textures": 0,
+    "lengthM": 4.37,
+    "rotateY": 0,
+    "paintMaterials": [
+      "astrah_paint"
+    ],
+    "rimsSwappable": false,
+    "removed": 23,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true
+  },
+  "opel-astra-k": {
+    "key": "opel-astra-k",
+    "file": "opel-astra-k",
+    "make": "Opel",
+    "model": "Astra",
+    "code": "K",
+    "title": "Opel Astra K 2015-2022",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/opel-astra-k-2015-2022-fd1ed795ab5d4394b78746a1765f96e1",
+    "license": "CC BY 4.0",
+    "bytesBefore": 34357836,
+    "bytesAfter": 6946300,
+    "textures": 4,
+    "lengthM": 4.37,
+    "rotateY": 0,
+    "paintMaterials": [
+      "astrakb16_body"
+    ],
+    "rimsSwappable": false,
+    "removed": 16,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "opel-corsa-b": {
+    "key": "opel-corsa-b",
+    "file": "opel-corsa-b",
+    "make": "Opel",
+    "model": "Corsa",
+    "code": "B",
+    "title": "Opel Corsa B 3door 1998",
+    "author": "Nieve5677",
+    "authorUrl": "https://sketchfab.com/niev",
+    "url": "https://sketchfab.com/3d-models/opel-corsa-b-3door-1998-e79106fd735340a8a295f381ce58e7c8",
+    "license": "CC BY 4.0",
+    "bytesBefore": 26655432,
+    "bytesAfter": 4627164,
+    "textures": 0,
+    "lengthM": 4.05,
+    "rotateY": 0,
+    "paintMaterials": [
+      "carpaint"
+    ],
+    "rimsSwappable": false,
+    "removed": 4,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "configurationOverride": {
+      "preRotateX": -1.5707963267948966
+    }
+  },
+  "opel-corsa-c": {
+    "key": "opel-corsa-c",
+    "file": "opel-corsa-c",
+    "make": "Opel",
+    "model": "Corsa",
+    "code": "C",
+    "title": "Opel Corsa C 3-Door 2000-2006",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/opel-corsa-c-3-door-2000-2006-68bacb5b6c70455a8524aa2c1c371faf",
+    "license": "CC BY 4.0",
+    "bytesBefore": 5996856,
+    "bytesAfter": 1295348,
+    "textures": 8,
+    "lengthM": 4.05,
+    "rotateY": 0,
+    "paintMaterials": [
+      "body"
+    ],
+    "rimsSwappable": false,
+    "removed": 5,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "opel-corsa-e": {
+    "key": "opel-corsa-e",
+    "file": "opel-corsa-e",
+    "make": "Opel",
+    "model": "Corsa",
+    "code": "E",
+    "title": "Opel Corsa E 2014-2019",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/opel-corsa-e-2014-2019-edd5c524d2404267bd28dac41a3cd08a",
+    "license": "CC BY 4.0",
+    "bytesBefore": 27900212,
+    "bytesAfter": 5077212,
+    "textures": 0,
+    "lengthM": 4.05,
+    "rotateY": 0,
+    "paintMaterials": [
+      "corsa_paint"
+    ],
+    "rimsSwappable": false,
+    "removed": 23,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "opel-insignia-a": {
+    "key": "opel-insignia-a",
+    "file": "opel-insignia-a",
+    "make": "Opel",
+    "model": "Insignia",
+    "code": "A",
+    "title": "Opel Insignia A 2008-2017",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/opel-insignia-a-2008-2017-b0758197f9064f0ca6d73a226007c781",
+    "license": "CC BY 4.0",
+    "bytesBefore": 23798548,
+    "bytesAfter": 4160544,
+    "textures": 0,
+    "lengthM": 4.85,
+    "rotateY": 0,
+    "paintMaterials": [
+      "insignia_body",
+      "VauxhallInsigniaVXR_body"
+    ],
+    "rimsSwappable": false,
+    "removed": 7,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "opel-mokka-b": {
+    "key": "opel-mokka-b",
+    "file": "opel-mokka-b",
+    "make": "Opel",
+    "model": "Mokka",
+    "code": "B",
+    "title": "Vauxhall/Opel Mokka 2021",
+    "author": "Nieve5677",
+    "authorUrl": "https://sketchfab.com/niev",
+    "url": "https://sketchfab.com/3d-models/vauxhallopel-mokka-2021-08f890ceffe944ddbcba5e77af683dc0",
+    "license": "CC BY 4.0",
+    "bytesBefore": 39342852,
+    "bytesAfter": 6877860,
+    "textures": 0,
+    "lengthM": 4.25,
+    "rotateY": 0,
+    "paintMaterials": [
+      "body"
+    ],
+    "rimsSwappable": true,
+    "removed": 4,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "opel-vectra-c": {
+    "key": "opel-vectra-c",
+    "file": "opel-vectra-c",
+    "make": "Opel",
+    "model": "Vectra",
+    "code": "C",
+    "title": "Opel Vectra C 2002-2005",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/opel-vectra-c-2002-2005-4559521e31134baf9b607f0f2186d4e8",
+    "license": "CC BY 4.0",
+    "bytesBefore": 12087732,
+    "bytesAfter": 2133972,
+    "textures": 6,
+    "lengthM": 4.5,
+    "rotateY": 0,
+    "paintMaterials": [
+      "htvectrac_body"
+    ],
+    "rimsSwappable": false,
+    "removed": 32,
+    "flags": [],
+    "check": [
+      "front",
+      "length"
+    ],
+    "review": [],
+    "inApp": true
+  },
+  "seat-leon-mk1-1m": {
+    "key": "seat-leon-mk1-1m",
+    "file": "seat-leon-mk1-1m",
+    "make": "SEAT",
+    "model": "Leon",
+    "code": "Mk1 / 1M",
+    "title": "Seat Leon MK1 Tuned 2002-2006",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/seat-leon-mk1-tuned-2002-2006-1c0e03b333b744fe839664ea25469a3c",
+    "license": "CC BY 4.0",
+    "bytesBefore": 24698668,
+    "bytesAfter": 4460092,
+    "textures": 32,
+    "lengthM": 4.3,
+    "rotateY": 0,
+    "paintMaterials": [
+      "body_leon_1m"
+    ],
+    "rimsSwappable": false,
+    "removed": 9,
+    "flags": [
+      "game"
+    ],
+    "check": [],
+    "review": [
+      "game"
+    ],
+    "inApp": false
+  }
+}

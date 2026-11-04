@@ -3,8 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import { Card, Chip, EmptyState, ErrorState, GaragePage, HeroLayout, GButton, GIcon, GText, Note, OptionSheet, SearchBar, SkeletonRows, StatusChip, Tap } from "../../../components/garage";
 import { CITIES, cityLabel, cityToEnglish } from "../../../core/constants/cities";
-import { Point, locationMemory } from "../../../core/constants/geo";
+import { clearLocationMemory, Point } from "../../../core/constants/geo";
 import { useL } from "../../../core/hooks/useL";
+import { useSessionUser } from "../../../core/session/session";
 import { TowCompanyRow, catalogService } from "../../../features/catalog/catalogService";
 import { WhileYouWait } from "../../../features/requests/WhileYouWait";
 import { LocationProblem, useCurrentLocation } from "../../../features/shared/useCurrentLocation";
@@ -57,6 +58,7 @@ function CompanyCard({ x }: { x: TowCompanyRow }) {
 }
 
 export default function CustomerTow() {
+  const user = useSessionUser();
   const { g, row } = useGarageTheme();
   const { t, isArabic } = useL();
   const { type } = useTruckLabels();
@@ -65,9 +67,9 @@ export default function CustomerTow() {
   const [truckType, setTruckType] = useState<TruckType | null>(null);
   const [availableOnly, setAvailableOnly] = useState(false);
   const [sheet, setSheet] = useState<Sheet>(null);
-  // Your position: read only when you tap a button, kept in memory for this session, never tracked.
-  const [me, setMe] = useState<Point | null>(locationMemory.current);
-  const loc = useCurrentLocation();
+  // Your position is read only when you tap a button; it is never tracked from this list screen.
+  const [me, setMe] = useState<Point | null>(null);
+  const loc = useCurrentLocation("tow-request", user.id);
   const [sortChoice, setSortChoice] = useState<Sort | null>(null);
   const sort: Sort = sortChoice === "nearest" && !me ? "available" : (sortChoice ?? (me ? "nearest" : "available"));
   const filtered = !!(city.trim() || name.trim() || truckType || availableOnly);
@@ -81,7 +83,7 @@ export default function CustomerTow() {
     return p;
   };
   const forgetLocation = () => {
-    locationMemory.current = null;
+    clearLocationMemory(user.id);
     setMe(null);
     setSortChoice(null);
   };

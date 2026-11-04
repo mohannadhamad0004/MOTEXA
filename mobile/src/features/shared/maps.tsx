@@ -22,6 +22,7 @@ type MapData = {
   mode: "companies" | "pin" | "trip" | "service";
   pins: { id: string; name: string; lat: number; lng: number; kind: Kind; dim?: boolean; color?: string }[];
   me: Point | null;
+  meFresh?: boolean;
   // service mode (the full-screen Tow / Mechanics map pages)
   selectedId?: string | null;
   route?: { coords: [number, number][]; dashed: boolean; key?: string } | null;
@@ -62,6 +63,8 @@ html,body,#map{margin:0;height:100%;width:100%;background:#2D1F18}
 .hide-attr .leaflet-top.leaflet-right{top:auto;bottom:calc(var(--bi,0px) + 28px)}
 .dot{position:relative;width:16px;height:16px;border-radius:50%;background:#2F7BFF;border:3px solid #fff;box-sizing:border-box;box-shadow:0 0 0 6px rgba(47,123,255,.25)}
 .dot.pulse::after{content:"";position:absolute;left:-3px;top:-3px;width:16px;height:16px;border-radius:50%;border:2px solid #2F7BFF;animation:pl 2s ease-out infinite}
+.dot.stale{background:#8D8178;box-shadow:0 0 0 5px rgba(141,129,120,.2)}
+.dot.stale.pulse::after{display:none}
 @keyframes pl{0%{transform:scale(.6);opacity:.8}100%{transform:scale(2.6);opacity:0}}
 .svc{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.55);box-sizing:border-box}
 .svc svg{transform:rotate(45deg);width:18px;height:18px}
@@ -171,7 +174,7 @@ function service(d){
   if(d.me){
     if(!meMarker){meMarker=L.marker([d.me.lat,d.me.lng],{icon:L.divIcon({html:'<div class="meWrap"><i class="ring"></i><i class="ring r2"></i><i class="ring r3"></i><div class="dot pulse in"></div></div>',className:"",iconSize:[16,16],iconAnchor:[8,8]}),interactive:false,keyboard:false}).addTo(map);}
     else meMarker.setLatLng([d.me.lat,d.me.lng]);
-    var me_el=meMarker.getElement();if(me_el)me_el.classList.toggle("radar",!!an.radar&&!an.reduced);
+    var me_el=meMarker.getElement();if(me_el){me_el.classList.toggle("radar",!!an.radar&&!an.reduced&&d.meFresh!==false);var dot=me_el.querySelector(".dot");if(dot)dot.classList.toggle("stale",d.meFresh===false);}
   }else if(meMarker){map.removeLayer(meMarker);meMarker=null;}
   var pad=d.pad||{top:0,bottom:0,left:0,right:0};
   if(d.fitKey!==lastFit){
@@ -437,6 +440,7 @@ export function ServiceMap({
   pins,
   selectedId,
   me,
+  meFresh = true,
   pickup,
   movePickup = false,
   route,
@@ -458,6 +462,8 @@ export function ServiceMap({
   pins: ServicePin[];
   selectedId: string | null;
   me: Point | null;
+  /** False marks an in-memory last known point or a watcher point that has gone stale. */
+  meFresh?: boolean;
   pickup?: Point | null;
   movePickup?: boolean;
   route?: { coords: [number, number][]; dashed: boolean; key?: string } | null;
@@ -486,6 +492,7 @@ export function ServiceMap({
       mode: "service",
       pins: (JSON.parse(pinsKey) as ServicePin[]).map((p) => ({ id: p.id, name: p.name, lat: p.lat, lng: p.lng, kind: p.kind, dim: p.dim, color: p.color })),
       me,
+      meFresh,
       selectedId,
       pickup: pickup ?? null,
       movePickup,
@@ -500,7 +507,7 @@ export function ServiceMap({
       theme,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pinsKey, JSON.stringify(me), selectedId, JSON.stringify(pickup), movePickup, JSON.stringify(route), JSON.stringify(fit), fitKey, JSON.stringify(pad), JSON.stringify(focus), radar, reduced, JSON.stringify(highlight), mini, theme]
+    [pinsKey, JSON.stringify(me), meFresh, selectedId, JSON.stringify(pickup), movePickup, JSON.stringify(route), JSON.stringify(fit), fitKey, JSON.stringify(pad), JSON.stringify(focus), radar, reduced, JSON.stringify(highlight), mini, theme]
   );
   return <LeafletMap bare height={height} data={data} bottomInset={bottomInset} onSelect={onSelect} onBackground={onBackground} onPickup={onPickupMove} onFailedChange={onFailedChange} />;
 }

@@ -1,3 +1,4 @@
+import { servicePosition, serviceRouteIdentity, PublicWorkshopLocation } from "./serviceDestination";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, View, useWindowDimensions } from "react-native";
@@ -6,9 +7,10 @@ import { Chip as GChip, GButton, GIcon, GIconName, GText, Note, OptionSheet, Rai
 import { useDelayed, useReduced } from "../../motion";
 import { CITIES, cityCentre, cityLabel } from "../../core/constants/cities";
 import { findCategory, labelOf } from "../../core/constants/categories";
-import { Point, haversineKm, locationMemory } from "../../core/constants/geo";
+import { clearLocationMemory, getLocationMemory, haversineKm, LocationFix, Point } from "../../core/constants/geo";
 import { goBack } from "../../core/hooks/nav";
 import { useL } from "../../core/hooks/useL";
+import { useSessionUser } from "../../core/session/session";
 import { alpha } from "../../theme/tokens";
 import { gShape, useGarageTheme } from "../../theme/garage";
 import { CatalogShopRow, TowCompanyRow, catalogService } from "../catalog/catalogService";
@@ -23,7 +25,7 @@ import type { TruckType } from "../tow/towService";
 import { useTruckLabels } from "../tow/truckBits";
 import { MapPanel, SIDE_PANEL_WIDTH, Snap, WIDE_MIN_WIDTH } from "./MapPanel";
 import { MAPS_AVAILABLE, ServiceMap, ServicePin } from "./maps";
-import { LocationProblem, useCurrentLocation } from "./useCurrentLocation";
+import { LocationProblem, useCurrentLocation, useForegroundLocationWatch } from "./useCurrentLocation";
 import { RouteSummary, useRoute } from "./useRoute";
 
 // ---- garage adapters: this customer-only screen keeps its structure; these give it the "Mo's Garage" look ----
@@ -129,6 +131,7 @@ type Provider = {
   lng: number;
   /** the pin is at the city centre, not at a real base / workshop point */
   approx: boolean;
+  routeDestination: Point | null;
   distanceKm: number | null;
   tow?: TowCompanyRow;
   mech?: MechanicRow;
@@ -184,6 +187,7 @@ function LayerChip({ kind, label, count, on, onPress }: { kind: Kind; label: str
  * (drawn here: the road route from your location, distance + approximate time; never handed off to another maps app).
  */
 export function ServiceMapScreen({ mode }: { mode: Mode }) {
+  const user = useSessionUser();
   const { c, row, align } = useTheme();
   const { t, isArabic } = useL();
   const insets = useSafeAreaInsets();
@@ -201,8 +205,11 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
   const [truckType, setTruckType] = useState<TruckType | null>(null);
   const [skill, setSkill] = useState<string | null>(null);
   const [skills, setSkills] = useState<string[]>([...MECHANIC_SKILLS]);
-  const [me, setMe] = useState<Point | null>(locationMemory.current);
-  const loc = useCurrentLocation();
+  const [seedFix, setSeedFix] = useState<LocationFix | null>(() => getLocationMemory(user.id));
+  const [tracking, setTracking] = useState(false);
+  const loc = useCurrentLocation("directions", user.id);
+  const live = useForegroundLocationWatch({ enabled: tracking, ownerId: user.id, initialFix: seedFix, purpose: "map" });
+  const me = live.fix?.point ?? null;
   const [tow, setTow] = useState<TowCompanyRow[]>([]);
   const [mech, setMech] = useState<MechanicRow[]>([]);
   const [shops, setShops] = useState<CatalogShopRow[]>([]);
@@ -273,19 +280,20 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
       for (const x of tow) {
         const base = x.baseLat !== null && x.baseLng !== null ? { lat: x.baseLat, lng: x.baseLng } : null;
         const at = base ?? cityCentre(x.city);
-        if (at) out.push({ kind: "tow", id: x.id, name: x.name, city: x.city, ...at, approx: !base, distanceKm: x.distanceKm ?? null, tow: x, words: [x.name, x.city, cityLabel(x.city, true), ...x.serviceCities] });
+        if (at) out.push({ kind: "tow", id: x.id, name: x.name, city: x.city, ...at, routeDestination: servicePosition(base, null).routeDestination, approx: !base, distanceKm: x.distanceKm ?? null, tow: x, words: [x.name, x.city, cityLabel(x.city, true), ...x.serviceCities] });
       }
     if (kinds.includes("mech"))
       for (const x of mech) {
-        const at = cityCentre(x.city); // MOTEXA stores no workshop coordinates yet: the pin is the city centre
-        if (at) out.push({ kind: "mech", id: x.id, name: x.name, city: x.city, ...at, approx: true, distanceKm: x.distanceKm ?? null, mech: x, words: [x.name, x.workshopName, x.city, cityLabel(x.city, true)] });
+        const position = servicePosition((x as MechanicRow & PublicWorkshopLocation).publicLocation, cityCentre(x.city));
+        const at = position.displayPosition;
+        if (at) out.push({ kind: "mech", id: x.id, name: x.name, city: x.city, ...at, routeDestination: position.routeDestination, approx: position.approx, distanceKm: x.distanceKm ?? null, mech: x, words: [x.name, x.workshopName, x.city, cityLabel(x.city, true)] });
       }
     if (kinds.includes("shop"))
       for (const x of shops) {
         // only a really stored point (rounded ~110 m by the server); a shop without one is never placed at its city centre
         if (x.baseLat === null || x.baseLng === null) continue;
         const at = { lat: x.baseLat, lng: x.baseLng };
-        out.push({ kind: "shop", id: x.id, name: (isArabic && x.nameAr) || x.name, city: x.city, ...at, approx: false, distanceKm: me ? haversineKm(me, at) : null, shop: x, words: [x.name, x.nameAr ?? "", x.brandName ?? "", x.city, cityLabel(x.city, true)] });
+        out.push({ kind: "shop", id: x.id, name: (isArabic && x.nameAr) || x.name, city: x.city, ...at, routeDestination: servicePosition(at, null).routeDestination, approx: false, distanceKm: me ? haversineKm(me, at) : null, shop: x, words: [x.name, x.nameAr ?? "", x.brandName ?? "", x.city, cityLabel(x.city, true)] });
       }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -334,7 +342,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
   const form = isTow ? towForm : mechForm;
 
   const select = (p: Provider) => {
-    setDirId(null);
+    setDirId(current => current && p.routeDestination && (p.shop || p.mech) ? serviceRouteIdentity(p) : null);
     setHighlight((h) => (h && h.id !== p.id ? null : h));
     setSelectedId(p.id);
     setStep("select");
@@ -362,9 +370,10 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
     return [...pool].sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0))[0];
   };
   const nearMe = async () => {
-    if (me) {
-      locationMemory.current = null;
-      setMe(null);
+    if (tracking) {
+      setTracking(false);
+      setSeedFix(null);
+      clearLocationMemory(user.id);
       setHighlight(null);
       return;
     }
@@ -372,7 +381,8 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
     const p = await loc.locate();
     if (p) {
       pendingNear.current = loadCount;
-      setMe(p);
+      setSeedFix({ point: p, timestamp: Date.now(), source: "gps" });
+      setTracking(true);
       setFocus({ lat: p.lat, lng: p.lng, key: `me-${Date.now()}` });
     } else setSearching(false);
   };
@@ -399,7 +409,13 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
   const [wantNearest, setWantNearest] = useState(false);
   const nearest = () => {
     setSearching(true);
-    if (!me) loc.locate().then((p) => (p ? (setMe(p), setWantNearest(true)) : setSearching(false)));
+    if (!me || !live.fresh) loc.locate().then((p) => {
+      if (p) {
+        setSeedFix({ point: p, timestamp: Date.now(), source: "gps" });
+        setTracking(true);
+        setWantNearest(true);
+      } else setSearching(false);
+    });
     else setWantNearest(true);
   };
   useEffect(() => {
@@ -418,7 +434,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
     setReqProvider(selected);
     setStep("form");
     setSnap("expanded");
-    if (!form.spot && me) form.place(me, true);
+    if (!form.spot && me && live.fresh) form.place(me, true);
   };
   const send = async () => {
     if (!selected) return;
@@ -504,24 +520,31 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
 
   // ---- directions to a shop, inside MOTEXA: your location (asked once if needed) -> road route (straight line if the router fails) ----
   const [dirId, setDirId] = useState<string | null>(null);
+  const [dirStartKey, setDirStartKey] = useState("");
   const [dirBusy, setDirBusy] = useState(false);
   const [dirDenied, setDirDenied] = useState(false);
-  const dirTarget = step === "select" && selected?.shop && selected.id === dirId ? selected : null;
-  const dir = useRoute(dirTarget && me ? `dir:${dirTarget.id}` : null, dirTarget ? me : null, dirTarget ? { lat: dirTarget.lat, lng: dirTarget.lng } : null);
+  const dirTarget = step === "select" && selected?.routeDestination && (selected.shop || selected.mech) && serviceRouteIdentity(selected) === dirId ? selected : null;
+  const dir = useRoute(dirTarget && me ? `${serviceRouteIdentity(dirTarget)}:${dirStartKey}` : null, dirTarget ? me : null, dirTarget?.routeDestination ?? null, 50);
   const startDirections = async () => {
-    if (!selected) return;
-    const id = selected.id;
+    if (!selected?.routeDestination) return;
+    const id = serviceRouteIdentity(selected);
     setDirDenied(false);
-    if (!me) {
+    if (!me || !live.fresh) {
       setDirBusy(true);
       const p = await loc.locate();
       setDirBusy(false);
       if (!p) return setDirDenied(true);
-      setMe(p);
+      setSeedFix({ point: p, timestamp: Date.now(), source: "gps" });
+      setTracking(true);
     }
+    setDirStartKey(String(Date.now()));
     setDirId(id);
     setSnap("collapsed");
   };
+
+  useEffect(() => {
+    if (dirId && (!selected?.routeDestination || serviceRouteIdentity(selected) !== dirId)) setDirId(null);
+  }, [dirId, selected]);
 
   // ---- map props ----
   const pinOf = (p: Provider, dim: boolean): ServicePin => ({ id: p.id, name: p.name, lat: p.lat, lng: p.lng, kind: p.kind, dim, color: PLACE_COLOR[p.kind] });
@@ -570,7 +593,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
         <OverlayButton icon="back" label={t("Back", "رجوع")} onPress={() => goBack(HOME[mode] as never)} />
         <Text numberOfLines={1} style={[{ flex: 1, color: c.ink, fontSize: 20, fontWeight: "700" }, align]}>{titles[mode]}</Text>
         <OverlayButton icon="search" label={t("Search", "بحث")} on={showSearch || !!q} onPress={() => setShowSearch(!showSearch)} />
-        <OverlayButton icon="pin" label={me ? t("Stop using my location", "إيقاف استخدام موقعي") : t("Use my location", "استخدم موقعي")} on={!!me} onPress={nearMe} />
+        <OverlayButton icon="pin" label={tracking ? t("Stop using my location", "إيقاف استخدام موقعي") : t("Use my location", "استخدم موقعي")} on={tracking} onPress={nearMe} />
       </View>
       {showSearch || q ? <SearchField compact value={q} onChangeText={setQ} placeholder={searchHint[mode]} /> : null}
       {isAll ? (
@@ -755,7 +778,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
         ) : null}
         {selected.approx ? <Text style={[{ color: c.soft, fontSize: 11 }, align]}>{t("Approx. location: the pin is at the city centre.", "موقع تقريبي: الدبوس في مركز المدينة.")}</Text> : null}
         {dirTarget ? <RouteSummary route={dir.route} loading={dir.loading} /> : null}
-        {selected.shop && dirDenied && !dirTarget ? (
+        {(selected.shop || selected.mech) && selected.routeDestination && dirDenied && !dirTarget ? (
           <>
             <Text style={[{ color: c.ink, fontSize: 13 }, align]}>{t("MOTEXA needs your location to show the way. You can still browse the map.", "يحتاج MOTEXA إلى موقعك لعرض الطريق. يمكنك متابعة تصفح الخريطة.")}</Text>
             <LocationProblem loc={loc} />
@@ -773,9 +796,12 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
         )}
       </View>
     ) : (
+      <View style={{ gap: 10 }}>
       <View style={[row, { gap: 10 }]}>
         <PrimaryButton style={{ flex: 1 }} variant="outline" label={t("View profile", "عرض الملف")} onPress={() => router.push(isTow ? `/customer/tow/${selected.id}` : `/customer/mechanic/${selected.id}`)} />
         <PrimaryButton style={{ flex: 1 }} label={t("Request", "اطلب")} disabled={isTow && (selected.tow?.availableTrucks ?? 0) === 0} onPress={startForm} />
+      </View>
+      {selected.mech && selected.routeDestination ? <PrimaryButton variant="outline" icon="pin" label={dirTarget ? t("Close route", "إغلاق المسار") : t("Directions", "الاتجاهات")} loading={dirBusy} onPress={() => dirTarget ? setDirId(null) : void startDirections()} /> : null}
       </View>
     );
   } else if (step === "form" && selected) {
@@ -871,6 +897,11 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
     );
   }
 
+  const locationBannerText = live.message ?? loc.message ?? (me && !live.fresh
+    ? t("Showing your last known position. Refresh it for live directions.", "يُعرض آخر موقع معروف. حدّثه للحصول على اتجاهات مباشرة.")
+    : null);
+  const showLocationBanner = !!locationBannerText;
+
   if (!MAPS_AVAILABLE) {
     return (
       <View style={{ flex: 1, backgroundColor: c.page, alignItems: "center", justifyContent: "center", padding: 24, gap: 16 }}>
@@ -888,6 +919,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
         pins={pins}
         selectedId={step === "select" ? selectedId : selected?.id ?? null}
         me={me}
+        meFresh={live.fresh}
         pickup={step === "select" ? null : pickupPoint}
         movePickup={step === "form"}
         route={
@@ -918,8 +950,17 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
         onFailedChange={setMapFailed}
       />
       {overlay}
-      {step === "select" && (loc.locating || (searching && loading)) ? banner(loc.locating ? t("Finding your location…", "جارٍ تحديد موقعك…") : t("Finding the nearest…", "جارٍ البحث عن الأقرب…"), "neutral", <RoadLoader compact />) : null}
-      {!loading && !error && step === "select" && providers.length === 0 && !searching && !loc.locating ? banner(emptyText) : null}
+      {!showLocationBanner && step === "select" && (loc.locating || (searching && loading)) ? banner(loc.locating ? t("Finding your location…", "جارٍ تحديد موقعك…") : t("Finding the nearest…", "جارٍ البحث عن الأقرب…"), "neutral", <RoadLoader compact />) : null}
+      {showLocationBanner ? banner(
+        locationBannerText,
+        live.issue || loc.issue ? "danger" : "neutral",
+        (live.canOpenSettings || loc.canOpenSettings) ? (
+          <Pressable accessibilityRole="button" onPress={() => void (live.issue ? live.openSettings() : loc.openSettings())} hitSlop={8}>
+            <Text style={{ color: c.bronze, fontSize: 12, fontWeight: "700" }}>{t("Open Settings", "فتح الإعدادات")}</Text>
+          </Pressable>
+        ) : undefined
+      ) : null}
+      {!showLocationBanner && !loading && !error && step === "select" && providers.length === 0 && !searching && !loc.locating ? banner(emptyText) : null}
       {error && step === "select" ? banner(error, "danger", <Pressable accessibilityRole="button" onPress={load} hitSlop={8}><Text style={{ color: c.bronze, fontSize: 12, fontWeight: "700" }}>{t("Retry", "إعادة المحاولة")}</Text></Pressable>) : null}
       {mapFailed ? null : (
         <Text
@@ -943,6 +984,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
           if (at) setFocus({ lat: at.lat, lng: at.lng, key: `city-${k}-${Date.now()}`, zoom: 12 });
         }}
       />
+      {loc.dialog}
       <MapPanel visible={panelVisible && !!header} snap={snap} onSnap={setSnap} onInset={setInset} header={header} footer={footer}>
         {body}
       </MapPanel>

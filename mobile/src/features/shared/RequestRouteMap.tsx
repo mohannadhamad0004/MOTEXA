@@ -9,6 +9,7 @@ export function RequestRouteMap({
   reqId,
   kind,
   provider,
+  providerStale = false,
   pickup,
   route,
   height,
@@ -16,6 +17,7 @@ export function RequestRouteMap({
   reqId: string;
   kind: "tow" | "mech";
   provider: Point & { name: string };
+  providerStale?: boolean;
   pickup: Point;
   route: RouteResult | null;
   height: number;
@@ -27,7 +29,7 @@ export function RequestRouteMap({
     <ServiceMap
       height={height}
       bottomInset={36}
-      pins={[{ id: "p", name: provider.name, lat: provider.lat, lng: provider.lng, kind, dim: false }]}
+      pins={[{ id: "p", name: provider.name, lat: provider.lat, lng: provider.lng, kind, dim: providerStale }]}
       selectedId="p"
       me={null}
       pickup={pickup}

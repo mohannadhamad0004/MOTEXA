@@ -2,8 +2,9 @@ import { hapticError, hapticSuccess } from "../../motion";
 import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import { cityCentre } from "../../core/constants/cities";
-import { Point, locationMemory, roundPoint } from "../../core/constants/geo";
+import { isFreshLocation, Point, roundPoint } from "../../core/constants/geo";
 import { useL } from "../../core/hooks/useL";
+import { useSessionUser } from "../../core/session/session";
 import { currentCar } from "../catalog/myCar";
 import { MAPS_AVAILABLE, PinMap } from "../shared/maps";
 import { LocationProblem, reverseGeocode, useCurrentLocation } from "../shared/useCurrentLocation";
@@ -46,6 +47,7 @@ function Section({ title, children }: { n?: string; title: string; children: Rea
  * (customer/towrequest/new) and the panel on the map page both use it, so the rules live in one place.
  */
 export function useTowRequestForm(company: { id: string; city: string }) {
+  const user = useSessionUser();
   const { t } = useL();
   const car = currentCar(); // from "Fits my car" when set; still editable
   const [pickup, setPickup] = useState("");
@@ -62,7 +64,7 @@ export function useTowRequestForm(company: { id: string; city: string }) {
   const [spot, setSpot] = useState<Point | null>(null);
   const [auto, setAuto] = useState(false); // the pickup text was filled in from the map, so moving the pin may refresh it
   const [finding, setFinding] = useState(false);
-  const loc = useCurrentLocation();
+  const loc = useCurrentLocation("tow-request", user.id);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -114,8 +116,16 @@ export function useTowRequestForm(company: { id: string; city: string }) {
     cancelLookup();
     setSpot(null);
   };
-  /** Drops the pin at your last known position, else at the company's city centre. */
-  const startPin = () => place(locationMemory.current ?? cityCentre(company.city) ?? { lat: 32.2211, lng: 35.2544 }, false);
+  /** Drops the pin at a fresh reading from this form, else at a known company-city centre. */
+  const startPin = () => {
+    const point = loc.fix && isFreshLocation(loc.fix.timestamp) ? loc.fix.point : cityCentre(company.city);
+    if (!point) {
+      setErr(t("Use your current location or choose a valid company city first.", "استخدم موقعك الحالي أو اختر مدينة الشركة الصحيحة أولًا."));
+      return;
+    }
+    setErr(null);
+    place(point, false);
+  };
 
   /** Validates and sends. Returns the request id (a 409 "already open" answer returns that request's id), or null. */
   const submit = async () => {

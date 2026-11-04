@@ -1,8 +1,6 @@
 // Shared pieces of the parts-order screens (customer, shop owner, parts admin): labels, tones, the status timeline, the money
 // card, a quantity stepper, the order map and the owner's live location while he delivers.
-import * as Location from "expo-location";
-import { useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { View } from "react-native";
 import { Card, GIcon, GText, Tap, Timeline, TimelineStep, Tone } from "../../components/garage";
 import { formatPrice } from "../../core/constants/money";
@@ -12,6 +10,7 @@ import { gShape, gType, useGarageTheme } from "../../theme/garage";
 import { fmtDateTime } from "../requests/requestBits";
 import { MAPS_AVAILABLE, ServiceMap, ServicePin } from "../shared/maps";
 import { RouteSummary, useRoute } from "../shared/useRoute";
+import { useForegroundLocationWatch } from "../shared/useCurrentLocation";
 import { Fulfilment, OrderStatus } from "./ordersService";
 
 type AnyOrder = {
@@ -126,15 +125,14 @@ export function QtyStepper({ value, max, onChange }: { value: number; max: numbe
 
 /**
  * Our map for one order: the delivery pin (A), the shop, the owner's live point (customer / admin) or his own dot (owner), and
- * the road route from where he is (or the shop) to the customer, with distance + time. The route is asked again only when the
- * start moves ~100 m, so a live point every 10 s does not flood the router.
+ * the road route from where he is (or the shop) to the customer, with distance + time. The route is refreshed only when the
+ * start moves about 50 m, so GPS noise does not flood the router.
  */
-export function OrderMap({ orderId, height, delivery, shop, courier, me }: { orderId: string; height: number; delivery: Point | null; shop: Point | null; courier: Point | null; me?: Point | null }) {
+export function OrderMap({ orderId, height, delivery, shop, courier, me, meFresh = true }: { orderId: string; height: number; delivery: Point | null; shop: Point | null; courier: Point | null; me?: Point | null; meFresh?: boolean }) {
   const { g, align } = useGarageTheme();
   const { t } = useL();
   const from = me ?? courier ?? shop;
-  const r3 = (p: Point | null) => (p ? { lat: Math.round(p.lat * 1000) / 1000, lng: Math.round(p.lng * 1000) / 1000 } : null);
-  const { route, loading } = useRoute(delivery && from ? `order:${orderId}` : null, r3(from), delivery);
+  const { route, loading } = useRoute(delivery && from ? `order:${orderId}` : null, from, delivery, 50);
   const pins: ServicePin[] = [
     ...(shop ? [{ id: "shop", name: t("Shop", "المتجر"), lat: shop.lat, lng: shop.lng, kind: "shop" as const, dim: false, color: "#2F6B8A" }] : []),
     ...(courier && !me ? [{ id: "courier", name: t("The shop owner", "صاحب المتجر"), lat: courier.lat, lng: courier.lng, kind: "tow" as const, dim: false, color: "#B5541C" }] : []),
@@ -154,6 +152,7 @@ export function OrderMap({ orderId, height, delivery, shop, courier, me }: { ord
           pins={pins}
           selectedId={null}
           me={me ?? null}
+          meFresh={meFresh}
           pickup={delivery}
           route={route ? { coords: route.coords, dashed: route.kind === "line", key: `order:${orderId}:${route.kind}` } : null}
           fit={fit}
@@ -173,36 +172,29 @@ export function OrderMap({ orderId, height, delivery, shop, courier, me }: { ord
  * sent about every 10 s so the customer can follow. Stops when the screen loses focus or the order leaves that status.
  */
 export function useShareLocation(key: string, sharing: boolean, send: (p: Point) => Promise<unknown>) {
-  const { t } = useL();
-  const [me, setMe] = useState<Point | null>(null);
-  const [problem, setProblem] = useState<string | null>(null);
-  useFocusEffect(
-    useCallback(() => {
-      let alive = true;
-      let sub: Location.LocationSubscription | null = null;
-      let last = 0;
-      (async () => {
-        const perm = await Location.requestForegroundPermissionsAsync();
-        if (!alive) return;
-        if (!perm.granted) return setProblem(t("Allow location so the customer can follow the delivery.", "اسمح بالموقع حتى يتابع الزبون التوصيل."));
-        setProblem(null);
-        sub = await Location.watchPositionAsync({ accuracy: Location.Accuracy.High, timeInterval: 10_000, distanceInterval: 0 }, (pos) => {
-          if (!alive) return;
-          const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          setMe(p);
-          if (sharing && Date.now() - last >= 9_000) {
-            last = Date.now();
-            send(p).catch(() => undefined);
-          }
-        });
-        if (!alive) sub.remove();
-      })().catch(() => alive && setProblem(t("Your location could not be read.", "تعذّرت قراءة موقعك.")));
-      return () => {
-        alive = false;
-        sub?.remove();
-      };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [key, sharing])
-  );
-  return { me, problem };
+  const sendRef = useRef(send);
+  sendRef.current = send;
+  const last = useRef(0);
+  useEffect(() => { last.current = 0; }, [key, sharing]);
+  const onFix = useCallback((fix: { point: Point }) => {
+    const now = Date.now();
+    if (now - last.current < 9_000) return;
+    last.current = now;
+    sendRef.current(fix.point).catch(() => undefined);
+  }, []);
+  const feed = useForegroundLocationWatch({
+    enabled: sharing,
+    restartKey: key,
+    purpose: "active",
+    requestIfUndetermined: true,
+    onFix,
+  });
+  return {
+    me: sharing ? feed.fix?.point ?? null : null,
+    meFresh: feed.fresh,
+    problem: feed.message,
+    issue: feed.issue,
+    canOpenSettings: feed.canOpenSettings,
+    openSettings: feed.openSettings,
+  };
 }

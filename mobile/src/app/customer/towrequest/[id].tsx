@@ -60,9 +60,9 @@ export default function TowRequestStatus() {
   const base = co ? (co.baseLat !== null && co.baseLng !== null ? { lat: co.baseLat, lng: co.baseLng } : cityCentre(co.city)) : null;
   // once a driver works on it: the truck's live point (route from the truck), else the company base
   const live = r?.driver?.live ?? null;
-  const r3 = (n: number) => Math.round(n * 1000) / 1000;
-  const provider = live ? { lat: r3(live.lat), lng: r3(live.lng) } : base;
-  const { route, loading: routing } = useRoute(r ? `${r.id}:${provider ? `${provider.lat},${provider.lng}` : "-"}` : null, r?.pickup ?? null, provider);
+  // The assigned driver's point is from the authorized live-tracking response; company base coordinates are already public-rounded by the API.
+  const provider = live ? { lat: live.lat, lng: live.lng } : base;
+  const { route, loading: routing } = useRoute(r?.id ? `tow:${r.id}` : null, r?.pickup ?? null, provider, 50);
   // the map opens by itself while the truck is live; the customer can still hide it
   const mapOpen = mapChoice ?? !!live;
   const canMap = MAPS_AVAILABLE && !!r?.pickup && !!provider;
@@ -99,7 +99,7 @@ export default function TowRequestStatus() {
               <ListRow icon="map-outline" title={mapOpen ? t("Hide map", "إخفاء الخريطة") : t("View on map", "عرض على الخريطة")} onPress={() => setMapOpen(!mapOpen)} />
               {mapOpen ? (
                 <View style={{ marginTop: 8, borderRadius: gShape.small, overflow: "hidden" }}>
-                  <RequestRouteMap reqId={r.id} kind="tow" height={280} provider={{ ...provider!, name: r.driver ? r.driver.firstName : r.company.name }} pickup={r.pickup!} route={route} />
+                  <RequestRouteMap reqId={r.id} kind="tow" height={280} provider={{ ...provider!, name: r.driver ? r.driver.firstName : r.company.name }} providerStale={!!live?.stale} pickup={r.pickup!} route={route} />
                 </View>
               ) : null}
               {r.driver ? <ListRow divider icon="person-circle-outline" title={`${t("Your driver", "سائقك")}: ${r.driver.firstName}`} sub={liveLabel(live, t)} /> : null}

@@ -32,7 +32,7 @@ function ProfileForm({ company }: { company: TowCompany }) {
   const [cities, setCities] = useState<string[]>(company.serviceCities);
   // The business location customers see on the map (rounded to about 100 m for them). Read from the phone only when you tap.
   const [base, setBase] = useState<Point | null>(company.baseLat !== null && company.baseLng !== null ? { lat: company.baseLat, lng: company.baseLng } : null);
-  const loc = useCurrentLocation();
+  const loc = useCurrentLocation("signup");
   const moveBase = (p: Point | null) => {
     setBase(p);
     setSaved(false);

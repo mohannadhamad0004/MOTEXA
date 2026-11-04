@@ -8,7 +8,7 @@ import { gType, useGarageTheme } from "../../theme/garage";
 import { carName } from "./catalogBits";
 import { CatalogProduct, PartSort, appendDistinct, catalogService } from "./catalogService";
 import { ActiveFilters, FilterSheet } from "./FilterSheet";
-import { Car, openMyCarPicker, saveMyCar, useMyCar } from "./myCar";
+import { Car, openMyCarPicker, openAddGarageCar, activateCar, garageError, matchingGarageCars, canAddGarageCar, useGarage } from "./myCar";
 import { useVehicleList } from "./VehiclePicker";
 import { matchVehicle } from "./vehicleMatch";
 import { EMPTY_FILTERS, PartFilters, countFilters, filterMemory, filterParams } from "./filters";
@@ -69,7 +69,7 @@ export function ProductBrowser({
   const { g } = useGarageTheme();
   const [q, setQ] = useState(initialQ ?? "");
   // the account's car (shared by every screen) and, from a search like "elantra 2018", another car being browsed
-  const { car: myCar } = useMyCar();
+  const { activeCar: myCar, garageCars, selectionRevision, busy, error: garageLoadError } = useGarage();
   const [browse, setBrowse] = useState<Car | null>(null);
   const [fitEnabled, setFitEnabled] = useState(true);
   const vehicles = useVehicleList().list;
@@ -112,12 +112,11 @@ export function ProductBrowser({
 
   const openCar = openMyCarPicker;
   // a newly saved car is the one shown (any browsed car is dropped), with the fit on
-  const myKey = myCar ? `${myCar.make}|${myCar.model}|${myCar.year}` : "";
+  const myKey = myCar ? `${myCar.id}|${myCar.make}|${myCar.model}|${myCar.year}|${myCar.generation?.id ?? ""}` : "";
   useEffect(() => {
-    if (!myKey) return;
     setBrowse(null);
     setFitEnabled(true);
-  }, [myKey]);
+  }, [myKey, selectionRevision]);
   useEffect(() => {
     if (!initialFit) return;
     if (carSet) setFitEnabled(true);
@@ -147,14 +146,15 @@ export function ProductBrowser({
     setQ(hit.rest);
   };
   const [saveErr, setSaveErr] = useState<string | null>(null);
+  const savedMatches = browse ? matchingGarageCars(garageCars, browse) : [];
   const setAsMine = async () => {
     if (!browse?.year) return;
     setSaveErr(null);
+    if (savedMatches.length > 1) { openCar(); return; }
     try {
-      await saveMyCar({ make: browse.make, model: browse.model, year: Number(browse.year) });
-    } catch (e: any) {
-      setSaveErr(e.message);
-    }
+      if (savedMatches.length === 1) { await activateCar(savedMatches[0].id); setBrowse(null); setFitEnabled(true); }
+      else openAddGarageCar({ make: browse.make, model: browse.model, year: Number(browse.year) });
+    } catch (e) { setSaveErr(garageError(e, t)); }
   };
 
   const run = useCallback(
@@ -241,17 +241,18 @@ export function ProductBrowser({
         {fitOn && car ? (
           <>
             <View style={{ flexShrink: 1 }}>
-              <Chip icon="car-sport" label={`${t("Parts for", "قطع تناسب")} ${carLabel(car)}`} on onPress={browse ? undefined : openCar} />
+              <Chip icon="car-sport" label={`${t("Parts for", "قطع تناسب")} ${carLabel(car)}`} on onPress={openCar} />
             </View>
             <Tap label={t("Clear vehicle", "إزالة المركبة")} onPress={clearCar} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
               <GIcon name="close" size={18} color={g.soft} />
             </Tap>
-            {browse?.year ? <GButton variant="ghost" icon="car-sport-outline" label={t("Set as my car", "اجعلها سيارتي")} onPress={() => void setAsMine()} style={{ minHeight: 44 }} /> : null}
+            {browse?.year ? <GButton variant="ghost" icon="car-sport-outline" label={savedMatches.length ? t("Make active", "تعيين كنشطة") : t("Add to Garage", "إضافة إلى الكراج")} disabled={busy || !!garageLoadError || (!savedMatches.length && !canAddGarageCar(garageCars))} onPress={() => void setAsMine()} style={{ minHeight: 44 }} /> : null}
           </>
         ) : (
           <Chip icon="car-sport-outline" label={carSet ? `${t("Show parts for", "عرض قطع")} ${carLabel(car!)}` : t("Find parts for your car", "ابحث عن قطع لسيارتك")} onPress={carSet ? onFitPress : openCar} />
         )}
       </View>
+      {browse && !canAddGarageCar(garageCars) && !savedMatches.length ? <Note>{t("You've reached the 10-car Garage limit.", "وصلت إلى الحد الأقصى للكراج: 10 سيارات.")}</Note> : null}
       {saveErr ? <Note tone="danger" icon="alert-circle-outline">{saveErr}</Note> : null}
 
       {afterSearch ? <View style={{ marginTop: 8 }}>{afterSearch}</View> : null}

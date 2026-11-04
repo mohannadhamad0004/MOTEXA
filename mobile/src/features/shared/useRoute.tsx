@@ -1,21 +1,33 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import { Mono, RoadLoader } from "../../components/blueprint";
 import { Text } from "../../components/ui/Text";
 import { useL } from "../../core/hooks/useL";
 import { useTheme } from "../../theme/useTheme";
 import { LatLng, RouteResult, cachedRoute, getRoute, routeCacheKey } from "./routing";
+import { shouldRefreshLocationRoute } from "../../core/constants/geo";
 
 /**
  * The route from a pickup point to a provider for one request: a road route from OSRM, or a straight line when OSRM
  * is offline / slow. `route` is null while the first answer is on its way. Cached per request for the session.
  */
-export function useRoute(requestId: string | null, from: LatLng | null, to: LatLng | null) {
-  const key = requestId && from && to ? routeCacheKey(requestId, from, to) : null;
+export function useRoute(requestId: string | null, from: LatLng | null, to: LatLng | null, movementThresholdMeters = 0) {
+  const anchor = useRef<{ requestId: string; from: LatLng; to: LatLng } | null>(null);
+  if (movementThresholdMeters > 0 && requestId && from && to) {
+    const previous = anchor.current;
+    if (shouldRefreshLocationRoute(previous, requestId, from, to, movementThresholdMeters)) {
+      anchor.current = { requestId, from, to };
+    }
+  } else if (!requestId || !from || !to || movementThresholdMeters <= 0) {
+    anchor.current = null;
+  }
+  const routeFrom = movementThresholdMeters > 0 ? anchor.current?.from ?? from : from;
+  const routeTo = movementThresholdMeters > 0 ? anchor.current?.to ?? to : to;
+  const key = requestId && routeFrom && routeTo ? routeCacheKey(requestId, routeFrom, routeTo) : null;
   const [route, setRoute] = useState<RouteResult | null>(key ? cachedRoute(key) : null);
   const [loading, setLoading] = useState(!!key && !(key && cachedRoute(key)));
   useEffect(() => {
-    if (!key || !from || !to) {
+    if (!key || !routeFrom || !routeTo) {
       setRoute(null);
       setLoading(false);
       return;
@@ -29,7 +41,7 @@ export function useRoute(requestId: string | null, from: LatLng | null, to: LatL
     let live = true;
     setRoute(null);
     setLoading(true);
-    getRoute(key, from, to).then((r) => {
+    getRoute(key, routeFrom, routeTo).then((r) => {
       if (live) {
         setRoute(r);
         setLoading(false);

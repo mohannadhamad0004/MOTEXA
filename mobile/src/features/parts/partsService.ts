@@ -10,7 +10,8 @@ import { fileNameOf, isServerFile, localFileToBase64, publicImageUrl } from "../
 
 export type Verification = "PENDING" | "APPROVED" | "REJECTED" | "DRAFT" | "NEEDS_CHANGES";
 
-export type Fitment = { make: string; model: string; yearFrom: number; yearTo: number; trim?: string };
+/** generationId: the shop ticked a generation ("Fits W202"); the server then stores that generation's years */
+export type Fitment = { make: string; model: string; yearFrom: number; yearTo: number; trim?: string; generationId?: string };
 
 export type Product = {
   id: string;
@@ -157,7 +158,7 @@ async function toBody(i: ProductInput) {
     condition: i.condition,
     partType: i.partType, // null clears it ("not specified")
     // Always sent: the server replaces the stored set with this one.
-    fitments: i.fitments.map((f) => ({ make: f.make, model: f.model, yearFrom: f.yearFrom, yearTo: f.yearTo, trim: f.trim?.trim() || null })),
+    fitments: i.fitments.map((f) => ({ make: f.make, model: f.model, yearFrom: f.yearFrom, yearTo: f.yearTo, trim: f.trim?.trim() || null, generationId: f.generationId ?? null })),
     isUniversal: i.isUniversal,
   };
   if (i.imageUri && !isServerFile(i.imageUri) && !i.imageUri.startsWith("http")) {
