@@ -17,6 +17,7 @@ export type ModelEntry = { file: string; url: string; license: string; inApp?: b
 export async function seedGenerations() {
   await seedVehicles();
   const rows = parseTsv(readFileSync(new URL("docs/3d/generations-master.tsv", ROOT), "utf8"));
+  const existing=await prisma.vehicleGeneration.count();if(existing)return {n:existing,total:rows.length,noVehicle:[],badYears:[],guessedYears:[]}; // Never overwrite Parts Admin management.
   const photos = json<PhotoEntry>("backend/public/cars/photos.json");
   const models = json<ModelEntry>("docs/3d/models.json");
   const vehicles = await prisma.vehicle.findMany();
@@ -42,6 +43,7 @@ export async function seedGenerations() {
     const p = photos[key];
     const m = models[key]?.inApp === false ? undefined : models[key]; // review models are not shown in the app
     const data = {
+      isPublished:!!m,catalogNormalizedCode:r.code.toLowerCase().replace(/[^a-z0-9]/g,""),
       nameEn: `${v.model} ${r.code}`,
       nameAr: `${v.modelAr} ${r.code}`,
       yearFrom: y.from,

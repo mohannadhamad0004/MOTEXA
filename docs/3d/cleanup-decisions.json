@@ -1,0 +1,1082 @@
+[
+  {
+    "key": "toyota-corolla-e170-e180",
+    "vehicle": "Toyota Corolla E170/E180",
+    "previous": "PASS",
+    "action": "KEEP",
+    "status": "PASS",
+    "reason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "bmw-1-series-f20-f21",
+    "vehicle": "BMW 1 Series F20/F21",
+    "previous": "REPLACE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Original is severely incomplete/fragmented around front and rear body; prepared remains broken.",
+    "replacement": null
+  },
+  {
+    "key": "bmw-3-series-e36",
+    "vehicle": "BMW 3 Series E36",
+    "previous": "PASS",
+    "action": "KEEP",
+    "status": "PASS_VARIANT",
+    "reason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation. Verified variant: Street-modified E36.",
+    "replacement": null
+  },
+  {
+    "key": "bmw-3-series-e46",
+    "vehicle": "BMW 3 Series E46",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing keepBox removes exploded alternatives but prepared wheel placement/materials remain questionable.",
+    "replacement": null
+  },
+  {
+    "key": "bmw-5-series-e34",
+    "vehicle": "BMW 5 Series E34",
+    "previous": "REPLACE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Original and prepared both show displaced/missing wheels or major body/trim pieces; source assembly/geometry unsuitable as delivered.",
+    "replacement": null
+  },
+  {
+    "key": "bmw-5-series-e39",
+    "vehicle": "BMW 5 Series E39",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Source has distant exploded components and miniature framed body; mesh-selection/assembly review required.",
+    "replacement": null
+  },
+  {
+    "key": "bmw-5-series-e60-e61",
+    "vehicle": "BMW 5 Series E60/E61",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Source and prepared contain vertically exploded body alternatives; cannot confirm safe component selection.",
+    "replacement": null
+  },
+  {
+    "key": "bmw-5-series-g30-g31",
+    "vehicle": "BMW 5 Series G30/G31",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Distant exploded geometry dominates bounds in both versions; inspect assembly selection before replacement.",
+    "replacement": null
+  },
+  {
+    "key": "bmw-x1-f48",
+    "vehicle": "BMW X1 F48",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "bmw-x1-u11",
+    "vehicle": "BMW X1 U11",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "bmw-x3-e83",
+    "vehicle": "BMW X3 E83",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Body surfaces remain partly translucent; material correction feasibility needs review.",
+    "replacement": null
+  },
+  {
+    "key": "bmw-x3-g01",
+    "vehicle": "BMW X3 G01",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Fresh renders show patchy/translucent body and glazing surfaces; remove rather than investigate material reconstruction.",
+    "replacement": null
+  },
+  {
+    "key": "bmw-x5-e53",
+    "vehicle": "BMW X5 E53",
+    "previous": "PASS",
+    "action": "KEEP",
+    "status": "PASS_VARIANT",
+    "reason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation. Verified variant: Restyled/facelift E53.",
+    "replacement": null
+  },
+  {
+    "key": "bmw-x5-e70",
+    "vehicle": "BMW X5 E70",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Broad paint corrected; source retains pink glazing/material artifacts. Not demo-approved.",
+    "replacement": null
+  },
+  {
+    "key": "bmw-x5-g05",
+    "vehicle": "BMW X5 G05",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Transparent patchy body in both versions; material correction needs review.",
+    "replacement": null
+  },
+  {
+    "key": "ford-fiesta-mk6",
+    "vehicle": "Ford Fiesta Mk6",
+    "previous": "REPLACE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Original and prepared both show displaced/missing wheels or major body/trim pieces; source assembly/geometry unsuitable as delivered.",
+    "replacement": null
+  },
+  {
+    "key": "ford-focus-mk1",
+    "vehicle": "Ford Focus Mk1",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Both versions contain multiple separate/overlapping body variants, with incorrect prepared heading; assembly selection needs review.",
+    "replacement": null
+  },
+  {
+    "key": "ford-focus-mk2",
+    "vehicle": "Ford Focus Mk2",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "ford-focus-mk3",
+    "vehicle": "Ford Focus Mk3",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Monochrome body/wheels and reversed heading; generation shape plausible but materials need review.",
+    "replacement": null
+  },
+  {
+    "key": "ford-focus-mk4",
+    "vehicle": "Ford Focus Mk4",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "No safe body paint configuration; original-finish-only model removed from the recolorable demo collection.",
+    "replacement": null
+  },
+  {
+    "key": "ford-kuga-mk2",
+    "vehicle": "Ford Kuga Mk2",
+    "previous": "FIX_PIPELINE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Prepared build throws SkinnedMesh missing bone matrixWorld error; original renders, though its orientation/materials also need work. Repair skeleton preservation before replacement decision.",
+    "replacement": null
+  },
+  {
+    "key": "ford-ranger-t6",
+    "vehicle": "Ford Ranger T6",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Red-paint comparison changes only part of the body while hood, fenders and wheels remain featureless white; incomplete material handling.",
+    "replacement": null
+  },
+  {
+    "key": "ford-transit-8th-gen-facelift",
+    "vehicle": "Ford Transit 8th gen facelift",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "ford-transit-8th-gen-pre-facelift",
+    "vehicle": "Ford Transit 8th gen pre-facelift",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "hyundai-accent-lc",
+    "vehicle": "Hyundai Accent LC",
+    "previous": "PASS",
+    "action": "KEEP",
+    "status": "PASS",
+    "reason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "hyundai-accent-x3",
+    "vehicle": "Hyundai Accent X3",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "hyundai-elantra-j2-rd",
+    "vehicle": "Hyundai Elantra J2/RD",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "hyundai-i10-ac3-ai3",
+    "vehicle": "Hyundai i10 AC3/AI3",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Whole-body material tint and low contrast; inspect material assignment before approval.",
+    "replacement": null
+  },
+  {
+    "key": "hyundai-i20-pb",
+    "vehicle": "Hyundai i20 PB",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Several body variants and detached kit pieces share the scene; selection/reassembly feasibility uncertain.",
+    "replacement": null
+  },
+  {
+    "key": "hyundai-i30-fd",
+    "vehicle": "Hyundai i30 FD",
+    "previous": "PASS_AFTER_FIX",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Over 1M triangles; remove for predictable demo loading rather than invasive optimization.",
+    "replacement": null
+  },
+  {
+    "key": "hyundai-kona-os",
+    "vehicle": "Hyundai Kona OS",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "No safe body paint configuration; original-finish-only model removed from the recolorable demo collection.",
+    "replacement": null
+  },
+  {
+    "key": "hyundai-santa-fe-mx5",
+    "vehicle": "Hyundai Santa Fe MX5",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Vehicle is assembled but heading is reversed and roof/window surfaces are patchy; inspect materials and variant correctness.",
+    "replacement": null
+  },
+  {
+    "key": "hyundai-sonata-nf",
+    "vehicle": "Hyundai Sonata NF",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Floor is fused into the single mesh Object_4/Object_0; node/config removal cannot isolate it. No geometry edited.",
+    "replacement": null
+  },
+  {
+    "key": "hyundai-tucson-lm-ix35",
+    "vehicle": "Hyundai Tucson LM/ix35",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Nearly white materials make details/wheels difficult to verify; keep for material/generation review.",
+    "replacement": null
+  },
+  {
+    "key": "kia-cerato-yd",
+    "vehicle": "Kia Cerato YD",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "No safe body paint configuration; original-finish-only model removed from the recolorable demo collection.",
+    "replacement": null
+  },
+  {
+    "key": "kia-optima-mg",
+    "vehicle": "Kia Optima MG",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Baked/scan-like texture and background floor remain; quality borderline for demo.",
+    "replacement": null
+  },
+  {
+    "key": "kia-optima-tf",
+    "vehicle": "Kia Optima TF",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Assembled but exact Optima generation and material quality require confirmation.",
+    "replacement": null
+  },
+  {
+    "key": "kia-rio-yb-sc",
+    "vehicle": "Kia Rio YB/SC",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "All-white rendering obscures surfaces/wheel integrity; inspect materials before deciding.",
+    "replacement": null
+  },
+  {
+    "key": "kia-sorento-um",
+    "vehicle": "Kia Sorento UM",
+    "previous": "FIX_PIPELINE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Prepared build fails in SkinnedMesh bone matrixWorld evaluation; original renders but is sideways/pale. Skeleton handling must be repaired and then rechecked.",
+    "replacement": null
+  },
+  {
+    "key": "kia-sportage-sl",
+    "vehicle": "Kia Sportage SL",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "No safe body paint configuration; original-finish-only model removed from the recolorable demo collection.",
+    "replacement": null
+  },
+  {
+    "key": "mercedes-a-class-w169",
+    "vehicle": "Mercedes-Benz A-Class W169",
+    "previous": "PASS_AFTER_FIX",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Red-paint comparison tints cabin/seats as well as the exterior; remove rather than keep broad unsafe paint assignment.",
+    "replacement": null
+  },
+  {
+    "key": "mercedes-a-class-w176",
+    "vehicle": "Mercedes-Benz A-Class W176",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Assembled but washed-out glazing/body materials need approval.",
+    "replacement": null
+  },
+  {
+    "key": "mercedes-c-class-w202",
+    "vehicle": "Mercedes-Benz C-Class W202",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Over 1M triangles; remove for predictable demo loading rather than invasive optimization.",
+    "replacement": null
+  },
+  {
+    "key": "mercedes-c-class-w203",
+    "vehicle": "Mercedes-Benz C-Class W203",
+    "previous": "PASS_AFTER_FIX",
+    "action": "KEEP",
+    "status": "PASS_AFTER_FIX",
+    "reason": "Upright, assembled, grounded, front heading and framing verified improved in front-three-quarter, left-side and rear-three-quarter comparisons.",
+    "replacement": null
+  },
+  {
+    "key": "mercedes-c-class-w204",
+    "vehicle": "Mercedes-Benz C-Class W204",
+    "previous": "REPLACE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Original and prepared have empty wheel arches, wheel below body centre and loose underbody pieces: source assembly defect.",
+    "replacement": null
+  },
+  {
+    "key": "mercedes-e-class-w212",
+    "vehicle": "Mercedes-Benz E-Class W212",
+    "previous": "PASS_AFTER_FIX",
+    "action": "KEEP",
+    "status": "PASS_AFTER_FIX",
+    "reason": "Upright, assembled, grounded, front heading and framing verified improved in front-three-quarter, left-side and rear-three-quarter comparisons.",
+    "replacement": null
+  },
+  {
+    "key": "mercedes-vito-w447",
+    "vehicle": "Mercedes-Benz Vito W447",
+    "previous": "PASS",
+    "action": "KEEP",
+    "status": "PASS",
+    "reason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "mercedes-vito-w638",
+    "vehicle": "Mercedes-Benz Vito W638",
+    "previous": "REPLACE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Original and prepared both show displaced/missing wheels or major body/trim pieces; source assembly/geometry unsuitable as delivered.",
+    "replacement": null
+  },
+  {
+    "key": "mitsubishi-l200-3rd-gen-k60-k70",
+    "vehicle": "Mitsubishi L200 3rd gen / K60-K70",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Over 1M triangles; remove for predictable demo loading rather than invasive optimization.",
+    "replacement": null
+  },
+  {
+    "key": "mitsubishi-l200-4th-gen-ka-kb",
+    "vehicle": "Mitsubishi L200 4th gen / KA-KB",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Configured paint material does not exist in the served GLB; source remains red. Remove rather than guess broad recoloring.",
+    "replacement": null
+  },
+  {
+    "key": "mitsubishi-lancer-5th-6th-era-evo-iii",
+    "vehicle": "Mitsubishi Lancer 5th/6th-era Evo III",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "mitsubishi-outlander-4th-gen-gm-gn",
+    "vehicle": "Mitsubishi Outlander 4th gen / GM/GN",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Washed-out materials and exact-generation detail need confirmation.",
+    "replacement": null
+  },
+  {
+    "key": "mitsubishi-pajero-2nd-gen-v20",
+    "vehicle": "Mitsubishi Pajero 2nd gen / V20",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Large background walls dominate both renders and hide the car; isolate geometry before deciding suitability.",
+    "replacement": null
+  },
+  {
+    "key": "mitsubishi-pajero-4th-gen-v80",
+    "vehicle": "Mitsubishi Pajero 4th gen / V80",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Exploded wheel/body alternatives in both versions; safe variant selection/reassembly not confirmed.",
+    "replacement": null
+  },
+  {
+    "key": "nissan-juke-f15",
+    "vehicle": "Nissan Juke F15",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Assembled Juke faces backward in front view; heading configuration needs correction.",
+    "replacement": null
+  },
+  {
+    "key": "nissan-micra-k12",
+    "vehicle": "Nissan Micra K12",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "nissan-micra-k13",
+    "vehicle": "Nissan Micra K13",
+    "previous": "REPLACE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Original and prepared both show displaced/missing wheels or major body/trim pieces; source assembly/geometry unsuitable as delivered.",
+    "replacement": null
+  },
+  {
+    "key": "nissan-navara-d22",
+    "vehicle": "Nissan Navara D22",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Red-paint comparison recolors wheels and trim with the body; broad material assignment is unsafe.",
+    "replacement": null
+  },
+  {
+    "key": "nissan-navara-d40",
+    "vehicle": "Nissan Navara D40",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "nissan-x-trail-t32",
+    "vehicle": "Nissan X-Trail T32",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Scene base and nearly white materials remain; geometry/material cleanup feasibility uncertain.",
+    "replacement": null
+  },
+  {
+    "key": "peugeot-2008-1st-gen-a94",
+    "vehicle": "Peugeot 2008 1st gen / A94",
+    "previous": "REPLACE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Original and prepared both show displaced/missing wheels or major body/trim pieces; source assembly/geometry unsuitable as delivered.",
+    "replacement": null
+  },
+  {
+    "key": "peugeot-206-206",
+    "vehicle": "Peugeot 206 206",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "peugeot-207-207",
+    "vehicle": "Peugeot 207 207",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Heading corrected; paint disabled to protect glass/trim, but source remains nearly featureless white. Material review needed.",
+    "replacement": null
+  },
+  {
+    "key": "peugeot-208-1st-gen-a9",
+    "vehicle": "Peugeot 208 1st gen / A9",
+    "previous": "REPLACE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Original and prepared both show displaced/missing wheels or major body/trim pieces; source assembly/geometry unsuitable as delivered.",
+    "replacement": null
+  },
+  {
+    "key": "peugeot-208-2nd-gen-p21",
+    "vehicle": "Peugeot 208 2nd gen / P21",
+    "previous": "PASS",
+    "action": "KEEP",
+    "status": "PASS",
+    "reason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "peugeot-301-m3",
+    "vehicle": "Peugeot 301 M3",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Almost featureless white vehicle/wheels; materials need review rather than automatic replacement.",
+    "replacement": null
+  },
+  {
+    "key": "peugeot-308-1st-gen-t7",
+    "vehicle": "Peugeot 308 1st gen / T7",
+    "previous": "REPLACE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Original and prepared both show displaced/missing wheels or major body/trim pieces; source assembly/geometry unsuitable as delivered.",
+    "replacement": null
+  },
+  {
+    "key": "peugeot-308-2nd-gen-t9",
+    "vehicle": "Peugeot 308 2nd gen / T9",
+    "previous": "PASS",
+    "action": "KEEP",
+    "status": "PASS",
+    "reason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "renault-captur-2nd-gen-jb-je",
+    "vehicle": "Renault Captur 2nd gen / JB/JE",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Nearly white vehicle; material acceptability cannot be confirmed.",
+    "replacement": null
+  },
+  {
+    "key": "renault-clio-mk2",
+    "vehicle": "Renault Clio Mk2",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Wheel/body materials restored, but source pink glazing remains. Material review needed.",
+    "replacement": null
+  },
+  {
+    "key": "renault-fluence-l38",
+    "vehicle": "Renault Fluence L38",
+    "previous": "PASS_AFTER_FIX",
+    "action": "KEEP",
+    "status": "PASS_AFTER_FIX",
+    "reason": "Upright, assembled, grounded, front heading and framing verified improved in front-three-quarter, left-side and rear-three-quarter comparisons.",
+    "replacement": null
+  },
+  {
+    "key": "renault-kangoo-2nd-gen-x61",
+    "vehicle": "Renault Kangoo 2nd gen / X61",
+    "previous": "REPLACE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Original and prepared both show displaced/missing wheels or major body/trim pieces; source assembly/geometry unsuitable as delivered.",
+    "replacement": null
+  },
+  {
+    "key": "renault-megane-mk2",
+    "vehicle": "Renault Megane Mk2",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Exploded alternate body pieces persist; needs safe variant selection review.",
+    "replacement": null
+  },
+  {
+    "key": "seat-ibiza-mk4-6j",
+    "vehicle": "SEAT Ibiza Mk4 / 6J",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Assembled but white/plain materials obscure detail and generation confirmation.",
+    "replacement": null
+  },
+  {
+    "key": "skoda-fabia-mk2-5j",
+    "vehicle": "Skoda Fabia Mk2 / 5J",
+    "previous": "PASS",
+    "action": "KEEP",
+    "status": "PASS",
+    "reason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "skoda-octavia-mk2-1z",
+    "vehicle": "Skoda Octavia Mk2 / 1Z",
+    "previous": "PASS",
+    "action": "KEEP",
+    "status": "PASS",
+    "reason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "skoda-octavia-mk4-nx",
+    "vehicle": "Skoda Octavia Mk4 / NX",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Over 1M triangles; remove for predictable demo loading rather than invasive optimization.",
+    "replacement": null
+  },
+  {
+    "key": "toyota-c-hr-1st-gen",
+    "vehicle": "Toyota C-HR 1st gen",
+    "previous": "PASS",
+    "action": "KEEP",
+    "status": "PASS",
+    "reason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "toyota-camry-xv20",
+    "vehicle": "Toyota Camry XV20",
+    "previous": "PASS_AFTER_FIX",
+    "action": "KEEP",
+    "status": "PASS_AFTER_FIX",
+    "reason": "Upright, assembled, grounded, front heading and framing verified improved in front-three-quarter, left-side and rear-three-quarter comparisons.",
+    "replacement": null
+  },
+  {
+    "key": "toyota-camry-xv30",
+    "vehicle": "Toyota Camry XV30",
+    "previous": "PASS_AFTER_FIX",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Upright, assembled, grounded, front heading and framing verified improved in front-three-quarter, left-side and rear-three-quarter comparisons.",
+    "replacement": null
+  },
+  {
+    "key": "toyota-camry-xv40",
+    "vehicle": "Toyota Camry XV40",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Red-paint comparison tints glazing red; unsafe material assignment removed rather than broad recoloring.",
+    "replacement": null
+  },
+  {
+    "key": "toyota-camry-xv70",
+    "vehicle": "Toyota Camry XV70",
+    "previous": "PASS",
+    "action": "KEEP",
+    "status": "PASS",
+    "reason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "toyota-corolla-e100",
+    "vehicle": "Toyota Corolla E100",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Fresh renders show patchy roof/body surfaces and no isolated body paint configuration; remove from demo.",
+    "replacement": null
+  },
+  {
+    "key": "toyota-corolla-e210",
+    "vehicle": "Toyota Corolla E210",
+    "previous": "PASS",
+    "action": "KEEP",
+    "status": "PASS",
+    "reason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "toyota-hilux-8th-gen",
+    "vehicle": "Toyota Hilux 8th gen",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "toyota-land-cruiser-j100",
+    "vehicle": "Toyota Land Cruiser J100",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "White low-contrast source plus detached-looking front wheel pieces; material/assembly review required.",
+    "replacement": null
+  },
+  {
+    "key": "toyota-land-cruiser-j200",
+    "vehicle": "Toyota Land Cruiser J200",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Vehicle floats off-centre with oversized bounds/shadow; inspect stray geometry/origin before choosing normalization.",
+    "replacement": null
+  },
+  {
+    "key": "toyota-prius-xw20",
+    "vehicle": "Toyota Prius XW20",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "toyota-prius-xw30",
+    "vehicle": "Toyota Prius XW30",
+    "previous": "PASS_AFTER_FIX",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Configured paint material does not exist in the served GLB; source remains mint green regardless of selected paint. Remove from demo.",
+    "replacement": null
+  },
+  {
+    "key": "toyota-rav4-xa40",
+    "vehicle": "Toyota RAV4 XA40",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "toyota-yaris-xp130",
+    "vehicle": "Toyota Yaris XP130",
+    "previous": "REPLACE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Original and prepared both show displaced/missing wheels or major body/trim pieces; source assembly/geometry unsuitable as delivered.",
+    "replacement": null
+  },
+  {
+    "key": "toyota-yaris-xp90",
+    "vehicle": "Toyota Yaris XP90",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Fresh enlarged views show crude faceted body, patchy headlights and featureless glazing; remove the low-detail asset.",
+    "replacement": null
+  },
+  {
+    "key": "volkswagen-caddy-sb-latest",
+    "vehicle": "Volkswagen Caddy SB / latest",
+    "previous": "PASS",
+    "action": "KEEP",
+    "status": "PASS",
+    "reason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "volkswagen-golf-mk3",
+    "vehicle": "Volkswagen Golf Mk3",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "volkswagen-golf-mk5",
+    "vehicle": "Volkswagen Golf Mk5",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "volkswagen-golf-mk7",
+    "vehicle": "Volkswagen Golf Mk7",
+    "previous": "REPLACE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Mapped as Golf Mk7 but visible rounded-headlamp/arched-grille body resembles Mk5; wrong generation; compare against the separate Mk5 entry.",
+    "replacement": null
+  },
+  {
+    "key": "volkswagen-polo-mk4-9n",
+    "vehicle": "Volkswagen Polo Mk4 / 9N",
+    "previous": "PASS_AFTER_FIX",
+    "action": "KEEP",
+    "status": "PASS_VARIANT",
+    "reason": "Upright, assembled, grounded, front heading and framing verified improved in front-three-quarter, left-side and rear-three-quarter comparisons. Verified variant: Three-door Polo 9N.",
+    "replacement": null
+  },
+  {
+    "key": "volkswagen-transporter-t4",
+    "vehicle": "Volkswagen Transporter T4",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Floating alternate front pieces and inconsistent wheel placement in both versions; selection/assembly needs review.",
+    "replacement": null
+  },
+  {
+    "key": "audi-a3-8l",
+    "vehicle": "Audi A3 8L",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Prepared hood has patch artifacts absent from original; determine material/quantization cause before choosing a fix.",
+    "replacement": null
+  },
+  {
+    "key": "audi-a3-8v",
+    "vehicle": "Audi A3 8V",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Fresh six-view render shows stripped roof/body and exposed racing interior; not a reliable representative vehicle for this demo.",
+    "replacement": null
+  },
+  {
+    "key": "audi-a4-b5",
+    "vehicle": "Audi A4 B5",
+    "previous": "PASS",
+    "action": "KEEP",
+    "status": "PASS",
+    "reason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "audi-a4-b6",
+    "vehicle": "Audi A4 B6",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Both versions have visibly transparent/wire-like surfaces; material correction feasibility needs review.",
+    "replacement": null
+  },
+  {
+    "key": "audi-a4-b8",
+    "vehicle": "Audi A4 B8",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Red-paint comparison recolors wheels and grille while most body remains dark; incorrect material assignment.",
+    "replacement": null
+  },
+  {
+    "key": "audi-a4-b9",
+    "vehicle": "Audi A4 B9",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Red-paint comparison leaves the body white; paint selection does not control the exterior finish.",
+    "replacement": null
+  },
+  {
+    "key": "audi-a6-c6",
+    "vehicle": "Audi A6 C6",
+    "previous": "REPLACE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Original and prepared both show displaced/missing wheels or major body/trim pieces; source assembly/geometry unsuitable as delivered.",
+    "replacement": null
+  },
+  {
+    "key": "audi-a6-c7",
+    "vehicle": "Audi A6 C7",
+    "previous": "REPLACE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Original and prepared both show displaced/missing wheels or major body/trim pieces; source assembly/geometry unsuitable as delivered.",
+    "replacement": null
+  },
+  {
+    "key": "audi-q3-8u",
+    "vehicle": "Audi Q3 8U",
+    "previous": "PASS",
+    "action": "KEEP",
+    "status": "PASS",
+    "reason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  },
+  {
+    "key": "audi-q5-8r",
+    "vehicle": "Audi Q5 8R",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Both versions have transparent patchy body/wheels; investigate material alpha settings before replacing.",
+    "replacement": null
+  },
+  {
+    "key": "audi-q7-4l",
+    "vehicle": "Audi Q7 4L",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Pale/low-contrast original and patchy prepared surfaces need material review.",
+    "replacement": null
+  },
+  {
+    "key": "opel-astra-f",
+    "vehicle": "Opel Astra F",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Floating body/trim and displaced wheels appear in original and prepared; assembly selection may help but needs review.",
+    "replacement": null
+  },
+  {
+    "key": "opel-astra-g",
+    "vehicle": "Opel Astra G",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Fresh enlarged views show featureless opaque white glazing/roof patches; materials are not acceptable for the demo.",
+    "replacement": null
+  },
+  {
+    "key": "opel-astra-h",
+    "vehicle": "Opel Astra H",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Vertical car plus rig/gizmo objects in both versions; orientation and object selection need validation.",
+    "replacement": null
+  },
+  {
+    "key": "opel-astra-k",
+    "vehicle": "Opel Astra K",
+    "previous": "REPLACE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Original and prepared both show displaced/missing wheels or major body/trim pieces; source assembly/geometry unsuitable as delivered.",
+    "replacement": null
+  },
+  {
+    "key": "opel-corsa-b",
+    "vehicle": "Opel Corsa B",
+    "previous": "PASS_AFTER_FIX",
+    "action": "KEEP",
+    "status": "PASS_VARIANT",
+    "reason": "Upright, assembled, grounded, front heading and framing verified improved in front-three-quarter, left-side and rear-three-quarter comparisons. Verified variant: Three-door Corsa B.",
+    "replacement": null
+  },
+  {
+    "key": "opel-corsa-c",
+    "vehicle": "Opel Corsa C",
+    "previous": "REPLACE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Original and prepared both show displaced/missing wheels or major body/trim pieces; source assembly/geometry unsuitable as delivered.",
+    "replacement": null
+  },
+  {
+    "key": "opel-corsa-e",
+    "vehicle": "Opel Corsa E",
+    "previous": "REPLACE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Original and prepared both show displaced/missing wheels or major body/trim pieces; source assembly/geometry unsuitable as delivered.",
+    "replacement": null
+  },
+  {
+    "key": "opel-insignia-a",
+    "vehicle": "Opel Insignia A",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Multiple separate shells and body pieces in both versions; assembly-selection feasibility uncertain.",
+    "replacement": null
+  },
+  {
+    "key": "opel-mokka-b",
+    "vehicle": "Opel Mokka B",
+    "previous": "UNCERTAIN",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Over 1M triangles; remove for predictable demo loading rather than invasive optimization.",
+    "replacement": null
+  },
+  {
+    "key": "opel-vectra-c",
+    "vehicle": "Opel Vectra C",
+    "previous": "REPLACE",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Original and prepared both show displaced/missing wheels or major body/trim pieces; source assembly/geometry unsuitable as delivered.",
+    "replacement": null
+  },
+  {
+    "key": "seat-leon-mk1-1m",
+    "vehicle": "SEAT Leon Mk1 / 1M",
+    "previous": "PASS",
+    "action": "REMOVE",
+    "status": "REMOVED",
+    "reason": "Existing provenance/quality hold retained; not promoted. Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation.",
+    "replacement": null
+  }
+]

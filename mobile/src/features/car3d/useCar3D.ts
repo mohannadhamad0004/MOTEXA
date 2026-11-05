@@ -1,5 +1,6 @@
 // The app side of the viewer protocol (see sceneHtml.ts), shared by the WebView (native) and iframe (web) versions.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {modelForViewer} from "./modelConfig";
 import { useReduced } from "../../motion";
 import { isModelFile, modelBase64 } from "./car3d";
 import { BUMPER_TESTS, type CarModel, modelFile } from "./models";
@@ -7,6 +8,8 @@ import type { BumperAdjust } from "./car3d";
 
 export type Car3DProps = {
   model: CarModel;
+  /** Screen-owned authenticated loader for private models; assets stay out of the public cache. */
+  assetLoader?: () => Promise<string>;
   color: string;
   wing: boolean;
   rack: boolean;
@@ -25,12 +28,13 @@ export function useCar3D(p: Car3DProps, send: (m: object) => void) {
   const [shown, setShown] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const sendRef = useRef(send);
-  sendRef.current = send;
+  useEffect(() => { sendRef.current = send; }, [send]);
   const m = p.model;
+  const assetLoader = p.assetLoader;
   const state = useMemo(
     () => ({
       file: modelFile(m),
-      model: { lengthM: m.lengthM, rotateY: m.rotateY, groundOffset: m.groundOffset, paintNodes: m.paintNodes, paintMaterials: m.paintMaterials, bakedPaint: m.bakedPaint, keepBox: m.keepBox, centerX: m.centerX, zones: m.zones, wing: m.wing, rack: m.rack },
+      model: modelForViewer(m),
       kit: { bumper: !!p.bumper && !!BUMPER_TESTS[m.key], file: BUMPER_TESTS[m.key] ?? "", paintMatch: !!p.bumperPaint, adj: p.adj },
       color: p.color,
       wing: p.wing,
@@ -45,6 +49,11 @@ export function useCar3D(p: Car3DProps, send: (m: object) => void) {
   useEffect(() => {
     if (ready) sendRef.current({ type: "state", state });
   }, [ready, state]);
+  useEffect(() => {
+    if (shown || error) return;
+    const timeout = setTimeout(() => setError("timeout"), 45_000);
+    return () => clearTimeout(timeout);
+  }, [ready, shown, error]);
 
   /** Every message from the page is untrusted: exact shapes only. */
   const onMessage = useCallback((raw: string) => {
@@ -61,12 +70,12 @@ export function useCar3D(p: Car3DProps, send: (m: object) => void) {
     else if (x.type === "fit") console.log("[bodykit] fit", JSON.stringify(x.info));
     else if (x.type === "error") setError(typeof x.message === "string" ? x.message : "error");
     else if (x.type === "need" && Array.isArray(x.keys))
-      for (const key of x.keys.filter(isModelFile).slice(0, 2))
-        modelBase64(key).then(
+      for (const key of x.keys.filter((key): key is string => typeof key === "string" && (key === modelFile(m) || isModelFile(key))).slice(0, 2))
+        (key === modelFile(m) && assetLoader ? assetLoader() : modelBase64(key)).then(
           (b64) => sendRef.current({ type: "asset", key, b64 }),
           (e) => setError(String(e?.message ?? e))
         );
-  }, []);
+  }, [m, assetLoader]);
   const retry = () => {
     setReady(false);
     setShown(false);

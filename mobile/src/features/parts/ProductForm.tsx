@@ -33,7 +33,7 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
   const [busy, setBusy] = useState(false);
   const picked = f.imageUri !== initial.imageUri; // a local photo chosen in this session, not saved yet
   // "Fits these cars": picked from the vehicle list (no free text), each with its own year range
-  const vehicles = useVehicleList().list;
+  const vehicles = useVehicleList("fitment").list;
   const listed = (x: Fitment) => !vehicles || vehicles.some((v) => v.make === x.make && v.model === x.model);
   const [adding, setAdding] = useState<{ make: string; model: string; year: string } | null>(null);
   const addCar = (make: string, model: string) => {
@@ -219,7 +219,7 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
       {adding ? (
         <Card>
           {/* make -> model from the list; picking the model adds the car (years are set on its row) */}
-          <VehiclePicker value={adding} onChange={(v) => (v.model ? addCar(v.make, v.model) : setAdding(v))} />
+          <VehiclePicker purpose="fitment" value={adding} onChange={(v) => (v.model ? addCar(v.make, v.model) : setAdding(v))} />
           <Button variant="ghost" label={t("Cancel", "إلغاء")} onPress={() => setAdding(null)} />
         </Card>
       ) : (

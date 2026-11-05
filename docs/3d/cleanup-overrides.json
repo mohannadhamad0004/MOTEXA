@@ -1,0 +1,19 @@
+{
+  "audi-a3-8v": "Fresh six-view render shows stripped roof/body and exposed racing interior; not a reliable representative vehicle for this demo.",
+  "bmw-x3-g01": "Fresh renders show patchy/translucent body and glazing surfaces; remove rather than investigate material reconstruction.",
+  "ford-focus-mk4": "No safe body paint configuration; original-finish-only model removed from the recolorable demo collection.",
+  "hyundai-kona-os": "No safe body paint configuration; original-finish-only model removed from the recolorable demo collection.",
+  "kia-cerato-yd": "No safe body paint configuration; original-finish-only model removed from the recolorable demo collection.",
+  "kia-sportage-sl": "No safe body paint configuration; original-finish-only model removed from the recolorable demo collection.",
+  "mitsubishi-l200-4th-gen-ka-kb": "Configured paint material does not exist in the served GLB; source remains red. Remove rather than guess broad recoloring.",
+  "toyota-corolla-e100": "Fresh renders show patchy roof/body surfaces and no isolated body paint configuration; remove from demo.",
+  "toyota-prius-xw30": "Configured paint material does not exist in the served GLB; source remains mint green regardless of selected paint. Remove from demo.",
+  "ford-ranger-t6": "Red-paint comparison changes only part of the body while hood, fenders and wheels remain featureless white; incomplete material handling.",
+  "mercedes-a-class-w169": "Red-paint comparison tints cabin/seats as well as the exterior; remove rather than keep broad unsafe paint assignment.",
+  "nissan-navara-d22": "Red-paint comparison recolors wheels and trim with the body; broad material assignment is unsafe.",
+  "audi-a4-b8": "Red-paint comparison recolors wheels and grille while most body remains dark; incorrect material assignment.",
+  "audi-a4-b9": "Red-paint comparison leaves the body white; paint selection does not control the exterior finish.",
+  "opel-astra-g": "Fresh enlarged views show featureless opaque white glazing/roof patches; materials are not acceptable for the demo.",
+  "toyota-yaris-xp90": "Fresh enlarged views show crude faceted body, patchy headlights and featureless glazing; remove the low-detail asset.",
+  "toyota-camry-xv40": "Red-paint comparison tints glazing red; unsafe material assignment removed rather than broad recoloring."
+}

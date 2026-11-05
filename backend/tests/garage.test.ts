@@ -1,3 +1,4 @@
+import {activeModels} from "../src/services/vehicle3d-catalog.js";
 // Real PostgreSQL + HTTP route integration. All fixtures and mutations are rolled back, never seeded into accounts.
 // Run with tsx --test tests/garage.test.ts (or compile this entry with tsc if tsx cannot start on the host).
 import { test, after } from "node:test";
@@ -41,10 +42,12 @@ test("garage HTTP and database behavior (rollback-only fixtures)", async t => {
       const user = async () => tx.user.create({ data: { email: `${randomUUID()}@garage-test.invalid`, fullName: "Garage transaction fixture", passwordHash: "not-a-login-hash", role: "CUSTOMER", status: "ACTIVE" } });
       const a = await user(), b = await user(), legacy = await user();
       const key = randomUUID();
-      const vehicle = await tx.vehicle.create({ data: { make: key, model: "Test", makeAr: key, modelAr: "Test", makeNormalized: key, modelNormalized: "test", yearFrom: 2000, yearTo: 2030 } });
-      const gen = await tx.vehicleGeneration.create({ data: { vehicleId: vehicle.id, code: "A", nameEn: "A", nameAr: "A", yearFrom: 2000, yearTo: 2010 } });
-      const otherVehicle = await tx.vehicle.create({ data: { make: key, model: "Other", makeAr: key, modelAr: "Other", makeNormalized: key, modelNormalized: "other", yearFrom: 2000, yearTo: 2030 } });
-      const foreignGen = await tx.vehicleGeneration.create({ data: { vehicleId: otherVehicle.id, code: "B", nameEn: "B", nameAr: "B", yearFrom: 2000, yearTo: 2010 } });
+      const brand=await tx.vehicleBrand.create({data:{name:key,nameAr:key,normalizedName:key}});
+      const approvedKey=activeModels()[0]!.key;
+      const vehicle = await tx.vehicle.create({ data: {brandId:brand.id, make: key, model: "Test", makeAr: key, modelAr: "Test", makeNormalized: key, modelNormalized: "test", yearFrom: 2000, yearTo: 2030 } });
+      const gen = await tx.vehicleGeneration.create({ data: {isPublished:true,model3dKey:approvedKey, vehicleId: vehicle.id, code: "A", nameEn: "A", nameAr: "A", yearFrom: 2000, yearTo: 2010 } });
+      const otherVehicle = await tx.vehicle.create({ data: {brandId:brand.id, make: key, model: "Other", makeAr: key, modelAr: "Other", makeNormalized: key, modelNormalized: "other", yearFrom: 2000, yearTo: 2030 } });
+      const foreignGen = await tx.vehicleGeneration.create({ data: {isPublished:true,model3dKey:approvedKey, vehicleId: otherVehicle.id, code: "B", nameEn: "B", nameAr: "B", yearFrom: 2000, yearTo: 2010 } });
       const input = { make: key, model: "Test", year: 2005, color: "#AbC123", generationId: gen.id };
       const service = createGarageService(work => work(tx));
       const app = express();
@@ -104,9 +107,9 @@ test("garage HTTP and database behavior (rollback-only fixtures)", async t => {
         await t.test("generation from another model rejected", async () => { assert.equal((await call("POST", "/garage", { ...input, generationId: foreignGen.id })).status, 400); });
         await t.test("generation outside selected year rejected", async () => { assert.equal((await call("POST", "/garage", { ...input, year: 2020 })).status, 400); });
         await t.test("PATCH cannot retain incompatible generation or change ownership/active", async () => { for (const data of [{ year: 2020 }, { model: "Other" }, { userId: b.id }, { isActive: true }]) assert.equal((await call("PATCH", `/garage/${first}`, data)).status, 400); });
-        await t.test("Not sure stays null; omitted generation selects unique match", async () => { await call("PATCH", `/garage/${first}`, { year: 2020, generationId: null }); assert.equal((await list()).find(c => c.id === first).generation, null); const r = await call("PUT", "/my-car", { make: key, model: "Test", year: 2005 }); assert.equal(r.car.generation.id, gen.id); await call("PUT", "/my-car", { ...input, generationId: null }); assert.equal((await call("GET", "/my-car")).car.generation, null); });
+        await t.test("Not sure stays null; omitted generation selects unique match", async () => { await call("PATCH", `/garage/${first}`, { year: 2005, generationId: null }); assert.equal((await list()).find(c => c.id === first).generation, null); const r = await call("PUT", "/my-car", { make: key, model: "Test", year: 2005 }); assert.equal(r.car.generation.id, gen.id); await call("PUT", "/my-car", { ...input, generationId: null }); assert.equal((await call("GET", "/my-car")).car.generation, null); });
         await t.test("overlapping generations stay unselected without confirmation", async () => {
-          await tx.vehicleGeneration.create({ data: { vehicleId: vehicle.id, code: "overlap", nameEn: "Overlap", nameAr: "Overlap", yearFrom: 2005, yearTo: 2007 } });
+          await tx.vehicleGeneration.create({ data: {isPublished:true,model3dKey:approvedKey, vehicleId: vehicle.id, code: "overlap", nameEn: "Overlap", nameAr: "Overlap", yearFrom: 2005, yearTo: 2007 } });
           const r = await call("PUT", "/my-car", { make: key, model: "Test", year: 2005 });
           assert.equal(r.car.generation, null);
         });

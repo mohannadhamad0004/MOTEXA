@@ -12,7 +12,8 @@ import { openMyCarPicker, openEditGarageCar, useMyCar } from "../../features/cat
 import { Car3DView } from "../../features/car3d/Car3DView";
 import { ComingSoon } from "../../features/car3d/CarPreview";
 import { DEFAULT_COLOR, NO_ADJUST, setLook, useLook, type BumperAdjust } from "../../features/car3d/car3d";
-import { BUMPER_TESTS, modelFor } from "../../features/car3d/models";
+import { useCatalogModel } from "../../features/car3d/runtimeModels";
+import { BUMPER_TESTS } from "../../features/car3d/models";
 import { gType, useGarageTheme } from "../../theme/garage";
 
 // BODYKIT TEST: hand-fit rows, [label, field, step per tap]; positions in metres, angles in radians, scale as a factor
@@ -26,7 +27,7 @@ export default function MyCar3D() {
   const insets = useSafeAreaInsets();
   const { car, loaded } = useMyCar();
   const look = useLook();
-  const model = modelFor(car);
+  const model = useCatalogModel(car);
   const kit = !!model && !!BUMPER_TESTS[model.key];
   const [adjusting, setAdjusting] = useState(false);
   const nudge = (f: keyof BumperAdjust, d: number) => setLook({ adj: { ...look.adj, [f]: Math.round((look.adj[f] + d) * 1000) / 1000 } });
@@ -55,6 +56,7 @@ export default function MyCar3D() {
         <>
           <Car3DView model={model} color={car.color ?? DEFAULT_COLOR} wing={look.wing} rack={look.rack} bumper={look.bumper} bumperPaint={look.bumperPaint} adj={look.adj} interactive bg={g.page} style={{ flex: 1, marginTop: 8 }} />
           <GText soft style={[gType.tiny, { textAlign: "center", marginTop: 4 }]}>{t("Drag to turn · pinch to zoom · double-tap to reset", "اسحب للتدوير · قرّب بإصبعين · انقر مرتين للإعادة")}</GText>
+          {!model.paintMaterials.length && !model.bakedPaint ? <GText soft style={[gType.caption, { textAlign: "center", marginHorizontal: 20 }]}>{t("This model keeps its original finish; your selected paint is not applied.", "يحتفظ هذا النموذج بلونه الأصلي؛ لا يُطبّق عليه لون الطلاء المحدد.")}</GText> : null}
           <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: insets.bottom + 12, gap: 12 }}>
             {/* rim choice: only for rimsSwappable models, and not built yet (no rim set to swap in) */}
             <GText style={[gType.label, { fontWeight: "800" }, align]}>{t("Extras", "إضافات")}</GText>

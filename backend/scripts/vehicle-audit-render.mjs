@@ -13,13 +13,14 @@ const arg = name => process.argv.find(a => a.startsWith(`--${name}=`))?.slice(na
 const variants = process.argv.includes('--original') ? ['original'] : process.argv.includes('--prepared') ? ['prepared'] : ['prepared', 'original'];
 if (process.argv.includes('--original') && process.argv.includes('--prepared')) throw new Error('Choose either --original or --prepared, or neither for both');
 const selected = arg('key');
+const finalAudit = process.argv.includes('--final');
 const stageA = process.argv.includes('--stage-a');
 const fixes = stageA ? json(resolve(ROOT,'docs/3d/config-fixes.json')) : {};
 const liveModels = loadTS(resolve(ROOT,'mobile/src/features/car3d/models.ts')).CAR_MODELS;
-const renderFolder = stageA ? 'stage-a/renders' : 'renders';
+const renderFolder = finalAudit ? (arg('color') ? 'final-paint/renders' : 'final/renders') : stageA ? 'stage-a/renders' : 'renders';
 const { CAR3D_HTML, THREE_VERSION } = loadTS(resolve(ROOT, 'mobile/src/features/car3d/sceneHtml.ts'));
 // Resume the completed inventory; never rerun the technical inspector here.
-const entries = json(resolve(AUDIT, 'vehicle-model-audit.json')).entries.filter(e => e.scope === 'model-library' && (!selected || e.key === selected) && (!stageA || Object.hasOwn(fixes,e.key)));
+const entries = json(resolve(AUDIT, 'vehicle-model-audit.json')).entries.filter(e => e.scope === 'model-library' && (!finalAudit || liveModels.some(m=>m.key===e.key)) && (!selected || e.key === selected) && (!stageA || Object.hasOwn(fixes,e.key)));
 if (!entries.length) throw new Error('No matching models');
 const views = [
   ['front', [0, 0.14, 1]], ['front-three-quarter', [-0.7, 0.35, 1]], ['left-side', [-1, 0.14, 0]],
@@ -39,7 +40,7 @@ window.auditLoad = async function(model, url, original) {
     b.setFromObject(group, true); var c = b.getCenter(new THREE.Vector3()); group.position.set(-c.x, -b.min.y, -c.z);
     scene.add(group); car = {group:group};
   } else {
-    car = await build({model:model, file:url, color:'#8b9baa'});
+    car = await build({model:model, file:url, color:'${arg('color') || '#8b9baa'}'});
     if (car.wing) car.wing.visible = false; if (car.rack) car.rack.visible = false;
   }
   car.group.updateMatrixWorld(true);
@@ -68,7 +69,7 @@ mkdirSync(AUDIT, { recursive: true });
 const run = { startedAt: new Date().toISOString(), variants, requestedModels: entries.length, requested: entries.length * variants.length, rendered: 0, results: [], blocker: null, remoteRequests: [],
   threeVersion: THREE_VERSION, threeSource: null, rendererSha256: hash(new URL(import.meta.url)),
   note: 'Rendering alone is not a visual classification. Headless desktop is not Android device verification.', viewerSha256: hash(resolve(ROOT, 'mobile/src/features/car3d/sceneHtml.ts')) };
-const runPath = resolve(AUDIT, `${stageA ? 'stage-a-' : ''}local-render-run${selected ? '-' + selected : ''}${variants.length === 1 ? '-' + variants[0] : ''}.json`);
+const runPath = resolve(AUDIT, `${finalAudit ? (arg('color') ? 'final-paint-' : 'final-') : stageA ? 'stage-a-' : ''}local-render-run${selected ? '-' + selected : ''}${variants.length === 1 ? '-' + variants[0] : ''}.json`);
 let browser;
 try {
   const threeDir = resolveLocalThree(ROOT, THREE_VERSION, arg('three-dir'));
@@ -104,7 +105,7 @@ try {
       await page.goto(AUDIT_ORIGIN + '/');
       await page.waitForFunction(() => window.auditReady === true, null, { timeout: 25000 });
       booted = true;
-      const model = (stageA ? liveModels.find(m=>m.key===e.key) : null) ?? e.configuration ?? { key:e.key, lengthM:e.manifest.lengthM, rotateY:e.manifest.rotateY, groundOffset:0, paintNodes:[],paintMaterials:e.manifest.paintMaterials,rimsSwappable:false,wing:{x:0,y:0,z:0,scale:1},rack:{x:0,y:0,z:0,scale:1} };
+      const model = ((stageA || finalAudit) ? liveModels.find(m=>m.key===e.key) : null) ?? e.configuration ?? { key:e.key, lengthM:e.manifest.lengthM, rotateY:e.manifest.rotateY, groundOffset:0, paintNodes:[],paintMaterials:e.manifest.paintMaterials,rimsSwappable:false,wing:{x:0,y:0,z:0,scale:1},rack:{x:0,y:0,z:0,scale:1} };
       if(stageA) Object.assign(model,fixes[e.key]);
       if(statSync(resolve(ROOT,path)).size > 50*1024*1024) {
         const bytes=readFileSync(resolve(ROOT,path));

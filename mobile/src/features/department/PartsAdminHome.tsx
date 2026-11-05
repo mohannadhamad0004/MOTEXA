@@ -62,12 +62,20 @@ export function PartsAdminHome() {
 
   return (
     <DeptPage hero={<Hero />} onRefresh={reload} refreshing={(stats.loading || shops.loading || queue.loading) && !!(stats.data || shops.data)}>
+      <Tap label={d.t("Vehicle catalog and customer requests", "كتالوج المركبات وطلبات العملاء")} onPress={()=>go("/dept/vehicles")} style={{...cardStyle(d),padding:16,marginBottom:18}}>
+        <Text style={{color:d.ink,fontSize:16,fontWeight:"700"}}>{d.t("Vehicle catalog and customer requests", "كتالوج المركبات وطلبات العملاء")}</Text>
+      </Tap>
       <View style={{ flexDirection: d.row, flexWrap: "wrap", justifyContent: "space-between", rowGap: 12, marginBottom: 22 }}>
         <Kpi i={0} icon="clipboard-outline" value={num(stats.data?.pendingShops)} label={d.t("Pending shops", "متاجر قيد المراجعة")} warn={pending > 0} onPress={() => go("/dept/requests")} />
         <Kpi i={1} icon="create-outline" value={num(stats.data?.needsChanges)} label={d.t("Needs changes", "بانتظار التعديل")} onPress={() => go("/dept/requests")} />
         <Kpi i={2} icon="shield-checkmark-outline" value={num(stats.data?.approvedShops)} label={d.t("Approved shops", "متاجر معتمدة")} onPress={() => go("/dept/directory")} />
         <Kpi i={3} icon="eye-off-outline" value={num(stats.data?.hiddenProducts)} label={d.t("Hidden products", "منتجات مخفية")} onPress={() => go("/dept/directory")} />
       </View>
+
+      <Tap label={d.t("Customer 3D submissions", "طلبات النماذج ثلاثية الأبعاد")} onPress={() => go("/dept/3d-submissions")} style={{ ...cardStyle(d), padding: 16, marginBottom: 22 }}>
+        <Text style={{ color: d.ink, fontSize: 16, fontWeight: "800", textAlign: d.align }}>{d.t("Customer 3D submissions", "طلبات النماذج ثلاثية الأبعاد")}</Text>
+        <Text style={{ color: d.muted, marginTop: 4, textAlign: d.align }}>{d.t("Inspect photos and models before catalog approval.", "افحص الصور والنماذج قبل اعتمادها في الكتالوج.")}</Text>
+      </Tap>
 
       {/* parts orders (read only): all orders, and the deliveries in progress on the map */}
       <Head title={d.t("Orders", "الطلبات")} caption={d.t("Customer orders across all shops", "طلبات الزبائن في كل المتاجر")} action={d.t("All", "الكل")} onAction={() => go("/dept/orders")} />

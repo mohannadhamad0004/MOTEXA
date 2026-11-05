@@ -1,3 +1,7 @@
+import managedVehicleCatalogRoutes from "./routes/vehicle-catalog.routes.js";
+import { prisma } from "./prisma.js";
+import vehicle3DRoutes from "./routes/vehicle3d.routes.js";
+import { startVehicle3DWorker } from "./services/vehicle3d-generation.js";
 import mechanicRegistrationRoutes from './routes/mechanic-registration.routes.js';
 import mechanicsRoutes from './routes/mechanics.routes.js';
 import passwordResetRoutes from "./routes/password-reset.routes.js";
@@ -31,8 +35,20 @@ const app = express();
 const PORT = Number(process.env.PORT) || 5000;
 
 app.use(cors());
+app.use("/api",managedVehicleCatalogRoutes);
+app.use("/api", (req, res, next) => /^\/(catalog\/(vehicle-3d-submissions|3d-models)|admin\/parts\/vehicle-3d-submissions)(\/|$)/.test(req.path) ? vehicle3DRoutes(req, res, next) : next());
 // Public 3D car models (backend/public/3d, optimised GLBs; no customer data). Long cache: a new model gets a new file name.
-app.use("/api/3d", express.static(fileURLToPath(new URL("../public/3d", import.meta.url)), { maxAge: "30d", immutable: true, fallthrough: false }));
+app.use("/api/3d", async (req, res, next) => {
+  if (!req.path.startsWith("/customer-") && !req.path.startsWith("/generated-") && !req.path.startsWith("/manual-")) { next(); return; }
+  const key = req.path.slice(1).replace(/\.glb$/, "");
+  try {
+    const approved = await prisma.vehicle3DSubmission.findFirst({ where: { approvedModel3dKey: key, status: "APPROVED" }, select: { id: true } });
+    const imported=key.startsWith("manual-")?await prisma.vehicle3DImport.findFirst({where:{publishedModel3dKey:key,status:"PUBLISHED"},select:{id:true}}):null;
+    const curated=key.startsWith("manual-")?await prisma.vehicleGeneration.findFirst({where:{model3dKey:key,isPublished:true},select:{id:true}}):null;
+    if (!approved&&!imported&&!curated) { res.status(404).end(); return; }
+    next();
+  } catch { res.status(503).end(); }
+}, express.static(fileURLToPath(new URL("../public/3d", import.meta.url)), { maxAge: "30d", immutable: true, fallthrough: false }));
 app.use("/api/cars", express.static(fileURLToPath(new URL("../public/cars", import.meta.url)), { maxAge: "30d", fallthrough: false })); // generation photos (CC, credited)
 // Mounted before the global JSON parser: it carries larger (base64 image) bodies with its own limit.
 app.use("/api/mechanic-applications", mechanicApplicationRoutes);
@@ -76,3 +92,5 @@ app.use((err:unknown,_req:express.Request,res:express.Response,_next:express.Nex
 app.listen(PORT, () => {
   console.log(`MOTEXA Server running on http://localhost:${PORT}`);
 });
+
+void startVehicle3DWorker().catch(() => console.error("Vehicle 3D worker startup failed; check migrations and storage."));
