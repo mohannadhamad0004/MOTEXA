@@ -1,5 +1,6 @@
+import {router,useFocusEffect,type Href} from "expo-router";
 import { Image } from "expo-image";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { TextInput, View } from "react-native";
 import { apiUrl } from "../../core/config/api";
 import { Field, GButton, GIcon, GText, Note, SearchBar, Sheet, SkeletonRows, Tap } from "../../components/garage";
@@ -12,21 +13,23 @@ import { CAR_COLORS, DEFAULT_COLOR } from "../car3d/car3d";
 
 export type PickedCar = { make: string; model: string; year: string };
 
-/** The vehicle list, read once per session (shared by the picker, the search chip and the shop form). */
-export function useVehicleList() {
+/** Refresh on focus; the server decides which generations remain selectable. */
+export function useVehicleList(purpose="garage") {
   const [list, setList] = useState<VehicleRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let live = true;
     catalogService
-      .getVehicleList()
+      .getVehicleList(purpose)
       .then((v) => live && (setList(v), setError(null)))
       .catch((e) => live && setError(e.message));
     return () => {
       live = false;
     };
-  }, [tick]);
+  // The retry token deliberately replaces this focus subscription after a failed load.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tick,purpose]));
   return { list, error, retry: () => setTick((n) => n + 1) };
 }
 
@@ -34,13 +37,14 @@ export function useVehicleList() {
  * Make -> Model -> Year from the vehicle list (no free text), searchable in English or Arabic. The step shows as a trail at the
  * top; tapping a step goes back to it. `onChange` gets year "" until a year is picked.
  */
-export function VehiclePicker({ value, onChange }: { value: PickedCar; onChange: (v: PickedCar) => void }) {
+export function VehiclePicker({ value, onChange,purpose="garage" }: { value: PickedCar; onChange: (v: PickedCar) => void;purpose?:string }) {
   const { g, shadow } = useGarageTheme();
   const { t, row, align, isArabic } = useL();
-  const { list, error, retry } = useVehicleList();
+  const { list, error, retry } = useVehicleList(purpose);
   const [q, setQ] = useState("");
   const step: "make" | "model" | "year" = !value.make ? "make" : !value.model ? "model" : "year";
-  useEffect(() => setQ(""), [step]);
+  const [searchStep,setSearchStep]=useState(step);
+  if(searchStep!==step){setSearchStep(step);setQ("");}
 
   const label = (en: string, ar: string) => (isArabic && ar ? ar : en);
   const hit = (...names: string[]) => !q.trim() || names.some((n) => normSearch(n).includes(normSearch(q)));
@@ -51,7 +55,7 @@ export function VehiclePicker({ value, onChange }: { value: PickedCar; onChange:
   }, [list]);
   const models = (list ?? []).filter((v) => v.make === value.make);
   const chosen = models.find((v) => v.model === value.model);
-  const years = chosen ? Array.from({ length: Math.min(chosen.yearTo, new Date().getFullYear() + 1) - chosen.yearFrom + 1 }, (_, i) => Math.min(chosen.yearTo, new Date().getFullYear() + 1) - i) : [];
+  const years = chosen ? [...new Set((chosen.generations?.length?chosen.generations:[chosen]).flatMap(g=>Array.from({length:Math.max(0,Math.min(g.yearTo,new Date().getFullYear()+1)-g.yearFrom+1)},(_,i)=>g.yearFrom+i)))].sort((a,b)=>b-a) : [];
 
   const option = (key: string, text: string, sub: string | null, on: boolean, onPress: () => void) => (
     <Tap key={key} label={text} onPress={onPress} style={[row, { minHeight: 48, alignItems: "center", gap: 10, paddingHorizontal: 14, borderRadius: gShape.small, backgroundColor: on ? g.tint : g.card, borderWidth: 1, borderColor: on ? g.accent : g.line }]}>
@@ -72,6 +76,7 @@ export function VehiclePicker({ value, onChange }: { value: PickedCar; onChange:
   if (error)
     return (
       <View style={{ gap: 10 }}>
+      {purpose==="garage"?<GButton variant="secondary" label={t("Request my car","طلب إضافة سيارتي")} onPress={()=>{closeMyCarPicker();router.push("/customer/vehicle-requests/new" as Href);}}/>:null}
         <Note tone="danger" icon="alert-circle-outline">{error}</Note>
         <GButton variant="secondary" label={t("Retry", "إعادة المحاولة")} onPress={retry} />
       </View>
@@ -79,6 +84,7 @@ export function VehiclePicker({ value, onChange }: { value: PickedCar; onChange:
   if (!list) return <SkeletonRows />;
   return (
     <View style={{ gap: 10 }}>
+      {purpose==="garage"?<GButton variant="secondary" label={t("Can't find your car? Request my car","لم تجد سيارتك؟ اطلب إضافتها")} onPress={()=>{closeMyCarPicker();router.push("/customer/vehicle-requests/new" as Href);}}/>:null}
       {value.make ? (
         <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
           {crumb(label(value.make, makes.find((m) => m.make === value.make)?.makeAr ?? ""), () => onChange({ make: "", model: "", year: "" }))}
@@ -115,30 +121,23 @@ export function VehiclePicker({ value, onChange }: { value: PickedCar; onChange:
 /** Explicit add/edit sheet; saved-car selection lives in GarageSheets. */
 export function MyCarSheet() {
   const picker = useGaragePicker();
+  if(picker?.mode!=="add"&&picker?.mode!=="edit")return null;
+  return <GarageCarEditor key={picker.mode==="edit"?picker.id:"add"} picker={picker}/>;
+}
+function GarageCarEditor({picker}:{picker:Exclude<ReturnType<typeof useGaragePicker>,null|{mode:"select"}>}) {
   const { garageCars, busy, loaded, error } = useGarage();
-  const editing = picker?.mode === "edit" ? garageCars.find(c => c.id === picker.id) : undefined;
-  const open = picker?.mode === "add" || picker?.mode === "edit";
+  const editing = picker.mode === "edit" ? garageCars.find(c => c.id === picker.id) : undefined;
+  const initial=picker.mode==="add"?picker.draft:editing;
   const { t } = useL();
-  const [draft, setDraft] = useState<PickedCar>({ make: "", model: "", year: "" });
-  const [nickname, setNickname] = useState("");
-  const [color, setColor] = useState<string | null>(DEFAULT_COLOR);
-  const [genId, setGenId] = useState<string | null | undefined>(undefined);
+  const [draft, setDraft] = useState<PickedCar>(()=>initial?{make:initial.make,model:initial.model,year:String(initial.year)}:{make:"",model:"",year:""});
+  const [nickname, setNickname] = useState(initial?.nickname??"");
+  const [color, setColor] = useState<string | null>(initial?.color===undefined?DEFAULT_COLOR:initial.color);
+  const [genId, setGenId] = useState<string | null | undefined>(initial?.generationId);
   const { list, error: listError, retry } = useVehicleList();
   const gens = (list ?? []).find(v => v.make === draft.make && v.model === draft.model)?.generations?.filter(x => draft.year && x.yearFrom <= +draft.year && +draft.year <= x.yearTo) ?? [];
   const gen = genId === undefined && gens.length === 1 ? gens[0].id : genId;
   const genDone = gens.length <= 1 || genId !== undefined;
   const [err, setErr] = useState<string | null>(null);
-  useEffect(() => {
-    if (!open) return;
-    const initial = picker?.mode === "add" ? picker.draft : editing;
-    setDraft(initial ? { make: initial.make, model: initial.model, year: String(initial.year) } : { make: "", model: "", year: "" });
-    setColor(initial?.color === undefined ? DEFAULT_COLOR : initial.color);
-    setNickname(initial?.nickname ?? "");
-    setGenId(initial?.generationId);
-    setErr(null);
-    // Snapshot the selected ID once; refreshes must not overwrite a draft.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [picker]);
   const duplicate = !editing && !!draft.year && matchingGarageCars(garageCars, { ...draft, generationId: gen ?? null }).length > 0;
   const atLimit = !editing && !canAddGarageCar(garageCars);
   const missing = picker?.mode === "edit" && !editing;
@@ -153,7 +152,7 @@ export function MyCarSheet() {
   };
   const close = () => { if (!busy) closeMyCarPicker(); };
   return (
-    <Sheet visible={open} tall onClose={close} closeLabel={t("Close", "إغلاق")} title={editing ? t("Edit car", "تعديل السيارة") : t("Add car", "إضافة سيارة")}
+    <Sheet visible tall onClose={close} closeLabel={t("Close", "إغلاق")} title={editing ? t("Edit car", "تعديل السيارة") : t("Add car", "إضافة سيارة")}
       footer={<View style={{ gap: 8 }}>
         {err ? <Note tone="danger">{err}</Note> : null}
         {error ? <Note tone="danger">{t("Refresh your Garage before saving.", "حدّث كراجك قبل الحفظ.")}</Note> : null}
@@ -213,7 +212,8 @@ function ColorStep({ value, onChange }: { value: string; onChange: (hex: string)
   const preset = CAR_COLORS.some((c) => c.hex === value);
   const [other, setOther] = useState(!preset);
   const [hex, setHex] = useState(preset ? "" : value);
-  useEffect(() => { setOther(!CAR_COLORS.some(c => c.hex === value)); setHex(value); }, [value]);
+  const [previousValue,setPreviousValue]=useState(value);
+  if(previousValue!==value){setPreviousValue(value);setOther(!preset);setHex(value);}
   const swatch = (key: string, label: string, fill: string | null, on: boolean, onPress: () => void) => (
     <Tap key={key} label={label} onPress={onPress} style={{ width: 64, alignItems: "center", gap: 4 }}>
       <View style={{ width: 44, height: 44, borderRadius: 22, borderWidth: on ? 3 : 1, borderColor: on ? g.accent : g.line, padding: 3 }}>

@@ -1,4 +1,5 @@
 import type { CustomerGarageCar, Prisma } from "../generated/prisma/client.js";
+import {activeModels} from "./vehicle3d-catalog.js";
 import { prisma } from "../prisma.js";
 
 export const MAX_GARAGE_CARS = 10;
@@ -31,11 +32,16 @@ async function validate(tx: Tx, input: Input, existing?: CustomerGarageCar) {
   if (color != null && (typeof color !== "string" || !/^#[0-9a-f]{6}$/i.test(color))) return invalid("Choose a colour from the list.");
   const nickname = value.nickname;
   if (nickname != null && (typeof nickname !== "string" || nickname.trim().length > MAX_GARAGE_NICKNAME || /[\x00-\x1f\x7f]/.test(nickname))) return invalid(`Nickname must be at most ${MAX_GARAGE_NICKNAME} characters without control characters.`);
-  const vehicle = await tx.vehicle.findUnique({ where: { makeNormalized_modelNormalized: { makeNormalized: norm(make), modelNormalized: norm(model) } }, include: { generations: true } });
+  const unchanged=existing&&make===existing.make&&model===existing.model&&year===existing.year&&(input.generationId===undefined||input.generationId===existing.generationId);
+  if(unchanged)return {make:existing.make,model:existing.model,year:existing.year,generationId:existing.generationId,color:typeof color==="string"?color.toLowerCase():null,nickname:typeof nickname==="string"?nickname.trim()||null:null};
+  const vehicle = await tx.vehicle.findUnique({ where: { makeNormalized_modelNormalized: { makeNormalized: norm(make), modelNormalized: norm(model) } }, include: { brand:true,generations: true } });
   if (!vehicle) return invalid("Choose a car from the list.");
+  const keys=new Set(activeModels().map(m=>m.key));
+  if(!vehicle.isActive||!vehicle.brand?.isActive)return invalid("This vehicle is no longer selectable. Request your car instead.");
   const carYear = year as number;
   if (carYear < vehicle.yearFrom || carYear > vehicle.yearTo) return invalid(`The ${vehicle.make} ${vehicle.model} is listed for ${vehicle.yearFrom}-${vehicle.yearTo}.`);
-  const matches = vehicle.generations.filter(g => g.yearFrom <= carYear && g.yearTo >= carYear);
+  const matches = vehicle.generations.filter(g => g.isActive&&g.isPublished&&g.model3dKey&&keys.has(g.model3dKey)&&g.yearFrom <= carYear && g.yearTo >= carYear);
+  if(!matches.length)return invalid("This year has no published supported generation. Request your car instead.");
   // Explicit null means Not sure. Omission on create auto-selects only an unambiguous generation.
   // On PATCH the existing choice is revalidated, even when only make/model/year changed.
   const asked = value.generationId;
@@ -73,6 +79,7 @@ export function createGarageService(run: Run = work => prisma.$transaction(work,
     return car;
   };
   const remove = async (tx: Tx, userId: string, car: CustomerGarageCar) => {
+    if (await tx.vehicle3DSubmission.count({ where: { garageCarId: car.id } })) throw new GarageError(409, "GARAGE_3D_HISTORY", "Delete this car's unapproved 3D submissions first. Cars with approved catalog history must be retained.");
     await tx.customerGarageCar.delete({ where: { id: car.id, userId } });
     await audit(tx, userId, "DELETE", car.id);
     if (car.isActive) {

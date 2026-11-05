@@ -1,4 +1,4 @@
-﻿// Garage is the source of truth; old consumers still see only the active car.
+// Garage is the source of truth; old consumers still see only the active car.
 import { useEffect, useSyncExternalStore } from "react";
 import { useSessionUser } from "../shared/session";
 import { catalogService, type GarageInput } from "./catalogService";
@@ -36,6 +36,7 @@ export const useGaragePicker = () => useSyncExternalStore(subscribePicker, picke
 export function garageError(error: unknown, t: (en: string, ar: string) => string) {
   const e = error as { message?: string; data?: { code?: string } };
   const code = e?.data?.code ?? e?.message;
+  if (code === "GARAGE_3D_HISTORY") return t("Delete this car's unapproved 3D submissions first. Cars with approved catalog history must stay in your Garage.", "احذف طلبات النماذج غير المعتمدة أولًا. يجب الاحتفاظ بالسيارات ذات السجل المعتمد في الكراج.");
   if (code === "GARAGE_LIMIT_REACHED") return t("You've reached the 10-car Garage limit.", "وصلت إلى الحد الأقصى للكراج: 10 سيارات.");
   if (code === "GARAGE_ALREADY_SAVED") return t("This car is already saved. Choose it from your Garage.", "هذه السيارة محفوظة بالفعل. اخترها من كراجك.");
   if (code === "GARAGE_BUSY") return t("Please wait for the current change to finish.", "انتظر حتى يكتمل التغيير الحالي.");

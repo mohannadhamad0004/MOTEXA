@@ -189,10 +189,13 @@ export const catalogService = {
   async getVehicles(q = "") {
     return (await api<{ vehicles: CatalogVehicle[] }>("GET", `/catalog/vehicles${qs({ q })}`)).vehicles;
   },
-  /** The whole vehicle list, read once per app session (it is small and fixed). */
-  getVehicleList() {
+  /** Share concurrent reads only. Each subsequent read rechecks server availability. */
+  invalidateVehicleList(){vehicleList=null;},
+  getVehicleList(purpose="garage") {
+    if(purpose==="fitment")return api<{vehicles:VehicleRow[]}>("GET","/catalog/vehicle-list?purpose=fitment").then(r=>r.vehicles);
     vehicleList ??= api<{ vehicles: VehicleRow[] }>("GET", "/catalog/vehicle-list")
       .then((r) => r.vehicles)
+      .finally(()=>{vehicleList=null;})
       .catch((e) => {
         vehicleList = null; // a failed read is retried next time
         throw e;

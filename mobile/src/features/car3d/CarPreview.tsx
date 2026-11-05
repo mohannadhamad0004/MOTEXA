@@ -9,7 +9,7 @@ import { carName } from "../catalog/catalogBits";
 import { Car, useMyCar } from "../catalog/myCar";
 import { DEFAULT_COLOR, useLook } from "./car3d";
 import { Car3DView } from "./Car3DView";
-import { modelFor } from "./models";
+import { useCatalogModel } from "./runtimeModels";
 
 /** "3D for Audi A6 is coming soon" + the car's colour dot. */
 export function ComingSoon({ car }: { car: Car }) {
@@ -32,8 +32,8 @@ export function CarPreview() {
   const { t } = useL();
   const { car } = useMyCar();
   const look = useLook();
+  const model = useCatalogModel(car);
   if (!car) return null;
-  const model = modelFor(car);
   if (!model) return <ComingSoon car={car} />;
   return (
     <Tap label={t("See your car in 3D", "شاهد سيارتك ثلاثية الأبعاد")} onPress={() => router.push("/customer/car3d")} style={[row, { alignItems: "center", gap: 12, padding: 10, borderRadius: gShape.cardLg, backgroundColor: g.card }, shadow(1)]}>

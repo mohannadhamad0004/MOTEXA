@@ -1,5 +1,7 @@
 # VEHICLE-3D-AUDIT ? visual review completed
 
+> Historical baseline: the active library has since been reduced to 21 models. See [FINAL-3D-CLEANUP.md](FINAL-3D-CLEANUP.md) for all 120 final decisions and [CUSTOMER-3D-WORKFLOW.md](CUSTOMER-3D-WORKFLOW.md) for private generation/review. The original classifications below describe the pre-cleanup inventory. Removed production files are backed up privately; do not run the old full-library command expecting them to remain active. Render only the retained set with `--final --prepared --three-dir=<local-three-r160-package>`; add `--color=#c62828` for the red-paint comparison.
+
 Local Three.js **0.160.1** and GLTFLoader loaded from C:/Users/mohan/WebstormProjects/MOTEXA/.private/three-r160/package. No npm operations or CDN requests were used in this resume. Production assets, mappings and viewer source were preserved. No Sketchfab searches or replacements were performed.
 
 ## Results

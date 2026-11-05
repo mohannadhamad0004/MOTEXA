@@ -20,6 +20,7 @@ function bodyTypes(): Map<string, string> {
 }
 
 export async function seedVehicles() {
+  const existing=await prisma.vehicle.count();if(existing)return {n:existing,missing:0}; // Managed catalog is authoritative after bootstrap.
   const bodies = bodyTypes();
   let n = 0;
   let missing = 0;
@@ -28,7 +29,9 @@ export async function seedVehicles() {
       const key = { makeNormalized: normVehicle(mk.make), modelNormalized: normVehicle(model) };
       const bodyType = bodies.get(`${key.makeNormalized}|${key.modelNormalized}`) ?? null;
       if (!bodyType) missing++;
-      const data = { make: mk.make, makeAr: mk.makeAr, model, modelAr, yearFrom, yearTo, bodyType, ...key };
+      const normalizedBrand=mk.make.toLowerCase().replace(/[^a-z0-9]/g,"");
+      const brand=await prisma.vehicleBrand.upsert({where:{normalizedName:normalizedBrand==="mercedes"?"mercedesbenz":normalizedBrand},create:{name:mk.make==="Mercedes"?"Mercedes-Benz":mk.make,nameAr:mk.makeAr,normalizedName:normalizedBrand==="mercedes"?"mercedesbenz":normalizedBrand,aliases:[normalizedBrand]},update:{}});
+      const data = {brandId:brand.id,catalogNormalizedName:model.toLowerCase().replace(/[^a-z0-9]/g,""), make: mk.make, makeAr: mk.makeAr, model, modelAr, yearFrom, yearTo, bodyType, ...key };
       await prisma.vehicle.upsert({ where: { makeNormalized_modelNormalized: key }, update: data, create: data });
       n++;
     }

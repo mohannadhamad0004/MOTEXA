@@ -1,3 +1,4 @@
+import {publishedVehicleList} from "../services/vehicle-taxonomy.js";
 import express, { Router } from "express";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -343,12 +344,10 @@ router.get("/shops/:id/storefront", async (req, res) => {
 // Vehicles that really appear in the fitment data of visible products (no separate vehicle catalogue exists). ?q= is split into
 // The whole vehicle list (makes -> models -> year ranges, EN + AR) for the car pickers and the car-aware search. Small and
 // fixed, so it is sent in one go and the client narrows it. Each model carries its generations (years may overlap).
-router.get("/vehicle-list", async (_req, res) => {
+router.get("/vehicle-list", async (req, res) => {
   try {
-    const vehicles = await prisma.vehicle.findMany({
-      select: { make: true, makeAr: true, model: true, modelAr: true, yearFrom: true, yearTo: true, generations: { select: GEN_FIELDS, orderBy: { yearFrom: "asc" } } },
-      orderBy: [{ make: "asc" }, { model: "asc" }],
-    });
+    const fitment=req.query.purpose==="fitment"&&["PARTS_PROVIDER","ADMIN","SUPER_ADMIN"].includes(res.locals.authUser.role);
+    const vehicles=await prisma.$transaction(tx=>publishedVehicleList(tx,fitment));
     return res.json({ success: true, vehicles });
   } catch (e) {
     return fail(res, "Vehicle list error", e);

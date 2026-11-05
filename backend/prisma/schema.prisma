@@ -73,6 +73,8 @@ model User {
 
   car CustomerCar?
   garageCars CustomerGarageCar[]
+  vehicle3dSubmissions Vehicle3DSubmission[] @relation("Vehicle3DOwner")
+  vehicle3dReviews Vehicle3DSubmission[] @relation("Vehicle3DReviewer")
 
   towDriver          TowDriver?
   partsOrders        PartsOrder[]
@@ -738,6 +740,11 @@ model PartsOrderMessage {
 // make / model are the exact strings fitment rows store; the *Normalized pair is the match key.
 
 model Vehicle {
+  brandId String?
+  brand VehicleBrand? @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  isActive Boolean @default(true)
+  catalogNormalizedName String?
+  @@unique([brandId, catalogNormalizedName])
   id              String   @id @default(uuid())
   make            String
   makeAr          String
@@ -760,6 +767,12 @@ model Vehicle {
 // Years may overlap (Octavia Mk1 / Mk2): then the customer picks. A shop ticking a generation = fits its year range.
 
 model VehicleGeneration {
+  isActive Boolean @default(true)
+  isPublished Boolean @default(false)
+  catalogNormalizedCode String?
+  imports Vehicle3DImport[]
+  @@unique([vehicleId, catalogNormalizedCode])
+  vehicle3dSubmissions Vehicle3DSubmission[]
   garageCars     CustomerGarageCar[]
   id             String   @id @default(uuid())
   vehicleId      String
@@ -789,6 +802,7 @@ model VehicleGeneration {
 // ---- Saved garage cars; the active one powers the single-car compatibility API. ----
 
 model CustomerGarageCar {
+  vehicle3dSubmissions Vehicle3DSubmission[]
   id             String   @id @default(uuid())
   userId         String
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1072,4 +1086,134 @@ model Notification {
   createdAt DateTime  @default(now())
 
   @@index([userId, createdAt])
+}
+
+// Private customer photos/models; only an approved catalog copy is public.
+enum Vehicle3DSubmissionStatus {
+  DRAFT
+  PROCESSING
+  READY
+  SUBMITTED
+  APPROVED
+  REJECTED
+  FAILED
+}
+
+model Vehicle3DSubmission {
+  catalogRequest VehicleCatalogRequest?
+  initialApprovedAt DateTime?
+  initialApprovedByUserId String?
+  provider String?
+  providerState String?
+  providerProgress Int?
+  providerCreatedAt DateTime?
+  providerStartedAt DateTime?
+  providerFinishedAt DateTime?
+  lastProviderCheckAt DateTime?
+  nextPollAt DateTime?
+  generationStage String @default("UPLOAD")
+  generationRevision Int @default(0)
+  generationErrorCode String?
+  generationHistory Json?
+  leaseToken String?
+  leaseUntil DateTime?
+  liveAuthorizedAt DateTime?
+  rawModelPath String?
+  preparationConfig Json?
+  catalogConsentAt DateTime?
+  catalogConsentVersion String?
+  visualVerifiedAt DateTime?
+  id String @id @default(uuid())
+  userId String
+  user User @relation("Vehicle3DOwner", fields: [userId], references: [id], onDelete: Restrict)
+  garageCarId String
+  garageCar CustomerGarageCar @relation(fields: [garageCarId], references: [id], onDelete: Restrict)
+  make String
+  model String
+  generationId String?
+  generation VehicleGeneration? @relation(fields: [generationId], references: [id], onDelete: Restrict)
+  generationName String
+  year Int
+  frontPhotoPath String?
+  rearPhotoPath String?
+  leftPhotoPath String?
+  rightPhotoPath String?
+  privateModelPath String?
+  status Vehicle3DSubmissionStatus @default(DRAFT)
+  reviewNotes String?
+  submittedAt DateTime?
+  reviewedAt DateTime?
+  reviewedByUserId String?
+  reviewedByUser User? @relation("Vehicle3DReviewer", fields: [reviewedByUserId], references: [id], onDelete: Restrict)
+  approvedModel3dKey String? @unique
+  providerTaskId String?
+  generationMode String?
+  failureReason String?
+  validation Json?
+  sourceMetadata Json?
+  lengthM Float @default(4.5)
+  deletedAt DateTime?
+  processingStartedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([garageCarId, createdAt])
+  @@index([status, submittedAt])
+  @@index([status, nextPollAt, leaseUntil], map: "Vehicle3DSubmission_job_due_idx")
+}
+
+
+model VehicleBrand {
+ id String @id @default(uuid())
+ name String
+ nameAr String
+ normalizedName String @unique
+ aliases String[] @default([])
+ isActive Boolean @default(true)
+ vehicles Vehicle[]
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+}
+
+model VehicleCatalogRequest {
+ id String @id @default(uuid())
+ submissionId String @unique
+ submission Vehicle3DSubmission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+ requestedMake String
+ requestedModel String
+ requestedYear Int
+ requestedGeneration String?
+ trim String?
+ notes String?
+ reviewState String @default("DRAFT")
+ reviewNotes String?
+ reviewedByUserId String?
+ reviewedAt DateTime?
+ submittedAt DateTime?
+ consentAt DateTime?
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([reviewState, submittedAt])
+}
+
+model Vehicle3DImport {
+ id String @id @default(uuid())
+ generationId String
+ generation VehicleGeneration @relation(fields: [generationId], references: [id], onDelete: Restrict)
+ uploadedByUserId String
+ status String @default("DRAFT")
+ rawModelPath String
+ privateModelPath String?
+ viewerConfig Json?
+ validation Json?
+ source String
+ author String
+ license String
+ sourceUrl String?
+ reviewNotes String?
+ publishedModel3dKey String? @unique
+ visuallyVerifiedAt DateTime?
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
 }

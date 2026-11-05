@@ -22,8 +22,10 @@ test('repository inventory includes held models and never assumes visual PASS', 
   const {entries} = inventory();
   assert.ok(entries.some(e=>e.manifest?.inApp === false));
   assert.ok(entries.every(e=>e.status === 'UNCERTAIN'));
-  assert.ok(entries.find(e=>e.key==='toyota-corolla-e100').configuration.bakedPaint);
-  assert.ok(entries.find(e=>e.key==='bmw-3-series-e46').configuration.keepBox);
+  assert.equal(entries.find(e=>e.key==='toyota-corolla-e100').configuration,null);
+  assert.equal(entries.find(e=>e.key==='toyota-corolla-e100').manifest.finalStatus,'REMOVED');
+  assert.equal(entries.find(e=>e.key==='bmw-3-series-e46').configuration,null);
+  assert.ok(entries.find(e=>e.key==='bmw-3-series-e46').manifest.viewerConfig.keepBox);
 });
 test('inspection uses world transforms, preserves hierarchy, and records a content hash', async () => {
   mkdirSync(resolve(AUDIT,'test-fixtures'),{recursive:true});

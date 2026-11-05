@@ -1,0 +1,734 @@
+{
+  "finalStatus": "REJECT",
+  "technicalVisualStatus": "PASS_VARIANT",
+  "reason": "External source/license verification could not be completed: Sketchfab page and public model API are inaccessible. Embedded CC BY 4.0 attribution is recorded, not treated as fresh external verification. Candidate remains inactive.",
+  "sourceSha256": "9874b284da3f456fdd297d3bd8654d060c4bf875158f12df6cc16a54640c1022",
+  "make": "Mercedes-Benz",
+  "model": "C-Class",
+  "generation": "W204",
+  "variant": "2008 C63 AMG sedan",
+  "sourceUrl": "https://sketchfab.com/3d-models/2008-mercedes-benz-c63-amg-1b769f1f8dd64aae9b0fb6f2d22a3a54",
+  "embeddedAuthor": "007",
+  "embeddedLicense": "CC BY 4.0",
+  "sourceBytes": 2872476,
+  "geometry": {
+    "triangles": 33921,
+    "vertices": 50523,
+    "meshes": 100,
+    "materials": 14,
+    "textures": 10,
+    "animations": 0,
+    "sourceDimensions": [
+      0.01990421965932354,
+      0.014548539790171247,
+      0.047137898345189555
+    ]
+  },
+  "viewer": {
+    "dimensions": [
+      1.9845991374871605,
+      1.450597914083348,
+      4.699999999999999
+    ],
+    "groundMinY": 0,
+    "front": "+Z visually verified",
+    "paintMaterials": [
+      "c63color"
+    ],
+    "paintMeshes": 14,
+    "wheelMeshCount": 16,
+    "wheelSeparation": "Rim and tire meshes are separate at all four wheel positions; swapping support is not claimed."
+  },
+  "neutral": {
+    "valid": true,
+    "dimensions": [
+      1.9845991374871605,
+      1.450597914083348,
+      4.699999999999999
+    ],
+    "boundsMin": [
+      -0.9922995687435803,
+      0,
+      -2.3499999999999996
+    ],
+    "paintMaterialsApplied": 14,
+    "animations": 0,
+    "wheelMeshes": [
+      {
+        "name": "Object_11",
+        "material": "c63rin2",
+        "center": [
+          -0.8738329828717397,
+          0.39236085684648037,
+          1.5065363628813577
+        ],
+        "dimensions": [
+          0.017910264129383457,
+          0.2807150093004587,
+          0.13525082458873738
+        ]
+      },
+      {
+        "name": "Object_15",
+        "material": "llanta",
+        "center": [
+          -0.7633950110838726,
+          0.32100193069995075,
+          1.5065049242661044
+        ],
+        "dimensions": [
+          0.2549688337524305,
+          0.6420038613999015,
+          0.6420038613999002
+        ]
+      },
+      {
+        "name": "Object_20",
+        "material": "c63rin",
+        "center": [
+          -0.8417768276352091,
+          0.3258001676363679,
+          1.5065049242661044
+        ],
+        "dimensions": [
+          0.016687545660153513,
+          0.12070927642856721,
+          0.12693831208309048
+        ]
+      },
+      {
+        "name": "Object_23",
+        "material": "c63rin",
+        "center": [
+          -0.862156330528022,
+          0.32100191584238286,
+          1.5065049242661044
+        ],
+        "dimensions": [
+          0.057078559185573585,
+          0.49349476657002034,
+          0.493494736854883
+        ]
+      },
+      {
+        "name": "Object_318",
+        "material": "c63rin2",
+        "center": [
+          0.8745611225959062,
+          0.39236085684648037,
+          1.506473485650851
+        ],
+        "dimensions": [
+          0.017910264129383457,
+          0.2807150093004587,
+          0.13525082458873738
+        ]
+      },
+      {
+        "name": "Object_322",
+        "material": "llanta",
+        "center": [
+          0.7641231805231765,
+          0.3210019306999515,
+          1.5065049242661044
+        ],
+        "dimensions": [
+          0.2549687743221559,
+          0.6420038613999001,
+          0.6420038613999002
+        ]
+      },
+      {
+        "name": "Object_327",
+        "material": "c63rin",
+        "center": [
+          0.8425049673593759,
+          0.3258001676363679,
+          1.5065049242661044
+        ],
+        "dimensions": [
+          0.016687545660153513,
+          0.12070927642856721,
+          0.12693831208309048
+        ]
+      },
+      {
+        "name": "Object_330",
+        "material": "c63rin",
+        "center": [
+          0.8628844702521887,
+          0.32100191584238286,
+          1.5065049242661044
+        ],
+        "dimensions": [
+          0.057078559185573585,
+          0.49349476657002034,
+          0.493494736854883
+        ]
+      },
+      {
+        "name": "Object_339",
+        "material": "c63rin2",
+        "center": [
+          -0.8598739405478752,
+          0.39236085684648037,
+          -1.250374763518086
+        ],
+        "dimensions": [
+          0.017910264129383457,
+          0.2807150093004587,
+          0.1352508245887376
+        ]
+      },
+      {
+        "name": "Object_343",
+        "material": "llanta",
+        "center": [
+          -0.7494359687600083,
+          0.32100193069995075,
+          -1.2504062021333393
+        ],
+        "dimensions": [
+          0.2549688337524305,
+          0.6420038613999015,
+          0.6420038613999
+        ]
+      },
+      {
+        "name": "Object_348",
+        "material": "c63rin",
+        "center": [
+          -0.8278177853113449,
+          0.3258001676363679,
+          -1.2504062021333393
+        ],
+        "dimensions": [
+          0.016687545660153513,
+          0.12070927642856721,
+          0.12693831208309025
+        ]
+      },
+      {
+        "name": "Object_351",
+        "material": "c63rin",
+        "center": [
+          -0.8481972882041577,
+          0.32100191584238286,
+          -1.2504062021333393
+        ],
+        "dimensions": [
+          0.057078559185573585,
+          0.49349476657002034,
+          0.4934947368548832
+        ]
+      },
+      {
+        "name": "Object_360",
+        "material": "c63rin2",
+        "center": [
+          0.860602080272042,
+          0.39236085684648037,
+          -1.2504376407485926
+        ],
+        "dimensions": [
+          0.017910264129383457,
+          0.2807150093004587,
+          0.1352508245887376
+        ]
+      },
+      {
+        "name": "Object_364",
+        "material": "llanta",
+        "center": [
+          0.7501641381993123,
+          0.3210019306999515,
+          -1.2504062021333393
+        ],
+        "dimensions": [
+          0.2549687743221559,
+          0.6420038613999001,
+          0.6420038613999
+        ]
+      },
+      {
+        "name": "Object_369",
+        "material": "c63rin",
+        "center": [
+          0.8285459250355114,
+          0.3258001676363679,
+          -1.2504062021333393
+        ],
+        "dimensions": [
+          0.016687545660153513,
+          0.12070927642856721,
+          0.12693831208309025
+        ]
+      },
+      {
+        "name": "Object_372",
+        "material": "c63rin",
+        "center": [
+          0.8489254279283244,
+          0.32100191584238286,
+          -1.2504062021333393
+        ],
+        "dimensions": [
+          0.057078559185573585,
+          0.49349476657002034,
+          0.4934947368548832
+        ]
+      }
+    ],
+    "views": 6,
+    "assetSha256": "9874b284da3f456fdd297d3bd8654d060c4bf875158f12df6cc16a54640c1022",
+    "configuration": {
+      "key": "mercedes-c-class-w204",
+      "generation": "Mercedes-Benz C63 AMG W204 (2008 sedan variant)",
+      "lengthM": 4.7,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "c63color"
+      ],
+      "rimsSwappable": true,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "2008_mercedes-benz_c63_amg",
+        "author": "007",
+        "url": "https://sketchfab.com/3d-models/2008-mercedes-benz-c63-amg-1b769f1f8dd64aae9b0fb6f2d22a3a54",
+        "license": "CC BY 4.0"
+      }
+    },
+    "forwardedModel": {
+      "lengthM": 4.7,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "c63color"
+      ],
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      }
+    },
+    "configurationSha256": "703a71470d4d412ef6b067a9afb7a65e00d36e61566f29ed7c2ab0a3d9625bea",
+    "viewerSha256": "824eee62c9e24ee62ec5a8bc683aa02f943e2bec5fb14d510f69f650cddce263",
+    "hookSha256": "cab21ab9cbb7f2405a6f3a06ef50efe1d258c9e7c980b7c22c1fe9a5225f33d9",
+    "serializerSha256": "1a445370e3e8d7a7cf5d59c4f152e5b4dd84c2931367bcda6330970b09642556",
+    "rendererSha256": "74fb7b34b528686857a9298c252762fefbda687502155f422d1ab2601d4a8e11",
+    "threeVersion": "0.160.1",
+    "screenshots": [
+      {
+        "name": "front",
+        "sha256": "187765f150539f11a2fda7f660b56a0decdf8869eee934713082fc12e451e129",
+        "triangles": 70672,
+        "drawCalls": 205
+      },
+      {
+        "name": "front-three-quarter",
+        "sha256": "92870c932ec1b04cce8b736e04b5ad19477cd1ab0d94b72104b6fa499e8f3900",
+        "triangles": 70672,
+        "drawCalls": 205
+      },
+      {
+        "name": "left-side",
+        "sha256": "92dc93e9b058ea368a145683746dcc28105015169044789687aa0196ca168678",
+        "triangles": 70672,
+        "drawCalls": 205
+      },
+      {
+        "name": "rear-three-quarter",
+        "sha256": "54d439fbb1819b627e9d795842ea6d43029467a9ee3e76a898653721aff0b40b",
+        "triangles": 70672,
+        "drawCalls": 205
+      },
+      {
+        "name": "rear",
+        "sha256": "6def0d4b498450f1f38bdf4e7b4df8d0f8deba2624b50157dfdba0b28440f3d7",
+        "triangles": 70672,
+        "drawCalls": 205
+      },
+      {
+        "name": "top-three-quarter",
+        "sha256": "6a19507452551f89bbae950d56a34ad011222ffa63e4fb516dbafcec0af8b16f",
+        "triangles": 70672,
+        "drawCalls": 205
+      }
+    ],
+    "remoteRequests": []
+  },
+  "redPaint": {
+    "valid": true,
+    "dimensions": [
+      1.9845991374871605,
+      1.450597914083348,
+      4.699999999999999
+    ],
+    "boundsMin": [
+      -0.9922995687435803,
+      0,
+      -2.3499999999999996
+    ],
+    "paintMaterialsApplied": 14,
+    "animations": 0,
+    "wheelMeshes": [
+      {
+        "name": "Object_11",
+        "material": "c63rin2",
+        "center": [
+          -0.8738329828717397,
+          0.39236085684648037,
+          1.5065363628813577
+        ],
+        "dimensions": [
+          0.017910264129383457,
+          0.2807150093004587,
+          0.13525082458873738
+        ]
+      },
+      {
+        "name": "Object_15",
+        "material": "llanta",
+        "center": [
+          -0.7633950110838726,
+          0.32100193069995075,
+          1.5065049242661044
+        ],
+        "dimensions": [
+          0.2549688337524305,
+          0.6420038613999015,
+          0.6420038613999002
+        ]
+      },
+      {
+        "name": "Object_20",
+        "material": "c63rin",
+        "center": [
+          -0.8417768276352091,
+          0.3258001676363679,
+          1.5065049242661044
+        ],
+        "dimensions": [
+          0.016687545660153513,
+          0.12070927642856721,
+          0.12693831208309048
+        ]
+      },
+      {
+        "name": "Object_23",
+        "material": "c63rin",
+        "center": [
+          -0.862156330528022,
+          0.32100191584238286,
+          1.5065049242661044
+        ],
+        "dimensions": [
+          0.057078559185573585,
+          0.49349476657002034,
+          0.493494736854883
+        ]
+      },
+      {
+        "name": "Object_318",
+        "material": "c63rin2",
+        "center": [
+          0.8745611225959062,
+          0.39236085684648037,
+          1.506473485650851
+        ],
+        "dimensions": [
+          0.017910264129383457,
+          0.2807150093004587,
+          0.13525082458873738
+        ]
+      },
+      {
+        "name": "Object_322",
+        "material": "llanta",
+        "center": [
+          0.7641231805231765,
+          0.3210019306999515,
+          1.5065049242661044
+        ],
+        "dimensions": [
+          0.2549687743221559,
+          0.6420038613999001,
+          0.6420038613999002
+        ]
+      },
+      {
+        "name": "Object_327",
+        "material": "c63rin",
+        "center": [
+          0.8425049673593759,
+          0.3258001676363679,
+          1.5065049242661044
+        ],
+        "dimensions": [
+          0.016687545660153513,
+          0.12070927642856721,
+          0.12693831208309048
+        ]
+      },
+      {
+        "name": "Object_330",
+        "material": "c63rin",
+        "center": [
+          0.8628844702521887,
+          0.32100191584238286,
+          1.5065049242661044
+        ],
+        "dimensions": [
+          0.057078559185573585,
+          0.49349476657002034,
+          0.493494736854883
+        ]
+      },
+      {
+        "name": "Object_339",
+        "material": "c63rin2",
+        "center": [
+          -0.8598739405478752,
+          0.39236085684648037,
+          -1.250374763518086
+        ],
+        "dimensions": [
+          0.017910264129383457,
+          0.2807150093004587,
+          0.1352508245887376
+        ]
+      },
+      {
+        "name": "Object_343",
+        "material": "llanta",
+        "center": [
+          -0.7494359687600083,
+          0.32100193069995075,
+          -1.2504062021333393
+        ],
+        "dimensions": [
+          0.2549688337524305,
+          0.6420038613999015,
+          0.6420038613999
+        ]
+      },
+      {
+        "name": "Object_348",
+        "material": "c63rin",
+        "center": [
+          -0.8278177853113449,
+          0.3258001676363679,
+          -1.2504062021333393
+        ],
+        "dimensions": [
+          0.016687545660153513,
+          0.12070927642856721,
+          0.12693831208309025
+        ]
+      },
+      {
+        "name": "Object_351",
+        "material": "c63rin",
+        "center": [
+          -0.8481972882041577,
+          0.32100191584238286,
+          -1.2504062021333393
+        ],
+        "dimensions": [
+          0.057078559185573585,
+          0.49349476657002034,
+          0.4934947368548832
+        ]
+      },
+      {
+        "name": "Object_360",
+        "material": "c63rin2",
+        "center": [
+          0.860602080272042,
+          0.39236085684648037,
+          -1.2504376407485926
+        ],
+        "dimensions": [
+          0.017910264129383457,
+          0.2807150093004587,
+          0.1352508245887376
+        ]
+      },
+      {
+        "name": "Object_364",
+        "material": "llanta",
+        "center": [
+          0.7501641381993123,
+          0.3210019306999515,
+          -1.2504062021333393
+        ],
+        "dimensions": [
+          0.2549687743221559,
+          0.6420038613999001,
+          0.6420038613999
+        ]
+      },
+      {
+        "name": "Object_369",
+        "material": "c63rin",
+        "center": [
+          0.8285459250355114,
+          0.3258001676363679,
+          -1.2504062021333393
+        ],
+        "dimensions": [
+          0.016687545660153513,
+          0.12070927642856721,
+          0.12693831208309025
+        ]
+      },
+      {
+        "name": "Object_372",
+        "material": "c63rin",
+        "center": [
+          0.8489254279283244,
+          0.32100191584238286,
+          -1.2504062021333393
+        ],
+        "dimensions": [
+          0.057078559185573585,
+          0.49349476657002034,
+          0.4934947368548832
+        ]
+      }
+    ],
+    "views": 6,
+    "assetSha256": "9874b284da3f456fdd297d3bd8654d060c4bf875158f12df6cc16a54640c1022",
+    "configuration": {
+      "key": "mercedes-c-class-w204",
+      "generation": "Mercedes-Benz C63 AMG W204 (2008 sedan variant)",
+      "lengthM": 4.7,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "c63color"
+      ],
+      "rimsSwappable": true,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "2008_mercedes-benz_c63_amg",
+        "author": "007",
+        "url": "https://sketchfab.com/3d-models/2008-mercedes-benz-c63-amg-1b769f1f8dd64aae9b0fb6f2d22a3a54",
+        "license": "CC BY 4.0"
+      }
+    },
+    "forwardedModel": {
+      "lengthM": 4.7,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "c63color"
+      ],
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      }
+    },
+    "configurationSha256": "703a71470d4d412ef6b067a9afb7a65e00d36e61566f29ed7c2ab0a3d9625bea",
+    "viewerSha256": "824eee62c9e24ee62ec5a8bc683aa02f943e2bec5fb14d510f69f650cddce263",
+    "hookSha256": "cab21ab9cbb7f2405a6f3a06ef50efe1d258c9e7c980b7c22c1fe9a5225f33d9",
+    "serializerSha256": "1a445370e3e8d7a7cf5d59c4f152e5b4dd84c2931367bcda6330970b09642556",
+    "rendererSha256": "74fb7b34b528686857a9298c252762fefbda687502155f422d1ab2601d4a8e11",
+    "threeVersion": "0.160.1",
+    "screenshots": [
+      {
+        "name": "front",
+        "sha256": "74c0095761270a15c632b5f0a5cb87ac84b3c13cf3cfd21399686254f7ecd944",
+        "triangles": 70672,
+        "drawCalls": 205
+      },
+      {
+        "name": "front-three-quarter",
+        "sha256": "c3f345537f71cf20a37deb91757e4b97e8dd34b0c538519cd6b4d41d2859ece8",
+        "triangles": 70672,
+        "drawCalls": 205
+      },
+      {
+        "name": "left-side",
+        "sha256": "149c913920de46acf42fe8d54d97a4d72e734cc6f73449d4218087049e03dd17",
+        "triangles": 70672,
+        "drawCalls": 205
+      },
+      {
+        "name": "rear-three-quarter",
+        "sha256": "4b8723bb689df94508f7093cc29574ca425e39a014ad06ffdf7823ddcd0d933b",
+        "triangles": 70672,
+        "drawCalls": 205
+      },
+      {
+        "name": "rear",
+        "sha256": "0110f8543c668b97843dd9cf5f267e8fba346cd767417d3b1791b57725a5b2c3",
+        "triangles": 70672,
+        "drawCalls": 205
+      },
+      {
+        "name": "top-three-quarter",
+        "sha256": "16e0922035b4a42208c1d6c0fb1e5f3e6fadaf10a1602ca6c5f6f8fcb398a38b",
+        "triangles": 70672,
+        "drawCalls": 205
+      }
+    ],
+    "remoteRequests": []
+  },
+  "sourceVerification": {
+    "attempted": true,
+    "pageAccessible": false,
+    "publicApiAccessible": false,
+    "paidRequests": 0
+  },
+  "archivedFiles": {
+    "backup-old/source-old.glb": "ARCHIVED_SOURCE_ONLY",
+    "backup-old/production-old.glb": "RETIRED_PRODUCTION_BACKUP_ONLY"
+  },
+  "otherIntendedModels": [
+    "not yet supplied / pending import",
+    "not yet supplied / pending import"
+  ]
+}
