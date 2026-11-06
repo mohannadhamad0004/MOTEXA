@@ -8,10 +8,10 @@ const {parseCatalog,offlineCatalog,CATALOG_CACHE_TTL}=load(resolve('src/features
 const {CAR_MODELS}=load(resolve('src/features/car3d/models.ts'));
 const full={...structuredClone(CAR_MODELS[0]),preRotateX:-Math.PI/2,rotateY:Math.PI,groundOffset:.03,centerX:0,
  bakedPaint:{hue:[10,80],sat:.2,ref:.35},keepBox:{y:[-1,2],z:[-3,3],names:['detached']},
- zones:{frontBumper:{meshes:['bumper'],box:{x:[0,1],y:[0,.4],z:[.7,1]}}},wing:{x:.1,y:.2,z:.3,scale:.9},rack:{x:0,y:.2,z:0,scale:1.1}};
+ zones:{FRONT_BUMPER:{meshes:['bumper'],box:{x:[0,1],y:[0,.4],z:[.7,1]}},RIMS:{box:{x:[0,1],y:[0,.5],z:[0,1]}}},wing:{x:.1,y:.2,z:.3,scale:.9},rack:{x:0,y:.2,z:0,scale:1.1}};
 test('every viewer configuration field survives validated runtime data and the actual hook serializer',()=>{
  const parsed=parseCarModel(full);assert.ok(parsed);const forwarded=modelForViewer(parsed);
- for(const key of ['lengthM','preRotateX','rotateY','groundOffset','paintNodes','paintMaterials','bakedPaint','centerX','keepBox','zones','wing','rack'])assert.deepEqual(forwarded[key],full[key],key);
+ for(const key of ['lengthM','preRotateX','rotateY','groundOffset','paintNodes','paintMaterials','bakedPaint','centerX','keepBox','zones'])assert.deepEqual(forwarded[key],full[key],key);
  assert.match(fs.readFileSync('src/features/car3d/useCar3D.ts','utf8'),/model:\s*modelForViewer\(m\)/);
  const html=fs.readFileSync('src/features/car3d/sceneHtml.ts','utf8');for(const key of Object.keys(forwarded))assert.ok(html.includes('m.'+key),key);
 });
@@ -28,4 +28,19 @@ test('server active keys control merging, remove duplicates and never resurrect 
  assert.deepEqual(offlineCatalog(parsed,CAR_MODELS,now+CATALOG_CACHE_TTL+1),[]);
  assert.deepEqual(offlineCatalog(null,CAR_MODELS,now),[]);
  assert.equal(parseCatalog({revision:'bad',models:[full]}),null);
+});
+test('accessory zones: every type accepted, legacy frontBumper mapped, bad boxes and unknown types rejected',()=>{
+ const {ACCESSORY_TYPES,parseZone}=load(resolve('src/features/car3d/modelConfig.ts'));
+ assert.equal(ACCESSORY_TYPES.length,11);
+ const legacy=parseCarModel({...full,zones:{frontBumper:{meshes:['b'],box:{x:[0,1],y:[0,.4],z:[.9,1]}}}});assert.deepEqual(legacy.zones.FRONT_BUMPER.meshes,['b']);
+ for(const zones of [{NOPE:{box:{x:[0,1],y:[0,1],z:[0,1]}}},{WING:{}},{WING:{box:{x:[1,0],y:[0,1],z:[0,1]}}},{WING:{box:{x:[0,9],y:[0,1],z:[0,1]}}},{WING:{meshes:[]}}])assert.equal(parseCarModel({...full,zones}),null,JSON.stringify(zones));
+ assert.deepEqual(parseZone({box:{x:[0,1],y:[0,.34],z:[.905,1]}}).box.z,[.905,1]);
+ // replace = the stock part an add-on hides: mesh names and/or a box, never nested, never extra keys
+ const wing=parseCarModel({...full,zones:{WING:{box:{x:[0,1],y:[0,1],z:[.04,.1]},replace:{box:{x:[.16,.84],y:[.735,.9],z:[0,.075]}}},RIMS:{replace:{meshes:['rim_fl']}}}});
+ assert.deepEqual(wing.zones.WING.replace.box.y,[.735,.9]);assert.deepEqual(wing.zones.RIMS.replace,{meshes:['rim_fl']});assert.deepEqual(modelForViewer(wing).zones,wing.zones);
+ for(const replace of [{},{replace:{box:{x:[0,1],y:[0,1],z:[0,1]}}},{box:{x:[0,1],y:[0,1],z:[0,1]},extra:1},{meshes:[]},{box:{x:[1,0],y:[0,1],z:[0,1]}}])assert.equal(parseZone({replace}),null,JSON.stringify(replace));
+});
+test('only content-addressed published accessory files may be requested by the viewer',()=>{
+ const re=load(resolve('src/features/car3d/modelConfig.ts')).ACCESSORY_FILE;
+ assert.ok(re.test('accessories/acc-0123456789abcdef.glb'));for(const bad of ['accessories/../x.glb','accessories/acc-XYZ.glb','private-1.glb','accessories/acc-0123456789abcdef.glb?x'])assert.ok(!re.test(bad),bad);
 });

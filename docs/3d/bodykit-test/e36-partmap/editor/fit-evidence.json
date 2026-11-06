@@ -1,0 +1,36 @@
+{
+  "valid": true,
+  "car": {
+    "dimensions": [
+      1.9725226945513303,
+      1.3627772935925346,
+      4.65
+    ],
+    "wheelsFound": true,
+    "mappedParts": [],
+    "partMapIn": []
+  },
+  "fit": {
+    "meshes": 216
+  },
+  "kit": {
+    "label": "SPOILER"
+  },
+  "carSha256": "2f026865272597d4edb718be5c99e2bc74a790f98f53e06f45f33a177e55ab89",
+  "partSha256": null,
+  "viewerSha256": "d97f3356838716161c38caed2e5ceaa95096a3da75b60a521954f98d98b5aca7",
+  "screenshots": [
+    {
+      "name": "editor-rear-34",
+      "sha256": "33294016d6c0c2510af904a87f2fb2231ef86a4a7bd99bd848e11a6453700fb7"
+    },
+    {
+      "name": "editor-front-34",
+      "sha256": "f73d7fca86058cc60185197de61a2b31ee23466c63a41ab0ee99a4deb6375694"
+    },
+    {
+      "name": "editor-side",
+      "sha256": "35f18cf80cbe2525488d03a90e2a935ebc6d37b6af60e2499315692893acf1e0"
+    }
+  ]
+}

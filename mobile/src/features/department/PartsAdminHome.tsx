@@ -77,6 +77,11 @@ export function PartsAdminHome() {
         <Text style={{ color: d.muted, marginTop: 4, textAlign: d.align }}>{d.t("Inspect photos and models before catalog approval.", "افحص الصور والنماذج قبل اعتمادها في الكتالوج.")}</Text>
       </Tap>
 
+      <Tap label={d.t("Shop accessories in 3D", "إكسسوارات المتاجر ثلاثية الأبعاد")} onPress={() => go("/dept/accessory3d")} style={{ ...cardStyle(d), padding: 16, marginBottom: 22 }}>
+        <Text style={{ color: d.ink, fontSize: 16, fontWeight: "800", textAlign: d.align }}>{d.t("Shop accessories in 3D", "إكسسوارات المتاجر ثلاثية الأبعاد")}</Text>
+        <Text style={{ color: d.muted, marginTop: 4, textAlign: d.align }}>{d.t("Review photos, start generation, check the fit on a car, publish.", "راجع الصور، ابدأ الإنشاء، تحقق من التركيب على سيارة، انشر.")}</Text>
+      </Tap>
+
       {/* parts orders (read only): all orders, and the deliveries in progress on the map */}
       <Head title={d.t("Orders", "الطلبات")} caption={d.t("Customer orders across all shops", "طلبات الزبائن في كل المتاجر")} action={d.t("All", "الكل")} onAction={() => go("/dept/orders")} />
       <View style={{ flexDirection: d.row, gap: 10, marginBottom: 22 }}>

@@ -1,7 +1,8 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
-import { Badge, Card, ErrorState, Field, GarageHero, GaragePage, GButton, ListRow, Note, Section, SkeletonBlock, StatusChip } from "../../../../components/garage";
+import { Badge, Card, ErrorState, Field, GarageHero,  GButton, ListRow, Note, Section, SkeletonBlock, StatusChip } from "../../../../components/garage";
+import { ProviderLayout as GaragePage } from "../../../../components/layout/ProviderLayout";
 import { cityLabel } from "../../../../core/constants/cities";
 import { useL } from "../../../../core/hooks/useL";
 import { ORDER_REFRESH_MS, OrderStatus, ShopOrder, shopOrders } from "../../../../features/orders/ordersService";

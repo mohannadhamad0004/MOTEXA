@@ -1,5 +1,6 @@
 import { router } from "expo-router";
-import { ErrorState, GarageHero, GaragePage, SkeletonBlock } from "../../../components/garage";
+import { ErrorState, GarageHero,  SkeletonBlock } from "../../../components/garage";
+import { ProviderLayout as GaragePage } from "../../../components/layout/ProviderLayout";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { companyDispatch } from "../../../features/tow/dispatchService";

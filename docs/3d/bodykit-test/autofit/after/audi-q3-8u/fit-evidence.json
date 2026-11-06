@@ -1,0 +1,173 @@
+{
+  "valid": true,
+  "car": {
+    "dimensions": [
+      1.9607815272923412,
+      1.6174023521764989,
+      4.4
+    ],
+    "wheelsFound": false,
+    "mappedParts": [],
+    "partMapIn": []
+  },
+  "fit": {
+    "type": "WING",
+    "fitVersion": 2,
+    "body": "hatch",
+    "mount": {
+      "body": "hatch",
+      "fromRearM": 0.729,
+      "widthM": 1.176,
+      "bodyWidthM": 1.716,
+      "scaleBy": "feet"
+    },
+    "feet": 2,
+    "feetGapMm": [
+      0,
+      0.2
+    ],
+    "pitchDeg": 7,
+    "rollDeg": 0,
+    "spanM": 1.001,
+    "heightAboveM": 0.171,
+    "overhangM": 0,
+    "copies": 1,
+    "turnedDeg": 0,
+    "flipped180": false,
+    "partSize": [
+      1.903,
+      0.444,
+      0.553
+    ],
+    "scale": 0.526,
+    "nonUniform": [
+      1,
+      1
+    ],
+    "stored": false,
+    "partBox": [
+      -0.5195,
+      1.4498,
+      -1.7153,
+      0.5201,
+      1.7168,
+      -1.3417
+    ]
+  },
+  "autofit": {
+    "version": 2,
+    "type": "WING",
+    "orient": [
+      "x",
+      0,
+      "bottom"
+    ],
+    "placements": [
+      {
+        "pos": [
+          0.0001,
+          1.4675,
+          -1.5426
+        ],
+        "sc": [
+          0.5258,
+          0.5258,
+          0.5258
+        ],
+        "rot": [
+          -0.1222,
+          0,
+          0
+        ],
+        "side": 1
+      }
+    ],
+    "shadows": [
+      {
+        "x": -0.9041,
+        "y": 0,
+        "z": 0.1367,
+        "w": 0.0934,
+        "d": 0.2764
+      },
+      {
+        "x": 0.9038,
+        "y": 0,
+        "z": 0.1378,
+        "w": 0.0946,
+        "d": 0.2739
+      }
+    ],
+    "info": {
+      "type": "WING",
+      "fitVersion": 2,
+      "body": "hatch",
+      "mount": {
+        "body": "hatch",
+        "fromRearM": 0.729,
+        "widthM": 1.176,
+        "bodyWidthM": 1.716,
+        "scaleBy": "feet"
+      },
+      "feet": 2,
+      "feetGapMm": [
+        0,
+        0.2
+      ],
+      "pitchDeg": 7,
+      "rollDeg": 0,
+      "spanM": 1.001,
+      "heightAboveM": 0.171,
+      "overhangM": 0,
+      "copies": 1,
+      "turnedDeg": 0,
+      "flipped180": false,
+      "partSize": [
+        1.903,
+        0.444,
+        0.553
+      ],
+      "scale": 0.526,
+      "nonUniform": [
+        1,
+        1
+      ]
+    }
+  },
+  "kit": {
+    "type": "WING",
+    "size": {
+      "widthMm": 1300
+    },
+    "paintMatch": false
+  },
+  "carSha256": "8314b563cc0ede1fd5169dc20bae4ca7375d28b725f0629d1e8a8bffed4a4e83",
+  "partSha256": "7e40b463d76777b8655d8c2198451d9bf0b1de6e30963a233c8c57c08225a958",
+  "viewerSha256": "f1b1ef0d07fbb43da9e361a718d877f2168d1a9d4deaa396ad116afe1f6144db",
+  "screenshots": [
+    {
+      "name": "front",
+      "sha256": "6393035309f9df48954de8b117abefad0d93b03da5ff96c95d24a32c37a20277"
+    },
+    {
+      "name": "front-three-quarter",
+      "sha256": "3400de0226a326213fb606254801bb86414d68d046eac3642700c6ec5d2ccfe7"
+    },
+    {
+      "name": "left-side",
+      "sha256": "976634830bb67c5d66685ed748a810b2764a246e085ee42055ca52d5d14e7f89"
+    },
+    {
+      "name": "rear-three-quarter",
+      "sha256": "b80ffc3d9558086c368af69495e63dc25bf654233ffeceeeff366a434c102806"
+    },
+    {
+      "name": "rear",
+      "sha256": "525de1066c92dc23bd6f4ae882795e91ca2865900da652ec6ceae73255ca8bb1"
+    },
+    {
+      "name": "top-three-quarter",
+      "sha256": "4dc86c49e953489a07f1ef2e26482c59b7fc2a5d9ae0f3ca0be0b7deb57b166d"
+    }
+  ]
+}

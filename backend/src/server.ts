@@ -1,6 +1,8 @@
 import managedVehicleCatalogRoutes from "./routes/vehicle-catalog.routes.js";
 import { prisma } from "./prisma.js";
 import vehicle3DRoutes from "./routes/vehicle3d.routes.js";
+import accessory3DRoutes from "./routes/accessory3d.routes.js";
+import providerPortalRoutes from "./routes/provider-portal.routes.js";
 import { startVehicle3DWorker } from "./services/vehicle3d-generation.js";
 import mechanicRegistrationRoutes from './routes/mechanic-registration.routes.js';
 import mechanicsRoutes from './routes/mechanics.routes.js';
@@ -35,10 +37,21 @@ const app = express();
 const PORT = Number(process.env.PORT) || 5000;
 
 app.use(cors());
+app.use("/api", providerPortalRoutes);
 app.use("/api",managedVehicleCatalogRoutes);
 app.use("/api", (req, res, next) => /^\/(catalog\/(vehicle-3d-submissions|3d-models)|admin\/parts\/vehicle-3d-submissions)(\/|$)/.test(req.path) ? vehicle3DRoutes(req, res, next) : next());
+// Feature 2: shop accessories in 3D (guards per route; photo bodies have their own limit)
+app.use("/api", (req, res, next) => /accessory-3d|accessory-zones/.test(req.path) ? accessory3DRoutes(req, res, next) : next());
 // Public 3D car models (backend/public/3d, optimised GLBs; no customer data). Long cache: a new model gets a new file name.
 app.use("/api/3d", async (req, res, next) => {
+  if (req.path.startsWith("/accessories/acc-")) { // generated shop accessories: only while their product is PUBLISHED
+    try {
+      const file = req.path.slice("/accessories/".length).replace(/.glb$/, "");
+      const live = await prisma.productAccessory3D.findFirst({ where: { publishedFile: file, status: "PUBLISHED", product: { isHidden: false } }, select: { id: true } });
+      if (!live) { res.status(404).end(); return; }
+      next(); return;
+    } catch { res.status(503).end(); return; }
+  }
   if (!req.path.startsWith("/customer-") && !req.path.startsWith("/generated-") && !req.path.startsWith("/manual-")) { next(); return; }
   const key = req.path.slice(1).replace(/\.glb$/, "");
   try {

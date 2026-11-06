@@ -1,3 +1,4 @@
+import { ShopPublicProfile } from "../../../features/catalog/ShopPublicProfile";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
@@ -137,6 +138,7 @@ export default function CustomerShop() {
 
         {/* product panel */}
         <View style={[{ marginHorizontal: 20, marginTop: 14, borderRadius: gShape.cardLg, backgroundColor: g.cardSoft, padding: 20 }, shadow(1)]}>
+          {shop ? <ShopPublicProfile shop={shop}/> : null}
           <View style={[row, { alignItems: "center", justifyContent: "space-between", marginBottom: 10 }]}>
             <GText style={[gType.title, align, { flexShrink: 1 }]}>{t("Available parts", "القطع المتاحة")}</GText>
             {items.length > 0 ? (

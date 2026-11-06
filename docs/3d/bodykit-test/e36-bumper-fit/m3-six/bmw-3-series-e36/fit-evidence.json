@@ -1,0 +1,430 @@
+{
+  "valid": true,
+  "car": {
+    "dimensions": [
+      1.972522671149907,
+      1.362777228188965,
+      4.649999875966968
+    ],
+    "wheelsFound": true,
+    "mappedParts": [
+      "FRONT_BUMPER",
+      "REAR_BUMPER",
+      "MIRRORS",
+      "SPOILER",
+      "SIDE_SKIRTS",
+      "WHEELS"
+    ],
+    "partMapIn": [
+      "WHEELS",
+      "MIRRORS",
+      "SPOILER",
+      "REAR_BUMPER",
+      "SIDE_SKIRTS",
+      "FRONT_BUMPER"
+    ]
+  },
+  "fit": {
+    "type": "FRONT_BUMPER",
+    "fitVersion": 2,
+    "zone": {
+      "how": "part map",
+      "size": [
+        1.792,
+        0.347,
+        0.477
+      ],
+      "hidden": 12
+    },
+    "stretch": [
+      1,
+      1.05,
+      0.966
+    ],
+    "deeperThanStockMm": 0,
+    "gapsMm": {
+      "bonnetBootLine": {
+        "n": 481,
+        "p90": 0,
+        "max": 21.6
+      },
+      "fendersArches": {
+        "n": 6,
+        "p90": 0,
+        "max": 0
+      }
+    },
+    "worstSeamPoints": [
+      {
+        "region": "bonnetBootLine",
+        "mm": 22,
+        "at": [
+          -0.896,
+          0.46,
+          1.849
+        ],
+        "by": "E36_coupe_grille_new_BMWE36_paint_0"
+      },
+      {
+        "region": "bonnetBootLine",
+        "mm": 22,
+        "at": [
+          -0.895,
+          0.46,
+          1.851
+        ],
+        "by": "E36_coupe_grille_new_BMWE36_paint_0"
+      },
+      {
+        "region": "bonnetBootLine",
+        "mm": 22,
+        "at": [
+          -0.895,
+          0.46,
+          1.851
+        ],
+        "by": "E36_coupe_grille_new_BMWE36_paint_0"
+      },
+      {
+        "region": "bonnetBootLine",
+        "mm": 21,
+        "at": [
+          -0.894,
+          0.46,
+          1.849
+        ],
+        "by": "E36_coupe_grille_new_BMWE36_paint_0"
+      },
+      {
+        "region": "bonnetBootLine",
+        "mm": 21,
+        "at": [
+          -0.894,
+          0.46,
+          1.848
+        ],
+        "by": "E36_coupe_grille_new_BMWE36_paint_0"
+      },
+      {
+        "region": "bonnetBootLine",
+        "mm": 20,
+        "at": [
+          -0.896,
+          0.455,
+          1.852
+        ],
+        "by": "E36_coupe_grille_new_BMWE36_paint_0"
+      },
+      {
+        "region": "bonnetBootLine",
+        "mm": 20,
+        "at": [
+          -0.896,
+          0.455,
+          1.853
+        ],
+        "by": "E36_coupe_grille_new_BMWE36_paint_0"
+      },
+      {
+        "region": "bonnetBootLine",
+        "mm": 20,
+        "at": [
+          -0.895,
+          0.457,
+          1.852
+        ],
+        "by": "E36_coupe_grille_new_BMWE36_paint_0"
+      },
+      {
+        "region": "bonnetBootLine",
+        "mm": 20,
+        "at": [
+          -0.894,
+          0.46,
+          1.851
+        ],
+        "by": "E36_coupe_grille_new_BMWE36_paint_0"
+      },
+      {
+        "region": "bonnetBootLine",
+        "mm": 20,
+        "at": [
+          -0.896,
+          0.457,
+          1.851
+        ],
+        "by": "E36_coupe_grille_new_BMWE36_paint_0"
+      },
+      {
+        "region": "bonnetBootLine",
+        "mm": 20,
+        "at": [
+          -0.894,
+          0.458,
+          1.85
+        ],
+        "by": "E36_coupe_grille_new_BMWE36_paint_0"
+      },
+      {
+        "region": "bonnetBootLine",
+        "mm": 20,
+        "at": [
+          -0.893,
+          0.46,
+          1.848
+        ],
+        "by": "E36_coupe_grille_new_BMWE36_paint_0"
+      }
+    ],
+    "copies": 1,
+    "turnedDeg": 90,
+    "flipped180": true,
+    "partSize": [
+      11.906,
+      1.851,
+      3.279
+    ],
+    "scale": 0.151,
+    "nonUniform": [
+      1.05,
+      0.966
+    ],
+    "stored": false,
+    "partBox": [
+      -0.8959,
+      0.1676,
+      1.8482,
+      0.8959,
+      0.4602,
+      2.325
+    ]
+  },
+  "autofit": {
+    "version": 2,
+    "type": "FRONT_BUMPER",
+    "orient": [
+      "x",
+      1,
+      "top"
+    ],
+    "placements": [
+      {
+        "pos": [
+          0,
+          0.4602,
+          2.325
+        ],
+        "sc": [
+          0.1505,
+          0.1581,
+          0.1454
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "side": 1
+      }
+    ],
+    "shadows": [],
+    "info": {
+      "type": "FRONT_BUMPER",
+      "fitVersion": 2,
+      "zone": {
+        "how": "part map",
+        "size": [
+          1.792,
+          0.347,
+          0.477
+        ],
+        "hidden": 12
+      },
+      "stretch": [
+        1,
+        1.05,
+        0.966
+      ],
+      "deeperThanStockMm": 0,
+      "gapsMm": {
+        "bonnetBootLine": {
+          "n": 481,
+          "p90": 0,
+          "max": 21.6
+        },
+        "fendersArches": {
+          "n": 6,
+          "p90": 0,
+          "max": 0
+        }
+      },
+      "worstSeamPoints": [
+        {
+          "region": "bonnetBootLine",
+          "mm": 22,
+          "at": [
+            -0.896,
+            0.46,
+            1.849
+          ],
+          "by": "E36_coupe_grille_new_BMWE36_paint_0"
+        },
+        {
+          "region": "bonnetBootLine",
+          "mm": 22,
+          "at": [
+            -0.895,
+            0.46,
+            1.851
+          ],
+          "by": "E36_coupe_grille_new_BMWE36_paint_0"
+        },
+        {
+          "region": "bonnetBootLine",
+          "mm": 22,
+          "at": [
+            -0.895,
+            0.46,
+            1.851
+          ],
+          "by": "E36_coupe_grille_new_BMWE36_paint_0"
+        },
+        {
+          "region": "bonnetBootLine",
+          "mm": 21,
+          "at": [
+            -0.894,
+            0.46,
+            1.849
+          ],
+          "by": "E36_coupe_grille_new_BMWE36_paint_0"
+        },
+        {
+          "region": "bonnetBootLine",
+          "mm": 21,
+          "at": [
+            -0.894,
+            0.46,
+            1.848
+          ],
+          "by": "E36_coupe_grille_new_BMWE36_paint_0"
+        },
+        {
+          "region": "bonnetBootLine",
+          "mm": 20,
+          "at": [
+            -0.896,
+            0.455,
+            1.852
+          ],
+          "by": "E36_coupe_grille_new_BMWE36_paint_0"
+        },
+        {
+          "region": "bonnetBootLine",
+          "mm": 20,
+          "at": [
+            -0.896,
+            0.455,
+            1.853
+          ],
+          "by": "E36_coupe_grille_new_BMWE36_paint_0"
+        },
+        {
+          "region": "bonnetBootLine",
+          "mm": 20,
+          "at": [
+            -0.895,
+            0.457,
+            1.852
+          ],
+          "by": "E36_coupe_grille_new_BMWE36_paint_0"
+        },
+        {
+          "region": "bonnetBootLine",
+          "mm": 20,
+          "at": [
+            -0.894,
+            0.46,
+            1.851
+          ],
+          "by": "E36_coupe_grille_new_BMWE36_paint_0"
+        },
+        {
+          "region": "bonnetBootLine",
+          "mm": 20,
+          "at": [
+            -0.896,
+            0.457,
+            1.851
+          ],
+          "by": "E36_coupe_grille_new_BMWE36_paint_0"
+        },
+        {
+          "region": "bonnetBootLine",
+          "mm": 20,
+          "at": [
+            -0.894,
+            0.458,
+            1.85
+          ],
+          "by": "E36_coupe_grille_new_BMWE36_paint_0"
+        },
+        {
+          "region": "bonnetBootLine",
+          "mm": 20,
+          "at": [
+            -0.893,
+            0.46,
+            1.848
+          ],
+          "by": "E36_coupe_grille_new_BMWE36_paint_0"
+        }
+      ],
+      "copies": 1,
+      "turnedDeg": 90,
+      "flipped180": true,
+      "partSize": [
+        11.906,
+        1.851,
+        3.279
+      ],
+      "scale": 0.151,
+      "nonUniform": [
+        1.05,
+        0.966
+      ]
+    }
+  },
+  "kit": {
+    "type": "FRONT_BUMPER"
+  },
+  "carSha256": "2f026865272597d4edb718be5c99e2bc74a790f98f53e06f45f33a177e55ab89",
+  "partSha256": "bf0a205cb346f9070a191c1d59ee37d34e24f15164aad685df8d5da71b8e23a8",
+  "viewerSha256": "b61dc0e294a316001c945379164b98b2bc77e5900f4ec76fee2716a2ebc17ced",
+  "screenshots": [
+    {
+      "name": "front",
+      "sha256": "85386eda84bac6ed20423680fd43a7ca52125a06cf74a2d5cf89fd1f6bfa06bc"
+    },
+    {
+      "name": "front-three-quarter",
+      "sha256": "aeb116a8afb44d040ce3defec2a524378fffb004854293095919f75bff3932aa"
+    },
+    {
+      "name": "left-side",
+      "sha256": "5a4c5bc0d1af6a5ec0603c3e043304e0faa053a88c67792f52613f51498b3d14"
+    },
+    {
+      "name": "rear-three-quarter",
+      "sha256": "12561da1aa2030a34b182b575fea2734ab94b34096e785a214a2be34c59babec"
+    },
+    {
+      "name": "rear",
+      "sha256": "7f1fd17d70c4dd1d1a971ab57fca22815734c4821b5278edffa6e25f3c53b36e"
+    },
+    {
+      "name": "top-three-quarter",
+      "sha256": "c3068c3d9f279e8028ecbffc8ad0df244761712342f4fc3dd5a19792c682dcee"
+    }
+  ]
+}

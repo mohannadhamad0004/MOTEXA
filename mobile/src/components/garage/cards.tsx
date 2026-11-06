@@ -40,7 +40,7 @@ export function cardBadges(badges: ProductBadge[] | undefined, isArabic: boolean
   return out.slice(0, max);
 }
 
-type Car = { make: string; model: string; year: string; trim?: string };
+type Car = { make: string; model: string; year: string; trim?: string; generation?: { id: string } | null };
 
 /**
  * The fit line for a car. Only FITS claims a fit (from a fitment row); UNIVERSAL is the shop's "fits every car"; a part with no
@@ -72,6 +72,10 @@ export function ProductCard({ p, onPress, car = null, mine = true, onBroken, wid
   const badges = cardBadges(p.badges, isArabic);
   const fit = car ? fitLine(fitStatus(p, car), car, mine, isArabic) : null;
   const fitColor = fit ? { success: g.success, accent: g.accentText, warning: g.warning, soft: g.soft }[fit.tone] : g.soft;
+  // "3D · View on my car" only on a car whose generation has the part; kits also say "Front + rear"
+  const m3 = p.model3d, onCar3d = !!m3 && !!car?.generation?.id && (m3.universal || m3.generationIds.includes(car.generation.id));
+  const kit = !!m3 && m3.parts.some((x) => x.part === "FRONT") && m3.parts.some((x) => x.part === "REAR");
+  const pills3d = [kit ? t("Front + rear", "أمامي + خلفي") : null, onCar3d ? `3D · ${t("View on my car", "اعرضها على سيارتي")}` : null].filter((x): x is string => !!x);
   const old = p.compareAtPrice && p.compareAtPrice > p.price ? p.compareAtPrice : null;
   const stock = { IN: [g.success, t("In stock", "متوفر")], LOW: [g.warning, t("Low stock", "كمية محدودة")], OUT: [g.danger, t("Out of stock", "نفدت الكمية")] }[p.stock];
   const cond = p.condition === "USED" ? t("Used", "مستعمل") : p.condition === "REFURBISHED" ? t("Refurbished", "مجدّد") : t("New", "جديد");
@@ -105,6 +109,7 @@ export function ProductCard({ p, onPress, car = null, mine = true, onBroken, wid
             <GText numberOfLines={1} style={[gType.tiny, { fontWeight: "600", color: fitColor, flexShrink: 1 }]}>{fit.text}</GText>
           </View>
         ) : null}
+        {pills3d.length ? <View style={[row, { flexWrap: "wrap", gap: 4, marginTop: 4 }]}>{pills3d.map((l) => <Badge key={l} label={l} tone="accent" />)}</View> : null}
       </View>
     </Tap>
   );

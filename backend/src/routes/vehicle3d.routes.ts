@@ -4,6 +4,7 @@ import express, { Router, type Request, type Response } from "express";
 import { requireAuth, requireCustomer, requirePartsAdmin } from "../middleware/auth.middleware.js";
 import { prisma } from "../prisma.js";
 import { activeModels } from "../services/vehicle3d-catalog.js";
+import { mergeZones } from "../services/accessory3d.js";
 import { createHash } from "node:crypto";
 import { createSubmissionService } from "../services/vehicle3d-submissions.js";
 import { Vehicle3DError } from "../services/vehicle3d-validation.js";
@@ -23,7 +24,8 @@ export function createVehicle3DRouter(service = createSubmissionService(), guard
     // Crash-safe visibility: catalog files alone never publish an uncommitted promotion.
     const rows = await prisma.vehicleGeneration.findMany({ where: { ...activeAncestry,isPublished:true,model3dKey: { not: null } }, select: { model3dKey: true } });
     const keys = new Set(rows.map(r => r.model3dKey));
-    const models=activeModels().filter(m=>keys.has(m.key));
+    // admin-tuned accessory zones (DB) ride along, so a fixed zone reaches the app without a rebuild
+    const models=await mergeZones(activeModels().filter(m=>keys.has(m.key)));
     const revision=createHash("sha256").update(JSON.stringify(models)).digest("hex");
     res.setHeader("Cache-Control", "no-store"); res.json({revision,activeKeys:models.map(m=>m.key),models});
   }));

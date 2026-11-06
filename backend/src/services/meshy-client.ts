@@ -1,4 +1,4 @@
-// Official contract: https://docs.meshy.ai/en/api/multi-image-to-3d
+// Official contract: https://docs.meshy.ai/en/api/multi-image-to-3d (1-4 images: vehicles send 4 views, accessories 2-4 part photos)
 // No raw provider errors, signed URLs, image data or credentials leave this module via exceptions.
 export type MeshyState = "PENDING" | "IN_PROGRESS" | "SUCCEEDED" | "FAILED" | "CANCELED";
 export type MeshyTask = { id: string; status: MeshyState; progress: number | null; glb?: string;
@@ -38,7 +38,7 @@ export function createMeshyClient(options: { key?: string; fetcher?: typeof fetc
   }
   return {
     async create(images: string[]) {
-      if (images.length !== 4 || images.some(i=>!i.startsWith("data:image/jpeg;base64,"))) throw new MeshyError("PROVIDER_INVALID_INPUT");
+      if (images.length < 1 || images.length > 4 || images.some(i=>!i.startsWith("data:image/jpeg;base64,"))) throw new MeshyError("PROVIDER_INVALID_INPUT");
       let data:any;
       try {data=await request("POST", "", { image_urls: images, ai_model: "meshy-7.1", target_formats: ["glb"], should_texture: true, enable_pbr: true, target_polycount: 50_000 });}
       catch(error){if(error instanceof MeshyError&&["PROVIDER_TIMEOUT","PROVIDER_UNAVAILABLE","PROVIDER_MALFORMED_RESPONSE"].includes(error.code))throw new MeshyError("PROVIDER_REQUEST_UNCONFIRMED");throw error;}

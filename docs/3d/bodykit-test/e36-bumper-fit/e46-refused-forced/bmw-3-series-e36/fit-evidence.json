@@ -1,0 +1,283 @@
+{
+  "valid": true,
+  "car": {
+    "dimensions": [
+      1.972522671149907,
+      1.362777228188965,
+      4.649999875966968
+    ],
+    "wheelsFound": true,
+    "mappedParts": [
+      "FRONT_BUMPER",
+      "REAR_BUMPER",
+      "MIRRORS",
+      "SPOILER",
+      "SIDE_SKIRTS",
+      "WHEELS"
+    ],
+    "partMapIn": [
+      "WHEELS",
+      "MIRRORS",
+      "SPOILER",
+      "REAR_BUMPER",
+      "SIDE_SKIRTS",
+      "FRONT_BUMPER"
+    ]
+  },
+  "fit": {
+    "type": "FRONT_BUMPER",
+    "fitVersion": 2,
+    "zone": {
+      "how": "part map",
+      "size": [
+        1.792,
+        0.347,
+        0.477
+      ],
+      "hidden": 12
+    },
+    "stretch": [
+      1,
+      0.95,
+      0.95
+    ],
+    "deeperThanStockMm": 2,
+    "gapsMm": {
+      "bonnetBootLine": {
+        "n": 481,
+        "p90": 2,
+        "max": 2.3
+      },
+      "fendersArches": {
+        "n": 6,
+        "p90": 20.7,
+        "max": 20.7
+      }
+    },
+    "worstSeamPoints": [
+      {
+        "region": "fendersArches",
+        "mm": 21,
+        "at": [
+          0.857,
+          0.246,
+          1.898
+        ],
+        "by": "E36_coupe_bumper_R_trim_BMWE36_paint_0"
+      },
+      {
+        "region": "fendersArches",
+        "mm": 21,
+        "at": [
+          -0.857,
+          0.246,
+          1.898
+        ],
+        "by": "E36_coupe_bumper_R_trim_BMWE36_paint_0"
+      },
+      {
+        "region": "fendersArches",
+        "mm": 21,
+        "at": [
+          0.857,
+          0.246,
+          1.898
+        ],
+        "by": "E36_coupe_bumper_R_trim_BMWE36_paint_0"
+      },
+      {
+        "region": "fendersArches",
+        "mm": 21,
+        "at": [
+          -0.858,
+          0.246,
+          1.898
+        ],
+        "by": "E36_coupe_bumper_R_trim_BMWE36_paint_0"
+      }
+    ],
+    "wouldFail": "this bumper does not fit this car cleanly (fendersArches gap 20.7 mm)",
+    "copies": 1,
+    "turnedDeg": 0,
+    "flipped180": false,
+    "partSize": [
+      1.498,
+      0.324,
+      0.421
+    ],
+    "scale": 1.197,
+    "nonUniform": [
+      0.95,
+      0.95
+    ],
+    "stored": false,
+    "partBox": [
+      -0.8961,
+      0.0919,
+      1.8465,
+      0.8961,
+      0.4602,
+      2.325
+    ]
+  },
+  "autofit": {
+    "version": 2,
+    "type": "FRONT_BUMPER",
+    "orient": [
+      "x",
+      1,
+      "top"
+    ],
+    "placements": [
+      {
+        "pos": [
+          0,
+          0.4602,
+          2.325
+        ],
+        "sc": [
+          1.1965,
+          1.1367,
+          1.1367
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "side": 1
+      }
+    ],
+    "shadows": [],
+    "info": {
+      "type": "FRONT_BUMPER",
+      "fitVersion": 2,
+      "zone": {
+        "how": "part map",
+        "size": [
+          1.792,
+          0.347,
+          0.477
+        ],
+        "hidden": 12
+      },
+      "stretch": [
+        1,
+        0.95,
+        0.95
+      ],
+      "deeperThanStockMm": 2,
+      "gapsMm": {
+        "bonnetBootLine": {
+          "n": 481,
+          "p90": 2,
+          "max": 2.3
+        },
+        "fendersArches": {
+          "n": 6,
+          "p90": 20.7,
+          "max": 20.7
+        }
+      },
+      "worstSeamPoints": [
+        {
+          "region": "fendersArches",
+          "mm": 21,
+          "at": [
+            0.857,
+            0.246,
+            1.898
+          ],
+          "by": "E36_coupe_bumper_R_trim_BMWE36_paint_0"
+        },
+        {
+          "region": "fendersArches",
+          "mm": 21,
+          "at": [
+            -0.857,
+            0.246,
+            1.898
+          ],
+          "by": "E36_coupe_bumper_R_trim_BMWE36_paint_0"
+        },
+        {
+          "region": "fendersArches",
+          "mm": 21,
+          "at": [
+            0.857,
+            0.246,
+            1.898
+          ],
+          "by": "E36_coupe_bumper_R_trim_BMWE36_paint_0"
+        },
+        {
+          "region": "fendersArches",
+          "mm": 21,
+          "at": [
+            -0.858,
+            0.246,
+            1.898
+          ],
+          "by": "E36_coupe_bumper_R_trim_BMWE36_paint_0"
+        }
+      ],
+      "wouldFail": "this bumper does not fit this car cleanly (fendersArches gap 20.7 mm)",
+      "copies": 1,
+      "turnedDeg": 0,
+      "flipped180": false,
+      "partSize": [
+        1.498,
+        0.324,
+        0.421
+      ],
+      "scale": 1.197,
+      "nonUniform": [
+        0.95,
+        0.95
+      ]
+    }
+  },
+  "kit": {
+    "type": "FRONT_BUMPER",
+    "size": {
+      "forceFit": true
+    }
+  },
+  "carSha256": "2f026865272597d4edb718be5c99e2bc74a790f98f53e06f45f33a177e55ab89",
+  "partSha256": "9ef69110da32bb253954a00d066966ed8a3db127fdc53705bbc5cc191c9872a4",
+  "viewerSha256": "b61dc0e294a316001c945379164b98b2bc77e5900f4ec76fee2716a2ebc17ced",
+  "screenshots": [
+    {
+      "name": "a-original-front-34",
+      "sha256": "c00962a42e4798bfdccf0292343c6c33fb4dd2c715cd3d985a80d27e08bc77c0"
+    },
+    {
+      "name": "b-part-on-front-34",
+      "sha256": "75d860149cae2c1e958353cc0e98e177f0c30a8494a9717e621e3c8ec0f7a2f7"
+    },
+    {
+      "name": "c-part-on-front",
+      "sha256": "5e9b3e3705b2eca83a5a8929ce0e210d1dbc72c2656ef10ba76766ab22dba5ab"
+    },
+    {
+      "name": "d-part-on-side",
+      "sha256": "8245c2303dff67a682a9b9dded9ba0318efe3daea03aaf3633eddaa855af2a06"
+    },
+    {
+      "name": "e-paint-to-match-34",
+      "sha256": "5492ec2d7142b987b6cf4784156d1a2e02062402d7bf8670fda190eb0fd59e37"
+    },
+    {
+      "name": "e2-paint-to-match-red-34",
+      "sha256": "eff3a4512bae22d2e94f1662ad295371217e89b10e2e0ba9977f5cdbcac6a8e2"
+    },
+    {
+      "name": "f-edge-closeup",
+      "sha256": "7824cbef51f56f60c1a0caca9127c553fcbdd6893e238515b920a869f29a299b"
+    },
+    {
+      "name": "f2-edge-closeup-side",
+      "sha256": "084ba88f7a295d271556abb3e387b0fcdeb87d3b9346c849442d06cf2c76a4fc"
+    }
+  ]
+}

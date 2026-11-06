@@ -1,7 +1,7 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
-import {readFileSync,readdirSync,existsSync,unlinkSync} from "node:fs";
+import {readFileSync,readdirSync,existsSync,unlinkSync,rmSync} from "node:fs";
 import path from "node:path";
 import express from "express";
 import jwt from "jsonwebtoken";
@@ -166,7 +166,7 @@ test("managed taxonomy, approved customer generation and reviewed manual import 
   for(const[k,v]of Object.entries({VEHICLE3D_MODE:old.mode,MESHY_API_KEY:old.key,MESHY_ALLOW_PAID_GENERATION:old.allow})){if(v===undefined)delete process.env[k];else process.env[k]=v;}
   for(const[p,text]of before)atomicWrite(p,text);
   for(const p of readdirSync(publicDir))if(!publicBefore.has(p))unlinkSync(path.join(publicDir,p));
-  if(existsSync(PRIVATE_3D_DIR))for(const p of readdirSync(PRIVATE_3D_DIR))if(!storageBefore.has(p))unlinkSync(path.join(PRIVATE_3D_DIR,p));
+  if(existsSync(PRIVATE_3D_DIR))for(const p of readdirSync(PRIVATE_3D_DIR))if(!storageBefore.has(p))rmSync(path.join(PRIVATE_3D_DIR,p),{recursive:true,force:true}); // also a background segmentation temp folder
   const users=[owner,other,actor];await prisma.vehicleCatalogRequest.deleteMany({where:{submission:{userId:{in:users}}}});await prisma.vehicle3DSubmission.deleteMany({where:{userId:{in:users}}});await prisma.vehicle3DImport.deleteMany({where:{uploadedByUserId:actor}});await prisma.customerGarageCar.deleteMany({where:{userId:{in:users}}});
   if(modelId){await prisma.vehicleGeneration.deleteMany({where:{vehicleId:modelId}});await prisma.vehicle.deleteMany({where:{id:modelId}});}if(brandId)await prisma.vehicleBrand.deleteMany({where:{id:brandId}});
   await prisma.auditLog.deleteMany({where:{actorId:{in:users}}});await prisma.adminPermission.deleteMany({where:{adminId:actor}});await prisma.user.deleteMany({where:{id:{in:users}}});await prisma.$disconnect();

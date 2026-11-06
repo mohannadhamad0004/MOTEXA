@@ -57,3 +57,11 @@ Keep the complete viewer configuration in `docs/3d/models.json`. Regenerate mobi
 | Part | Used for | Credit | License |
 |---|---|---|---|
 | [Corolla AE-101 Yakuza style front bumper](https://sketchfab.com/3d-models/corolla-ae-101-yakuza-style-front-bumper-36cb19414a9145e1b631915f01c27803) (optimised copy: `backend/public/3d/accessories/test-corolla-ae101-front-bumper.glb`, webp 1024, meshopt, 0.6 MB) | BODYKIT-3D prototype on Toyota Corolla E100 | [yan555](https://sketchfab.com/yan555) | CC BY 4.0 |
+| [(FREE) BMW E36 M3 front bumper](https://sketchfab.com/3d-models/free-bmw-e36-m3-front-bumper-1360894f703943e3a19b82b90c166d89) (source kept unpublished in `3d-source/accessory-photos/test/free_bmw_e36_m3_front_bumper.glb`; shown only in `docs/3d/bodykit-test/e36/`) | Feature 2 body-kit fit test on BMW 3 Series E36 (2026-11-05) | [slay](https://sketchfab.com/slay35) | CC BY 4.0 |
+| Garagistic E36 LTW rear wing: vendor listing photos (`3d-source/accessory-photos/wing-1..4.webp`, JPG copies in `3d-source/accessory-photos/e36-wing/`) | Feature 2 live Meshy wing test on BMW 3 Series E36, private local dev database only (2026-11-05) | Garagistic (vendor) | **TEST ONLY — vendor photos, do not ship.** No licence; used for a private dev test at the project owner's responsibility. |
+
+## Rims (test)
+
+| Part | Used for | Credit | License |
+|---|---|---|---|
+| [BBS RS16 Tuner Car Wheel](https://sketchfab.com/3d-models/bbs-rs16-tuner-car-wheel-4e50d45e5ff04d00927a50c150e088c1) (licence re-checked on the Sketchfab API 2026-11-06: CC Attribution, free, downloadable; source kept unpublished in `3d-source/rims/bbs-rs16/source.glb`, optimised copy `rim.glb` = tyre, logo decal and an invisible display backdrop removed, centre-cap logo texture replaced by a plain neutral metal (`optimize-accessory.mjs --plain=Textures`), meshopt, 100 KB / 10.6k triangles, drawn ×4) | STEP RIMS fit test on 21 catalog cars + dev demo product "Mesh rims 17″" (`backend/src/seed/demo-rims.ts`, published as `backend/public/3d/accessories/acc-<hash>.glb`) | [Martin Trafas (TinoD2)](https://sketchfab.com/TinoD2) | CC BY 4.0. The source's centre cap carries the "BBS" logo; the app copy has a plain cap (same shape). |

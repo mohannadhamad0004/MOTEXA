@@ -1,7 +1,7 @@
 import { Async } from "../../../../components/ui/Feedback";
 import { Button } from "../../../../components/ui/Button";
 import { Card } from "../../../../components/ui/Card";
-import { DashboardLayout } from "../../../../components/layout/DashboardLayout";
+import { ProviderLayout as DashboardLayout } from "../../../../components/layout/ProviderLayout";
 import { KV } from "../../../../components/ui/Rows";
 import { useL } from "../../../../core/hooks/useL";
 import { useLoad } from "../../../../core/hooks/useLoad";

@@ -1,7 +1,8 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
-import { Card, Chip, EmptyState, ErrorState, Field, GarageHero, GaragePage, GButton, GText, ListRow, Note, Section, Sheet, SkeletonRows, StatusChip, Toggle, Tone } from "../../../components/garage";
+import { Card, Chip, EmptyState, ErrorState, Field, GarageHero,  GButton, GText, ListRow, Note, Section, Sheet, SkeletonRows, StatusChip, Toggle, Tone } from "../../../components/garage";
+import { ProviderLayout as GaragePage } from "../../../components/layout/ProviderLayout";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { CompanyDriver, companyDispatch, liveLabel } from "../../../features/tow/dispatchService";

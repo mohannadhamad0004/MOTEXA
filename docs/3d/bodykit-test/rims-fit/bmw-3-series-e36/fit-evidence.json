@@ -1,0 +1,368 @@
+{
+  "valid": true,
+  "car": {
+    "dimensions": [
+      1.972522671149907,
+      1.362777228188965,
+      4.649999875966968
+    ],
+    "wheelsFound": true,
+    "mappedParts": [
+      "FRONT_BUMPER",
+      "REAR_BUMPER",
+      "MIRRORS",
+      "SPOILER",
+      "SIDE_SKIRTS",
+      "WHEELS"
+    ],
+    "partMapIn": [
+      "WHEELS",
+      "MIRRORS",
+      "SPOILER",
+      "REAR_BUMPER",
+      "SIDE_SKIRTS",
+      "FRONT_BUMPER"
+    ]
+  },
+  "fit": {
+    "type": "RIMS",
+    "fitVersion": 3,
+    "replaces": {
+      "how": "part map wheels",
+      "hidden": 8
+    },
+    "wheels": [
+      {
+        "wheel": "rearLeft",
+        "tyreOuterMm": 637,
+        "tyreWidthMm": 309,
+        "stockRimMm": 467,
+        "stockRimInches": 17.4,
+        "rimMm": 467,
+        "rimWidthMm": 279,
+        "gapToTyreMm": -12,
+        "sidewallMm": 85,
+        "faceInsetMm": 4,
+        "archClearMm": -20,
+        "tyre": "stock",
+        "hidden": 1,
+        "brakesKept": 1,
+        "clashHidden": 6
+      },
+      {
+        "wheel": "rearRight",
+        "tyreOuterMm": 637,
+        "tyreWidthMm": 309,
+        "stockRimMm": 467,
+        "stockRimInches": 17.4,
+        "rimMm": 467,
+        "rimWidthMm": 279,
+        "gapToTyreMm": -12,
+        "sidewallMm": 85,
+        "faceInsetMm": 4,
+        "archClearMm": -25,
+        "tyre": "stock",
+        "hidden": 1,
+        "brakesKept": 1,
+        "clashHidden": 6
+      },
+      {
+        "wheel": "frontLeft",
+        "tyreOuterMm": 637,
+        "tyreWidthMm": 306,
+        "stockRimMm": 467,
+        "stockRimInches": 17.4,
+        "rimMm": 467,
+        "rimWidthMm": 279,
+        "gapToTyreMm": -12,
+        "sidewallMm": 85,
+        "faceInsetMm": 4,
+        "archClearMm": -7,
+        "tyre": "stock",
+        "hidden": 1,
+        "brakesKept": 1,
+        "clashHidden": 5
+      },
+      {
+        "wheel": "frontRight",
+        "tyreOuterMm": 637,
+        "tyreWidthMm": 306,
+        "stockRimMm": 467,
+        "stockRimInches": 17.4,
+        "rimMm": 467,
+        "rimWidthMm": 279,
+        "gapToTyreMm": -12,
+        "sidewallMm": 85,
+        "faceInsetMm": 4,
+        "archClearMm": -11,
+        "tyre": "stock",
+        "hidden": 1,
+        "brakesKept": 1,
+        "clashHidden": 5
+      }
+    ],
+    "faceSign": 1,
+    "copies": 4,
+    "turnedDeg": 0,
+    "flipped180": false,
+    "partSize": [
+      2.315,
+      3.872,
+      3.855
+    ],
+    "scale": 0.121,
+    "nonUniform": [
+      1,
+      1
+    ],
+    "stored": false,
+    "partBox": [
+      -0.9527,
+      0.0955,
+      -1.5469,
+      0.9577,
+      0.5625,
+      1.7712
+    ]
+  },
+  "autofit": {
+    "version": 3,
+    "type": "RIMS",
+    "orient": [
+      "axle",
+      0,
+      "mid"
+    ],
+    "placements": [
+      {
+        "pos": [
+          -0.8131,
+          0.329,
+          -1.3144
+        ],
+        "sc": [
+          -0.1206,
+          0.1206,
+          0.1206
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "side": -1
+      },
+      {
+        "pos": [
+          0.8181,
+          0.329,
+          -1.3144
+        ],
+        "sc": [
+          0.1206,
+          0.1206,
+          0.1206
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "side": 1
+      },
+      {
+        "pos": [
+          -0.8029,
+          0.329,
+          1.5387
+        ],
+        "sc": [
+          -0.1206,
+          0.1206,
+          0.1206
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "side": -1
+      },
+      {
+        "pos": [
+          0.8079,
+          0.329,
+          1.5387
+        ],
+        "sc": [
+          0.1206,
+          0.1206,
+          0.1206
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "side": 1
+      }
+    ],
+    "shadows": [],
+    "tyres": [],
+    "keep": [
+      "Object_4004_Scene_-_Root002_0_WHEELS",
+      "Object_4001_Scene_-_Root002_0_WHEELS",
+      "Object_4002_Scene_-_Root002_0_WHEELS",
+      "Object_4003_Scene_-_Root002_0_WHEELS"
+    ],
+    "hideMore": [
+      "E36_coupe_hub_R_BMWE36_suspension_0",
+      "wheel_bmw_aplg_16x7003_wheel_19a_0_WHEELS",
+      "amdb11_brakedisc_FR004_amdb11_brake002_0",
+      "amdb11_brakedisc_FR004_amdb11_misc_chrome002_0",
+      "amdb11_brakedisc_FR004_amdb11_misc002_0",
+      "amdb11_brakedisc_FR004_amdb11_caliper002_0",
+      "wheel_bmw_aplg_16x7001_wheel_19a_0_WHEELS",
+      "amdb11_brakedisc_FR001_amdb11_brake002_0",
+      "amdb11_brakedisc_FR001_amdb11_misc_chrome002_0",
+      "amdb11_brakedisc_FR001_amdb11_misc002_0",
+      "amdb11_brakedisc_FR001_amdb11_caliper002_0",
+      "wheel_bmw_aplg_16x7002_wheel_19a_0_WHEELS",
+      "amdb11_brakedisc_FR002_amdb11_brake002_0",
+      "amdb11_brakedisc_FR002_amdb11_misc_chrome002_0",
+      "amdb11_brakedisc_FR002_amdb11_misc002_0",
+      "amdb11_brakedisc_FR002_amdb11_caliper002_0",
+      "wheel_bmw_aplg_16x7_wheel_19a_0_WHEELS",
+      "amdb11_brakedisc_FR003_amdb11_brake002_0",
+      "amdb11_brakedisc_FR003_amdb11_misc_chrome002_0",
+      "amdb11_brakedisc_FR003_amdb11_misc002_0",
+      "amdb11_brakedisc_FR003_amdb11_caliper002_0"
+    ],
+    "info": {
+      "type": "RIMS",
+      "fitVersion": 3,
+      "replaces": {
+        "how": "part map wheels",
+        "hidden": 8
+      },
+      "wheels": [
+        {
+          "wheel": "rearLeft",
+          "tyreOuterMm": 637,
+          "tyreWidthMm": 309,
+          "stockRimMm": 467,
+          "stockRimInches": 17.4,
+          "rimMm": 467,
+          "rimWidthMm": 279,
+          "gapToTyreMm": -12,
+          "sidewallMm": 85,
+          "faceInsetMm": 4,
+          "archClearMm": -20,
+          "tyre": "stock",
+          "hidden": 1,
+          "brakesKept": 1,
+          "clashHidden": 6
+        },
+        {
+          "wheel": "rearRight",
+          "tyreOuterMm": 637,
+          "tyreWidthMm": 309,
+          "stockRimMm": 467,
+          "stockRimInches": 17.4,
+          "rimMm": 467,
+          "rimWidthMm": 279,
+          "gapToTyreMm": -12,
+          "sidewallMm": 85,
+          "faceInsetMm": 4,
+          "archClearMm": -25,
+          "tyre": "stock",
+          "hidden": 1,
+          "brakesKept": 1,
+          "clashHidden": 6
+        },
+        {
+          "wheel": "frontLeft",
+          "tyreOuterMm": 637,
+          "tyreWidthMm": 306,
+          "stockRimMm": 467,
+          "stockRimInches": 17.4,
+          "rimMm": 467,
+          "rimWidthMm": 279,
+          "gapToTyreMm": -12,
+          "sidewallMm": 85,
+          "faceInsetMm": 4,
+          "archClearMm": -7,
+          "tyre": "stock",
+          "hidden": 1,
+          "brakesKept": 1,
+          "clashHidden": 5
+        },
+        {
+          "wheel": "frontRight",
+          "tyreOuterMm": 637,
+          "tyreWidthMm": 306,
+          "stockRimMm": 467,
+          "stockRimInches": 17.4,
+          "rimMm": 467,
+          "rimWidthMm": 279,
+          "gapToTyreMm": -12,
+          "sidewallMm": 85,
+          "faceInsetMm": 4,
+          "archClearMm": -11,
+          "tyre": "stock",
+          "hidden": 1,
+          "brakesKept": 1,
+          "clashHidden": 5
+        }
+      ],
+      "faceSign": 1,
+      "copies": 4,
+      "turnedDeg": 0,
+      "flipped180": false,
+      "partSize": [
+        2.315,
+        3.872,
+        3.855
+      ],
+      "scale": 0.121,
+      "nonUniform": [
+        1,
+        1
+      ]
+    }
+  },
+  "kit": {
+    "type": "RIMS",
+    "finish": "silver",
+    "size": {}
+  },
+  "carSha256": "2f026865272597d4edb718be5c99e2bc74a790f98f53e06f45f33a177e55ab89",
+  "partSha256": "512a47b76cd1b5569ab11adc0a509fa99abadf5c963dc3499a534369e42d7572",
+  "viewerSha256": "4adf50b608629384d841bd3f18370911d1bb6555d1c1221fc0130bfabbab035c",
+  "screenshots": [
+    {
+      "name": "on-left-side",
+      "sha256": "72e7d3b4ed6c06d475b2a98a957ceaba17cc32c472bd74294610e0f0f6f25e8f"
+    },
+    {
+      "name": "on-right-side",
+      "sha256": "57597df3f3def0d451b2585bc65410347083bcf4f8bcd0a7eff5988c8b599366"
+    },
+    {
+      "name": "on-front-three-quarter",
+      "sha256": "33579e2281daa048ac28471c7d47beaad7b7090348aaf72ab1862a03cdbbcdda"
+    },
+    {
+      "name": "on-wheel-closeup",
+      "sha256": "05593d9eb36ffbbb94ffe7067fae4e42b79bce72b2092788032fa1f6aed1b48e"
+    },
+    {
+      "name": "off-front-three-quarter",
+      "sha256": "c00962a42e4798bfdccf0292343c6c33fb4dd2c715cd3d985a80d27e08bc77c0"
+    },
+    {
+      "name": "off-wheel-closeup",
+      "sha256": "ac0e0f8b3987dc038778b526f3f85f9103719062ad8745e3f144d87c1af8f422"
+    }
+  ]
+}

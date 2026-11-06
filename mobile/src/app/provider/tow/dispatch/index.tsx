@@ -1,7 +1,9 @@
+import { SearchBar } from "../../../../components/ui/Input";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
-import { EmptyState, ErrorState, GarageHero, GaragePage, GIcon, GText, SkeletonRows, StatusChip, Tabs, Tap } from "../../../../components/garage";
+import { EmptyState, ErrorState, GarageHero,  GIcon, GText, SkeletonRows, StatusChip, Tabs, Tap } from "../../../../components/garage";
+import { ProviderLayout as GaragePage } from "../../../../components/layout/ProviderLayout";
 import { useL } from "../../../../core/hooks/useL";
 import { towTone } from "../../../../features/requests/garageBits";
 import { fmtDateTime, useTowStatusLabels } from "../../../../features/requests/requestBits";
@@ -13,11 +15,12 @@ type Bucket = "new" | "active" | "done";
 const OF: Record<Bucket, string[]> = { new: ["REQUESTED"], active: ["ACCEPTED", "EN_ROUTE", "IN_PROGRESS"], done: ["COMPLETED", "CANCELLED", "DECLINED"] };
 
 /** Every request of the company and its drivers: New / Active / Done with counts, who has it, the live state. Every 10 s. */
-export default function CompanyDispatch() {
+export default function CompanyDispatch({ initialBucket = "new" }: {initialBucket?:Bucket}) {
   const { g, shadow, row, align } = useGarageTheme();
   const { t } = useL();
   const L = useTowStatusLabels();
-  const [bucket, setBucket] = useState<Bucket>("new");
+  const [q,setQ]=useState("");
+  const [bucket, setBucket] = useState<Bucket>(initialBucket);
   const [list, setList] = useState<CompanyTowRequest[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const load = useCallback(async () => {
@@ -36,7 +39,7 @@ export default function CompanyDispatch() {
     }, [load])
   );
   const count = (b: Bucket) => (list ?? []).filter((r) => OF[b].includes(r.status)).length;
-  const shown = (list ?? []).filter((r) => OF[bucket].includes(r.status));
+  const shown = (list ?? []).filter((r) => OF[bucket].includes(r.status) && (!q.trim() || `${r.customerName} ${r.pickupAddress} ${r.vehicle.make} ${r.vehicle.model}`.toLowerCase().includes(q.trim().toLowerCase())));
 
   return (
     <GaragePage
@@ -51,6 +54,7 @@ export default function CompanyDispatch() {
         />
       }
     >
+      <SearchBar value={q} onChange={setQ} placeholder={t("Search jobs","???? ?? ????")}/>
       <Tabs
         value={bucket}
         onChange={setBucket}

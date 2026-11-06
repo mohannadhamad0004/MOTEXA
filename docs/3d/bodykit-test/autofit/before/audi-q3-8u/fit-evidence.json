@@ -1,0 +1,66 @@
+{
+  "valid": true,
+  "car": {
+    "dimensions": [
+      1.9607815272923412,
+      1.6174023521764989,
+      4.4
+    ],
+    "wheelsFound": false,
+    "mappedParts": [],
+    "partMapIn": []
+  },
+  "fit": {
+    "type": "WING",
+    "restDrop": 0,
+    "copies": 1,
+    "turnedDeg": 0,
+    "flipped180": false,
+    "partSize": [
+      1.903,
+      0.444,
+      0.553
+    ],
+    "scale": 0.683,
+    "nonUniform": [
+      1,
+      1
+    ]
+  },
+  "kit": {
+    "type": "WING",
+    "size": {
+      "widthMm": 1300
+    },
+    "paintMatch": false
+  },
+  "carSha256": "8314b563cc0ede1fd5169dc20bae4ca7375d28b725f0629d1e8a8bffed4a4e83",
+  "partSha256": "7e40b463d76777b8655d8c2198451d9bf0b1de6e30963a233c8c57c08225a958",
+  "viewerSha256": "9fbea380ff5e3b888489945db81b5cca875d138b2429b1a8689b5998be4b480e",
+  "screenshots": [
+    {
+      "name": "front",
+      "sha256": "b5c2fdccf50faca976d96f5b456064f6c9fdf6285b2fce6102272d1c04ae47de"
+    },
+    {
+      "name": "front-three-quarter",
+      "sha256": "cd7310cf51fa846a18a5d575b05c4cd5bec460426bb87a4cd74c4098c06097db"
+    },
+    {
+      "name": "left-side",
+      "sha256": "b001ce8c9ab4dedcc190f84d697c5cc98852c3a1f84cda30fdd42cc207b3361d"
+    },
+    {
+      "name": "rear-three-quarter",
+      "sha256": "9b50c99cafcd115f6ae50a36477e650fed7e63320a945a273478ea0504460988"
+    },
+    {
+      "name": "rear",
+      "sha256": "d16724b38db552da66b5f3a09fa0c671f6195666f3d253dbf23b53ac60f6888b"
+    },
+    {
+      "name": "top-three-quarter",
+      "sha256": "01111508be84c1c8709e74c68acc66989b36d090e74c612222635eada8edb1e5"
+    }
+  ]
+}

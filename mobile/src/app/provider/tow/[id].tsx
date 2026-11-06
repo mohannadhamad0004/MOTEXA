@@ -2,7 +2,7 @@ import { Async, Notice } from "../../../components/ui/Feedback";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
 import { Input } from "../../../components/ui/Input";
-import { DashboardLayout } from "../../../components/layout/DashboardLayout";
+import { ProviderLayout as DashboardLayout } from "../../../components/layout/ProviderLayout";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { ImageTile } from "../../../components/ui/Rows";
 import { goBack, pickImage } from "../../../core/hooks/nav";

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
 import { CrossFade, Flash, PrimaryButton, Tag } from "../../../../components/blueprint";
-import { DashboardLayout } from "../../../../components/layout/DashboardLayout";
+import { ProviderLayout as DashboardLayout } from "../../../../components/layout/ProviderLayout";
 import { Card } from "../../../../components/ui/Card";
 import { Segmented } from "../../../../components/ui/Chip";
 import { Async, EmptyState, Notice } from "../../../../components/ui/Feedback";

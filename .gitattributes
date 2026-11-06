@@ -1,0 +1,3 @@
+# Generated / byte-compared files: always LF, also on Windows checkouts (core.autocrlf would turn them CRLF and break
+# backend/tests/vehicle3d.test.ts, which regenerates the CAR_MODELS block and compares it byte for byte).
+mobile/src/features/car3d/models.ts text eol=lf

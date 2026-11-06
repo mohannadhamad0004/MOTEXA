@@ -1,0 +1,138 @@
+{
+  "valid": true,
+  "car": {
+    "dimensions": [
+      1.972522671149907,
+      1.362777228188965,
+      4.649999875966968
+    ],
+    "wheelsFound": true,
+    "mappedParts": [
+      "FRONT_BUMPER",
+      "REAR_BUMPER",
+      "MIRRORS",
+      "SPOILER",
+      "SIDE_SKIRTS",
+      "WHEELS"
+    ],
+    "partMapIn": [
+      "WHEELS",
+      "MIRRORS",
+      "SPOILER",
+      "REAR_BUMPER",
+      "SIDE_SKIRTS",
+      "FRONT_BUMPER"
+    ]
+  },
+  "fit": {
+    "type": "REAR_DIFFUSER",
+    "fitVersion": 2,
+    "topGapMm": [
+      0
+    ],
+    "copies": 1,
+    "turnedDeg": 90,
+    "flipped180": false,
+    "partSize": [
+      11.906,
+      1.851,
+      3.279
+    ],
+    "scale": 0.148,
+    "nonUniform": [
+      1,
+      1
+    ],
+    "stored": false,
+    "partBox": [
+      -0.8794,
+      -0.0483,
+      -2.325,
+      0.878,
+      0.2249,
+      -1.841
+    ]
+  },
+  "autofit": {
+    "version": 2,
+    "type": "REAR_DIFFUSER",
+    "orient": [
+      "x",
+      -1,
+      "top"
+    ],
+    "placements": [
+      {
+        "pos": [
+          -0.0007,
+          0.2249,
+          -2.325
+        ],
+        "sc": [
+          0.1476,
+          0.1476,
+          0.1476
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "side": 1
+      }
+    ],
+    "shadows": [],
+    "info": {
+      "type": "REAR_DIFFUSER",
+      "fitVersion": 2,
+      "topGapMm": [
+        0
+      ],
+      "copies": 1,
+      "turnedDeg": 90,
+      "flipped180": false,
+      "partSize": [
+        11.906,
+        1.851,
+        3.279
+      ],
+      "scale": 0.148,
+      "nonUniform": [
+        1,
+        1
+      ]
+    }
+  },
+  "kit": {
+    "type": "REAR_DIFFUSER"
+  },
+  "carSha256": "2f026865272597d4edb718be5c99e2bc74a790f98f53e06f45f33a177e55ab89",
+  "partSha256": "bf0a205cb346f9070a191c1d59ee37d34e24f15164aad685df8d5da71b8e23a8",
+  "viewerSha256": "f1b1ef0d07fbb43da9e361a718d877f2168d1a9d4deaa396ad116afe1f6144db",
+  "screenshots": [
+    {
+      "name": "front",
+      "sha256": "bc5b40c5df4b4b13b80ed2212d7b7723fad7c770ad97f1802ddcab4d9f67b71b"
+    },
+    {
+      "name": "front-three-quarter",
+      "sha256": "c8e13b5dc946b444a57322a462533bf368ac1e5b36f5ac3bb2b7214adc49f35f"
+    },
+    {
+      "name": "left-side",
+      "sha256": "7b888992222fd93c4cb36c96fe6dcf6a968cb9c51852046a4b75ac2f332294a9"
+    },
+    {
+      "name": "rear-three-quarter",
+      "sha256": "85c048ed383a6bfa3488f14e38762c8543b06af23aaec6e4beebb799c44dd705"
+    },
+    {
+      "name": "rear",
+      "sha256": "8009713208bcb4333d4dd3736b58cfe41ee1f76f50d66c4db9c2615ffe96826f"
+    },
+    {
+      "name": "top-three-quarter",
+      "sha256": "edc3331b72e2aebb62d36b465da1ad7401d26d9fcb4b210f0bf1a470a5cef819"
+    }
+  ]
+}

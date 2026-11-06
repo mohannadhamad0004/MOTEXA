@@ -34,8 +34,10 @@ export function refreshRuntimeModels(){
   })().finally(()=>{pending=null;});
   return pending;
 }
-export function useCatalogModel(car:Pick<Car,"generation">|null){
+export function useCatalogModel(car:Pick<Car,"generation">|null){return useCatalogModelKey(car?.generation?.model3dKey);}
+/** An active catalog model by its key (the Parts Admin zone editor previews any car). */
+export function useCatalogModelKey(key:string|null|undefined){
   const user=useSessionUser();const list=useSyncExternalStore(subscribe,snapshot,snapshot);
-  useEffect(()=>{if(user.id)void refreshRuntimeModels();const timer=setInterval(()=>{if(user.id)void refreshRuntimeModels();},60000);return()=>clearInterval(timer);},[user.id,car?.generation?.model3dKey]);
-  return list.find(m=>m.key===car?.generation?.model3dKey)??null;
+  useEffect(()=>{if(user.id)void refreshRuntimeModels();const timer=setInterval(()=>{if(user.id)void refreshRuntimeModels();},60000);return()=>clearInterval(timer);},[user.id,key]);
+  return list.find(m=>m.key===key)??null;
 }

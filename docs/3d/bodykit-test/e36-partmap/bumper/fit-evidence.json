@@ -1,0 +1,92 @@
+{
+  "valid": true,
+  "car": {
+    "dimensions": [
+      1.972522671149907,
+      1.362777228188965,
+      4.649999875966968
+    ],
+    "wheelsFound": true,
+    "mappedParts": [
+      "FRONT_BUMPER",
+      "REAR_BUMPER",
+      "MIRRORS",
+      "SPOILER",
+      "SIDE_SKIRTS",
+      "WHEELS"
+    ],
+    "partMapIn": [
+      "FRONT_BUMPER",
+      "REAR_BUMPER",
+      "SPOILER",
+      "SIDE_SKIRTS",
+      "MIRRORS",
+      "WHEELS"
+    ]
+  },
+  "fit": {
+    "type": "FRONT_BUMPER",
+    "zone": {
+      "how": "part map",
+      "size": [
+        1.792,
+        0.347,
+        0.477
+      ],
+      "hidden": 12
+    },
+    "copies": 1,
+    "turnedDeg": 90,
+    "flipped180": true,
+    "partSize": [
+      11.906,
+      1.851,
+      3.279
+    ],
+    "scale": 0.151,
+    "nonUniform": [
+      1.15,
+      0.966
+    ]
+  },
+  "kit": {
+    "type": "FRONT_BUMPER"
+  },
+  "carSha256": "2f026865272597d4edb718be5c99e2bc74a790f98f53e06f45f33a177e55ab89",
+  "partSha256": "bf0a205cb346f9070a191c1d59ee37d34e24f15164aad685df8d5da71b8e23a8",
+  "viewerSha256": "d97f3356838716161c38caed2e5ceaa95096a3da75b60a521954f98d98b5aca7",
+  "screenshots": [
+    {
+      "name": "a-original-front-34",
+      "sha256": "c00962a42e4798bfdccf0292343c6c33fb4dd2c715cd3d985a80d27e08bc77c0"
+    },
+    {
+      "name": "b-part-on-front-34",
+      "sha256": "f40db3798b1ab4ac04c97e70b8043e992ba053e755e046d7c736b6f7c8bc7d21"
+    },
+    {
+      "name": "c-part-on-front",
+      "sha256": "f7e594d5397f6fa4f8b0cfb43e9e6aa45f69f390980e04da045f1699d0c35c52"
+    },
+    {
+      "name": "d-part-on-side",
+      "sha256": "5b88f4505b90149d3a8242e0c1610ad62c986178bde93bd37c9703ce4bcb5ff5"
+    },
+    {
+      "name": "e-paint-to-match-34",
+      "sha256": "b637d41623d755aae962d872716c17b5d19f7794983267ed832ce32ac549fe03"
+    },
+    {
+      "name": "e2-paint-to-match-red-34",
+      "sha256": "51ab2c7dbef9bd9ada3b4ad2cba946ccfe8591367e3fb7bac3dd5fd260e1a5d2"
+    },
+    {
+      "name": "f-edge-closeup",
+      "sha256": "d3269e3ee3fde7c33069a640db6225d8f058b88fd78b8a08c0f56b080a1135f3"
+    },
+    {
+      "name": "f2-edge-closeup-side",
+      "sha256": "aa6599360331df6cdce2f76c19575cf01866ce1762d67e3ec652c58f98b9611b"
+    }
+  ]
+}

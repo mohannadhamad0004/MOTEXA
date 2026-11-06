@@ -3,9 +3,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useFocusEffect } from "expo-router";
-import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { InTabs } from "../../components/layout/ProviderLayout";
 import { CanvasFill } from "../../components/BrandSurfaces";
 import { pickMechanicDocument } from "../../components/MechanicDocuments";
 import { Text } from "../../components/MotexaVisual";
@@ -162,6 +163,7 @@ export function ChatScreen({
 }) {
   const d = useDT();
   const insets = useSafeAreaInsets();
+  const inTabs = useContext(InTabs) > 0; // inside the provider tab shell the floating tab bar covers the input
   const viewer = useDocViewer();
   const scroll = useRef<ScrollView>(null);
   const [messages, setMessages] = useState<Message[] | null>(null);
@@ -287,7 +289,7 @@ export function ChatScreen({
       </ScrollView>
 
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <View style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 10), gap: 6, backgroundColor: d.dark ? "#241C16" : "#FBF1E2", borderTopWidth: 1, borderTopColor: d.border }}>
+        <View style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 10) + (inTabs ? 84 : 0), gap: 6, backgroundColor: d.dark ? "#241C16" : "#FBF1E2", borderTopWidth: 1, borderTopColor: d.border }}>
           {error && messages ? <Text accessibilityRole="alert" style={{ color: d.bad, fontSize: 12, textAlign: d.align }}>{error}</Text> : null}
           {file ? (
             <View style={{ flexDirection: d.row, alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, backgroundColor: d.chip("bronze").bg, borderWidth: 1, borderColor: d.chip("bronze").border }}>

@@ -1,3 +1,4 @@
+import { TowPublicProfile } from "../../../features/catalog/TowPublicProfile";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
@@ -73,21 +74,7 @@ export default function CustomerTowCompany() {
             </View>
           ) : null}
 
-          <Section title={t("The company", "الشركة")}>
-            <Card pad={12}>
-              {co.description ? <GText style={[gType.bodySm, align, { paddingVertical: 6 }]}>{co.description}</GText> : null}
-              {co.workingHours ? <ListRow divider={!!co.description} icon="time-outline" title={t("Working hours", "ساعات العمل")} sub={co.workingHours} /> : null}
-              <ListRow divider icon="car-outline" title={t("Approved trucks", "الشاحنات المعتمدة")} end={<GText style={[gType.label, { writingDirection: "ltr" }]}>{String(co.approvedTrucks)}</GText>} />
-              <ListRow divider icon="checkmark-circle-outline" title={t("Available now", "المتاحة الآن")} end={<GText style={[gType.label, { writingDirection: "ltr" }]}>{String(co.availableTrucks)}</GText>} />
-            </Card>
-            {co.serviceCities.length ? (
-              <View style={[row, { flexWrap: "wrap", gap: 8, marginTop: 12 }]}>
-                {co.serviceCities.map((x) => (
-                  <Chip key={x} icon="location-outline" label={cityLabel(x, isArabic)} />
-                ))}
-              </View>
-            ) : null}
-          </Section>
+          <TowPublicProfile company={co} trucks={trucks}/>
 
           {drivers.data?.length ? (
             <Section title={t("Free drivers", "السائقون المتاحون")}>
@@ -108,31 +95,7 @@ export default function CustomerTowCompany() {
             </Section>
           ) : null}
 
-          <Section title={`${t("Trucks", "الشاحنات")} (${trucks.length})`}>
-            {trucks.length ? (
-              <View style={{ gap: 12 }}>
-                {trucks.map((tr) => (
-                  <Card key={tr.id} pad={10}>
-                    <View style={[row, { gap: 12, alignItems: "center" }]}>
-                      <View style={{ width: 76, height: 76, borderRadius: gShape.small, overflow: "hidden", backgroundColor: g.tint, alignItems: "center", justifyContent: "center" }}>
-                        {tr.photoUri ? <Image source={{ uri: tr.photoUri }} contentFit="cover" style={{ width: "100%", height: "100%" }} /> : <GIcon name="car-outline" size={26} />}
-                      </View>
-                      <View style={{ flex: 1, gap: 2 }}>
-                        <GText numberOfLines={1} style={[gType.label, { fontWeight: "800" }, align]}>{type[tr.type]}</GText>
-                        <GText soft numberOfLines={1} style={[gType.caption, align]}>{[tr.make, tr.model, tr.year].filter(Boolean).join(" ")}</GText>
-                        {tr.maxWeightKg ? <GText soft numberOfLines={1} style={[gType.caption, align]}>{`${t("Carries vehicles up to", "تحمل مركبات حتى")} ${tr.maxWeightKg} ${isArabic ? "كغ" : "kg"}`}</GText> : null}
-                        <View style={{ marginTop: 4 }}>
-                          <StatusChip tone={opTone[tr.operationalStatus]} label={opLabel[tr.operationalStatus]} />
-                        </View>
-                      </View>
-                    </View>
-                  </Card>
-                ))}
-              </View>
-            ) : (
-              <EmptyState photo="empty.search" text={t("This company has no approved trucks yet.", "لا توجد شاحنات معتمدة لهذه الشركة بعد.")} />
-            )}
-          </Section>
+
           {co.availableTrucks === 0 ? <View style={{ marginTop: 12 }}><Note>{t("Trucks become available again when a job ends. Pull down to refresh.", "تصبح الشاحنات متاحة مجددًا عند انتهاء مهمة. اسحب للأسفل للتحديث.")}</Note></View> : null}
         </View>
       )}

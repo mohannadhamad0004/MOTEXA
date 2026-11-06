@@ -1,7 +1,7 @@
 import {test,after} from "node:test";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
-import {existsSync,readFileSync,readdirSync,unlinkSync} from "node:fs";
+import {existsSync,readFileSync,readdirSync,unlinkSync,rmSync} from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
 import express from "express";
@@ -61,7 +61,7 @@ async function fixture(work:(f:{uid:string;carId:string;id:string;admin:string;s
     for(const[k,v]of Object.entries({VEHICLE3D_MODE:old.mode,MESHY_ALLOW_PAID_GENERATION:old.allow,MESHY_API_KEY:old.key})){if(v===undefined)delete process.env[k];else process.env[k]=v;}
     for(const[p,text]of before)atomicWrite(p,text);
     for(const p of readdirSync(path.join(REPO_ROOT,"backend/public/3d")))if(!publicBefore.has(p))unlinkSync(path.join(REPO_ROOT,"backend/public/3d",p));
-    if(existsSync(PRIVATE_3D_DIR))for(const p of readdirSync(PRIVATE_3D_DIR))if(!storageBefore.has(p))unlinkSync(path.join(PRIVATE_3D_DIR,p));
+    if(existsSync(PRIVATE_3D_DIR))for(const p of readdirSync(PRIVATE_3D_DIR))if(!storageBefore.has(p))rmSync(path.join(PRIVATE_3D_DIR,p),{recursive:true,force:true}); // also a background segmentation temp folder
     await prisma.vehicle3DSubmission.deleteMany({where:{userId:uid}});await prisma.customerGarageCar.deleteMany({where:{id:carId}});await prisma.vehicleGeneration.deleteMany({where:{id:gid}});await prisma.vehicle.deleteMany({where:{id:vid}});await prisma.vehicleBrand.deleteMany({where:{id:vid}});
     await prisma.auditLog.deleteMany({where:{OR:[{actorId:{in:[uid,admin]}},{targetId:gid}]}});await prisma.adminPermission.deleteMany({where:{adminId:admin}});await prisma.user.deleteMany({where:{id:{in:[uid,admin]}}});
   }

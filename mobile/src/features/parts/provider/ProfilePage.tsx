@@ -1,0 +1,13 @@
+import { useState } from "react";
+import { ProviderLayout } from "../../../components/layout/ProviderLayout";
+import { Input } from "../../../components/ui/Input";
+import { useLoad } from "../../../core/hooks/useLoad";
+import { portalApi } from "../../provider/portal/api";
+import type { ShopProfile } from "../../provider/portal/types";
+import { Async,Panel,Text,Button,useDT,go } from "../../provider/portal/ui";
+function ProfileForm({shop}:{shop:ShopProfile}){const d=useDT(),[address,setAddress]=useState(shop.address??""),[hours,setHours]=useState(shop.workingHours??""),[lat,setLat]=useState(shop.baseLat?.toString()??""),[lng,setLng]=useState(shop.baseLng?.toString()??""),[busy,setBusy]=useState(false),[message,setMessage]=useState<string|null>(null);const save=async()=>{setBusy(true);setMessage(null);try{await portalApi.updateProfile({address,workingHours:hours,baseLat:lat.trim()?Number(lat):null,baseLng:lng.trim()?Number(lng):null});setMessage(d.t("Profile saved.","تم حفظ الملف."));}catch(e){setMessage((e as Error).message);}finally{setBusy(false);}};return <>
+ <Panel title={shop.name}><Text style={{color:d.muted,textAlign:d.align}}>{[shop.brandName,shop.branchName,shop.city].filter(Boolean).join(" · ")}</Text><Text style={{color:d.muted,textAlign:d.align,lineHeight:21}}>{d.t("Verified identity changes follow the existing application review process.","تتبع تغييرات الهوية الموثقة إجراءات مراجعة الطلب الحالية.")}</Text></Panel>
+ <Panel title={d.t("Public business information","معلومات النشاط العامة")}><Input label={d.t("Address","العنوان")} value={address} onChangeText={setAddress}/><Input label={d.t("Working hours","ساعات العمل")} value={hours} onChangeText={setHours}/><Input label={d.t("Latitude","خط العرض")} value={lat} onChangeText={setLat} keyboardType="decimal-pad"/><Input label={d.t("Longitude","خط الطول")} value={lng} onChangeText={setLng} keyboardType="decimal-pad"/><Button loading={busy} label={d.t("Save profile","حفظ الملف")} onPress={()=>void save()}/>{message?<Text accessibilityRole="alert" style={{color:d.ink,textAlign:d.align}}>{message}</Text>:null}</Panel>
+ <Button variant="ghost" label={d.t("Preview as customer","معاينة كعميل")} onPress={()=>go("/provider/parts/preview")}/><Button variant="ghost" label={d.t("Manage media","إدارة الوسائط")} onPress={()=>go("/provider/parts/media")}/>
+ </>;}
+export default function ProfilePage(){const d=useDT(),state=useLoad(()=>portalApi.profile(),[]);return <ProviderLayout area="parts" title={d.t("Shop profile","ملف المتجر")} onRefresh={state.reload}><Async state={state}>{s=><ProfileForm key={s.id} shop={s}/>}</Async></ProviderLayout>;}

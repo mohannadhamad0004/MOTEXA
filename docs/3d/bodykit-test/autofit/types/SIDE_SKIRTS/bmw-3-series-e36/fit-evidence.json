@@ -1,0 +1,150 @@
+{
+  "valid": true,
+  "car": {
+    "dimensions": [
+      1.972522671149907,
+      1.362777228188965,
+      4.649999875966968
+    ],
+    "wheelsFound": true,
+    "mappedParts": [
+      "FRONT_BUMPER",
+      "REAR_BUMPER",
+      "MIRRORS",
+      "SPOILER",
+      "SIDE_SKIRTS",
+      "WHEELS"
+    ],
+    "partMapIn": [
+      "WHEELS",
+      "MIRRORS",
+      "SPOILER",
+      "REAR_BUMPER",
+      "SIDE_SKIRTS",
+      "FRONT_BUMPER"
+    ]
+  },
+  "fit": {
+    "type": "SIDE_SKIRTS",
+    "fitVersion": 2,
+    "zone": {
+      "how": "part map",
+      "size": [
+        1.913,
+        0.181,
+        2.104
+      ],
+      "hidden": 1
+    },
+    "copies": 1,
+    "turnedDeg": 0,
+    "flipped180": false,
+    "partSize": [
+      3.279,
+      1.851,
+      11.906
+    ],
+    "scale": 0.203,
+    "nonUniform": [
+      0.739,
+      0.87
+    ],
+    "stored": false,
+    "partBox": [
+      -0.3332,
+      0.0878,
+      -0.9406,
+      0.333,
+      0.3658,
+      1.1632
+    ]
+  },
+  "autofit": {
+    "version": 2,
+    "type": "SIDE_SKIRTS",
+    "orient": [
+      "z",
+      0,
+      "bottom"
+    ],
+    "placements": [
+      {
+        "pos": [
+          -0.0001,
+          0.0878,
+          0.1113
+        ],
+        "sc": [
+          0.2032,
+          0.1502,
+          0.1767
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "side": 1
+      }
+    ],
+    "shadows": [],
+    "info": {
+      "type": "SIDE_SKIRTS",
+      "fitVersion": 2,
+      "zone": {
+        "how": "part map",
+        "size": [
+          1.913,
+          0.181,
+          2.104
+        ],
+        "hidden": 1
+      },
+      "copies": 1,
+      "turnedDeg": 0,
+      "flipped180": false,
+      "partSize": [
+        3.279,
+        1.851,
+        11.906
+      ],
+      "scale": 0.203,
+      "nonUniform": [
+        0.739,
+        0.87
+      ]
+    }
+  },
+  "kit": {
+    "type": "SIDE_SKIRTS"
+  },
+  "carSha256": "2f026865272597d4edb718be5c99e2bc74a790f98f53e06f45f33a177e55ab89",
+  "partSha256": "bf0a205cb346f9070a191c1d59ee37d34e24f15164aad685df8d5da71b8e23a8",
+  "viewerSha256": "f1b1ef0d07fbb43da9e361a718d877f2168d1a9d4deaa396ad116afe1f6144db",
+  "screenshots": [
+    {
+      "name": "front",
+      "sha256": "bc5b40c5df4b4b13b80ed2212d7b7723fad7c770ad97f1802ddcab4d9f67b71b"
+    },
+    {
+      "name": "front-three-quarter",
+      "sha256": "1d66f270757b6ed3fbc2f665a7ad0fd369543247581dbaf0839f45e0a8586dee"
+    },
+    {
+      "name": "left-side",
+      "sha256": "2279bd7ca3c9bb257b5f97ba996d26c81c4bf57908d7e2b61b871636a83e37ac"
+    },
+    {
+      "name": "rear-three-quarter",
+      "sha256": "316a9c28f22ec38703bce0f16671811169a9a231ce63045cc5fbdef9d36ea498"
+    },
+    {
+      "name": "rear",
+      "sha256": "7f1fd17d70c4dd1d1a971ab57fca22815734c4821b5278edffa6e25f3c53b36e"
+    },
+    {
+      "name": "top-three-quarter",
+      "sha256": "e61019049f6ff06dac633c5c252dff447d8142d9e8a8ffd327e1caac68aa9436"
+    }
+  ]
+}
