@@ -6,9 +6,10 @@ export const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 export const CATALOG_PATH = new URL("../../../docs/3d/models.json", import.meta.url);
 export type Offset = {x:number;y:number;z:number;scale:number};
 export type ViewerConfig = {
+  rimProposal?: { ids: string[]; confidence: number };
   bakedPaint?: {hue:[number,number];sat:number;ref:number};
   centerX?:number;keepBox?:{y:[number,number];z:[number,number];names?:string[]};
-  zones?:{frontBumper?:{meshes:string[];box:{x:[number,number];y:[number,number];z:[number,number]}}};
+  zones?:Record<string,{meshes?:string[];box?:{x:[number,number];y:[number,number];z:[number,number]}}>;
   key: string; generation: string; lengthM: number; rotateY: number; preRotateX?: number;
   groundOffset: number; paintNodes: string[]; paintMaterials: string[]; rimsSwappable: boolean;
   wing: { x: number; y: number; z: number; scale: number }; rack: { x: number; y: number; z: number; scale: number };

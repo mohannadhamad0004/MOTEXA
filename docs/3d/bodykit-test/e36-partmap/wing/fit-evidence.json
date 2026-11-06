@@ -1,0 +1,112 @@
+{
+  "valid": true,
+  "car": {
+    "dimensions": [
+      1.972522671149907,
+      1.362777228188965,
+      4.649999875966968
+    ],
+    "wheelsFound": true,
+    "mappedParts": [
+      "FRONT_BUMPER",
+      "REAR_BUMPER",
+      "MIRRORS",
+      "SPOILER",
+      "SIDE_SKIRTS",
+      "WHEELS"
+    ],
+    "partMapIn": [
+      "FRONT_BUMPER",
+      "REAR_BUMPER",
+      "SPOILER",
+      "SIDE_SKIRTS",
+      "MIRRORS",
+      "WHEELS"
+    ]
+  },
+  "fit": {
+    "type": "WING",
+    "replaces": {
+      "how": "part map",
+      "hidden": 2
+    },
+    "anchor": "part map",
+    "restDrop": -0.015,
+    "copies": 1,
+    "turnedDeg": 0,
+    "flipped180": false,
+    "partSize": [
+      1.903,
+      0.444,
+      0.553
+    ],
+    "scale": 0.683,
+    "nonUniform": [
+      1,
+      1
+    ]
+  },
+  "kit": {
+    "type": "WING",
+    "size": {
+      "widthMm": 1300
+    }
+  },
+  "carSha256": "2f026865272597d4edb718be5c99e2bc74a790f98f53e06f45f33a177e55ab89",
+  "partSha256": "7e40b463d76777b8655d8c2198451d9bf0b1de6e30963a233c8c57c08225a958",
+  "viewerSha256": "d97f3356838716161c38caed2e5ceaa95096a3da75b60a521954f98d98b5aca7",
+  "screenshots": [
+    {
+      "name": "a-original-rear-34",
+      "sha256": "edd3ab258f19502beafb36b7067c0fe94a762bacd47bf8b3b08d59b217a47f6e"
+    },
+    {
+      "name": "b-part-on-rear-34",
+      "sha256": "01adf7ae200e2f8a9b6e1df8180b585b2cb79a4b0eafc1d922333ae4a97385e3"
+    },
+    {
+      "name": "c-part-on-side",
+      "sha256": "da72dc6a148e44b95af7c84183abdbcafa4e22064daeb016fabcd0085c7dcf5e"
+    },
+    {
+      "name": "d-part-on-top",
+      "sha256": "133315abd10a03ca16621a6ecf9fdb680300361e0f864fd4fce48d6c2310b289"
+    },
+    {
+      "name": "e-paint-to-match-rear-34",
+      "sha256": "be076ba54859b656ede162458bcc7821781a06e9602e1c9283ca95e025d39e7b"
+    },
+    {
+      "name": "e2-paint-to-match-red-rear-34",
+      "sha256": "758d5faf8cd59180840268ad84c2e44421ed508593ee30f2040497f6317678f1"
+    },
+    {
+      "name": "g-part-on-stock-hidden-close",
+      "sha256": "16f8442163465a22ca2eb13a88f5bbb1393d47ec84de5ac7c9659a405697869a"
+    },
+    {
+      "name": "g2-stock-hidden-part-invisible-close",
+      "sha256": "b38cd14c43b5088c91b5001746868d2d0a1cdaa47f75dd4c13f55a896f0dd61b"
+    },
+    {
+      "name": "h-part-off-stock-back-close",
+      "sha256": "71c0574043b997954b1364583b2115bcc3a4cd39b48e27fb00750c9ea2dfe83c"
+    },
+    {
+      "name": "h2-part-off-rear-34",
+      "sha256": "edd3ab258f19502beafb36b7067c0fe94a762bacd47bf8b3b08d59b217a47f6e"
+    },
+    {
+      "name": "f-edge-closeup-foot",
+      "sha256": "06db11b28e0470f85bcd4df5cffce9dea73d43c9a6ff1e639930f09df7a4ee77"
+    },
+    {
+      "name": "f2-edge-closeup-side",
+      "sha256": "65c65a3e0e78762c4913a15d02fe0518f8e61c4a45c1c497924866925694546b"
+    },
+    {
+      "name": "f3-edge-closeup-rear",
+      "sha256": "151c542b0fd4b996dc7bd341aa26292731432b3dc46de772758ef13c9b6dcbe9"
+    }
+  ]
+}

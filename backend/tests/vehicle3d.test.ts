@@ -5,7 +5,7 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import sharp from "sharp";
 import { randomUUID } from "node:crypto";
-import { existsSync, readFileSync, readdirSync, unlinkSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, unlinkSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import { prisma } from "../src/prisma.js";
 import { createVehicle3DRouter } from "../src/routes/vehicle3d.routes.js";
@@ -225,7 +225,7 @@ test("real authentication, Parts Admin authorization, private assets and catalog
   finally {
     for(const [file,text] of fileBefore)atomicWrite(file,text);
     for(const file of readdirSync(path.join(REPO_ROOT,"backend/public/3d")))if(!publicBefore.has(file))unlinkSync(path.join(REPO_ROOT,"backend/public/3d",file));
-    if(existsSync(PRIVATE_3D_DIR))for(const file of readdirSync(PRIVATE_3D_DIR))if(!storageBefore.has(file))unlinkSync(path.join(PRIVATE_3D_DIR,file));
+    if(existsSync(PRIVATE_3D_DIR))for(const file of readdirSync(PRIVATE_3D_DIR))if(!storageBefore.has(file))rmSync(path.join(PRIVATE_3D_DIR,file),{recursive:true,force:true}); // also a background segmentation temp folder
     await prisma.adminPermission.deleteMany({where:{adminId:{in:ids}}});
     await prisma.user.deleteMany({where:{id:{in:ids}}});
   }

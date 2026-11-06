@@ -1,0 +1,193 @@
+{
+  "valid": true,
+  "car": {
+    "dimensions": [
+      1.972522671149907,
+      1.362777228188965,
+      4.649999875966968
+    ],
+    "wheelsFound": true,
+    "mappedParts": [
+      "FRONT_BUMPER",
+      "REAR_BUMPER",
+      "MIRRORS",
+      "SPOILER",
+      "SIDE_SKIRTS",
+      "WHEELS"
+    ],
+    "partMapIn": [
+      "WHEELS",
+      "MIRRORS",
+      "SPOILER",
+      "REAR_BUMPER",
+      "SIDE_SKIRTS",
+      "FRONT_BUMPER"
+    ]
+  },
+  "fit": {
+    "type": "SPOILER",
+    "fitVersion": 2,
+    "replaces": {
+      "how": "part map",
+      "hidden": 2
+    },
+    "body": "sedan",
+    "movedForwardM": 0.007,
+    "mount": {
+      "body": "sedan",
+      "fromRearM": 0.142,
+      "widthM": 1.282,
+      "bodyWidthM": 1.603,
+      "scaleBy": "height"
+    },
+    "feet": 2,
+    "feetGapMm": [
+      0.1,
+      0
+    ],
+    "pitchDeg": 4.646,
+    "rollDeg": 0,
+    "spanM": 0.643,
+    "heightAboveM": 0.136,
+    "overhangM": 0,
+    "copies": 1,
+    "turnedDeg": 0,
+    "flipped180": false,
+    "partSize": [
+      1.903,
+      0.444,
+      0.553
+    ],
+    "scale": 0.338,
+    "nonUniform": [
+      1,
+      1
+    ],
+    "stored": false,
+    "partBox": [
+      -0.334,
+      0.9678,
+      -2.335,
+      0.3345,
+      1.1325,
+      -2.1
+    ]
+  },
+  "autofit": {
+    "version": 2,
+    "type": "SPOILER",
+    "orient": [
+      "x",
+      0,
+      "bottom"
+    ],
+    "placements": [
+      {
+        "pos": [
+          0.0001,
+          0.9754,
+          -2.2297
+        ],
+        "sc": [
+          0.3381,
+          0.3381,
+          0.3381
+        ],
+        "rot": [
+          -0.0811,
+          0,
+          0
+        ],
+        "side": 1
+      }
+    ],
+    "shadows": [
+      {
+        "x": -0.9041,
+        "y": 0,
+        "z": 0.1367,
+        "w": 0.0934,
+        "d": 0.2764
+      },
+      {
+        "x": 0.9038,
+        "y": 0,
+        "z": 0.1378,
+        "w": 0.0946,
+        "d": 0.2739
+      }
+    ],
+    "info": {
+      "type": "SPOILER",
+      "fitVersion": 2,
+      "replaces": {
+        "how": "part map",
+        "hidden": 2
+      },
+      "body": "sedan",
+      "movedForwardM": 0.007,
+      "mount": {
+        "body": "sedan",
+        "fromRearM": 0.142,
+        "widthM": 1.282,
+        "bodyWidthM": 1.603,
+        "scaleBy": "height"
+      },
+      "feet": 2,
+      "feetGapMm": [
+        0.1,
+        0
+      ],
+      "pitchDeg": 4.646,
+      "rollDeg": 0,
+      "spanM": 0.643,
+      "heightAboveM": 0.136,
+      "overhangM": 0,
+      "copies": 1,
+      "turnedDeg": 0,
+      "flipped180": false,
+      "partSize": [
+        1.903,
+        0.444,
+        0.553
+      ],
+      "scale": 0.338,
+      "nonUniform": [
+        1,
+        1
+      ]
+    }
+  },
+  "kit": {
+    "type": "SPOILER"
+  },
+  "carSha256": "2f026865272597d4edb718be5c99e2bc74a790f98f53e06f45f33a177e55ab89",
+  "partSha256": "7e40b463d76777b8655d8c2198451d9bf0b1de6e30963a233c8c57c08225a958",
+  "viewerSha256": "f1b1ef0d07fbb43da9e361a718d877f2168d1a9d4deaa396ad116afe1f6144db",
+  "screenshots": [
+    {
+      "name": "front",
+      "sha256": "cbca811d8e78ee1f153723418d7a836af4d820917e1805b7f7a7705dead4a073"
+    },
+    {
+      "name": "front-three-quarter",
+      "sha256": "ed8360d452744d1d5d38e1addec0ec5aba3d5660184e7f970eec94be2bcfea6d"
+    },
+    {
+      "name": "left-side",
+      "sha256": "9665a66f1a94ef3f348848226350c0fc90a5d52f7ccef4c12ad9ac6b191d2010"
+    },
+    {
+      "name": "rear-three-quarter",
+      "sha256": "c6527a1de9ea9c6e511577eb6472e1af85532121a1b0bd66460edb339026b3b3"
+    },
+    {
+      "name": "rear",
+      "sha256": "13daf959d80844d0069ec79dc73172b71a142be49c66881da059dde0e1ae85ca"
+    },
+    {
+      "name": "top-three-quarter",
+      "sha256": "0b1a764eddd16a606452b7f77ff2ce33369834c44813fb02972c13579ddc8b62"
+    }
+  ]
+}

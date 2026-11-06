@@ -36,6 +36,7 @@ import { openMyCarPicker, useMyCar } from "../../../features/catalog/myCar";
 import { addToCart, cartCount, useCart } from "../../../features/orders/cart";
 import { QtyStepper } from "../../../features/orders/orderBits";
 import { usePartLabels } from "../../../features/catalog/partAttrs";
+import { ProductAccessory3D } from "../../../features/accessory3d/customer";
 import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 
 /** Up to 8 similar visible parts: same category (or the same shop when the part has none), never this one. Hidden when none. */
@@ -163,6 +164,9 @@ export default function CustomerPartDetail() {
                   </Tap>
                 ) : null}
               </Card>
+
+              {/* Feature 2: "View on my car" / doesn't fit / installed look */}
+              <ProductAccessory3D productId={p.id} car={car} />
 
               {status === "UNKNOWN" || status === "NOT_LISTED" ? (
                 <View style={{ marginTop: 12 }}>

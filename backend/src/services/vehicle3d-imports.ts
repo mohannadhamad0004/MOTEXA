@@ -10,6 +10,7 @@ import {privatePath,storePrivate,removePrivate,PRIVATE_3D_DIR} from "./vehicle3d
 import {stageCatalogPromotion,recoverCatalogJournal} from "./vehicle3d-promotion.js";
 import {REPO_ROOT,type ViewerConfig} from "./vehicle3d-catalog.js";
 import {field,requirePartsActor,catalogLock} from "./vehicle-taxonomy.js";
+import {autoSegment} from "./car-part-map.js";
 const json=(v:unknown)=>JSON.parse(JSON.stringify(v)) as Prisma.InputJsonValue;
 const include={generation:{include:{vehicle:true}}} as const;
 const shape=(r:any)=>({id:r.id,generationId:r.generationId,status:r.status,source:r.source,author:r.author,license:r.license,sourceUrl:r.sourceUrl,reviewNotes:r.reviewNotes,viewerConfig:r.viewerConfig,validation:r.validation,hasModel:!!r.privateModelPath,publishedModel3dKey:r.publishedModel3dKey,existingModel3dKey:r.generation.model3dKey,make:r.generation.vehicle.make,model:r.generation.vehicle.model,code:r.generation.code});
@@ -44,7 +45,8 @@ export function createImportService(){
   asset:async(uid:string,id:string)=>{const r=await get(uid,id);if(!r.privateModelPath)return fail("MODEL_REQUIRED","Validate this model first.",409);return readFileSync(privatePath(r.privateModelPath));},
   publish:async(uid:string,id:string,input:any)=>{
    if(input.visuallyVerified!==true)return fail("VISUAL_REVIEW_REQUIRED","Explicit visual verification is required.");
-   try{return await prisma.$transaction(async tx=>{await requirePartsActor(tx,uid);await catalogLock(tx);await recoverCatalogJournal(tx);await tx.$queryRaw`SELECT "id" FROM "Vehicle3DImport" WHERE "id"=${id} FOR UPDATE`;const r=await tx.vehicle3DImport.findUniqueOrThrow({where:{id},include});
+   let published:string|null=null;
+   try{const out=await prisma.$transaction(async tx=>{await requirePartsActor(tx,uid);await catalogLock(tx);await recoverCatalogJournal(tx);await tx.$queryRaw`SELECT "id" FROM "Vehicle3DImport" WHERE "id"=${id} FOR UPDATE`;const r=await tx.vehicle3DImport.findUniqueOrThrow({where:{id},include});
     if(r.status!=="READY"||!r.privateModelPath||(r.validation as any)?.valid!==true)return fail("IMPORT_NOT_READY","Validate this import before publishing.",409);
     if(input.validationVersion!==(r.validation as any).validatedAt)return fail("STALE_VALIDATION","The model changed. Reload and visually verify the current preview.",409);
     const g=await tx.vehicleGeneration.findUniqueOrThrow({where:{id:r.generationId},include:{vehicle:{include:{brand:true}}}});if(!g.isActive||!g.vehicle.isActive||!g.vehicle.brand?.isActive)return fail("INACTIVE","Activate the taxonomy before publishing.");
@@ -52,7 +54,7 @@ export function createImportService(){
     const key=`manual-${r.generationId}-${(r.validation as any).sha256.slice(0,16)}`,config={...(r.viewerConfig as ViewerConfig),key};
     await stageCatalogPromotion(tx,{generationId:r.generationId,entry:{key,file:key,make:g.vehicle.make,model:g.vehicle.model,code:g.code,...config.credit,inApp:true,finalStatus:"PASS_VARIANT",source:r.source,viewerConfig:config},bytes,expectedExistingKey:input.replaceExistingKey,importId:id,actorId:uid});
     const saved=await tx.vehicle3DImport.update({where:{id},data:{status:"PUBLISHED",publishedModel3dKey:key,visuallyVerifiedAt:new Date(),reviewNotes:typeof input.notes==="string"?input.notes.slice(0,2000):null},include});return shape(saved);
-   },{timeout:90000});}finally{await prisma.$transaction(async tx=>{await catalogLock(tx);await recoverCatalogJournal(tx);});}
+   },{timeout:90000});published=out.publishedModel3dKey;return out;}finally{await prisma.$transaction(async tx=>{await catalogLock(tx);await recoverCatalogJournal(tx);});if(published)void autoSegment(published);}
   }
  };
 }

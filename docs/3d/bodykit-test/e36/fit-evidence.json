@@ -1,0 +1,77 @@
+{
+  "valid": true,
+  "car": {
+    "dimensions": [
+      1.9725226945513303,
+      1.3627772935925346,
+      4.65
+    ],
+    "wheelsFound": true
+  },
+  "fit": {
+    "type": "FRONT_BUMPER",
+    "zone": {
+      "how": "tuned box",
+      "size": [
+        1.788,
+        0.35,
+        0.442
+      ],
+      "hidden": 14
+    },
+    "copies": 1,
+    "turnedDeg": 90,
+    "flipped180": true,
+    "partSize": [
+      11.906,
+      1.851,
+      3.279
+    ],
+    "scale": 0.15,
+    "nonUniform": [
+      1.15,
+      0.897
+    ]
+  },
+  "kit": {
+    "type": "FRONT_BUMPER",
+    "paintMatch": false
+  },
+  "carSha256": "2f026865272597d4edb718be5c99e2bc74a790f98f53e06f45f33a177e55ab89",
+  "partSha256": "bf0a205cb346f9070a191c1d59ee37d34e24f15164aad685df8d5da71b8e23a8",
+  "viewerSha256": "10b2e774810ac626d4c7764ad26cb05000dab88f2373c33c99b3f778910eed1f",
+  "screenshots": [
+    {
+      "name": "a-original-front-34",
+      "sha256": "298c7cc6341fb95dd5c72e0e07faec098b46cfc97c0d3e3b61872e70ce75b683"
+    },
+    {
+      "name": "b-part-on-front-34",
+      "sha256": "708397e274d2a63058c19eee7bc7ad5de0ae5d41cab9ffe350ea3043c55c1fc5"
+    },
+    {
+      "name": "c-part-on-front",
+      "sha256": "afa3efc9a69295cc995a5618da3ebf76b9f62d627a4e4997685e9f31a0ff2a45"
+    },
+    {
+      "name": "d-part-on-side",
+      "sha256": "afddd57a6ebdee74e40b94d98c86f4a32ed65dea590e4fcf551e4b955ac3f0e0"
+    },
+    {
+      "name": "e-paint-to-match-34",
+      "sha256": "4bc57acf34f4009e44a6aac0164d5fee2a9cf21a6a874c580f798aa8400058b4"
+    },
+    {
+      "name": "e2-paint-to-match-red-34",
+      "sha256": "ef3c4feeb2d834eef894c9a2a8404b627c83a094998a0551c09d9f6732d9f6b4"
+    },
+    {
+      "name": "f-edge-closeup",
+      "sha256": "816735f4b9a50a173c9541e71548f3cda3023efdea34d4ed84d4a32e38e8f982"
+    },
+    {
+      "name": "f2-edge-closeup-side",
+      "sha256": "3c61ab0d3c19863bc1983a0463e2cac2a349b6d312a8916112bb42fc71028fc5"
+    }
+  ]
+}

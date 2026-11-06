@@ -14,6 +14,8 @@ export type HeroConfig = {
   /** one real data line (1–2 lines); left out until its number is known */
   line?: string;
   action: HeroAction;
+  /** providers: replaces the customer's car chip / bell / map row with their own label (start) and round icon buttons (end) */
+  top?: { label: string; actions: { icon: GIconName; label: string; onPress: () => void; badge?: number }[] };
 };
 
 /** Per-tab fixed parts: the Map button's route and the media's accessibility label. */

@@ -320,12 +320,15 @@ router.get("/parts/me/products", ...provider, async (req, res) => {
     const s = await myShop(res);
     if (!s) return;
     const q = text(req.query.q, 100);
+    const page = req.query.page === undefined ? null : Number(req.query.page);
+    if (page !== null && (!Number.isSafeInteger(page) || page < 1 || page > 10000)) return bad(res,400,"Invalid page.");
     const stock = typeof req.query.stock === "string" ? req.query.stock : undefined;
     if (stock && !["in", "low", "out"].includes(stock)) return bad(res, 400, "Invalid stock filter.");
 
     const norm = q ? normalizePart(q) : "";
     const products = await prisma.partsProduct.findMany({
       include: withFiles,
+      ...(page ? { skip:(page-1)*20, take:21 } : {}),
       where: {
         shopId: s.id,
         ...(stock === "out" ? { stock: 0 } : stock === "low" ? { stock: { gte: 1, lte: LOW_STOCK_AT } } : stock === "in" ? { stock: { gt: LOW_STOCK_AT } } : {}),
@@ -342,7 +345,7 @@ router.get("/parts/me/products", ...provider, async (req, res) => {
       },
       orderBy: { createdAt: "asc" },
     });
-    return res.json({ success: true, products: products.map(shapeProduct) });
+    return res.json({ success: true, products: (page ? products.slice(0,20) : products).map(p=>({...shapeProduct(p),reservedStock:p.reservedStock,customerVisible:s.verificationStatus==="APPROVED"&&!p.isHidden&&!!realPhoto(p)})), hasMore: !!page && products.length > 20 });
   } catch (e) {
     return fail(res, "Parts products error", e);
   }
@@ -352,7 +355,7 @@ router.get("/parts/me/products/:id", ...provider, async (req, res) => {
   try {
     const own = await ownProduct(req, res);
     if (!own) return;
-    return res.json({ success: true, product: shapeProduct(own.product) });
+    return res.json({ success: true, product: {...shapeProduct(own.product),reservedStock:own.product.reservedStock,customerVisible:own.shop.verificationStatus==="APPROVED"&&!own.product.isHidden&&!!realPhoto(own.product)} });
   } catch (e) {
     return fail(res, "Parts product error", e);
   }

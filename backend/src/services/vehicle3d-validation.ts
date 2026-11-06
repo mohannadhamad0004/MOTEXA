@@ -21,9 +21,9 @@ function stripGLBMetadata(bytes:Buffer){
   const rest=bytes.subarray(20+length),header=Buffer.alloc(20);header.write("glTF");header.writeUInt32LE(2,4);header.writeUInt32LE(20+padded.length+rest.length,8);header.writeUInt32LE(padded.length,12);header.writeUInt32LE(0x4e4f534a,16);
   return Buffer.concat([header,padded,rest]);
 }
-
 /** Reject external resources before parsing: validation must never fetch client-selected URLs. */
-export async function normalizeVehicle(bytes: Buffer, lengthM: number, options: {preRotateX?: number; rotateY?: number; stripPrivateMetadata?: boolean} = {}) {
+/** Reject external resources before parsing: validation must never fetch client-selected URLs. Shared by vehicles and accessories: self-contained, bounded resources/textures/geometry, finite triangles. */
+export async function readSafeGLB(bytes: Buffer, maxTriangles: number) {
   if (!bytes.length || bytes.length > MAX_MODEL_BYTES) return fail("INVALID_GLB", "Model exceeds the configured size limit.");
   if (bytes.length < 20 || bytes.toString("ascii", 0, 4) !== "glTF" || bytes.readUInt32LE(4) !== 2 || bytes.readUInt32LE(8) !== bytes.length
     || bytes.readUInt32LE(16) !== 0x4e4f534a || bytes.readUInt32LE(12) > bytes.length - 20) return fail("INVALID_GLB", "Invalid GLB container.");
@@ -47,7 +47,6 @@ export async function normalizeVehicle(bytes: Buffer, lengthM: number, options: 
       if (pixels > 32_000_000) throw new Error();
     } catch { return fail("INVALID_GLB", "Textures exceed safe decoding limits or cannot be loaded."); }
   }
-  if (!Number.isFinite(lengthM) || lengthM < 2.5 || lengthM > 8) return fail("INVALID_GLB", "Vehicle length must be between 2.5 and 8 metres.");
   await MeshoptDecoder.ready;
   const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ "meshopt.decoder": MeshoptDecoder });
   let doc;
@@ -63,7 +62,13 @@ export async function normalizeVehicle(bytes: Buffer, lengthM: number, options: 
     if (indices && Array.from(indices).some(i => i < 0 || i >= pos!.getCount())) return fail("INVALID_GLB", "Invalid geometry indices.");
     triangles += (p.getIndices()?.getCount() ?? pos!.getCount()) / 3;
   }
-  if (!triangles || triangles > 500_000) return fail("INVALID_GLB", "Model needs nonzero geometry and at most 500,000 triangles.");
+  if (!triangles || triangles > maxTriangles) return fail("INVALID_GLB", `Model needs nonzero geometry and at most ${maxTriangles.toLocaleString("en")} triangles.`);
+  return { doc, io, scene, triangles };
+}
+
+export async function normalizeVehicle(bytes: Buffer, lengthM: number, options: {preRotateX?: number; rotateY?: number; stripPrivateMetadata?: boolean} = {}) {
+  const { doc, io, scene, triangles } = await readSafeGLB(bytes, 500_000);
+  if (!Number.isFinite(lengthM) || lengthM < 2.5 || lengthM > 8) return fail("INVALID_GLB", "Vehicle length must be between 2.5 and 8 metres.");
   const dimensions = () => {
     const b = getBounds(scene), size = b.max.map((v, i) => v - b.min[i]!);
     if (![...b.min, ...b.max, ...size].every(Number.isFinite) || size.some(v => v < 0.00001 || v > 1e7)) return fail("INVALID_GLB", "Invalid or extreme model bounds.");
@@ -113,6 +118,26 @@ export async function normalizeVehicle(bytes: Buffer, lengthM: number, options: 
     uprightProportions: true, uprightOrientation: "admin_visual_required", frontDirection:"admin_visual_required", visualVerificationRequired: true } };
 }
 
+/** A loose accessory part (shop photos -> provider, Feature 2): the same safety limits, then centred on x/z and standing on y = 0,
+ *  names / extras / copyright stripped. No scaling or orientation guess here: the viewer fits it to the car (real size from the product). */
+export async function normalizeAccessory(bytes: Buffer) {
+  const { doc, io, scene, triangles } = await readSafeGLB(bytes, 300_000);
+  const b = getBounds(scene), size = b.max.map((v, i) => v - b.min[i]!);
+  if (![...b.min, ...b.max, ...size].every(Number.isFinite) || size.some(v => v < 0.00001 || v > 1e7)) return fail("INVALID_GLB", "Invalid or extreme model bounds.");
+  const wrapper = doc.createNode("MOTEXA_accessory");
+  for (const child of scene.listChildren()) { scene.removeChild(child); wrapper.addChild(child); }
+  scene.addChild(wrapper);
+  wrapper.setTranslation([-(b.min[0]! + b.max[0]!) / 2, -b.min[1]!, -(b.min[2]! + b.max[2]!) / 2]);
+  const asset = doc.getRoot().getAsset() as Record<string, unknown>;
+  delete asset.extras; delete asset.copyright;
+  const output = stripGLBMetadata(Buffer.from(await io.writeBinary(doc)));
+  if (output.length > MAX_MODEL_BYTES) return fail("INVALID_GLB", "Prepared part exceeds the configured size limit.");
+  const materials = doc.getRoot().listMaterials();
+  return { bytes: output, report: { valid: true, sha256: digest(output), triangles: Math.floor(triangles), bytes: output.length, dimensions: size,
+    textures: doc.getRoot().listTextures().length, materials: materials.length, transparentMaterials: materials.filter(m => m.getAlphaMode() !== "OPAQUE").length,
+    warnings: ["Part identity, shape, orientation and its fit on a matching car require visual verification in the six-view preview."], visualVerificationRequired: true } };
+}
+
 /** Render the same build/paint path used by the mobile viewer, with local pinned dependencies. */
 export async function verifyViewer(file: string, lengthM: number) {
   try {
@@ -132,6 +157,26 @@ const number=(v:unknown,limit=100)=>typeof v==="number"&&Number.isFinite(v)&&Mat
 const strings=(v:unknown):v is string[]=>Array.isArray(v)&&v.length<=300&&v.every(s=>typeof s==="string"&&s.length<=200);
 const offset=(v:unknown):v is Offset=>object(v)&&number(v.x)&&number(v.y)&&number(v.z)&&number(v.scale,10)&&Number(v.scale)>0;
 const range=(v:unknown)=>Array.isArray(v)&&v.length===2&&v.every(n=>number(n,1e6))&&v[0]<=v[1];
+/** Accessory types a shop can submit; also the keys of a model's tuned fitting zones. */
+export const ACCESSORY_TYPES=["FRONT_BUMPER","REAR_BUMPER","SIDE_SKIRTS","FRONT_LIP","REAR_DIFFUSER","FENDER_FLARES","WING","SPOILER","ROOF_RACK","RIMS","MIRROR_COVERS"] as const;
+export type AccessoryType=typeof ACCESSORY_TYPES[number];
+export type ZoneBox={x:[number,number];y:[number,number];z:[number,number]};
+/** replace = the car's OWN part hidden while an add-on of this type is on (stock spoiler, roof rails, mirrors, rims): mesh names hidden whole,
+ *  a box cut out of the body (or out of the named meshes), or both. Bumpers / skirts always hide their fit zone and take no replace. */
+/** wheelInsetMm (RIMS only): moves the whole wheel (tyre + rim) inward while rims are on, per axle, whole mm 0..40 (a model whose stock wheels stand outside the fenders) */
+export type AccessoryZone={meshes?:string[];box?:ZoneBox;replace?:{meshes?:string[];box?:ZoneBox};wheelInsetMm?:{front:number;rear:number}};
+const fraction=(v:unknown)=>Array.isArray(v)&&v.length===2&&v.every(n=>typeof n==="number"&&Number.isFinite(n)&&n>=-0.5&&n<=1.5)&&v[0]<v[1];
+/** A tuned zone: mesh names to cut and/or a box in fractions of the car's bounding box (y from the ground, z: 0 = rear, 1 = front). */
+export function parseZone(f:unknown,nested=false):AccessoryZone|null{
+  const keys=nested?["meshes","box"]:["meshes","box","replace","wheelInsetMm"];
+  if(!object(f)||Object.keys(f).some(k=>!keys.includes(k))||(f.meshes===undefined&&f.box===undefined&&f.replace===undefined&&f.wheelInsetMm===undefined))return null;
+  const zone:AccessoryZone={};
+  if(f.meshes!==undefined){if(!strings(f.meshes)||!f.meshes.length)return null;zone.meshes=[...f.meshes];}
+  if(f.box!==undefined){const b=f.box;if(!object(b)||!["x","y","z"].every(k=>fraction(b[k])))return null;zone.box={x:[...(b.x as [number,number])],y:[...(b.y as [number,number])],z:[...(b.z as [number,number])]};}
+  if(f.replace!==undefined){const r=parseZone(f.replace,true);if(!r)return null;zone.replace=r as {meshes?:string[];box?:ZoneBox};}
+  if(f.wheelInsetMm!==undefined){const w=f.wheelInsetMm,mm=(n:unknown)=>Number.isInteger(n)&&(n as number)>=0&&(n as number)<=40;if(!object(w)||Object.keys(w).some(k=>k!=="front"&&k!=="rear")||!mm(w.front)||!mm(w.rear))return null;zone.wheelInsetMm={front:w.front as number,rear:w.rear as number};}
+  return zone;
+}
 /** Never spread untrusted server objects into the viewer protocol. Reject a whole malformed model. */
 export function parseCarModel(v:unknown):CarModel|null{
   if(!object(v)||typeof v.key!=="string"||!/^[a-z0-9][a-z0-9-]{0,150}$/.test(v.key)||typeof v.generation!=="string"||v.generation.length>200||!number(v.lengthM,8)||Number(v.lengthM)<2.5
@@ -145,6 +190,7 @@ export function parseCarModel(v:unknown):CarModel|null{
   if(v.centerX!==undefined){if(!number(v.centerX,1e6))return null;m.centerX=Number(v.centerX);}
   if(v.bakedPaint!==undefined){const b=v.bakedPaint;if(!object(b)||!range(b.hue)||(b.hue as number[]).some(h=>h<0||h>360)||!number(b.sat,1)||Number(b.sat)<0||!number(b.ref,1)||Number(b.ref)<=0)return null;m.bakedPaint={hue:[Number((b.hue as number[])[0]),Number((b.hue as number[])[1])],sat:Number(b.sat),ref:Number(b.ref)};}
   if(v.keepBox!==undefined){const b=v.keepBox;if(!object(b)||!range(b.y)||!range(b.z)||(b.names!==undefined&&!strings(b.names)))return null;m.keepBox={y:[...(b.y as [number,number])],z:[...(b.z as [number,number])],...(b.names?{names:[...(b.names as string[])]}:{})};}
-  if(v.zones!==undefined){const z=v.zones;if(!object(z)||Object.keys(z).some(k=>k!=="frontBumper"))return null;m.zones={};if(z.frontBumper!==undefined){const f=z.frontBumper;if(!object(f)||!strings(f.meshes)||!object(f.box)||!["x","y","z"].every(k=>range((f.box as Record<string,unknown>)[k])))return null;m.zones.frontBumper={meshes:[...f.meshes],box:{x:[...(f.box.x as [number,number])],y:[...(f.box.y as [number,number])],z:[...(f.box.z as [number,number])]}};}}
+  if(v.zones!==undefined){const z=v.zones;if(!object(z)||Object.keys(z).length>ACCESSORY_TYPES.length+1)return null;m.zones={};
+    for(const[raw,f]of Object.entries(z)){const type=raw==="frontBumper"?"FRONT_BUMPER":raw;if(!(ACCESSORY_TYPES as readonly string[]).includes(type))return null;const zone=parseZone(f);if(!zone)return null;m.zones[type as AccessoryType]=zone;}}
   return m;
 }

@@ -73,7 +73,7 @@ export function ModelPreview({ s, admin }: { s: Submission; admin: boolean }) {
   const { id, lengthM, make, model: name, generationName } = s;
   const model = useMemo(() => submissionModel({id,lengthM,make,model:name,generationName}), [id,lengthM,make,name,generationName]);
   const loader = useCallback(() => privateAssetBase64(s.id,"model",admin), [s.id,admin]);
-  return <Car3DView model={model} assetLoader={loader} color="#c3c7cc" bg={g.cardSoft} wing={false} rack={false} interactive style={{ height: 300, borderRadius: 16 }} />;
+  return <Car3DView model={model} assetLoader={loader} color="#c3c7cc" bg={g.cardSoft} interactive style={{ height: 300, borderRadius: 16 }} />;
 }
 function SubmissionBody({ s, admin, reload }: { s: Submission; admin: boolean; reload: () => Promise<unknown> }) {
   const { t } = useL(); const { g, align } = useGarageTheme();

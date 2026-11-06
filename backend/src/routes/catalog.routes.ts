@@ -1,3 +1,4 @@
+import { publicProviderMedia } from "../services/public-provider-presentation.js";
 import {publishedVehicleList} from "../services/vehicle-taxonomy.js";
 import express, { Router } from "express";
 import { readFile } from "node:fs/promises";
@@ -50,6 +51,8 @@ const productInclude = {
   files: { where: { purpose: "PRODUCT_IMAGE" as const } },
   fitments: { orderBy: { position: "asc" as const } },
   shop: { select: { id: true, shopName: true, city: true } },
+  // published 3D parts only (a customer never sees a draft); drives the "3D · View on my car" badge and the "Front + rear" label
+  accessory3d: { where: { status: "PUBLISHED" as const }, select: { kitPart: true, accessoryType: true, fits: { select: { generationId: true } } } },
 };
 type ProductRow = Prisma.PartsProductGetPayload<{ include: typeof productInclude }>;
 
@@ -74,7 +77,15 @@ const shapeProduct = (p: ProductRow, withDescription = false) => ({
   compareAtPrice: saleWas(p),
   warrantyMonths: p.warrantyMonths,
   badges: productBadges({ ...p, stock: p.stock - p.reservedStock }),
+  model3d: p.accessory3d.length ? { kit: p.accessory3d.some((a) => a.kitPart !== "MAIN"), parts: p.accessory3d.map((a) => ({ part: a.kitPart, type: a.accessoryType })), generationIds: [...new Set(p.accessory3d.flatMap((a) => a.fits.map((f) => f.generationId)))],
+    // a rim on a Universal product ("Universal by size") is shown on any car that has a 3D model
+    universal: p.isUniversal && p.accessory3d.some((a) => a.accessoryType === "RIMS") } : null,
 });
+
+// Product names are English: the common Arabic body-kit words also match their English name ("مصد E36" finds "E36 M3 front bumper").
+// ponytail: a hand list, not a translator. Add a word when shops start listing it; a real Arabic name field is the long-term fix.
+const AR_ALIASES: Record<string, string[]> = { مصد: ["bumper"], مصدات: ["bumper"], صدام: ["bumper"], جناح: ["wing", "spoiler"], سبويلر: ["spoiler"], طقم: ["kit"], بودي: ["body"] };
+const arAlias = (w: string) => AR_ALIASES[w.replace(/^ال/, "")] ?? [];
 
 const PART_SORTS = ["relevance", "price_asc", "price_desc", "newest", "discount"] as const;
 type PartSort = (typeof PART_SORTS)[number];
@@ -172,7 +183,7 @@ router.get("/parts", async (req, res) => {
       const np = normalizePart(w);
       and.push({
         OR: [
-          { name: { contains: w, mode: "insensitive" } },
+          ...[w, ...arAlias(w)].map((x) => ({ name: { contains: x, mode: "insensitive" as const } })),
           { brand: { contains: w, mode: "insensitive" } },
           ...(w.length >= 3 ? [{ partNumber: { contains: w, mode: "insensitive" as const } }] : []),
           ...(np.length >= 4 ? [{ partNumberNormalized: { contains: np } }] : []),
@@ -312,6 +323,7 @@ router.get("/shops/:id", async (req, res) => {
         baseLat: round3(s.baseLat),
         baseLng: round3(s.baseLng),
         storefrontUri: s.files[0] ? `/catalog/shops/${s.id}/storefront` : null,
+        media: await publicProviderMedia("parts", s.id),
         workingHours: s.workingHours,
         // orders: whether the owner delivers, his fee (null = agreed with the shop) and where he delivers
         delivery: { enabled: s.deliveryEnabled, fee: s.deliveryFee === null ? null : Number(s.deliveryFee), areaNote: s.deliveryAreaNote },
@@ -534,6 +546,7 @@ router.get("/tow/companies/:id", async (req, res) => {
         baseLat: round3(c.baseLat),
         baseLng: round3(c.baseLng),
         ...(point ? distanceTo(point, c) : {}),
+        media: await publicProviderMedia("tow", c.id, trucks.map(t=>t.id)),
         approvedTrucks: trucks.length,
         availableTrucks: trucks.filter(usable).length,
       },

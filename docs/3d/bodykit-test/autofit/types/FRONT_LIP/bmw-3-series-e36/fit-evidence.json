@@ -1,0 +1,138 @@
+{
+  "valid": true,
+  "car": {
+    "dimensions": [
+      1.972522671149907,
+      1.362777228188965,
+      4.649999875966968
+    ],
+    "wheelsFound": true,
+    "mappedParts": [
+      "FRONT_BUMPER",
+      "REAR_BUMPER",
+      "MIRRORS",
+      "SPOILER",
+      "SIDE_SKIRTS",
+      "WHEELS"
+    ],
+    "partMapIn": [
+      "WHEELS",
+      "MIRRORS",
+      "SPOILER",
+      "REAR_BUMPER",
+      "SIDE_SKIRTS",
+      "FRONT_BUMPER"
+    ]
+  },
+  "fit": {
+    "type": "FRONT_LIP",
+    "fitVersion": 2,
+    "topGapMm": [
+      0
+    ],
+    "copies": 1,
+    "turnedDeg": 90,
+    "flipped180": true,
+    "partSize": [
+      11.906,
+      1.851,
+      3.279
+    ],
+    "scale": 0.145,
+    "nonUniform": [
+      1,
+      1
+    ],
+    "stored": false,
+    "partBox": [
+      -0.8602,
+      -0.1541,
+      1.8512,
+      0.8602,
+      0.1133,
+      2.325
+    ]
+  },
+  "autofit": {
+    "version": 2,
+    "type": "FRONT_LIP",
+    "orient": [
+      "x",
+      1,
+      "top"
+    ],
+    "placements": [
+      {
+        "pos": [
+          0,
+          0.1133,
+          2.325
+        ],
+        "sc": [
+          0.1445,
+          0.1445,
+          0.1445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "side": 1
+      }
+    ],
+    "shadows": [],
+    "info": {
+      "type": "FRONT_LIP",
+      "fitVersion": 2,
+      "topGapMm": [
+        0
+      ],
+      "copies": 1,
+      "turnedDeg": 90,
+      "flipped180": true,
+      "partSize": [
+        11.906,
+        1.851,
+        3.279
+      ],
+      "scale": 0.145,
+      "nonUniform": [
+        1,
+        1
+      ]
+    }
+  },
+  "kit": {
+    "type": "FRONT_LIP"
+  },
+  "carSha256": "2f026865272597d4edb718be5c99e2bc74a790f98f53e06f45f33a177e55ab89",
+  "partSha256": "bf0a205cb346f9070a191c1d59ee37d34e24f15164aad685df8d5da71b8e23a8",
+  "viewerSha256": "f1b1ef0d07fbb43da9e361a718d877f2168d1a9d4deaa396ad116afe1f6144db",
+  "screenshots": [
+    {
+      "name": "front",
+      "sha256": "bc01d54c7ca615782750c8e48a6e6765ea9caeaecc09a28cf0b2796799bb9682"
+    },
+    {
+      "name": "front-three-quarter",
+      "sha256": "083252adc0403beda4784f2149d587f1b8db3443b488a7977a1cb6531cb13ab7"
+    },
+    {
+      "name": "left-side",
+      "sha256": "0b9e56e322503042480b4f4e10cbf05315168a87838a38509cd1af068465d4f6"
+    },
+    {
+      "name": "rear-three-quarter",
+      "sha256": "9ded69c4c985e629cda30e8cae8feb0d1a45a47ae9e76ee351171fd6f144c10a"
+    },
+    {
+      "name": "rear",
+      "sha256": "7f1fd17d70c4dd1d1a971ab57fca22815734c4821b5278edffa6e25f3c53b36e"
+    },
+    {
+      "name": "top-three-quarter",
+      "sha256": "64df5d627f09fe06f5d4c89cce97fb47c0451e0c0bcfab328e40c8427e74a395"
+    }
+  ]
+}

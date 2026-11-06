@@ -7,7 +7,7 @@ import { useL } from "../../core/hooks/useL";
 import { gShape, gType, useGarageTheme } from "../../theme/garage";
 import { carName } from "../catalog/catalogBits";
 import { Car, useMyCar } from "../catalog/myCar";
-import { DEFAULT_COLOR, useLook } from "./car3d";
+import { DEFAULT_COLOR } from "./car3d";
 import { Car3DView } from "./Car3DView";
 import { useCatalogModel } from "./runtimeModels";
 
@@ -31,14 +31,13 @@ export function CarPreview() {
   const { g, row, align, shadow } = useGarageTheme();
   const { t } = useL();
   const { car } = useMyCar();
-  const look = useLook();
   const model = useCatalogModel(car);
   if (!car) return null;
   if (!model) return <ComingSoon car={car} />;
   return (
     <Tap label={t("See your car in 3D", "شاهد سيارتك ثلاثية الأبعاد")} onPress={() => router.push("/customer/car3d")} style={[row, { alignItems: "center", gap: 12, padding: 10, borderRadius: gShape.cardLg, backgroundColor: g.card }, shadow(1)]}>
       <View pointerEvents="none" style={{ width: 128, height: 96, borderRadius: gShape.small, overflow: "hidden" }}>
-        <Car3DView model={model} color={car.color ?? DEFAULT_COLOR} {...look} bg={g.cardSoft} style={{ flex: 1 }} />
+        <Car3DView model={model} color={car.color ?? DEFAULT_COLOR} bg={g.cardSoft} style={{ flex: 1 }} />
       </View>
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
         <GText style={[gType.label, { fontWeight: "800" }, align]}>{t("See your car in 3D", "شاهد سيارتك ثلاثية الأبعاد")}</GText>

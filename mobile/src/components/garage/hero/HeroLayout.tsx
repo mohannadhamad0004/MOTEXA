@@ -68,26 +68,49 @@ function MediaBox({ tab }: { tab: HeroConfig["tab"] }) {
   );
 }
 
+/** The customer's top row: car chip (start), requests bell + map (end). Kept apart so provider heroes never touch the customer garage. */
+function CustomerTop({ tab }: { tab: HeroConfig["tab"] }) {
+  const { row } = useGarageTheme();
+  const { g } = useGarageTheme();
+  const { t } = useL();
+  const { car } = useMyCar();
+  const chip = car ? carName(car) : t("Set your car", "حدّد سيارتك");
+  return (
+    <>
+      <View style={[row, { flex: 1, minWidth: 0 }]}>
+        <Tap label={chip} onPress={openMyCarPicker} style={[row, { height: HERO.topRow, alignItems: "center", gap: 6, paddingHorizontal: 14, borderRadius: gShape.pill, backgroundColor: g.card, flexShrink: 1 }]}>
+          <GIcon name="car-sport-outline" size={16} />
+          <GText numberOfLines={1} style={[gType.caption, { fontWeight: "700", flexShrink: 1 }]}>{chip}</GText>
+          <GIcon name="chevron-down" size={14} color={g.soft} />
+        </Tap>
+      </View>
+      <IconButton icon="notifications-outline" label={t("My requests", "طلباتي")} onPress={() => router.push("/customer/requests")} />
+      <IconButton icon="map-outline" label={t("Map", "الخريطة")} onPress={() => router.push(HERO_TAB[tab].map as never)} />
+    </>
+  );
+}
+
 export function HeroLayout({ config }: { config: HeroConfig }) {
   const { g, row, align } = useGarageTheme();
   const { t } = useL();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { car } = useMyCar();
   const f = titleSize(config.title, width - HERO.padX * 2 - HERO_BOX.w - HERO.gap);
-  const chip = car ? carName(car) : t("Set your car", "حدّد سيارتك");
   return (
     <View style={{ backgroundColor: g.heroTone, borderBottomLeftRadius: gShape.hero, borderBottomRightRadius: gShape.hero, paddingTop: insets.top + 8, paddingHorizontal: HERO.padX, paddingBottom: 20 + OVERLAP, overflow: "hidden" }}>
       <View style={[row, { height: HERO.topRow, alignItems: "center", gap: 10 }]}>
-        <View style={[row, { flex: 1, minWidth: 0 }]}>
-          <Tap label={chip} onPress={openMyCarPicker} style={[row, { height: HERO.topRow, alignItems: "center", gap: 6, paddingHorizontal: 14, borderRadius: gShape.pill, backgroundColor: g.card, flexShrink: 1 }]}>
-            <GIcon name="car-sport-outline" size={16} />
-            <GText numberOfLines={1} style={[gType.caption, { fontWeight: "700", flexShrink: 1 }]}>{chip}</GText>
-            <GIcon name="chevron-down" size={14} color={g.soft} />
-          </Tap>
-        </View>
-        <IconButton icon="notifications-outline" label={t("My requests", "طلباتي")} onPress={() => router.push("/customer/requests")} />
-        <IconButton icon="map-outline" label={t("Map", "الخريطة")} onPress={() => router.push(HERO_TAB[config.tab].map as never)} />
+        {config.top ? (
+          <>
+            <View style={[row, { flex: 1, minWidth: 0 }]}>
+              <View style={[row, { height: HERO.topRow, alignItems: "center", paddingHorizontal: 14, borderRadius: gShape.pill, backgroundColor: g.card, flexShrink: 1 }]}>
+                <GText numberOfLines={1} style={[gType.caption, { fontWeight: "700", flexShrink: 1 }]}>{config.top.label}</GText>
+              </View>
+            </View>
+            {config.top.actions.map((a) => <IconButton key={a.label} icon={a.icon} label={a.label} onPress={a.onPress} badge={a.badge} />)}
+          </>
+        ) : (
+          <CustomerTop tab={config.tab} />
+        )}
       </View>
       <View style={[row, { height: HERO_BOX.h, gap: HERO.gap, marginTop: HERO.topGap }]}>
         <View style={{ flex: 1, minWidth: 0, justifyContent: "space-between" }}>

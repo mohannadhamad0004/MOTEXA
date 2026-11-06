@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import {stageCatalogPromotion,recoverCatalogJournal} from "./vehicle3d-promotion.js";
+import { autoSegment } from "./car-part-map.js";
 export {recoverCatalogJournal} from "./vehicle3d-promotion.js";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
@@ -236,6 +237,7 @@ export function createSubmissionService(run: Runner = work => prisma.$transactio
           return submissionShape(updated);
         });
         await run(async tx => { await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(762493031)`; await recoverCatalogJournal(tx); });
+        if (result.approvedModel3dKey) void autoSegment(result.approvedModel3dKey); // split the new car into parts for the Parts Admin's part map
         return result;
       } catch (error) {
         if (journalWritten) await run(async tx => { await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(762493031)`; await recoverCatalogJournal(tx); });

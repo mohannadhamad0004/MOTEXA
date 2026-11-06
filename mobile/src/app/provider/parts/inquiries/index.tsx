@@ -1,6 +1,6 @@
 import { Async, EmptyState } from "../../../../components/ui/Feedback";
 import { Card } from "../../../../components/ui/Card";
-import { DashboardLayout } from "../../../../components/layout/DashboardLayout";
+import { ProviderLayout as DashboardLayout } from "../../../../components/layout/ProviderLayout";
 import { Segmented } from "../../../../components/ui/Chip";
 import { useL } from "../../../../core/hooks/useL";
 import { useLoad } from "../../../../core/hooks/useLoad";

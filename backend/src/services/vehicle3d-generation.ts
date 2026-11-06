@@ -7,6 +7,7 @@ import { Vehicle3DError } from "./vehicle3d-validation.js";
 import { prisma } from "../prisma.js";
 import { VIEWS, privatePath, storePrivate, recoverCatalogJournal } from "./vehicle3d-submissions.js";
 import { MAX_MODEL_BYTES, normalizeVehicle, verifyViewer } from "./vehicle3d-validation.js";
+import { cleanPreviewTemp, processNextAccessory3DJob } from "./accessory3d.js";
 
 /** A deliberately generic preview for testing the workflow. Never claimed to reconstruct photos. */
 export async function mockVehicleGLB() {
@@ -110,7 +111,12 @@ export function createVehicle3DProcessor(options: ProcessorOptions = {}) {
 export const processNextVehicle3DJob=(id: string|null=null)=>createVehicle3DProcessor()(id);
 export async function startVehicle3DWorker(){
   await prisma.$transaction(async tx=>{await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(762493031)`;await recoverCatalogJournal(tx);});
+  cleanPreviewTemp();
   let running=false;
-  const timer=setInterval(async()=>{if(running)return;running=true;try{await processNextVehicle3DJob();}catch{console.error("Vehicle 3D worker could not process a job.");}finally{running=false;}},5000);
+  // one loop for both pipelines: Garage vehicles (Feature 1) and shop accessories (Feature 2)
+  const timer=setInterval(async()=>{if(running)return;running=true;
+    try{await processNextVehicle3DJob();}catch{console.error("Vehicle 3D worker could not process a job.");}
+    try{await processNextAccessory3DJob();}catch{console.error("Accessory 3D worker could not process a job.");}
+    finally{running=false;}},5000);
   timer.unref();return()=>clearInterval(timer);
 }

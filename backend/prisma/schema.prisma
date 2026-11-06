@@ -61,6 +61,7 @@ model User {
   towCompanyProfile        TowCompanyProfile?
   partsShopProfile         PartsShopProfile?
   providerFiles            ProviderFile[]
+  portalMedia              ProviderMedia[]
   providerMessages         ProviderMessage[]      @relation("ProviderMessageAuthor")
   partInquiries            PartInquiry[]
   inquiryMessages          PartInquiryMessage[]
@@ -75,6 +76,7 @@ model User {
   garageCars CustomerGarageCar[]
   vehicle3dSubmissions Vehicle3DSubmission[] @relation("Vehicle3DOwner")
   vehicle3dReviews Vehicle3DSubmission[] @relation("Vehicle3DReviewer")
+  accessoryAdjusts AccessoryFitAdjust[]
 
   towDriver          TowDriver?
   partsOrders        PartsOrder[]
@@ -296,6 +298,7 @@ enum TruckType {
 }
 
 model TowCompanyProfile {
+  portalMedia ProviderMedia[]
   id     String @id @default(uuid())
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -340,6 +343,7 @@ model TowCompanyProfile {
 }
 
 model Truck {
+  portalMedia ProviderMedia[]
   id        String            @id @default(uuid())
   companyId String
   company   TowCompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -409,6 +413,7 @@ model TowDriver {
 // ---- Parts shops + products. Product images and vehicle fitment are a later step. ----
 
 model PartsShopProfile {
+  portalMedia ProviderMedia[]
   id     String @id @default(uuid())
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -420,6 +425,8 @@ model PartsShopProfile {
   licenceNumber String?
 
   verificationStatus ProviderVerificationStatus @default(PENDING)
+  /// paid Meshy accessory generations allowed per calendar month (Parts Admin sets it)
+  accessory3dMonthlyCredits Int @default(5)
   rejectionReason    String?
   reviewedById       String?
   reviewedAt         DateTime?
@@ -506,6 +513,8 @@ model PartsProduct {
 
   files      ProviderFile[]
   fitments   PartsFitment[]
+  accessory3d ProductAccessory3D[] // Feature 2: shown in 3D on the customer's car (one MAIN part, or a body kit's FRONT / REAR bumpers)
+  accessoryAdjusts AccessoryFitAdjust[]
   inquiries  PartInquiry[]
   orderItems PartsOrderItem[]
 
@@ -584,6 +593,29 @@ model ProviderFile {
   @@unique([productId, purpose])
   @@index([ownerUserId])
   @@index([towCompanyId])
+  @@index([partsShopId])
+}
+
+// Public presentation assets only. Verification documents remain in ProviderFile.
+model ProviderMedia {
+  id String @id @default(uuid())
+  ownerUserId String
+  owner User @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  towCompanyId String?
+  towCompany TowCompanyProfile? @relation(fields: [towCompanyId], references: [id], onDelete: Cascade)
+  truckId String?
+  truck Truck? @relation(fields: [truckId], references: [id], onDelete: Cascade)
+  partsShopId String?
+  partsShop PartsShopProfile? @relation(fields: [partsShopId], references: [id], onDelete: Cascade)
+  slot String
+  mimeType String
+  sizeBytes Int
+  storageKey String @unique
+  sha256 String
+  createdAt DateTime @default(now())
+  @@index([ownerUserId])
+  @@index([towCompanyId])
+  @@index([truckId])
   @@index([partsShopId])
 }
 
@@ -773,6 +805,7 @@ model VehicleGeneration {
   imports Vehicle3DImport[]
   @@unique([vehicleId, catalogNormalizedCode])
   vehicle3dSubmissions Vehicle3DSubmission[]
+  accessoryFits ProductAccessory3DFit[]
   garageCars     CustomerGarageCar[]
   id             String   @id @default(uuid())
   vehicleId      String
@@ -1216,4 +1249,199 @@ model Vehicle3DImport {
  visuallyVerifiedAt DateTime?
  createdAt DateTime @default(now())
  updatedAt DateTime @updatedAt
+}
+
+// ---- Feature 2: shop accessories in 3D on the customer's car (same lifecycle as Vehicle3DSubmission) ----
+enum AccessoryType {
+  FRONT_BUMPER
+  REAR_BUMPER
+  SIDE_SKIRTS
+  FRONT_LIP
+  REAR_DIFFUSER
+  FENDER_FLARES
+  WING
+  SPOILER
+  ROOF_RACK
+  RIMS
+  MIRROR_COVERS
+}
+
+/// A rim's finish, chosen by the shop (the 3D rim's material)
+enum RimFinish {
+  SILVER
+  BLACK
+  GUNMETAL
+  CHROME
+}
+
+/// MAIN = a single-part product; FRONT / REAR = the front / rear bumper of a body kit (one product, two 3D parts)
+enum AccessoryKitPart {
+  MAIN
+  FRONT
+  REAR
+}
+
+enum Accessory3DStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED_FOR_GENERATION
+  GENERATING
+  READY_FOR_FINAL_REVIEW
+  PUBLISHED
+  REJECTED
+}
+
+/// One per product. Photos and the generated model stay private (backend/storage/vehicle3d); only a published model is public.
+model ProductAccessory3D {
+  id                    String            @id @default(uuid())
+  productId             String
+  product               PartsProduct      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// which part of the product this is (a body kit has a FRONT and / or a REAR bumper; everything else is MAIN)
+  kitPart               AccessoryKitPart  @default(MAIN)
+  shopId                String
+  accessoryType         AccessoryType
+  /// real size, mm: width across the car / height / depth / length along the car (skirt, flare); rims in inches
+  widthMm               Int?
+  heightMm              Int?
+  depthMm               Int?
+  lengthMm              Int?
+  rimInches             Float?
+  /// rims only (all optional, shown on the product page): width in inches, bolt pattern ("5x120"), ET offset in mm, the shop's finish
+  /// (the 3D rim uses it; rims never take "paint to match")
+  rimWidthIn            Float?
+  rimPcd                String?
+  rimOffsetMm           Int?
+  rimFinish             RimFinish?
+  /// the generation the installed photos show; installed360 = a 12+ photo set around the car (drag to spin)
+  installedGenerationId String?
+  installed360          Boolean           @default(false)
+  /// set when a Parts Admin approved the photos; only then customers see the installed look
+  installedApprovedAt   DateTime?
+  status                Accessory3DStatus @default(DRAFT)
+  /// generation attempt counter; exact-revision review uses modelRevision = hash of the current private model
+  revision              Int               @default(0)
+  /// paid provider generations started for this accessory
+  creditsUsed           Int               @default(0)
+  submittedAt           DateTime?
+  reviewNotes           String?
+  reviewedAt            DateTime?
+  reviewedByUserId      String?
+  approvedAt            DateTime?
+  approvedByUserId      String?
+  provider              String?
+  providerTaskId        String?
+  providerState         String?
+  providerProgress      Int?
+  generationMode        String?
+  generationStage       String            @default("UPLOAD")
+  generationErrorCode   String?
+  failureReason         String?
+  leaseToken            String?
+  leaseUntil            DateTime?
+  nextPollAt            DateTime?
+  liveAuthorizedAt      DateTime?
+  processingStartedAt   DateTime?
+  rawModelPath          String?
+  privateModelPath      String?
+  validation            Json?
+  /// six-view render on a car of a matching generation: { generationId, model3dKey, modelRevision, views, fit }
+  preview               Json?
+  sourceMetadata        Json?
+  generationHistory     Json?
+  visualVerifiedAt      DateTime?
+  publishedFile         String?           @unique
+  publishedAt           DateTime?
+  publishedByUserId     String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  fits                  ProductAccessory3DFit[]
+  photos                ProductAccessory3DPhoto[]
+  autoFits              AccessoryAutoFit[]
+
+  @@unique([productId, kitPart])
+  @@index([shopId])
+  @@index([status, nextPollAt, leaseUntil], map: "ProductAccessory3D_job_due_idx")
+}
+
+/// One shop accessory auto-fitted on one vehicle generation by the viewer (sceneHtml fitAccessory): computed ONCE for this part file
+/// (partRevision) + car file and config (carRevision) + fitVersion, then replayed by the app. adj = the Parts Admin's correction on top
+/// (customers' own Adjust goes on top of that); approvedAt = the Parts Admin looked at it.
+model AccessoryAutoFit {
+  accessoryId      String
+  accessory        ProductAccessory3D @relation(fields: [accessoryId], references: [id], onDelete: Cascade)
+  generationId     String
+  model3dKey       String
+  carRevision      String
+  partRevision     String
+  fitVersion       Int
+  fit              Json
+  adj              Json?
+  approvedAt       DateTime?
+  approvedByUserId String?
+  updatedAt        DateTime           @updatedAt
+
+  @@id([accessoryId, generationId])
+  @@index([model3dKey])
+}
+
+model ProductAccessory3DFit {
+  accessoryId  String
+  accessory    ProductAccessory3D @relation(fields: [accessoryId], references: [id], onDelete: Cascade)
+  generationId String
+  generation   VehicleGeneration  @relation(fields: [generationId], references: [id], onDelete: Restrict)
+
+  @@id([accessoryId, generationId])
+  @@index([generationId])
+}
+
+/// kind PART = the loose part (2-4, sent to the provider); INSTALLED = on a car (1-24, customers see them once approved)
+model ProductAccessory3DPhoto {
+  id          String             @id @default(uuid())
+  accessoryId String
+  accessory   ProductAccessory3D @relation(fields: [accessoryId], references: [id], onDelete: Cascade)
+  kind        String
+  path        String
+  sortOrder   Int
+  createdAt   DateTime           @default(now())
+
+  @@index([accessoryId, kind, sortOrder])
+}
+
+/// Admin-tuned fitting zone per car model and accessory type, merged into the runtime 3D catalog (no app rebuild)
+/// Per car model: its pieces (connected components of ONE exact model file, ids "m<mesh>c<component>") and the part map
+/// (label -> piece ids). proposal = auto-label; map = the Parts Admin's. The app gets the map only when confirmed AND modelSha256
+/// still equals the served file's sha256; otherwise accessories fall back to the zone cut.
+model CarPartMap {
+  model3dKey        String    @id
+  modelSha256       String
+  pieces            Json
+  dims              Json
+  proposal          Json
+  map               Json?
+  confirmedAt       DateTime?
+  confirmedByUserId String?
+  segmentedAt       DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model AccessoryFitZone {
+  model3dKey      String
+  accessoryType   AccessoryType
+  zone            Json
+  updatedByUserId String?
+  updatedAt       DateTime      @updatedAt
+
+  @@id([model3dKey, accessoryType])
+}
+
+/// A customer's hand-fit (Adjust) of one product on their car
+model AccessoryFitAdjust {
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   PartsProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  adj       Json
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, productId])
 }

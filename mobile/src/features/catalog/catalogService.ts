@@ -1,3 +1,4 @@
+import type { ProviderMedia } from "../provider/portal/types";
 // Customer catalog: REST client for the read-only /catalog endpoints (parts and tow companies).
 // The server only returns what a customer may see (approved shops/companies, visible products, no plates,
 // documents or contact data) and stock as a state, never an exact number.
@@ -37,6 +38,8 @@ export type CatalogProduct = {
   warrantyMonths?: number | null;
   /** server-computed badges (catalog list + detail) */
   badges?: ProductBadge[];
+  /** published 3D parts (bumper, wing…): which generations they fit; null = no 3D */
+  model3d?: { kit: boolean; parts: { part: "MAIN" | "FRONT" | "REAR"; type: string }[]; generationIds: string[]; universal?: boolean } | null;
 };
 
 /** DISCOUNT value = whole %, LOW_STOCK value = units left (only when 3 or fewer), CONDITION value = USED / REFURBISHED. */
@@ -75,6 +78,7 @@ export type VehicleRow = { make: string; makeAr: string; model: string; modelAr:
 export type CatalogVehicle = { make: string; model: string; yearFrom: number; yearTo: number; partCount: number; /** engine / variant labels shops entered for this vehicle */ trims: string[] };
 
 export type CatalogShop = {
+  media?: ProviderMedia[];
   id: string;
   name: string;
   nameAr: string | null;
@@ -113,7 +117,7 @@ export type TowCompanyRow = {
 };
 
 /** The company page adds the fields the list leaves out. */
-export type TowCompanyDetail = Omit<TowCompanyRow, "truckTypes"> & { address: string | null; description: string | null };
+export type TowCompanyDetail = Omit<TowCompanyRow, "truckTypes"> & { address: string | null; description: string | null; media?: ProviderMedia[] };
 
 export type TowFilters = { city?: string; serviceCity?: string; q?: string; truckType?: TruckType; sort?: "nearest" | "available" | "name"; availableOnly?: boolean; lat?: number; lng?: number };
 

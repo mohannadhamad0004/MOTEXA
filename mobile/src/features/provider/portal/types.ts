@@ -1,0 +1,6 @@
+export type ProviderArea="tow"|"parts";
+export type PortalSummary={identity:{id:string;name:string;city:string;status:string};metrics:Record<string,number>;recent:{id:string;title:string;status:string;updatedAt:string;kind:string}[]};
+export type ProviderMedia={id:string;slot:string;mimeType:string;truckId:string|null;sizeBytes:number;createdAt:string;uri:string};
+export type ShopProfile={id:string;name:string;nameAr:string|null;city:string;address:string|null;workingHours:string|null;baseLat:number|null;baseLng:number|null;categories:string[];brandName:string|null;branchName:string|null;status:string};
+export type FitGeneration={id:string;name:string;nameAr:string;model3dKey:string|null;has3d:boolean;replacement:string|null;fitState:"NOT_COMPUTED"|"STALE"|"FAILED"|"VERIFIED"|"COMPUTED";approvedAt:string|null;autoFit?:{fit:unknown;adj:import("../../car3d/car3d").FitAdjust|null}|null};
+export type Provider3dProduct={id:string;name:string;category:string|null;updatedAt:string;parts:{id:string;part:"MAIN"|"FRONT"|"REAR";type:import("../../car3d/modelConfig").AccessoryType;status:import("../../accessory3d/api").AccessoryStatus;hasModel:boolean;published:boolean;validated:boolean;updatedAt:string;reviewNotes:string|null;generations:FitGeneration[]}[]};

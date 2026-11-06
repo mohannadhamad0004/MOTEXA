@@ -1,0 +1,8 @@
+import { api } from "../../../core/config/api";
+import { ProviderLayout } from "../../../components/layout/ProviderLayout";
+import { useLoad } from "../../../core/hooks/useLoad";
+import { portalApi } from "../../provider/portal/api";
+import { catalogService } from "../../catalog/catalogService";
+import { TowPublicProfile } from "../../catalog/TowPublicProfile";
+import { Async,Text,Panel,Button,useDT,go } from "../../provider/portal/ui";
+export default function CustomerPreviewPage(){const d=useDT(),drivers=useLoad(()=>api<{drivers:{id:string;firstName:string;truck:{make:string;model:string}|null}[]}>("GET","/tow/me/portal/public-drivers"),[]),state=useLoad(async()=>{const {id}=await portalApi.identity("tow");try{return await catalogService.getTowCompany(id);}catch(e){if((e as {status?:number}).status===404)return {company:null,trucks:[]};throw e;}},[]);return <ProviderLayout area="tow" title={d.t("Customer profile preview","معاينة الملف للعميل")} onRefresh={state.reload}><Async state={state}>{data=>data.company?<><TowPublicProfile company={data.company} trucks={data.trucks}/><Panel title={d.t("Free drivers","???????? ????????")}>{drivers.data?.drivers.map(x=><Text key={x.id} style={{color:d.ink,textAlign:d.align}}>{x.firstName} ? {x.truck?`${x.truck.make} ${x.truck.model}`:""}</Text>)}</Panel></>:<Panel><Text style={{color:d.muted,textAlign:d.align}}>{d.t("Your profile is not publicly visible yet. An approved company and approved truck are required.","ملفك غير ظاهر للعملاء بعد. يلزم اعتماد الشركة وشاحنة واحدة على الأقل.")}</Text><Button label={d.t("Manage trucks","إدارة الشاحنات")} onPress={()=>go("/provider/tow/trucks")}/></Panel>}</Async></ProviderLayout>;}

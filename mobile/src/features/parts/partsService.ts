@@ -23,6 +23,7 @@ export type Product = {
   description: string;
   price: number;
   stock: number;
+  reservedStock?: number;
   condition: PartCondition;
   partType: PartType | null; // null = not specified
   category: string | null; // key from shared/categories.ts; null on products made before categories existed
@@ -80,6 +81,7 @@ type ApiProduct = {
   description: string | null;
   price: string; // exact decimal string
   stock: number;
+  reservedStock?: number;
   category: string | null;
   condition: PartCondition;
   partType: PartType | null;
@@ -118,6 +120,7 @@ const toProduct = (p: ApiProduct): Product => ({
   description: p.description ?? "",
   price: Number(p.price),
   stock: p.stock,
+  reservedStock: p.reservedStock,
   category: p.category ?? null,
   condition: p.condition ?? "NEW",
   partType: p.partType ?? null,
@@ -169,12 +172,12 @@ async function toBody(i: ProductInput) {
 
 // ---- Provider (PARTS_PROVIDER). The actor argument is kept for the screens; the server uses the token. ----
 export const partsShopService = {
-  async getMyInventory(_actor: Actor) {
+  async getMyInventory(_actor: Actor, options?: {page:number;q:string;stock?:string}) {
     const [s, p] = await Promise.all([
       api<{ shop: ApiShop }>("GET", "/parts/me/shop"),
-      api<{ products: ApiProduct[] }>("GET", "/parts/me/products"),
+      api<{ products: ApiProduct[];hasMore?:boolean }>("GET", "/parts/me/products"+(options?`?page=${options.page}&q=${encodeURIComponent(options.q)}${options.stock?"&stock="+options.stock:""}`:"")),
     ]);
-    return { shop: toShop(s.shop), products: p.products.map(toProduct) };
+    return { shop: toShop(s.shop), products: p.products.map(toProduct), hasMore: !!p.hasMore };
   },
   async getMyProduct(_actor: Actor, id: string) {
     const r = await api<{ product: ApiProduct }>("GET", `/parts/me/products/${id}`);

@@ -3,6 +3,7 @@
 // in the git-ignored 3d-source/ by backend/scripts/optimize-3d.ts, which also writes the generated block below; credits in
 // docs/3d/CREDITS.md) and are downloaded once by the app (car3d.ts). "check" comments = guesses to look at in the viewer.
 import type { Car } from "../catalog/myCar";
+import type { AccessoryType, AccessoryZone, PartMap } from "./modelConfig";
 
 export type Offset = { x: number; y: number; z: number; scale: number };
 
@@ -27,12 +28,15 @@ export type CarModel = {
   rimsSwappable: boolean;
   /** photo-baked paint (the paint is part of one texture, no paint material): recolour the texels in this hue window, see sceneHtml */
   bakedPaint?: { hue: [number, number]; sat: number; ref: number };
-  /** body-kit zones (BODYKIT TEST): the triangles of `meshes` inside `box` (fractions of the car's bounding box, front = +Z, y from the ground) are split off so the original part can be hidden */
   /** meshes whose centre is outside this box (model units, after rotateY) are removed: some files carry loose, exploded kit parts around the car */
   /** x (model units, after rotateY) that is the car's symmetry axis, when the bounding box centre is not */
   centerX?: number;
+  /** tuned accessory fitting zones (admin-editable, merged in by the server catalog); see sceneHtml KIT for the defaults */
+  zones?: Partial<Record<AccessoryType, AccessoryZone>>;
+  /** the Parts Admin's confirmed part map for this exact model file (server catalog only); see sceneHtml PART MAP */
+  partMap?: PartMap;
+  rimProposal?: { ids: string[]; confidence: number };
   keepBox?: { y: [number, number]; z: [number, number]; /** also removed by name (a displaced duplicate headlight set) */ names?: string[] };
-  zones?: { frontBumper?: { meshes: string[]; box: { x: [number, number]; y: [number, number]; z: [number, number] } } };
   /** per-model nudges for the computed wing / roof-rack anchors (metres, after scaling) */
   wing: Offset;
   rack: Offset;
@@ -71,8 +75,3 @@ export function modelFor(car: Pick<Car, "generation"> | null): CarModel | null {
   const key = car?.generation?.model3dKey;
   return (key && CAR_MODELS.find((m) => m.key === key)) || null;
 }
-
-/** BODYKIT TEST: one test front bumper per car key (files under backend/public/3d, served at /api/3d/accessories/...). */
-export const BUMPER_TESTS: Record<string, string> = {
-  // Development accessory files remain archived; neither associated vehicle passed final cleanup.
-};
