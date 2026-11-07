@@ -1,6 +1,6 @@
 import { NodeIO, getBounds } from "@gltf-transform/core";
 import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
-import { MeshoptDecoder } from "meshoptimizer";
+import { MeshoptDecoder, MeshoptEncoder } from "meshoptimizer";
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -9,7 +9,7 @@ import sharp from "sharp";
 
 export const MAX_MODEL_BYTES = Math.min(20, Math.max(1, Number(process.env.VEHICLE3D_MAX_MB) || 8)) * 1024 * 1024;
 export class Vehicle3DError extends Error {
-  constructor(public status: number, public code: string, message: string) { super(message); }
+  constructor(public status: number, public code: string, message: string, public issues?: { code: string; field: string; message: string }[]) { super(message); }
 }
 export const fail = (code: string, message: string, status = 400): never => { throw new Vehicle3DError(status, code, message); };
 export const digest = (bytes: Buffer | Uint8Array) => createHash("sha256").update(bytes).digest("hex");
@@ -23,8 +23,8 @@ function stripGLBMetadata(bytes:Buffer){
 }
 /** Reject external resources before parsing: validation must never fetch client-selected URLs. */
 /** Reject external resources before parsing: validation must never fetch client-selected URLs. Shared by vehicles and accessories: self-contained, bounded resources/textures/geometry, finite triangles. */
-export async function readSafeGLB(bytes: Buffer, maxTriangles: number) {
-  if (!bytes.length || bytes.length > MAX_MODEL_BYTES) return fail("INVALID_GLB", "Model exceeds the configured size limit.");
+export async function readSafeGLB(bytes: Buffer, maxTriangles: number, limits: {maxBytes?:number; textureSize?:number; pixels?:number} = {}) {
+  if (!bytes.length || bytes.length > (limits.maxBytes ?? MAX_MODEL_BYTES)) return fail("INVALID_GLB", "Model exceeds the configured size limit.");
   if (bytes.length < 20 || bytes.toString("ascii", 0, 4) !== "glTF" || bytes.readUInt32LE(4) !== 2 || bytes.readUInt32LE(8) !== bytes.length
     || bytes.readUInt32LE(16) !== 0x4e4f534a || bytes.readUInt32LE(12) > bytes.length - 20) return fail("INVALID_GLB", "Invalid GLB container.");
   let json: any;
@@ -32,6 +32,8 @@ export async function readSafeGLB(bytes: Buffer, maxTriangles: number) {
   catch { return fail("INVALID_GLB", "Invalid GLB JSON."); }
   if ([...(json.buffers ?? []), ...(json.images ?? [])].some((r: any) => r.uri)) return fail("INVALID_GLB", "Model must be self-contained, with no resource URLs.");
   if (json.skins?.length || json.animations?.length) return fail("INVALID_GLB", "Animated or skinned models are not supported for catalog promotion.");
+  if ((json.buffers ?? []).reduce((total:number,b:any)=>total+(Number.isSafeInteger(b.byteLength)&&b.byteLength>=0?b.byteLength:Infinity),0)>128*1024*1024)
+    return fail("INVALID_GLB", "Decoded geometry exceeds the safe memory limit.");
   if ((json.buffers ?? []).some((b: any) => b.byteLength > 128 * 1024 * 1024) || (json.accessors ?? []).some((a: any) => a.count > 2_000_000)) return fail("INVALID_GLB", "Decoded geometry exceeds the safe memory limit.");
   const binStart = 20 + bytes.readUInt32LE(12) + 8;
   let pixels = 0;
@@ -41,14 +43,15 @@ export async function readSafeGLB(bytes: Buffer, maxTriangles: number) {
     const start = binStart + (view.byteOffset ?? 0), end = start + view.byteLength;
     if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < binStart || end > bytes.length) return fail("INVALID_GLB", "Texture buffer is invalid.");
     try {
-      const meta = await sharp(bytes.subarray(start,end), { limitInputPixels: 32_000_000 }).metadata();
-      if (!meta.width || !meta.height || meta.width > 4096 || meta.height > 4096) throw new Error();
+      const meta = await sharp(bytes.subarray(start,end), { limitInputPixels: limits.pixels ?? 32_000_000 }).metadata();
+      if (!meta.width || !meta.height || meta.width > (limits.textureSize ?? 4096) || meta.height > (limits.textureSize ?? 4096)) throw new Error();
       pixels += meta.width * meta.height;
-      if (pixels > 32_000_000) throw new Error();
+      if (pixels > (limits.pixels ?? 32_000_000)) throw new Error();
     } catch { return fail("INVALID_GLB", "Textures exceed safe decoding limits or cannot be loaded."); }
   }
   await MeshoptDecoder.ready;
-  const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ "meshopt.decoder": MeshoptDecoder });
+  await MeshoptEncoder.ready;
+  const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ "meshopt.decoder": MeshoptDecoder, "meshopt.encoder": MeshoptEncoder });
   let doc;
   try { doc = await io.readBinary(bytes); } catch { return fail("INVALID_GLB", "GLB could not be loaded."); }
   const scenes = doc.getRoot().listScenes();

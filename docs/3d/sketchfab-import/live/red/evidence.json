@@ -1,0 +1,108 @@
+{
+  "valid": true,
+  "dimensions": [
+    1.7376817057659908,
+    1.6900270836020328,
+    4.4999999577266685
+  ],
+  "boundsMin": [
+    -0.8688408528829954,
+    2.4910045970383266e-8,
+    -2.2499999916798012
+  ],
+  "paintMaterialsApplied": 0,
+  "paintTest": {
+    "supported": false,
+    "paintedMeshes": 0,
+    "unchangedMeshes": 17,
+    "protectedChanged": [],
+    "method": "production_material_comparison",
+    "visualSurfaceReviewRequired": true
+  },
+  "animations": 0,
+  "wheelMeshes": [],
+  "views": 6,
+  "assetSha256": "ad65d3b3205c45de56ab9b2ff4b50f66d960737793950d6b67aa4920bad6e1dd",
+  "configuration": {
+    "key": "manual-32b36fb3-25fa-4e6f-922d-b153ed3c0ffe",
+    "rack": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "scale": 1
+    },
+    "wing": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "scale": 1
+    },
+    "credit": {
+      "url": "https://sketchfab.com/3d-models/volkswagen-beetle-83276f21bd9c41e196c474350b43efb0",
+      "title": "Volkswagen beetle",
+      "author": "Angelos Gkanias",
+      "license": "CC Attribution"
+    },
+    "lengthM": 4.5,
+    "rotateY": 0,
+    "generation": "Volkswagen Beetle Type 1",
+    "paintNodes": [],
+    "preRotateX": 0,
+    "groundOffset": 0,
+    "rimsSwappable": false,
+    "paintMaterials": []
+  },
+  "forwardedModel": {
+    "lengthM": 4.5,
+    "preRotateX": 0,
+    "rotateY": 0,
+    "groundOffset": 0,
+    "paintNodes": [],
+    "paintMaterials": []
+  },
+  "configurationSha256": "9b71311555717f71050d15f12c87e2baf1ffca30b5e3e31a6e07f8ba3d4f6dca",
+  "viewerSha256": "266a008f87aacd1a7a014a0abdacfdd6f48440989fb8a47d0e8721f88e3a1aaa",
+  "hookSha256": "7098702862fb85df384ce9d16c72141ff098b5663c5c3664762320df7b026e1c",
+  "serializerSha256": "bb19dadc6786c58e9740671af53e7327d81186d84e74bec7c0b03b304510b16b",
+  "rendererSha256": "47eda42b8d36085866c8b8cd2894c85a78dcedbaa7e7b7148e1cfdb4cdb81b2e",
+  "threeVersion": "0.160.1",
+  "screenshots": [
+    {
+      "name": "front",
+      "sha256": "2f560ecb1b6afe7b366a43b6131c541edab5b3290a0e6f704100f5991b8eecce",
+      "triangles": 758734,
+      "drawCalls": 40
+    },
+    {
+      "name": "front-three-quarter",
+      "sha256": "b901608697bcc3f811797a85ad3345c86fb48aa082842be16b9f5b7590c60201",
+      "triangles": 758734,
+      "drawCalls": 40
+    },
+    {
+      "name": "left-side",
+      "sha256": "fc0cbf5f31f29bb6ae93d362e39b45d65c4924cf190912470d57c0b42c522920",
+      "triangles": 758734,
+      "drawCalls": 40
+    },
+    {
+      "name": "rear-three-quarter",
+      "sha256": "ac2f6d533ef9f8f3c2d23e3a5b117759919245d76ebf01edd45ae2cfa7cfbe40",
+      "triangles": 758734,
+      "drawCalls": 40
+    },
+    {
+      "name": "rear",
+      "sha256": "2446e75724c396133f353c4c4dda8fd3f91207ba283662875987752ebc6a1c84",
+      "triangles": 758734,
+      "drawCalls": 40
+    },
+    {
+      "name": "top-three-quarter",
+      "sha256": "d91dde50b98b2d4393869ac4cbf1fbb5f34c97069b7bd61b441ab4831b85c663",
+      "triangles": 758734,
+      "drawCalls": 40
+    }
+  ],
+  "remoteRequests": []
+}

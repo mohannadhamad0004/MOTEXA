@@ -200,14 +200,15 @@ const MAX_B64 = Math.ceil((MAX_DOC_BYTES * 4) / 3) + 8;
 export function parseDocUpload(input: unknown, allowPdf = true): ParsedUpload {
   const o = input as { name?: unknown; dataBase64?: unknown } | null;
   if (!o || typeof o.dataBase64 !== "string" || !o.dataBase64) return fail(400, "File data is missing.");
-  if (o.dataBase64.length > MAX_B64) return fail(400, "Each file must be a JPEG, PNG or PDF of at most 5 MB.");
+  if (o.dataBase64.length > MAX_B64) return fail(400, "Each file must be a JPEG, PNG, WEBP or PDF of at most 5 MB.");
   const buffer = Buffer.from(o.dataBase64, "base64");
-  if (!buffer.length || buffer.length > MAX_DOC_BYTES) return fail(400, "Each file must be a JPEG, PNG or PDF of at most 5 MB.");
+  if (!buffer.length || buffer.length > MAX_DOC_BYTES) return fail(400, "Each file must be a JPEG, PNG, WEBP or PDF of at most 5 MB.");
   let mime: string, ext: string;
   if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) [mime, ext] = ["image/jpeg", "jpg"];
   else if (buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) [mime, ext] = ["image/png", "png"];
+  else if (buffer.length >= 12 && buffer.subarray(0, 4).toString("latin1") === "RIFF" && buffer.subarray(8, 12).toString("latin1") === "WEBP") [mime, ext] = ["image/webp", "webp"];
   else if (allowPdf && buffer.subarray(0, 5).toString("latin1") === "%PDF-") [mime, ext] = ["application/pdf", "pdf"];
-  else return fail(400, allowPdf ? "Only JPEG, PNG or PDF files are accepted." : "Only JPEG or PNG images are accepted.");
+  else return fail(400, allowPdf ? "Only JPEG, PNG, WEBP or PDF files are accepted." : "Only JPEG, PNG or WEBP images are accepted.");
   const base = typeof o.name === "string" ? (o.name.split(/[\\/]/).pop() ?? "") : "";
   const originalName = base.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 120) || `file.${ext}`;
   return { buffer, mimeType: mime, ext, originalName, sha256: createHash("sha256").update(buffer).digest("hex") };

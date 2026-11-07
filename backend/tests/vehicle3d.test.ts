@@ -19,7 +19,8 @@ after(() => prisma.$disconnect());
 test("cleanup metadata agrees with production, configurations, attribution and current DB pointers", async () => {
   const manifest = readManifest(), active = activeModels();
   const publicFiles = readdirSync(path.join(REPO_ROOT,"backend/public/3d")).filter(f => f.endsWith(".glb"));
-  assert.equal(active.length,21); assert.equal(publicFiles.length,active.length);
+  // The retained baseline has 21 models; reviewed imports can legitimately expand the catalog.
+  assert.ok(active.length>=21); assert.equal(publicFiles.length,active.length);
   for (const e of Object.values(manifest)) {
     assert.equal(existsSync(path.join(REPO_ROOT,"backend/public/3d",`${e.file}.glb`)),e.inApp !== false);
     if (e.inApp !== false) { assert.ok(e.viewerConfig);assert.ok(e.license);assert.ok(e.author); }

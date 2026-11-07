@@ -174,6 +174,22 @@ export function TowAdminHome() {
         <Ionicons name={d.ar ? "chevron-back" : "chevron-forward"} size={18} color={d.muted} />
       </Pressable>
 
+      <Pressable accessibilityRole="button" accessibilityLabel={d.t("Tow history", "سجل السحب")} onPress={() => go("/dept/tows/history")} style={{ ...cardStyle(d), flexDirection: d.row, alignItems: "center", gap: 12, padding: 14, marginBottom: 12 }}>
+        <Ionicons name="time-outline" size={24} color="#E0A36F" />
+        <Text style={{ flex: 1, color: d.ink, fontSize: 14, fontWeight: "800", textAlign: d.align }}>{d.t("Tow history", "سجل السحب")}</Text>
+        <Ionicons name={d.ar ? "chevron-back" : "chevron-forward"} size={18} color={d.muted} />
+      </Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={d.t("Problem reports", "بلاغات المشاكل")} onPress={() => go("/dept/tows/reports")} style={{ ...cardStyle(d), flexDirection: d.row, alignItems: "center", gap: 12, padding: 14, marginBottom: 12 }}>
+        <Ionicons name="flag-outline" size={24} color="#E0A36F" />
+        <Text style={{ flex: 1, color: d.ink, fontSize: 14, fontWeight: "800", textAlign: d.align }}>{d.t("Problem reports", "بلاغات المشاكل")}</Text>
+        <Ionicons name={d.ar ? "chevron-back" : "chevron-forward"} size={18} color={d.muted} />
+      </Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={d.t("Drivers' licences", "رخص السائقين")} onPress={() => go("/dept/tows/drivers")} style={{ ...cardStyle(d), flexDirection: d.row, alignItems: "center", gap: 12, padding: 14, marginBottom: 22 }}>
+        <Ionicons name="id-card-outline" size={24} color="#E0A36F" />
+        <Text style={{ flex: 1, color: d.ink, fontSize: 14, fontWeight: "800", textAlign: d.align }}>{d.t("Review drivers' licences", "مراجعة رخص السائقين")}</Text>
+        <Ionicons name={d.ar ? "chevron-back" : "chevron-forward"} size={18} color={d.muted} />
+      </Pressable>
+
       <Head title={d.t("Fleet status", "حالة الأسطول")} caption={d.t("Approved trucks.", "الشاحنات المعتمدة.")} action={d.t("All", "الكل")} onAction={() => go("/dept/directory")} />
       {fleet.data ? (
         fleetRows.length === 0 ? (

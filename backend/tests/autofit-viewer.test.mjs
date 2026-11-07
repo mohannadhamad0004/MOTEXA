@@ -1,6 +1,8 @@
 // Accessory auto-fit in the REAL viewer code (sceneHtml.ts via scripts/accessory-fit-check.mjs, headless Chrome, local Three.js), with the
 // published E36 wing as the part: every body type gets the right mount, both feet touch (0-2 mm), never wider than the body; a stored fit
 // replays to exactly the same place; a lip touches the bumper's bottom edge.
+// FIT-QA (visible clipping / floating gaps, refusal) has its own suite (fit-qa-viewer.test.mjs): here the parts run in evidence mode, so
+// this file keeps testing its own mechanism with the E36 demo parts the QA refuses.
 import { test } from 'node:test'; import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process'; import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'; import { resolve } from 'node:path';
 import { ROOT, loadTS } from '../scripts/vehicle-audit-lib.mjs';
@@ -15,7 +17,7 @@ test.after(() => rmSync(TMP, { recursive: true, force: true }));
 function run(key, views, kit, part = WING, partMap) {
   const dir = resolve(TMP, `${key}-${views}-${kit.type}-${kit.fit ? 'replay' : 'live'}`); mkdirSync(dir, { recursive: true });
   writeFileSync(resolve(dir, 'config.json'), JSON.stringify({ ...CAR_MODELS.find(m => m.key === key), ...(partMap ? { partMap } : {}) }));
-  writeFileSync(resolve(dir, 'kit.json'), JSON.stringify(kit));
+  writeFileSync(resolve(dir, 'kit.json'), JSON.stringify({ ...kit, qaEvidence: true }));
   const args = [resolve(ROOT, 'backend/scripts/accessory-fit-check.mjs'), `--car=${resolve(ROOT, 'backend/public/3d', key + '.glb')}`, `--config=${resolve(dir, 'config.json')}`, `--out=${dir}`, `--views=${views}`, `--kit=${resolve(dir, 'kit.json')}`];
   if (views !== 'segment') args.push(`--part=${part}`);
   const out = JSON.parse(execFileSync(process.execPath, args, { encoding: 'utf8', timeout: 180_000, windowsHide: true, maxBuffer: 32 * 1024 * 1024 }).trim().split('\n').pop());

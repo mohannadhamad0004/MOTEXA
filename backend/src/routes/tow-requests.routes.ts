@@ -6,7 +6,9 @@ import { prisma } from "../prisma.js";
 import { readPair } from "../geo.js";
 import { requireAuth, requireCustomer, requireTowProvider } from "../middleware/auth.middleware.js";
 import { notify, requireApprovedProvider } from "../services/provider-onboarding.js";
-import { DispatchError, checkRequestedDriver, livePoint, routeNewRequest } from "../services/tow-dispatch.js";
+import { DispatchError, checkRequestedDriver, livePoint, routeNewRequest, stageOf } from "../services/tow-dispatch.js";
+import { driverCards, freeDriversNear } from "../services/tow-cards.js";
+import { haversineKm } from "../geo.js";
 
 // Tow requests: a customer asks one approved tow company for a tow; the company accepts with one of its trucks.
 //  - /api/requests/tow/*     CUSTOMER, only their own requests.
@@ -30,6 +32,7 @@ import { DispatchError, checkRequestedDriver, livePoint, routeNewRequest } from 
 const router = Router();
 
 const ACTIVE = ["REQUESTED", "ACCEPTED", "EN_ROUTE", "IN_PROGRESS"] as const;
+const CHOICES = ["NEAREST", "COMPANY", "DRIVER"] as const;
 const STATUSES = ["REQUESTED", "ACCEPTED", "DECLINED", "EN_ROUTE", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as const;
 type Status = (typeof STATUSES)[number];
 /** What the company may move an accepted job to, and the status it must come from. */
@@ -66,6 +69,7 @@ const include = {
   assignedTruck: { select: { id: true, plateNumber: true } },
   driver: { select: { id: true, phone: true, userId: true, lastLat: true, lastLng: true, lastAt: true, user: { select: { fullName: true } } } },
   requestedDriver: { select: { id: true, user: { select: { fullName: true } } } },
+  review: { select: { stars: true, comment: true } },
 };
 type Row = Prisma.TowRequestGetPayload<{ include: typeof include }>;
 
@@ -77,6 +81,8 @@ const timeline = (r: Row) =>
       ["DECLINED", r.declinedAt],
       ["EN_ROUTE", r.enRouteAt],
       ["ARRIVED", r.arrivedAt],
+      ["LOADING", r.loadingAt],
+      ["DELIVERED", r.deliveredAt],
       ["IN_PROGRESS", r.inProgressAt],
       ["COMPLETED", r.completedAt],
       ["CANCELLED", r.cancelledAt],
@@ -104,21 +110,46 @@ const common = (r: Row) => ({
   cancelReason: r.cancelReason,
   cancelledBy: r.cancelledBy,
   timeline: timeline(r),
+  stage: stageOf(r),
   arrivedAt: r.arrivedAt,
+  loadingAt: r.loadingAt,
+  deliveredAt: r.deliveredAt,
   createdAt: r.createdAt,
   updatedAt: r.updatedAt,
 });
 
-/** What the customer sees: company name/city, the assigned truck WITHOUT a plate. */
-const customerView = (r: Row) => ({
-  ...common(r),
-  company: { id: r.company.id, name: r.company.companyName, city: r.company.city },
-  truck: truckSnapshot(r),
-  canCancel: r.status === "REQUESTED" || r.status === "ACCEPTED",
-  // the driver's first name, and his live point only while he works on THIS job (stale = "last seen")
-  driver: r.driver ? { id: r.driver.id, firstName: r.driver.user.fullName.trim().split(/\s+/)[0], live: ["ACCEPTED", "EN_ROUTE", "IN_PROGRESS"].includes(r.status) ? livePoint(r.driver) : null } : null,
-  requestedDriver: r.requestedDriver ? { id: r.requestedDriver.id, firstName: r.requestedDriver.user.fullName.trim().split(/\s+/)[0] } : null,
-});
+type Cards = Awaited<ReturnType<typeof driverCards>>;
+const WORKING_NOW = ["ACCEPTED", "EN_ROUTE", "IN_PROGRESS"];
+/** What the customer sees: the driver's card (photo, rating, truck, plate masked until assigned) and always the responsible company. Never a phone number. */
+const customerView = (r: Row, cards: Cards) => {
+  const card = r.driverId ? cards.get(r.driverId) ?? null : null;
+  return {
+    ...common(r),
+    contactPhone: undefined, // the number the customer typed is not echoed back
+    company: { id: r.company.id, name: r.company.companyName, city: r.company.city, verified: r.company.verificationStatus === "APPROVED" },
+    truck: truckSnapshot(r),
+    canCancel: ["REQUESTED", "ACCEPTED", "EN_ROUTE"].includes(r.status),
+    // after the driver is on the way, cancelling still works but needs a reason and the company is told
+    cancelWarning: r.status === "EN_ROUTE",
+    // the open offer: the customer sees how long it waits; a request nobody answered in time says so
+    offerExpiresAt: r.status === "REQUESTED" ? r.offerExpiresAt : null,
+    timedOut: r.status === "CANCELLED" && r.cancelledBy === "SYSTEM",
+    distanceMeters: r.distanceMeters,
+    canChat: !!r.driverId && WORKING_NOW.includes(r.status),
+    canReview: r.status === "COMPLETED" && !!r.driverId && !r.review,
+    reviewed: r.review ? { stars: r.review.stars, comment: r.review.comment } : null,
+    choiceMode: r.choiceMode,
+    distanceKm: r.pickupLat !== null && r.pickupLng !== null && r.dropoffLat !== null && r.dropoffLng !== null ? Math.round(haversineKm({ lat: r.pickupLat, lng: r.pickupLng }, { lat: r.dropoffLat, lng: r.dropoffLng }) * 10) / 10 : null, // straight line, not the road
+    driver: card ? { ...card, live: WORKING_NOW.includes(r.status) ? livePoint(r.driver) : null } : null,
+    requestedDriver: r.requestedDriver ? { id: r.requestedDriver.id, firstName: r.requestedDriver.user.fullName.trim().split(/\s+/)[0] } : null,
+  };
+};
+/** Plates are shown in full only for jobs that are assigned to the viewer. */
+const viewAll = async (rows: Row[]) => {
+  const full = new Set(rows.filter((r) => r.driverId && r.status !== "REQUESTED").map((r) => r.driverId!));
+  const cards = await driverCards(rows.map((r) => r.driverId).filter((x): x is string => !!x), full);
+  return rows.map((r) => customerView(r, cards));
+};
 
 /** What the company sees: the customer's name (not email) and its own truck, plate included. */
 const companyView = (r: Row) => ({
@@ -127,7 +158,7 @@ const companyView = (r: Row) => ({
   truck: truckSnapshot(r) ? { ...truckSnapshot(r), id: r.assignedTruck?.id ?? null, plateNumber: r.assignedTruck?.plateNumber ?? null } : null,
   driver: r.driver ? { id: r.driver.id, name: r.driver.user.fullName, phone: r.driver.phone, live: ["ACCEPTED", "EN_ROUTE", "IN_PROGRESS"].includes(r.status) ? livePoint(r.driver) : null } : null,
   requestedDriver: r.requestedDriver ? { id: r.requestedDriver.id, name: r.requestedDriver.user.fullName } : null,
-  canReassign: r.status === "REQUESTED" || r.status === "ACCEPTED",
+  canReassign: r.status === "REQUESTED" || r.status === "ACCEPTED" || r.status === "EN_ROUTE",
 });
 
 const statusFilter = (q: unknown) => {
@@ -159,7 +190,7 @@ router.post("/requests/tow", ...customerSide, async (req, res) => {
   try {
     const me = res.locals.authUser as { id: string };
     const b = req.body ?? {};
-    const companyId = text(b.companyId, 64);
+    let companyId = text(b.companyId, 64);
     const pickupAddress = text(b.pickupAddress, 300);
     const dropoffAddress = text(b.dropoffAddress, 300);
     const contactPhone = text(b.contactPhone, 20);
@@ -167,8 +198,17 @@ router.post("/requests/tow", ...customerSide, async (req, res) => {
     const vehicleModel = text(b.vehicleModel, 60);
     const notes = b.notes === undefined || b.notes === null || b.notes === "" ? null : text(b.notes, 500);
     // optional: one FREE driver of that company (else the request goes to the company)
-    const driverId = b.driverId === undefined || b.driverId === null || b.driverId === "" ? null : text(b.driverId, 64);
-    if (!companyId) throw new HttpError(400, "companyId is required.");
+    let driverId = b.driverId === undefined || b.driverId === null || b.driverId === "" ? null : text(b.driverId, 64);
+    // how the customer chose: the nearest available driver, a company, or one driver
+    const mode: (typeof CHOICES)[number] = CHOICES.includes(b.mode) ? b.mode : driverId ? "DRIVER" : "COMPANY";
+    if (mode === "DRIVER" && !driverId) throw new HttpError(400, "driverId is required to choose a driver.");
+    if (mode === "DRIVER" && !companyId) {
+      const dr = await prisma.towDriver.findFirst({ where: { id: driverId!, approval: "APPROVED", company: { verificationStatus: "APPROVED" } }, select: { companyId: true } });
+      if (!dr) throw new HttpError(404, "Driver not found.");
+      companyId = dr.companyId;
+    }
+    if (mode === "COMPANY") driverId = null;
+    if (!companyId && mode !== "NEAREST") throw new HttpError(400, "companyId is required.");
     if (!pickupAddress || pickupAddress.length < 3) throw new HttpError(400, "Pickup address is required.");
     if (!dropoffAddress || dropoffAddress.length < 3) throw new HttpError(400, "Destination address is required.");
     if (!contactPhone || !phoneOk(contactPhone)) throw new HttpError(400, "A valid contact phone number is required.");
@@ -179,11 +219,18 @@ router.post("/requests/tow", ...customerSide, async (req, res) => {
     if ("error" in pickup) throw new HttpError(400, pickup.error);
     const dropoff = readPair(b, "dropoffLat", "dropoffLng", "Destination location");
     if ("error" in dropoff) throw new HttpError(400, dropoff.error);
+    if (mode === "NEAREST") {
+      if (pickup.lat === null || pickup.lng === null) throw new HttpError(400, "Pickup location is required to find the nearest driver.");
+      const best = (await freeDriversNear({ lat: pickup.lat, lng: pickup.lng }))[0];
+      if (!best) throw new HttpError(409, "No driver is available right now. Choose a company or try again soon.");
+      companyId = best._companyId;
+      driverId = best.id; // offered to him first; his company is told too
+    }
     const y = b.vehicleYear;
     if (y !== undefined && y !== null && !(Number.isInteger(y) && y >= 1950 && y <= new Date().getFullYear() + 1)) throw new HttpError(400, "Car year is invalid.");
 
     const id = await prisma.$transaction(async (tx) => {
-      const company = await tx.towCompanyProfile.findFirst({ where: { id: companyId, verificationStatus: "APPROVED" }, select: { id: true } });
+      const company = await tx.towCompanyProfile.findFirst({ where: { id: companyId!, verificationStatus: "APPROVED" }, select: { id: true } });
       if (!company) throw new HttpError(404, "Company not found.");
       const available = await tx.truck.count({ where: { companyId: company.id, verificationStatus: "APPROVED", operationalStatus: "AVAILABLE", archivedAt: null, ...noExpiredDocument() } });
       if (!available) throw new HttpError(409, "This company has no available truck right now.");
@@ -191,14 +238,14 @@ router.post("/requests/tow", ...customerSide, async (req, res) => {
       if (active) throw new HttpError(409, "You already have an active request with this company.", { existingRequestId: active.id });
       if (driverId) await checkRequestedDriver(tx, company.id, driverId);
       const created = await tx.towRequest.create({
-        data: { customerId: me.id, companyId: company.id, ...(driverId ? { driverId, requestedDriverId: driverId } : {}), pickupAddress, dropoffAddress, contactPhone, vehicleMake, vehicleModel, vehicleYear: y ?? null, problemType, notes, pickupLat: pickup.lat, pickupLng: pickup.lng, dropoffLat: dropoff.lat, dropoffLng: dropoff.lng },
+        data: { customerId: me.id, companyId: company.id, ...(driverId ? { driverId, ...(mode === "DRIVER" ? { requestedDriverId: driverId } : {}) } : {}), choiceMode: mode, pickupAddress, dropoffAddress, contactPhone, vehicleMake, vehicleModel, vehicleYear: y ?? null, problemType, notes, pickupLat: pickup.lat, pickupLng: pickup.lng, dropoffLat: dropoff.lat, dropoffLng: dropoff.lng },
       });
       await log(tx, me.id, "TOW_REQUEST_CREATED", created.id, { companyId: company.id, driverId });
       return created.id;
     });
     await routeNewRequest(id);
     const row = await prisma.towRequest.findUniqueOrThrow({ where: { id }, include });
-    return res.status(201).json({ success: true, request: customerView(row) });
+    return res.status(201).json({ success: true, request: (await viewAll([row]))[0] });
   } catch (e) {
     return send(res, e, "Tow request create error");
   }
@@ -209,7 +256,7 @@ router.get("/requests/tow", ...customerSide, async (req, res) => {
     const me = res.locals.authUser as { id: string };
     const status = statusFilter(req.query.status);
     const rows = await prisma.towRequest.findMany({ where: { customerId: me.id, ...(status ? { status } : {}) }, include, orderBy: { updatedAt: "desc" }, take: 100 });
-    return res.json({ success: true, requests: rows.map(customerView) });
+    return res.json({ success: true, requests: await viewAll(rows) });
   } catch (e) {
     return send(res, e, "Tow requests list error");
   }
@@ -224,7 +271,7 @@ const ownRequest = async (res: any, id: string) => {
 
 router.get("/requests/tow/:id", ...customerSide, async (req, res) => {
   try {
-    return res.json({ success: true, request: customerView(await ownRequest(res, idParam(req.params.id))) });
+    return res.json({ success: true, request: (await viewAll([await ownRequest(res, idParam(req.params.id))]))[0] });
   } catch (e) {
     return send(res, e, "Tow request error");
   }
@@ -235,20 +282,24 @@ router.patch("/requests/tow/:id/cancel", ...customerSide, async (req, res) => {
     const me = res.locals.authUser as { id: string };
     const reason = req.body?.reason === undefined || req.body.reason === null || req.body.reason === "" ? null : text(req.body.reason, 500);
     const current = await ownRequest(res, idParam(req.params.id));
+    // free until the driver is on the way; after that a reason is required and the company is warned
+    const late = current.status === "EN_ROUTE";
+    if (late && !reason) throw new HttpError(400, "Please give a reason: your driver is already on the way.");
     await prisma.$transaction(async (tx) => {
       // Atomic on the status we read: a request that moved on in the meantime (e.g. EN_ROUTE) is refused.
       const done = await tx.towRequest.updateMany({
-        where: { id: current.id, customerId: me.id, status: { in: ["REQUESTED", "ACCEPTED"] } },
+        where: { id: current.id, customerId: me.id, status: { in: ["REQUESTED", "ACCEPTED", "EN_ROUTE"] } },
         data: { status: "CANCELLED", cancelledAt: new Date(), cancelledBy: "CUSTOMER", cancelReason: reason },
       });
       if (!done.count) throw new HttpError(409, "This request can no longer be cancelled.");
       const fresh = await tx.towRequest.findUniqueOrThrow({ where: { id: current.id }, select: { assignedTruckId: true } });
       await releaseTruck(tx, fresh.assignedTruckId);
-      await log(tx, me.id, "TOW_REQUEST_CANCELLED", current.id, { by: "CUSTOMER", reason });
+      await tx.towJobTrail.deleteMany({ where: { requestId: current.id } });
+      await log(tx, me.id, "TOW_REQUEST_CANCELLED", current.id, { by: "CUSTOMER", reason, late });
     });
     const owner = await prisma.towCompanyProfile.findUniqueOrThrow({ where: { id: current.companyId }, select: { userId: true } });
-    await notify([owner.userId, ...(current.driver ? [current.driver.userId] : [])], ["Tow request cancelled", "تم إلغاء طلب سحب"], ["The customer cancelled the request.", "ألغى الزبون الطلب."]);
-    return res.json({ success: true, request: customerView(await ownRequest(res, current.id)) });
+    await notify([owner.userId, ...(current.driver ? [current.driver.userId] : [])], ["Tow request cancelled", "تم إلغاء طلب سحب"], late ? ["The customer cancelled after the driver was on the way.", "ألغى الزبون بعد أن كان السائق في الطريق."] : ["The customer cancelled the request.", "ألغى الزبون الطلب."]);
+    return res.json({ success: true, request: (await viewAll([await ownRequest(res, current.id)]))[0] });
   } catch (e) {
     return send(res, e, "Tow request cancel error");
   }
@@ -391,6 +442,7 @@ router.patch("/tow/me/requests/:id/cancel", ...companySide, async (req, res) => 
       });
       if (!done.count) throw new HttpError(409, "Only an accepted or on-the-way request can be cancelled.");
       await releaseTruck(tx, row.assignedTruckId);
+      await tx.towJobTrail.deleteMany({ where: { requestId: row.id } });
       await log(tx, me.id, "TOW_REQUEST_CANCELLED", row.id, { by: "COMPANY", reason });
     });
     await notify([row.customerId, ...(row.driver && row.driver.userId !== me.id ? [row.driver.userId] : [])], ["Tow request cancelled", "تم إلغاء طلب السحب"], [reason, reason]);

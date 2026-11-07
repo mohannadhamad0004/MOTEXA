@@ -66,7 +66,7 @@ export default function LocationPicker() {
         <View style={{ ...cardStyle(d), padding: 14, gap: 10, backgroundColor: d.dark ? "#2F231BF7" : "#FFFCF6F7" }}>
           {point ? <Text style={{ color: d.ink, fontSize: 13, fontWeight: "700", textAlign: "center", writingDirection: "ltr" }}>{fmtPoint(point.lat, point.lng)}</Text> : <Text style={{ color: d.muted, fontSize: 13, textAlign: "center" }}>{d.t("Use your location or choose your city first.", "استخدم موقعك أو اختر مدينتك أولًا.")}</Text>}
           {loc.message ? <Text accessibilityRole="alert" style={{ color: d.bad, fontSize: 12, textAlign: "center" }}>{loc.message}</Text> : null}
-          {loc.canOpenSettings ? <DButton variant="ghost" icon="settings-outline" label={d.t("Open Settings", "??? ?????????")} onPress={() => void loc.openSettings()} /> : null}
+          {loc.canOpenSettings ? <DButton variant="ghost" icon="settings-outline" label={d.t("Open Settings", "فتح الإعدادات")} onPress={() => void loc.openSettings()} /> : null}
           {error ? <Text accessibilityRole="alert" style={{ color: d.bad, fontSize: 12, textAlign: "center" }}>{error}</Text> : null}
           <DButton variant="ghost" icon="locate-outline" label={loc.locating ? d.t("Finding your location…", "جارٍ تحديد موقعك…") : d.t("Use my location", "استخدم موقعي")} disabled={loc.locating} onPress={useMine} />
           <DButton icon="checkmark-circle-outline" label={d.t("Confirm location", "تأكيد الموقع")} disabled={!point || busy} onPress={confirm} />

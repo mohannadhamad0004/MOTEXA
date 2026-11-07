@@ -16,7 +16,7 @@ const DEMO_NOTE = "Demo job (demo): car will not start near the roundabout.";
 async function driver(email: string, fullName: string, companyId: string, truckId: string, phone: string) {
   const passwordHash = await argon2.hash(PASSWORD, { type: argon2.argon2id });
   const user = await prisma.user.upsert({ where: { email }, update: { fullName, role: "TOW_DRIVER", status: "ACTIVE", passwordHash }, create: { email, fullName, role: "TOW_DRIVER", status: "ACTIVE", passwordHash } });
-  return prisma.towDriver.upsert({ where: { userId: user.id }, update: { companyId, truckId, phone, offline: false }, create: { userId: user.id, companyId, truckId, phone } });
+  return prisma.towDriver.upsert({ where: { userId: user.id }, update: { companyId, truckId, phone, offline: false, approval: "APPROVED" }, create: { userId: user.id, companyId, truckId, phone, licenceNumber: "DEMO-0001", approval: "APPROVED" } });
 }
 
 async function main() {

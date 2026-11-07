@@ -1,7 +1,7 @@
 import { jobAfterLocationError } from "../../../features/shared/locationPolicy";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import { Linking, View, useWindowDimensions } from "react-native";
+import { View, useWindowDimensions } from "react-native";
 import { Card, ErrorState, Field, GarageHero,  GButton, ListRow, Note, SkeletonBlock, StatusChip, Timeline } from "../../../components/garage";
 import { ProviderLayout as GaragePage } from "../../../components/layout/ProviderLayout";
 import { useL } from "../../../core/hooks/useL";
@@ -51,7 +51,10 @@ export default function DriverJob() {
     }, [load])
   );
   const working = !!j && j.id === id && ["ACCEPTED", "EN_ROUTE", "IN_PROGRESS"].includes(j.status);
-  const { me, meFresh, problem: locProblem, canOpenSettings, openSettings } = useShareLocation(id, working, (p) => driverApi.ping(id, p));
+  // every step is confirmed with a second tap, in order, and cannot be skipped or undone (the server enforces it too)
+  const [confirm, setConfirm] = useState<DriverStep | null>(null);
+  // foreground only: a point at most every 5 s, and only after 20 m of movement (every 15 s while standing still)
+  const { me, meFresh, weak, problem: locProblem, canOpenSettings, openSettings } = useShareLocation(id, working, (p) => driverApi.ping(id, p), { minMs: 5_000, minMeters: 20 });
 
   const act = async (key: string, fn: () => Promise<unknown>) => {
     setBusy(key);
@@ -67,6 +70,7 @@ export default function DriverJob() {
       setBusy(null);
     }
   };
+  const stageText = (k: string) => ({ ON_THE_WAY: t("On the way", "في الطريق"), ARRIVED: t("Arrived", "وصل"), LOADING: t("Loading", "التحميل"), TOWING: t("Towing", "جارٍ السحب"), DELIVERED: t("Delivered", "تم التسليم") } as Record<string, string>)[k] ?? L[k as keyof typeof L] ?? k;
   const step = (to: DriverStep) => act(to, () => driverApi.move(id, to));
   const back = () => (router.canGoBack() ? router.back() : router.navigate("/driver" as never));
   // before towing: drive to the customer; while towing: to the destination (when a point was given)
@@ -77,18 +81,22 @@ export default function DriverJob() {
       ? { key: "EN_ROUTE", label: t("On the way", "في الطريق") }
       : j.status === "EN_ROUTE" && !j.arrivedAt
         ? { key: "ARRIVED", label: t("Arrived", "وصلت") }
-        : j.status === "EN_ROUTE"
-          ? { key: "IN_PROGRESS", label: t("Start towing", "بدء السحب") }
-          : j.status === "IN_PROGRESS"
-            ? { key: "COMPLETED", label: t("Completed", "اكتمل") }
-            : null;
+        : j.status === "EN_ROUTE" && !j.loadingAt
+          ? { key: "LOADING", label: t("Loading the car", "تحميل السيارة") }
+          : j.status === "EN_ROUTE"
+            ? { key: "IN_PROGRESS", label: t("Start towing", "بدء السحب") }
+            : j.status === "IN_PROGRESS" && !j.deliveredAt
+              ? { key: "DELIVERED", label: t("Delivered", "تم التسليم") }
+              : j.status === "IN_PROGRESS"
+                ? { key: "COMPLETED", label: t("Complete the job", "إنهاء المهمة") }
+                : null;
 
   return (
     <GaragePage
       onRefresh={load}
       hero={
         <GarageHero variant="detail" onBack={back} title={j ? `${j.customer.firstName} · ${j.vehicle.make} ${j.vehicle.model}` : t("Job", "المهمة")} line={j ? (j.status === "IN_PROGRESS" ? j.dropoffAddress : j.pickupAddress) : undefined}>
-          {j ? <StatusChip tone={towTone(j.status)} label={j.status === "EN_ROUTE" && j.arrivedAt ? L.ARRIVED : L[j.status]} /> : null}
+          {j ? <StatusChip tone={towTone(j.status)} label={stageText(j.stage ?? j.status)} /> : null}
         </GarageHero>
       }
     >
@@ -98,6 +106,7 @@ export default function DriverJob() {
         <View style={{ gap: 12 }}>
           {error ? <Note tone="danger" icon="alert-circle-outline">{error}</Note> : null}
           {locProblem ? <Note tone="danger" icon="location-outline">{locProblem}</Note> : null}
+          {weak && !locProblem ? <Note tone="warning" icon="cellular-outline">{t("GPS signal is weak: the customer may see your position late. Move to an open area.", "إشارة GPS ضعيفة: قد يرى الزبون موقعك متأخرًا. انتقل إلى مكان مكشوف.")}</Note> : null}
           {locProblem && canOpenSettings ? <GButton variant="secondary" icon="settings-outline" label={t("Open Settings", "فتح الإعدادات")} onPress={() => void openSettings()} /> : null}
           {working && me ? <Note icon="radio-outline">{t("Sharing your location with the customer and your company while this screen is open.", "تتم مشاركة موقعك مع الزبون وشركتك أثناء فتح هذه الشاشة.")}</Note> : null}
 
@@ -109,11 +118,23 @@ export default function DriverJob() {
               <GButton flex icon="checkmark" label={t("Accept", "قبول")} busy={busy === "accept"} disabled={!!busy} onPress={() => void act("accept", () => driverApi.accept(id))} />
             </View>
           ) : null}
-          {next ? <GButton icon="arrow-forward" label={next.label} busy={busy === next.key} disabled={!!busy} onPress={() => void step(next.key)} style={{ minHeight: 60 }} /> : null}
+          {next ? (
+            <View style={{ gap: 8 }}>
+              <GButton
+                icon={confirm === next.key ? "checkmark-done" : "arrow-forward"}
+                label={confirm === next.key ? t(`Tap again to confirm: ${next.label}`, `اضغط مرة أخرى للتأكيد: ${next.label}`) : next.label}
+                busy={busy === next.key}
+                disabled={!!busy}
+                onPress={() => (confirm === next.key ? void step(next.key).then(() => setConfirm(null)) : setConfirm(next.key))}
+                style={{ minHeight: 60 }}
+              />
+              {confirm === next.key ? <GButton variant="ghost" label={t("Not yet", "ليس الآن")} onPress={() => setConfirm(null)} /> : null}
+            </View>
+          ) : null}
 
           <Card pad={12}>
             <ListRow icon="person-outline" title={j.customer.firstName} sub={problem[j.problemType]} end={undefined} />
-            <ListRow divider icon="call-outline" title={j.contactPhone} sub={t("Call the customer", "اتصل بالزبون")} onPress={() => void Linking.openURL(`tel:${j.contactPhone.replace(/[^\d+]/g, "")}`)} />
+            {["ACCEPTED", "EN_ROUTE", "IN_PROGRESS"].includes(j.status) ? <ListRow divider icon="chatbubble-ellipses-outline" title={t("Chat with the customer", "محادثة الزبون")} sub={t("Messages stay inside MOTEXA", "تبقى الرسائل داخل موتكسا")} onPress={() => router.push({ pathname: "/driver/job/chat", params: { id: j.id } })} /> : null}
             {j.notes ? <ListRow divider icon="document-text-outline" title={t("Note", "ملاحظة")} sub={j.notes} /> : null}
             <ListRow divider icon="flag-outline" title={t("Destination", "الوجهة")} sub={j.dropoffAddress} />
           </Card>

@@ -50,7 +50,7 @@ export default function ShopOrdersList() {
         />
       }
     >
-      <SearchBar value={q} onChange={setQ} placeholder={t("Customer, product or order","?????? ?? ?????? ?? ?????")}/>
+      <SearchBar value={q} onChange={setQ} placeholder={t("Customer, product or order","العميل أو المنتج أو الطلب")}/>
       <Tabs
         value={bucket}
         onChange={(k) => {

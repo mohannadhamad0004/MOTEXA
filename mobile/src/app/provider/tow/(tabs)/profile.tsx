@@ -1,4 +1,4 @@
-import Profile from "../company";
 import { inTabs } from "../../../../features/providerhub/inTabs";
+import { ProfileHub } from "../../../../features/providerhub/ProfileHub";
 
-export default inTabs(Profile);
+export default inTabs(() => <ProfileHub area="tow" />);

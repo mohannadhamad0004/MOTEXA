@@ -46,7 +46,7 @@ function Section({ title, children }: { n?: string; title: string; children: Rea
  * All state and rules of the tow request form (validation, address lookup, location). The full screen
  * (customer/towrequest/new) and the panel on the map page both use it, so the rules live in one place.
  */
-export function useTowRequestForm(company: { id: string; city: string }) {
+export function useTowRequestForm(company: { id: string; city: string } | null) {
   const user = useSessionUser();
   const { t } = useL();
   const car = currentCar(); // from "Fits my car" when set; still editable
@@ -60,6 +60,8 @@ export function useTowRequestForm(company: { id: string; city: string }) {
   const [notes, setNotes] = useState("");
   // null = any driver of the company; else one FREE driver the customer picked
   const [driverId, setDriverId] = useState<string | null>(null);
+  // NEAREST (no company: the server picks the nearest FREE driver from the pickup point), COMPANY, or DRIVER
+  const [nearest, setNearest] = useState(false);
   // Where the car is: read only when you tap "Use my current location" (or place the pin yourself). Sent with the request, nowhere else.
   const [spot, setSpot] = useState<Point | null>(null);
   const [auto, setAuto] = useState(false); // the pickup text was filled in from the map, so moving the pin may refresh it
@@ -118,7 +120,7 @@ export function useTowRequestForm(company: { id: string; city: string }) {
   };
   /** Drops the pin at a fresh reading from this form, else at a known company-city centre. */
   const startPin = () => {
-    const point = loc.fix && isFreshLocation(loc.fix.timestamp) ? loc.fix.point : cityCentre(company.city);
+    const point = loc.fix && isFreshLocation(loc.fix.timestamp) ? loc.fix.point : cityCentre(company?.city ?? "");
     if (!point) {
       setErr(t("Use your current location or choose a valid company city first.", "استخدم موقعك الحالي أو اختر مدينة الشركة الصحيحة أولًا."));
       return;
@@ -143,11 +145,13 @@ export function useTowRequestForm(company: { id: string; city: string }) {
     if (y !== null && !(Number.isInteger(y) && y >= 1950 && y <= new Date().getFullYear() + 1)) return fail(t("The car year is not valid.", "سنة السيارة غير صحيحة."));
     if (!problem) return fail(t("Choose what is wrong with the car.", "اختر مشكلة السيارة."));
     if (!/^[0-9+()\-\s]{6,20}$/.test(phone.trim()) || phone.replace(/\D/g, "").length < 5) return fail(t("Enter a valid contact phone number.", "أدخل رقم هاتف صحيحًا للتواصل."));
+    if (nearest && !spot) return fail(t("Use your current location or place the pin: we need the pickup point to find the nearest driver.", "استخدم موقعك الحالي أو ضع الدبوس: نحتاج نقطة الاستلام لإيجاد أقرب سائق."));
     setBusy(true);
     setErr(null);
     try {
       const r = await customerTowRequests.create({
-        companyId: company.id,
+        mode: nearest ? "NEAREST" : driverId ? "DRIVER" : "COMPANY",
+        ...(nearest || !company ? {} : { companyId: company.id }),
         pickupAddress: pickup.trim(),
         dropoffAddress: dropoff.trim(),
         contactPhone: phone.trim(),
@@ -157,7 +161,7 @@ export function useTowRequestForm(company: { id: string; city: string }) {
         ...(spot ? { pickupLat: spot.lat, pickupLng: spot.lng } : {}),
         problemType: problem,
         notes: notes.trim(),
-        ...(driverId ? { driverId } : {}),
+        ...(driverId && !nearest ? { driverId } : {}),
       });
       return { id: r.id, existing: false, request: r };
     } catch (e: any) {
@@ -174,7 +178,7 @@ export function useTowRequestForm(company: { id: string; city: string }) {
     return null;
   };
 
-  return { loc, spot, place, useHere, editPickup, removePin, startPin, finding, busy, err, submit, setErr, pickup, dropoff, setDropoff, make, setMake, model, setModel, year, setYear, problem, setProblem, phone, setPhone, notes, setNotes, driverId, setDriverId, cancelLookup };
+  return { loc, spot, place, useHere, editPickup, removePin, startPin, finding, busy, err, submit, setErr, pickup, dropoff, setDropoff, make, setMake, model, setModel, year, setYear, problem, setProblem, phone, setPhone, notes, setNotes, driverId, setDriverId, nearest, setNearest, cancelLookup };
 }
 export type TowForm = ReturnType<typeof useTowRequestForm>;
 

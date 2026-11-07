@@ -5,18 +5,18 @@
 // on / off per part (rims: the shop's finish instead of "Paint to match"). The fit itself is the stored auto-fit + the Parts Admin's correction (Adjust is admin-only,
 // in /dept/accessory-zones -> Accessory fits; offsets customers saved earlier stay in the database but are not applied).
 // A car without a real model yet: the "coming soon" card.
-import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Chip, EmptyState, GButton, GText, IconButton, Note } from "../../components/garage";
 import { useL } from "../../core/hooks/useL";
 import { carName } from "../../features/catalog/catalogBits";
-import { openMyCarPicker, openEditGarageCar, useMyCar } from "../../features/catalog/myCar";
+import { openMyCarPicker, openEditGarageCar, useMyCar, refreshGarage } from "../../features/catalog/myCar";
 import { Car3DView } from "../../features/car3d/Car3DView";
 import { ComingSoon } from "../../features/car3d/CarPreview";
 import { DEFAULT_COLOR, NO_ADJUST } from "../../features/car3d/car3d";
-import { useCatalogModel } from "../../features/car3d/runtimeModels";
+import { refreshRuntimeModels, useCatalogModel } from "../../features/car3d/runtimeModels";
 import type { Kit } from "../../features/car3d/useCar3D";
 import { ACCESSORY_TYPE_LABELS, RIM_FINISH_LABELS, bumperLabel, customerAccessoryApi, isBumper, type CustomerAccessory, type CustomerPart, type KitPart } from "../../features/accessory3d/api";
 import { gType, useGarageTheme } from "../../theme/garage";
@@ -28,6 +28,7 @@ export default function MyCar3D() {
   const insets = useSafeAreaInsets();
   const { product } = useLocalSearchParams<{ product?: string }>();
   const { car, loaded } = useMyCar();
+  useFocusEffect(useCallback(()=>{void refreshGarage();void refreshRuntimeModels();},[]));
   const model = useCatalogModel(car);
   const [acc, setAcc] = useState<CustomerAccessory>(null);
   // a body kit shows its front and rear bumper together; each one is switched on / off on its own
@@ -36,9 +37,14 @@ export default function MyCar3D() {
   const genId = car?.generation?.id ?? null;
   const parts: CustomerPart[] = useMemo(() => acc ? acc.parts ?? [{ part: "MAIN", type: acc.type, fitsIds: acc.fits.map(f => f.id), model: acc.model, autoFit: acc.autoFit ?? null }] : [], [acc]);
   useEffect(() => {
-    if (!product) { setAcc(null); return; }
-    let live = true; setFitErrors({});
-    customerAccessoryApi.get(product, genId).then(a => live && setAcc(a), () => live && setAcc(null));
+    let live = true;
+    void Promise.resolve().then(async()=>{
+      if(!live)return;
+      setFitErrors({});
+      if(!product){setAcc(null);return;}
+      try{const result=await customerAccessoryApi.get(product,genId);if(live)setAcc(result);}
+      catch{if(live)setAcc(null);}
+    });
     return () => { live = false; };
   }, [product, genId]);
   const fitting = parts.filter(x => !!x.model && !!genId && (!!x.universal || x.fitsIds.includes(genId))); // universal = a "Universal by size" rim
@@ -46,8 +52,9 @@ export default function MyCar3D() {
   const shown = fitting.filter(x => !isBumper(x.type) || !!model?.partMap?.[bumperLabel(x.type)]);
   const noPreview = fitting.length > 0 && !shown.length;
   const fits = shown.length > 0;
+  const shownParts=shown.map(x=>x.part).join();
   const kits: Kit[] = useMemo(() => shown.filter(x => !off[x.part]).map(x => ({ type: x.type, file: x.model!.file, size: x.model!.size, paintMatch: paint && x.type !== "RIMS", finish: x.model!.finish ?? null, adj: NO_ADJUST,
-    fit: x.autoFit?.fit, baseAdj: x.autoFit?.adj ?? null })), [shown.map(x => x.part).join(), off, paint, acc]); // eslint-disable-line react-hooks/exhaustive-deps
+    fit: x.autoFit?.fit, baseAdj: x.autoFit?.adj ?? null })), [shownParts, off, paint, acc]); // eslint-disable-line react-hooks/exhaustive-deps
   const back = () => (router.canGoBack() ? router.back() : router.navigate("/customer/profile"));
   const label = (x: { type: CustomerPart["type"] }) => t(...ACCESSORY_TYPE_LABELS[x.type]);
   const paintable = kits.some(k => k.type !== "RIMS"), rim = shown.find(x => x.type === "RIMS");

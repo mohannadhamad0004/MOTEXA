@@ -72,3 +72,28 @@ test("computed once; admin correction and reset; customers only get a current fi
     await prisma.auditLog.deleteMany({ where: { actorId: "admin", action: "ACCESSORY3D_FIT_APPROVED" } });
   }
 });
+
+test("after a fit-version bump an approved correction is re-checked: kept when it passes, recorded (not silently dropped) when it fails", async () => {
+  const a = await prisma.productAccessory3D.findFirst({ where: { status: "PUBLISHED", accessoryType: "WING", fits: { some: { generation: { model3dKey: "bmw-3-series-e36" } } } }, include: { fits: { include: { generation: true } } } });
+  const g = a?.fits.find(f => f.generation.model3dKey === "bmw-3-series-e36");
+  if (!a || !g) return; // no published E36 wing in this database
+  const key = "bmw-3-series-e36", id = { accessoryId_generationId: { accessoryId: a.id, generationId: g.generationId } }, adj = { x: 0, y: 0.004, z: 0, rx: 0, ry: 0, s: 1 };
+  const saved = await prisma.accessoryAutoFit.findUnique({ where: id }), s = createAutoFitService();
+  const recomputed = (ok: boolean) => ({ ...fit(), info: { qa: { clipMm: 0, gapMm: 1, ok: true, correction: { adj, clipMm: ok ? 0 : 6.5, gapMm: 1, ok } } } });
+  const approveThenAge = async () => { await prisma.accessoryAutoFit.deleteMany({ where: { accessoryId: a.id, generationId: g.generationId } }); await saveFit(a, g.generationId, key, fit());
+    await s.approve("admin", a.id, g.generationId, { adj }); await prisma.accessoryAutoFit.update({ where: id, data: { fitVersion: fitVersion("WING") - 1 } }); };
+  try {
+    await approveThenAge();
+    const kept = await saveFit(a, g.generationId, key, recomputed(true));
+    assert.deepEqual(kept.adj, adj); assert.ok(kept.approvedAt, "still passes: stays approved"); assert.equal(kept.fitVersion, fitVersion("WING"));
+    await approveThenAge();
+    const since = new Date(), dropped = await saveFit(a, g.generationId, key, recomputed(false));
+    assert.equal(dropped.adj, null, "a failing correction is never served"); assert.equal(dropped.approvedAt, null, "back to review");
+    const prev = (dropped.fit as { previousCorrection?: Record<string, unknown> }).previousCorrection;
+    assert.deepEqual({ adj: prev?.adj, result: prev?.result, clipMm: prev?.clipMm, ok: prev?.ok }, { adj, result: "fails", clipMm: 6.5, ok: false }, "kept on record with its numbers");
+    assert.ok(await prisma.auditLog.findFirst({ where: { action: "ACCESSORY3D_FIT_CORRECTION_FAILED", targetId: a.id, createdAt: { gte: since } } }), "audited");
+  } finally {
+    await prisma.accessoryAutoFit.deleteMany({ where: { accessoryId: a.id, generationId: g.generationId } });
+    if (saved) await prisma.accessoryAutoFit.create({ data: { ...saved, fit: saved.fit as never, adj: (saved.adj ?? undefined) as never } });
+  }
+});

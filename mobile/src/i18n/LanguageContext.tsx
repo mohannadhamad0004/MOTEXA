@@ -2,8 +2,12 @@ import {
   createContext,
   ReactNode,
   useContext,
+  useEffect,
   useState,
 } from "react";
+import * as SessionStore from "../components/SessionStore";
+
+const LANGUAGE_KEY = "motexa_language";
 
 import {
   Language,
@@ -28,14 +32,19 @@ type LanguageProviderProps = {
 export function LanguageProvider({
   children,
 }: LanguageProviderProps) {
-  const [language, setLanguage] =
+  const [language, setLanguageState] =
     useState<Language>("en");
 
-  const toggleLanguage = () => {
-    setLanguage((currentLanguage) =>
-      currentLanguage === "en" ? "ar" : "en"
-    );
+  // remembered like the appearance mode: SecureStore on a phone, the tab's session storage on web
+  useEffect(() => {
+    SessionStore.getItemAsync(LANGUAGE_KEY).then((v) => { if (v === "en" || v === "ar") setLanguageState(v); }).catch(() => {});
+  }, []);
+  const setLanguage = (next: Language) => {
+    setLanguageState(next);
+    SessionStore.setItemAsync(LANGUAGE_KEY, next).catch(() => {});
   };
+
+  const toggleLanguage = () => setLanguage(language === "en" ? "ar" : "en");
 
   const value: LanguageContextType = {
     language,

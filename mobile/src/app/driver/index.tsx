@@ -50,8 +50,8 @@ export default function DriverHome() {
     }
   };
   const d = data?.driver;
-  const statusTone: Record<string, Tone> = { FREE: "success", BUSY: "accent", OFFLINE: "neutral", NO_TRUCK: "warning" };
-  const statusLabel: Record<string, string> = { FREE: t("Free", "متاح"), BUSY: t("Busy", "مشغول"), OFFLINE: t("Offline", "غير متصل"), NO_TRUCK: t("No truck ready", "لا شاحنة جاهزة") };
+  const statusTone: Record<string, Tone> = { FREE: "success", BUSY: "accent", OFFLINE: "neutral", NO_TRUCK: "warning", UNAPPROVED: "warning" };
+  const statusLabel: Record<string, string> = { FREE: t("Free", "متاح"), BUSY: t("Busy", "مشغول"), OFFLINE: t("Offline", "غير متصل"), NO_TRUCK: t("No truck ready", "لا شاحنة جاهزة"), UNAPPROVED: t("Licence not approved", "الرخصة غير معتمدة") };
   const row_ = (j: TowJob) => (
     <Tap key={j.id} label={`${j.customer.firstName}, ${L[j.status]}`} onPress={() => router.push({ pathname: "/driver/job/[id]", params: { id: j.id } })} style={[{ padding: 14, borderRadius: gShape.card, backgroundColor: g.card, gap: 6 }, shadow(1)]}>
       <View style={[row, { alignItems: "center", gap: 8 }]}>
@@ -84,6 +84,13 @@ export default function DriverHome() {
       {d ? (
         <>
           {error ? <Note tone="danger" icon="alert-circle-outline">{error}</Note> : null}
+          {d.approval && d.approval !== "APPROVED" ? (
+            <Note tone={d.approval === "PENDING" ? "warning" : "danger"} icon="shield-checkmark-outline">
+              {d.approval === "PENDING"
+                ? t("Your licence is waiting for MOTEXA's review. You cannot go free or take jobs until it is approved.", "رخصتك بانتظار مراجعة موتكسا. لا يمكنك أن تصبح متاحًا أو تستلم مهام قبل الموافقة.")
+                : `${d.approval === "REJECTED" ? t("Your licence was rejected", "تم رفض رخصتك") : t("You were suspended", "تم إيقافك")}${d.approvalReason ? `: ${d.approvalReason}` : ""}. ${t("Talk to your company.", "تحدث مع شركتك.")}`}
+            </Note>
+          ) : null}
           <Card>
             <Toggle label={t("Online", "متصل")} sub={d.status === "BUSY" ? t("You are on a job", "أنت في مهمة") : t("Customers can choose you when you are free", "يمكن للزبائن اختيارك عندما تكون متاحًا")} value={!d.offline} onChange={(v) => !busy && void toggle(v)} />
             <ListRow divider icon="car-outline" title={d.truck ? `${type[d.truck.type]} · ${d.truck.make} ${d.truck.model}` : t("No truck linked", "لا توجد شاحنة مرتبطة")} sub={d.truck ? d.truck.plate : t("Ask your company to link one", "اطلب من شركتك ربط شاحنة")} />

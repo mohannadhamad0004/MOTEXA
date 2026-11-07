@@ -53,6 +53,26 @@ function rimSpecs(input: Record<string, unknown>) {
 export const rimOf = (a: Pick<ProductAccessory3D, "accessoryType" | "rimInches" | "rimWidthIn" | "rimPcd" | "rimOffsetMm" | "rimFinish">) =>
   a.accessoryType === "RIMS" ? { inches: a.rimInches, widthIn: a.rimWidthIn, pcd: a.rimPcd, offsetMm: a.rimOffsetMm, finish: a.rimFinish } : null;
 export const sizeField = (type: string) => type === "RIMS" ? "rimInches" :type === "SIDE_SKIRTS" || type === "FENDER_FLARES" ? "lengthMm" : "widthMm";
+/**
+ * Sanity range of the part's main real size, per type (whole mm; rims are checked in inches). A bumper that is 630 mm wide is a typo
+ * (or the wrong field), and a wrong size scales the part wrongly on every customer's car, so it is refused with these numbers.
+ */
+export const SIZE_RANGES: Record<string, { field: "widthMm" | "lengthMm"; min: number; max: number }> = {
+  FRONT_BUMPER: { field: "widthMm", min: 1200, max: 2100 }, REAR_BUMPER: { field: "widthMm", min: 1200, max: 2100 },
+  SIDE_SKIRTS: { field: "lengthMm", min: 1000, max: 2800 }, FRONT_LIP: { field: "widthMm", min: 900, max: 2100 }, REAR_DIFFUSER: { field: "widthMm", min: 700, max: 2000 },
+  FENDER_FLARES: { field: "lengthMm", min: 300, max: 1500 }, WING: { field: "widthMm", min: 700, max: 2100 }, SPOILER: { field: "widthMm", min: 500, max: 2100 },
+  ROOF_RACK: { field: "widthMm", min: 700, max: 1900 }, MIRROR_COVERS: { field: "widthMm", min: 80, max: 450 },
+};
+const TYPE_NAME: Record<string, string> = { FRONT_BUMPER: "front bumper", REAR_BUMPER: "rear bumper", SIDE_SKIRTS: "side skirt", FRONT_LIP: "front lip", REAR_DIFFUSER: "rear diffuser", FENDER_FLARES: "fender flare",
+  WING: "wing", SPOILER: "spoiler", ROOF_RACK: "roof rack", MIRROR_COVERS: "mirror cover" };
+/** null = fine (or nothing entered), else the message for a main size outside the range of its type. */
+export function sizeProblem(type: string, value: number | null | undefined) {
+  const r = SIZE_RANGES[type];
+  if (!r || value === null || value === undefined) return null;
+  if (value >= r.min && value <= r.max) return null;
+  const name = TYPE_NAME[type] ?? "part";
+  return `A ${name}'s ${r.field === "widthMm" ? "width" : "length"} must be ${r.min}\u2013${r.max} mm (you entered ${value}). Measure the whole part, end to end, in millimetres.`;
+}
 export const PUBLIC_ACCESSORY_DIR = path.join(REPO_ROOT, "backend/public/3d/accessories");
 const LIMITS = { PART: [2, 4], INSTALLED: [1, 24] } as const;
 const CONSENT_VERSION = "accessory-3d-v1";
@@ -62,6 +82,12 @@ const missing = (): never => fail("ACCESSORY_NOT_FOUND", "3D accessory not found
 const include = { photos: { orderBy: { sortOrder: "asc" as const } }, fits: true };
 const audit = (tx: Tx, actorId: string | null, action: string, targetId: string, details: Prisma.InputJsonValue = {}) =>
   tx.auditLog.create({ data: { actorId, action: `ACCESSORY3D_${action}`, targetId, details } });
+/** The shop's owner hears about every admin action on a 3D request (in-app notification, stored "English||العربية"). */
+async function tellShop(tx: Tx, shopId: string, title: [string, string], body: [string, string]) {
+  const shop = await tx.partsShopProfile.findUnique({ where: { id: shopId }, select: { userId: true } });
+  if (shop) await tx.notification.create({ data: { userId: shop.userId, title: `${title[0]}||${title[1]}`, body: `${body[0]}||${body[1]}` } });
+}
+const productName = async (tx: Tx, productId: string) => (await tx.partsProduct.findUnique({ where: { id: productId }, select: { name: true } }))?.name ?? "";
 export const modelRevision = (a: Pick<ProductAccessory3D, "privateModelPath">) => digest(Buffer.from(a.privateModelPath ?? "")).slice(0, 16);
 const monthStart = (now = new Date()) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 export async function creditsThisMonth(tx: Tx, shopId: string) {
@@ -179,7 +205,7 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
     get: (uid: string, productId: string, part: AccessoryKitPart = "MAIN") => run(async tx => {
       const product = await ownProduct(tx, uid, productId), a = await load(tx, { productId, kitPart: part });
       const parts = await tx.productAccessory3D.findMany({ where: { productId }, select: { kitPart: true, accessoryType: true, status: true } });
-      return { eligible: ACCESSORY_CATEGORIES.includes(product.category ?? ""), category: product.category, isUniversal: product.isUniversal, accessory: a ? accessoryShape(a) : null,
+      return { eligible: ACCESSORY_CATEGORIES.includes(product.category ?? ""), category: product.category, isUniversal: product.isUniversal, productName: product.name, sizeRanges: SIZE_RANGES, accessory: a ? accessoryShape(a) : null,
         /** every 3D part of this product (a body kit: FRONT / REAR) */
         parts: parts.map(p => ({ part: p.kitPart, type: p.accessoryType, status: p.status })) };
     }),
@@ -207,6 +233,8 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
       if (installedGen && bySize && !await tx.vehicleGeneration.findFirst({ where: { id: installedGen, isActive: true }, select: { id: true } })) return fail("INVALID_INSTALLED_GENERATION", "The car in the installed photos is not in the catalog.");
       if (installedGen && !bySize && !(ids as string[]).includes(installedGen)) return fail("INVALID_INSTALLED_GENERATION", "The car in the installed photos must be one of the generations it fits.");
       if (isBumper(type) && !ids.length) return fail("FITS_REQUIRED", "Bumpers fit specific cars: choose the exact generation(s).");
+      const main = sizeField(type), mainValue = main === "rimInches" ? null : (mm(input[main]));
+      const bad = sizeProblem(type, mainValue); if (bad) return fail("INVALID_SIZE", bad);
       const rim = type === "RIMS" ? rimSpecs(input) : { rimWidthIn: null, rimPcd: null, rimOffsetMm: null, rimFinish: null };
       const data = { ...rim, accessoryType: type as AccessoryType, widthMm: mm(input.widthMm), heightMm: mm(input.heightMm), depthMm: mm(input.depthMm), lengthMm: mm(input.lengthMm), rimInches: inches,
         installedGenerationId: installedGen, installed360: input.installed360 === true };
@@ -248,16 +276,23 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
     },
     submit: (uid: string, productId: string, consent: unknown, part: AccessoryKitPart = "MAIN") => run(async tx => {
       const a = await owned(tx, uid, productId, true, part); editable(a);
-      if (isBumper(a.accessoryType) && (await tx.partsProduct.findUnique({ where: { id: productId }, select: { isUniversal: true } }))?.isUniversal) return fail("BUMPER_NOT_UNIVERSAL", "Bumpers and body kits are made for specific cars: untick Universal on the product.");
+      // every problem at once (the app lists them all, each one opens its field)
+      const universal = (await tx.partsProduct.findUnique({ where: { id: productId }, select: { isUniversal: true } }))?.isUniversal ?? false;
       const n = (k: "PART" | "INSTALLED") => a.photos.filter(p => p.kind === k).length;
-      if (n("PART") < 2 || n("PART") > 4) return fail("PART_PHOTOS_REQUIRED", "Add 2-4 photos of the loose part (plain background, different angles).");
-      if (n("INSTALLED") < 1) return fail("INSTALLED_PHOTOS_REQUIRED", "Add at least one photo of the part installed on a car.");
-      if (a.installed360 && n("INSTALLED") < 12) return fail("SPIN_SET_TOO_SMALL", "A 360° set needs at least 12 photos taken around the car.");
-      const bySize = universalRim(a.accessoryType, (await tx.partsProduct.findUnique({ where: { id: productId }, select: { isUniversal: true } }))?.isUniversal ?? false);
-      if (!a.fits.length && !bySize) return fail("FITS_REQUIRED", "Choose at least one generation this part fits.");
-      if (!a.installedGenerationId) return fail("INSTALLED_GENERATION_REQUIRED", "Choose which car the installed photos show.");
-      if (a[sizeField(a.accessoryType) as "widthMm" | "lengthMm" | "rimInches"] === null) return fail("SIZE_REQUIRED", a.accessoryType === "RIMS" ? "Enter the rim size in inches." : "Enter the part's real size in millimetres.");
-      if (consent !== true) return fail("CONSENT_REQUIRED", "Confirm you own these photos and allow MOTEXA to generate and show a 3D model of this part.");
+      const bySize = universalRim(a.accessoryType, universal);
+      const issues: { code: string; field: string; message: string }[] = [];
+      const add = (code: string, field: string, message: string) => { issues.push({ code, field, message }); };
+      if (isBumper(a.accessoryType) && universal) add("BUMPER_NOT_UNIVERSAL", "fits", "Bumpers and body kits are made for specific cars: untick Universal on the product.");
+      if (n("PART") < 2 || n("PART") > 4) add("PART_PHOTOS_REQUIRED", "partPhotos", "Add 2-4 photos of the loose part (plain background, different angles).");
+      if (n("INSTALLED") < 1) add("INSTALLED_PHOTOS_REQUIRED", "installedPhotos", "Add at least one photo of the part installed on a car.");
+      else if (a.installed360 && n("INSTALLED") < 12) add("SPIN_SET_TOO_SMALL", "installedPhotos", "A 360° set needs at least 12 photos taken around the car.");
+      if (!a.fits.length && !bySize) add("FITS_REQUIRED", "fits", "Choose at least one generation this part fits.");
+      if (!a.installedGenerationId) add("INSTALLED_GENERATION_REQUIRED", "installedGen", "Choose which car the installed photos show.");
+      const main = sizeField(a.accessoryType) as "widthMm" | "lengthMm" | "rimInches", mainValue = a[main];
+      if (mainValue === null) add("SIZE_REQUIRED", "size", a.accessoryType === "RIMS" ? "Enter the rim size in inches." : "Enter the part's real size in millimetres.");
+      else { const bad = main === "rimInches" ? null : sizeProblem(a.accessoryType, mainValue); if (bad) add("INVALID_SIZE", "size", bad); }
+      if (consent !== true) add("CONSENT_REQUIRED", "consent", "Confirm you own these photos and allow MOTEXA to generate and show a 3D model of this part.");
+      if (issues.length) throw new Vehicle3DError(400, issues[0].code, issues.length === 1 ? issues[0].message : `${issues.length} things need fixing: ${issues.map(i => i.message).join(" ")}`, issues);
       const updated = await tx.productAccessory3D.update({ where: { id: a.id }, data: { status: "PENDING_REVIEW", submittedAt: new Date(), reviewNotes: null,
         sourceMetadata: { ...(a.sourceMetadata as object ?? {}), shopConsentAt: new Date().toISOString(), shopConsentVersion: CONSENT_VERSION } }, include });
       await audit(tx, uid, "SUBMIT", a.id); return accessoryShape(updated);
@@ -287,8 +322,15 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
 
     // ---- Parts Admin ----
     adminList: () => run(async tx => {
-      const rows = await tx.productAccessory3D.findMany({ where: { status: { not: "DRAFT" } }, include: { ...include, product: { select: { name: true, brand: true, shop: { select: { id: true, shopName: true } } } } }, orderBy: { updatedAt: "desc" }, take: 300 });
-      return rows.map(r => ({ ...accessoryShape(r), productName: r.product.name, productBrand: r.product.brand, shopName: r.product.shop.shopName }));
+      // EVERY submitted request (anything but a shop's draft), of every type and every shop, newest submission first
+      const rows = await tx.productAccessory3D.findMany({ where: { status: { not: "DRAFT" } }, include: { ...include, product: { select: { name: true, brand: true, files: { where: { purpose: "PRODUCT_IMAGE", visibility: "PUBLIC" }, select: { id: true }, take: 1 }, shop: { select: { id: true, shopName: true } } } } }, take: 500 });
+      const ids = [...new Set(rows.flatMap(r => [...r.fits.map(f => f.generationId), ...(r.installedGenerationId ? [r.installedGenerationId] : [])]))];
+      const gens = await tx.vehicleGeneration.findMany({ where: { id: { in: ids } }, include: { vehicle: { select: { make: true, makeAr: true } } } });
+      const car = (id: string) => { const g = gens.find(x => x.id === id); return g ? { id, name: `${g.vehicle.make} ${g.nameEn}`, nameAr: `${g.vehicle.makeAr} ${g.nameAr}` } : null; };
+      const when = (r: { submittedAt: Date | null; updatedAt: Date }) => (r.submittedAt ?? r.updatedAt).getTime();
+      return rows.sort((x, y) => when(y) - when(x)).map(r => ({ ...accessoryShape(r), productName: r.product.name, productBrand: r.product.brand, shopName: r.product.shop.shopName, shopId: r.product.shop.id,
+        productImageId: r.product.files[0]?.id ?? null, firstPartPhotoId: r.photos.find(p => p.kind === "PART")?.id ?? null,
+        cars: (r.fits.length ? r.fits.map(f => f.generationId) : r.installedGenerationId ? [r.installedGenerationId] : []).map(car).filter(Boolean) as { id: string; name: string; nameAr: string }[] }));
     }),
     adminGet: (id: string) => run(async tx => {
       const a = await admin(tx, id);
@@ -303,14 +345,18 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
       const a = await admin(tx, id, true);
       if (a.status !== "PENDING_REVIEW") return fail("REVIEW_CONFLICT", "Only a submitted accessory can be approved for generation.", 409);
       const updated = await tx.productAccessory3D.update({ where: { id }, data: { status: "APPROVED_FOR_GENERATION", approvedAt: new Date(), approvedByUserId: uid, installedApprovedAt: new Date(), reviewNotes: null }, include });
-      await audit(tx, uid, "APPROVE", id); return accessoryShape(updated);
+      await audit(tx, uid, "APPROVE", id); const nm = await productName(tx, a.productId);
+      await tellShop(tx, a.shopId, ["Your 3D request was approved", "تمت الموافقة على طلبك ثلاثي الأبعاد"], [`${nm}: the photos were approved. The 3D model is the next step.`, `${nm}: تمت الموافقة على الصور. الخطوة التالية هي إنشاء النموذج.`]);
+      return accessoryShape(updated);
     }),
     reject: (uid: string, id: string, notes: unknown) => run(async tx => {
       const a = await admin(tx, id, true);
       if (!["PENDING_REVIEW", "READY_FOR_FINAL_REVIEW", "APPROVED_FOR_GENERATION"].includes(a.status)) return fail("REVIEW_CONFLICT", "This accessory cannot be rejected now.", 409);
       if (typeof notes !== "string" || !notes.trim() || notes.length > 2000) return fail("REVIEW_NOTES_REQUIRED", "Tell the shop what to change (at most 2000 characters).");
       const updated = await tx.productAccessory3D.update({ where: { id }, data: { status: "REJECTED", reviewNotes: notes.trim(), reviewedAt: new Date(), reviewedByUserId: uid, visualVerifiedAt: null }, include });
-      await audit(tx, uid, "REJECT", id, { from: a.status }); return accessoryShape(updated);
+      await audit(tx, uid, "REJECT", id, { from: a.status }); const nm = await productName(tx, a.productId), why = notes.trim().slice(0, 300);
+      await tellShop(tx, a.shopId, ["Changes requested on your 3D request", "مطلوب تعديلات على طلبك ثلاثي الأبعاد"], [`${nm}: ${why}`, `${nm}: ${why}`]);
+      return accessoryShape(updated);
     }),
     /** The only action that may spend provider credits. Real mode needs the process opt-in, a key, confirmPaid and the shop's monthly cap. */
     start: (uid: string, id: string, confirmPaid: unknown) => run(async tx => {
@@ -320,7 +366,8 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
       if (resumable(a)) { // same paid provider task: only free status reads + download, no new task, no credit (like Feature 1)
         const resumed = await tx.productAccessory3D.update({ where: { id }, data: { status: "GENERATING", generationStage: a.rawModelPath ? "PREPARING" : "GENERATING",
           generationErrorCode: null, failureReason: null, leaseToken: null, leaseUntil: null, nextPollAt: null, processingStartedAt: new Date() }, include });
-        await audit(tx, uid, "RESUME", id, { shopId: a.shopId, revision: a.revision, after: a.generationErrorCode }); return accessoryShape(resumed);
+        await audit(tx, uid, "RESUME", id, { shopId: a.shopId, revision: a.revision, after: a.generationErrorCode });
+        await tellShop(tx, a.shopId, ["Your 3D model is being created", "يتم إنشاء نموذجك ثلاثي الأبعاد"], [`${await productName(tx, a.productId)}: generation resumed.`, `${await productName(tx, a.productId)}: استُؤنف الإنشاء.`]); return accessoryShape(resumed);
       }
       if (a.photos.filter(p => p.kind === "PART").length < 2) return fail("PART_PHOTOS_REQUIRED", "2-4 part photos are required.", 409);
       const mode = process.env.VEHICLE3D_MODE === "real" ? "meshy" : "mock";
@@ -340,6 +387,7 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
         liveAuthorizedAt: mode === "meshy" ? new Date() : null, processingStartedAt: new Date(), rawModelPath: null, privateModelPath: null,
         validation: Prisma.JsonNull, preview: Prisma.JsonNull, visualVerifiedAt: null, generationHistory: history as Prisma.InputJsonValue }, include });
       await audit(tx, uid, mode === "meshy" ? "PAID_START" : "MOCK_START", id, { shopId: a.shopId, revision: updated.revision });
+      await tellShop(tx, a.shopId, ["Your 3D model is being created", "يتم إنشاء نموذجك ثلاثي الأبعاد"], [`${await productName(tx, a.productId)}: generation started. We will tell you when it is ready for the final check.`, `${await productName(tx, a.productId)}: بدأ الإنشاء. سنُعلمك عندما يصبح جاهزًا للفحص النهائي.`]);
       return accessoryShape(updated);
     }),
     /** Re-render the six-view preview on another fitting generation (clears visual verification). */
@@ -363,7 +411,9 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
       if (a.status !== "READY_FOR_FINAL_REVIEW") return fail("REVIEW_CONFLICT", "Only a generated accessory awaiting final review can be regenerated.", 409);
       const updated = await tx.productAccessory3D.update({ where: { id }, data: { status: "APPROVED_FOR_GENERATION", generationStage: "UPLOAD", visualVerifiedAt: null,
         reviewNotes: typeof notes === "string" && notes.trim() ? notes.trim().slice(0, 2000) : null }, include });
-      await audit(tx, uid, "REGENERATE_REQUESTED", id); return accessoryShape(updated);
+      await audit(tx, uid, "REGENERATE_REQUESTED", id); const nm = await productName(tx, a.productId);
+      await tellShop(tx, a.shopId, ["We are redoing your 3D model", "نعيد إنشاء نموذجك ثلاثي الأبعاد"], [`${nm}: the first result was not good enough, a new one will be created.`, `${nm}: لم تكن النتيجة الأولى جيدة بما يكفي، سيُنشأ نموذج جديد.`]);
+      return accessoryShape(updated);
     }),
     publish: (uid: string, id: string, input: { visuallyVerified?: unknown; modelRevision?: unknown; notes?: unknown }) => run(async tx => {
       const a = await admin(tx, id, true);
@@ -383,12 +433,15 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
       const updated = await tx.productAccessory3D.update({ where: { id }, data: { status: "PUBLISHED", publishedFile: file, publishedAt: new Date(), publishedByUserId: uid,
         visualVerifiedAt: new Date(), reviewedAt: new Date(), reviewedByUserId: uid, reviewNotes: typeof input.notes === "string" ? input.notes.trim() || null : null }, include });
       await audit(tx, uid, "PUBLISH", id, { file, modelRevision: current, previewGenerationId: (a.preview as { generationId?: string }).generationId ?? null });
+      const nm = await productName(tx, a.productId);
+      await tellShop(tx, a.shopId, ["Your 3D part is live", "قطعتك ثلاثية الأبعاد منشورة"], [`${nm}: customers can now see it on their own car.`, `${nm}: يمكن للزبائن الآن رؤيتها على سياراتهم.`]);
       return accessoryShape(updated);
     }),
     setCredits: (uid: string, shopId: string, monthly: unknown) => run(async tx => {
       if (!Number.isInteger(monthly) || (monthly as number) < 0 || (monthly as number) > 100) return fail("INVALID_CREDITS", "Monthly 3D generations are a whole number from 0 to 100.");
       const shop = await tx.partsShopProfile.update({ where: { id: shopId }, data: { accessory3dMonthlyCredits: monthly as number }, select: { id: true, accessory3dMonthlyCredits: true } }).catch(() => missing());
-      await audit(tx, uid, "CREDITS", shopId, { monthly: monthly as number }); return { ...shop, creditsThisMonth: await creditsThisMonth(tx, shopId) };
+      await audit(tx, uid, "CREDITS", shopId, { monthly: monthly as number });
+      await tellShop(tx, shopId, ["Your monthly 3D allowance changed", "تغيّر سقف إنشاءات ثلاثية الأبعاد الشهري"], [`You can now start ${monthly} paid 3D generations a month.`, `يمكنك الآن بدء ${monthly} إنشاءات ثلاثية الأبعاد مدفوعة شهريًا.`]); return { ...shop, creditsThisMonth: await creditsThisMonth(tx, shopId) };
     }),
     zones: () => run(async tx => {
       const rows = await tx.accessoryFitZone.findMany();

@@ -110,12 +110,14 @@ export function createVehicle3DProcessor(options: ProcessorOptions = {}) {
 }
 export const processNextVehicle3DJob=(id: string|null=null)=>createVehicle3DProcessor()(id);
 export async function startVehicle3DWorker(){
+  const {processNextSketchfabImport}=await import("./vehicle3d-import-worker.js");
   await prisma.$transaction(async tx=>{await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(762493031)`;await recoverCatalogJournal(tx);});
   cleanPreviewTemp();
   let running=false;
   // one loop for both pipelines: Garage vehicles (Feature 1) and shop accessories (Feature 2)
   const timer=setInterval(async()=>{if(running)return;running=true;
     try{await processNextVehicle3DJob();}catch{console.error("Vehicle 3D worker could not process a job.");}
+    try{await processNextSketchfabImport();}catch{console.error("Vehicle import worker could not process a job.");}
     try{await processNextAccessory3DJob();}catch{console.error("Accessory 3D worker could not process a job.");}
     finally{running=false;}},5000);
   timer.unref();return()=>clearInterval(timer);

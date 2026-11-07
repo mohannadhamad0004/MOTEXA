@@ -5,6 +5,7 @@
 
 import { api } from "../shared/api";
 import type { TruckType } from "../tow/towService";
+import type { DriverCardData } from "../tow/dispatchService";
 
 // ---- part inquiries ----
 
@@ -83,10 +84,14 @@ type TowBase = {
   notes: string | null;
   declineReason: string | null;
   cancelReason: string | null;
-  cancelledBy: "CUSTOMER" | "COMPANY" | null;
+  cancelledBy: "CUSTOMER" | "COMPANY" | "SYSTEM" | "ADMIN" | null;
   timeline: { status: TowStatus; at: string }[];
   /** the driver reached the customer (the status stays EN_ROUTE until towing starts) */
   arrivedAt?: string | null;
+  loadingAt?: string | null;
+  deliveredAt?: string | null;
+  /** the step the status bar shows (ON_THE_WAY, ARRIVED, LOADING, TOWING, DELIVERED or the status itself) */
+  stage?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -95,11 +100,22 @@ export type DriverLive = { lat: number; lng: number; at: string; stale: boolean 
 type AssignedTruck = { type: TruckType; make: string | null; model: string | null; year: number | null };
 
 export type CustomerTowRequest = TowBase & {
-  company: { id: string; name: string; city: string };
-  truck: AssignedTruck | null; // never a plate
+  company: { id: string; name: string; city: string; verified: boolean };
+  truck: AssignedTruck | null; // never a plate here; the plate is on the driver card (partly hidden until assigned)
   canCancel: boolean;
-  /** first name only; his live point only during this job */
-  driver?: { id: string; firstName: string; live: DriverLive | null } | null;
+  /** cancelling still works, but the driver is already on the way: a reason is needed and the company is told */
+  cancelWarning: boolean;
+  canChat: boolean;
+  /** the open offer waits until this time; timedOut = nobody accepted in time */
+  offerExpiresAt?: string | null;
+  timedOut?: boolean;
+  canReview: boolean;
+  reviewed: { stars: number; comment: string | null } | null;
+  choiceMode: "NEAREST" | "COMPANY" | "DRIVER" | null;
+  /** straight-line distance pickup -> destination (not the road) */
+  distanceKm: number | null;
+  /** his card; `live` only while this job is active */
+  driver?: (DriverCardData & { live: DriverLive | null }) | null;
   requestedDriver?: { id: string; firstName: string } | null;
 };
 export type CompanyTowRequest = TowBase & {
@@ -111,7 +127,9 @@ export type CompanyTowRequest = TowBase & {
 };
 
 export type TowRequestInput = {
-  companyId: string;
+  /** NEAREST needs no company; COMPANY needs companyId; DRIVER needs driverId */
+  mode?: "NEAREST" | "COMPANY" | "DRIVER";
+  companyId?: string;
   pickupAddress: string;
   dropoffAddress: string;
   contactPhone: string;

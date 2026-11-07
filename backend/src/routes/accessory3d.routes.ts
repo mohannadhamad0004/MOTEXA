@@ -15,7 +15,7 @@ export function createAccessory3DRouter(service = createAccessory3DService(), pa
   const handle = (work: (req: Request, res: Response, uid: string) => Promise<unknown>) => async (req: Request, res: Response) => {
     try { await work(req, res, res.locals.authUser.id); }
     catch (error) {
-      if (error instanceof Vehicle3DError) { res.status(error.status).json({ success: false, code: error.code, message: error.message }); return; }
+      if (error instanceof Vehicle3DError) { res.status(error.status).json({ success: false, code: error.code, message: error.message, ...(error.issues ? { issues: error.issues } : {}) }); return; }
       console.error("Accessory 3D request failed."); // no details: storage paths / provider data never leave the server
       res.status(500).json({ success: false, message: "Could not complete the 3D accessory request." });
     }

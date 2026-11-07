@@ -1,0 +1,163 @@
+[
+ {
+  "route": "/provider/parts/new",
+  "title": "",
+  "elements": [
+   {
+    "i": 0,
+    "role": "button",
+    "name": "Back",
+    "size": "44x44",
+    "small": false,
+    "result": "NAV /provider/parts"
+   },
+   {
+    "i": 1,
+    "role": "button",
+    "name": "Settings",
+    "size": "44x44",
+    "small": false,
+    "result": "CHANGED"
+   },
+   {
+    "i": 2,
+    "role": "button",
+    "name": "Dashboard",
+    "size": "92x44",
+    "small": false,
+    "result": "NAV /provider/parts"
+   },
+   {
+    "i": 3,
+    "role": "button",
+    "name": "Products",
+    "size": "79x44",
+    "small": false,
+    "result": "NAV /provider/parts/products"
+   },
+   {
+    "i": 4,
+    "role": "button",
+    "name": "Orders",
+    "size": "69x44",
+    "small": false,
+    "result": "NAV /provider/parts/orders"
+   },
+   {
+    "i": 5,
+    "role": "button",
+    "name": "3D Parts",
+    "size": "78x44",
+    "small": false,
+    "result": "NAV /provider/parts/3d"
+   },
+   {
+    "i": 6,
+    "role": "button",
+    "name": "3D submissions",
+    "size": "114x44",
+    "small": false,
+    "result": "NAV /provider/parts/3d/submissions"
+   },
+   {
+    "i": 7,
+    "role": "button",
+    "name": "Inventory",
+    "size": "83x44",
+    "small": false,
+    "result": "NAV /provider/parts/inventory"
+   },
+   {
+    "i": 8,
+    "role": "button",
+    "name": "Fitment",
+    "size": "74x44",
+    "small": false,
+    "result": "NAV /provider/parts/fitment"
+   },
+   {
+    "i": 9,
+    "role": "button",
+    "name": "Categories",
+    "size": "91x44",
+    "small": false,
+    "result": "NAV /provider/parts/categories"
+   },
+   {
+    "i": 10,
+    "role": "button",
+    "name": "Questions",
+    "size": "86x44",
+    "small": false,
+    "result": "NAV /provider/parts/inquiries"
+   },
+   {
+    "i": 11,
+    "role": "button",
+    "name": "Shop profile",
+    "size": "96x44",
+    "small": false,
+    "result": "NAV /provider/parts/profile"
+   },
+   {
+    "i": 12,
+    "role": "button",
+    "name": "Media",
+    "size": "64x44",
+    "small": false,
+    "result": "NAV /provider/parts/media"
+   },
+   {
+    "i": 13,
+    "role": "button",
+    "name": "Customer preview",
+    "size": "131x44",
+    "small": false,
+    "result": "NAV /provider/parts/preview"
+   },
+   {
+    "i": 14,
+    "role": "button",
+    "name": "Performance",
+    "size": "103x44",
+    "small": false,
+    "result": "NAV /provider/parts/analytics"
+   },
+   {
+    "i": 15,
+    "role": "button",
+    "name": "Delivery",
+    "size": "76x44",
+    "small": false,
+    "result": "NAV /provider/parts/delivery"
+   },
+   {
+    "i": 16,
+    "role": "button",
+    "name": "Settings",
+    "size": "75x44",
+    "small": false,
+    "result": "NAV /provider/parts/settings"
+   },
+   {
+    "i": 17,
+    "role": "button",
+    "name": " Add product photo",
+    "size": "320x48",
+    "small": false,
+    "result": "NOTHING"
+   },
+   {
+    "i": 18,
+    "role": "button",
+    "name": "Next",
+    "size": "354x48",
+    "small": false,
+    "result": "CHANGED"
+   }
+  ],
+  "problems": [],
+  "landed": "/provider/parts/new",
+  "total": 19
+ }
+]

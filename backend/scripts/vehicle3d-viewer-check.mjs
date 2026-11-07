@@ -19,7 +19,20 @@ const {CAR3D_HTML}=loadTS(resolve(ROOT,'mobile/src/features/car3d/sceneHtml.ts')
 const hook=`window.checkVehicle=async function(model){
  renderer.setAnimationLoop(null);controls.autoRotate=false;controls.enableDamping=false;
  var gltf=await loader.loadAsync('/asset.glb');parsed['check.glb']=Promise.resolve(gltf);
+ var originalModel=Object.assign({},model,{paintNodes:[],paintMaterials:[],bakedPaint:undefined});
+ var original=await build({file:'check.glb',model:originalModel,color:'#8b9baa'});
+ function materials(group){var result={};group.traverse(function(o){if(o.isMesh)result[o.userData.pi]={name:o.name,mat:o.material.name,color:o.material.color?.getHexString(),opacity:o.material.opacity,map:o.material.map?.uuid||null};});return result;}
+ var before=materials(original.group);
  car=await build({file:'check.glb',model:model,color:'${arg('color')||'#8b9baa'}'});
+ var after=materials(car.group),protectedChanged=[],painted=0,unchanged=0;
+ car.group.traverse(function(o){if(!o.isMesh)return;var previous=before[o.userData.pi],current=after[o.userData.pi];if(!previous)return;
+   if(car.paint.indexOf(o.material)>=0){painted++;if(/glass|window|windshield|tyre|tire|wheel|rim|light|lamp|interior|seat|dashboard/i.test(previous.name+' '+previous.mat))protectedChanged.push(previous.name||previous.mat);}
+   else if(JSON.stringify(previous)===JSON.stringify(current))unchanged++;
+   else if(!model.bakedPaint)throw Error('Unrelated geometry was recolored');
+ });
+ if(protectedChanged.length)throw Error('Protected surfaces were selected for body paint');
+ var paintTest={supported:painted>0||!!model.bakedPaint,paintedMeshes:painted,unchangedMeshes:unchanged,protectedChanged:protectedChanged,
+   method:model.bakedPaint?'baked_texture_requires_visual_review':'production_material_comparison',visualSurfaceReviewRequired:true};
  if(car.wing)car.wing.visible=false;if(car.rack)car.rack.visible=false;car.group.updateMatrixWorld(true);
  var box=new THREE.Box3().setFromObject(car.group.children[0],true),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
  if(![size.x,size.y,size.z].every(n=>Number.isFinite(n)&&n>0))throw Error('Empty viewer');
@@ -28,7 +41,7 @@ const hook=`window.checkVehicle=async function(model){
  const distance=size.length()/2/Math.sin(THREE.MathUtils.degToRad(camera.fov)/2)*1.15;
  window.checkView=function(direction){camera.position.copy(center).add(new THREE.Vector3(...direction).normalize().multiplyScalar(distance));camera.near=distance/1000;camera.far=distance*100;camera.updateProjectionMatrix();camera.lookAt(center);renderer.render(scene,camera);return {triangles:renderer.info.render.triangles,drawCalls:renderer.info.render.calls};};
  var wheelMeshes=[];car.group.children[0].traverse(function(o){if(o.isMesh&&o.material&&/c63rin|llanta|tire|wheel/i.test(o.material.name)){var b=new THREE.Box3().setFromObject(o,true);wheelMeshes.push({name:o.name,material:o.material.name,center:b.getCenter(new THREE.Vector3()).toArray(),dimensions:b.getSize(new THREE.Vector3()).toArray()});}});
- return {valid:true,dimensions:size.toArray(),boundsMin:box.min.toArray(),paintMaterialsApplied:car.paint.length,animations:gltf.animations.length,wheelMeshes};
+ return {valid:true,dimensions:size.toArray(),boundsMin:box.min.toArray(),paintMaterialsApplied:car.paint.length,paintTest,animations:gltf.animations.length,wheelMeshes};
 };window.checkReady=true;`;
 const html=localizeViewerHtml(CAR3D_HTML).replace('post({ type: "ready" });',hook+'\npost({ type: "ready" });');
 const browser=await chromium.launch({headless:true,channel:'chrome'});const remoteRequests=[];
@@ -43,5 +56,5 @@ try{
  if(errors.length||remoteRequests.length)throw Error('Viewer errors or unexpected remote requests');
  const evidence={...result,views:6,assetSha256:hash(file),configuration:config,forwardedModel:protocol,configurationSha256:createHash('sha256').update(JSON.stringify(config)).digest('hex'),viewerSha256:hash(resolve(ROOT,'mobile/src/features/car3d/sceneHtml.ts')),hookSha256:hash(resolve(ROOT,'mobile/src/features/car3d/useCar3D.ts')),serializerSha256:hash(resolve(ROOT,'mobile/src/features/car3d/modelConfig.ts')),rendererSha256:hash(new URL(import.meta.url)),threeVersion:'0.160.1',screenshots,remoteRequests};
  if(out)writeFileSync(resolve(out,'evidence.json'),JSON.stringify(evidence,null,2)+'\n');
- console.log(JSON.stringify(out?{valid:true,views:6,out,assetSha256:evidence.assetSha256,stats:result}:{valid:true,views:6}));
+ console.log(JSON.stringify(out?{valid:true,views:6,out,assetSha256:evidence.assetSha256,stats:result}:{valid:true,views:6,paintTest:result.paintTest}));
 }finally{await browser.close();}

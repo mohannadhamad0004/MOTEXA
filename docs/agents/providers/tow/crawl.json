@@ -1,0 +1,733 @@
+[
+ {
+  "route": "/provider/tow",
+  "title": "",
+  "elements": [
+   {
+    "i": 0,
+    "role": "button",
+    "name": "Settings",
+    "size": "44x44",
+    "small": false,
+    "result": "CHANGED"
+   },
+   {
+    "i": 1,
+    "role": "button",
+    "name": "Open jobs",
+    "size": "190x52",
+    "small": false,
+    "result": "NAV /provider/tow/jobs"
+   },
+   {
+    "i": 2,
+    "role": "img",
+    "name": "Mo with the tow truck",
+    "size": "148x186",
+    "small": false,
+    "result": "NOTHING"
+   },
+   {
+    "i": 3,
+    "role": "button",
+    "name": "Test Customer · Toyota Corolla",
+    "size": "332x71",
+    "small": false,
+    "result": "NAV /provider/tow/dispatch/c1a3da96-64b5-4143-b10c-d23ae5091fe0"
+   },
+   {
+    "i": 4,
+    "role": "button",
+    "name": "Completed today: 0",
+    "size": "166x85",
+    "small": false,
+    "result": "NAV /provider/tow/history"
+   },
+   {
+    "i": 5,
+    "role": "button",
+    "name": "Drivers free: 0",
+    "size": "166x85",
+    "small": false,
+    "result": "NAV /provider/tow/fleet"
+   },
+   {
+    "i": 6,
+    "role": "button",
+    "name": "Drivers busy: 1",
+    "size": "166x85",
+    "small": false,
+    "result": "NAV /provider/tow/fleet"
+   },
+   {
+    "i": 7,
+    "role": "button",
+    "name": "Trucks available: 0",
+    "size": "166x85",
+    "small": false,
+    "result": "NAV /provider/tow/fleet"
+   },
+   {
+    "i": 8,
+    "role": "tab",
+    "name": "Home",
+    "size": "138x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 9,
+    "role": "tab",
+    "name": "Jobs",
+    "size": "48x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 10,
+    "role": "tab",
+    "name": "Fleet",
+    "size": "48x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 11,
+    "role": "tab",
+    "name": "Messages",
+    "size": "48x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 12,
+    "role": "tab",
+    "name": "Profile",
+    "size": "48x50",
+    "small": false,
+    "result": "NAV /provider/tow/profile"
+   }
+  ],
+  "problems": [],
+  "landed": "/provider/tow",
+  "total": 13
+ },
+ {
+  "route": "/provider/tow/jobs",
+  "title": "",
+  "elements": [
+   {
+    "i": 0,
+    "role": "button",
+    "name": "Settings",
+    "size": "44x44",
+    "small": false,
+    "result": "CHANGED"
+   },
+   {
+    "i": 1,
+    "role": "button",
+    "name": "Live map",
+    "size": "354x44",
+    "small": false,
+    "result": "NAV /provider/tow/live"
+   },
+   {
+    "i": 2,
+    "role": "input",
+    "name": "Search jobs",
+    "size": "280x54",
+    "small": false,
+    "result": "SKIP"
+   },
+   {
+    "i": 3,
+    "role": "tab",
+    "name": "New",
+    "size": "113x44",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 4,
+    "role": "tab",
+    "name": "Active",
+    "size": "113x44",
+    "small": false,
+    "result": "CHANGED"
+   },
+   {
+    "i": 5,
+    "role": "tab",
+    "name": "Done",
+    "size": "113x44",
+    "small": false,
+    "result": "CHANGED"
+   },
+   {
+    "i": 6,
+    "role": "tab",
+    "name": "Home",
+    "size": "48x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 7,
+    "role": "tab",
+    "name": "Jobs",
+    "size": "138x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 8,
+    "role": "tab",
+    "name": "Fleet",
+    "size": "48x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 9,
+    "role": "tab",
+    "name": "Messages",
+    "size": "48x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 10,
+    "role": "tab",
+    "name": "Profile",
+    "size": "48x50",
+    "small": false,
+    "result": "NAV /provider/tow/profile"
+   }
+  ],
+  "problems": [],
+  "landed": "/provider/tow/jobs",
+  "total": 11
+ },
+ {
+  "route": "/provider/tow/fleet",
+  "title": "",
+  "elements": [
+   {
+    "i": 0,
+    "role": "button",
+    "name": "Settings",
+    "size": "44x44",
+    "small": false,
+    "result": "CHANGED"
+   },
+   {
+    "i": 1,
+    "role": "button",
+    "name": "Drivers",
+    "size": "82x40",
+    "small": false,
+    "result": "NOTHING"
+   },
+   {
+    "i": 2,
+    "role": "button",
+    "name": "Trucks",
+    "size": "78x40",
+    "small": false,
+    "result": "CHANGED"
+   },
+   {
+    "i": 3,
+    "role": "button",
+    "name": "Add driver",
+    "size": "354x50",
+    "small": false,
+    "result": "CHANGED"
+   },
+   {
+    "i": 4,
+    "role": "button",
+    "name": "I drive too",
+    "size": "354x50",
+    "small": false,
+    "result": "CHANGED"
+   },
+   {
+    "i": 5,
+    "role": "switch",
+    "name": "Online",
+    "size": "40x20",
+    "small": true,
+    "result": "CHANGED"
+   },
+   {
+    "i": 6,
+    "role": "button",
+    "name": "Edit",
+    "size": "155x50",
+    "small": false,
+    "result": "CHANGED"
+   },
+   {
+    "i": 7,
+    "role": "button",
+    "name": "Send code",
+    "size": "155x50",
+    "small": false,
+    "result": "CHANGED",
+    "problems": [
+     "http 500 ://localhost:5000/api/tow/me/drivers/aca1d638-7219-489c-878d-fb30bc2e0ed5/invite",
+     "console: Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ]
+   },
+   {
+    "i": 8,
+    "role": "button",
+    "name": "On a job: Test",
+    "size": "320x57",
+    "small": false,
+    "result": "NAV /provider/tow/dispatch/c1a3da96-64b5-4143-b10c-d23ae5091fe0"
+   },
+   {
+    "i": 9,
+    "role": "switch",
+    "name": "Online",
+    "size": "40x20",
+    "small": true,
+    "result": "CHANGED"
+   },
+   {
+    "i": 10,
+    "role": "button",
+    "name": "Edit",
+    "size": "155x50",
+    "small": false,
+    "result": "CHANGED"
+   },
+   {
+    "i": 11,
+    "role": "button",
+    "name": "Send code",
+    "size": "155x50",
+    "small": false,
+    "result": "CHANGED",
+    "problems": [
+     "http 500 ://localhost:5000/api/tow/me/drivers/aca1d638-7219-489c-878d-fb30bc2e0ed5/invite",
+     "console: Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ]
+   },
+   {
+    "i": 12,
+    "role": "tab",
+    "name": "Home",
+    "size": "48x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 13,
+    "role": "tab",
+    "name": "Jobs",
+    "size": "48x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 14,
+    "role": "tab",
+    "name": "Fleet",
+    "size": "138x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 15,
+    "role": "tab",
+    "name": "Messages",
+    "size": "48x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 16,
+    "role": "tab",
+    "name": "Profile",
+    "size": "48x50",
+    "small": false,
+    "result": "NAV /provider/tow/profile"
+   }
+  ],
+  "problems": [
+   "http 500 ://localhost:5000/api/tow/me/drivers/aca1d638-7219-489c-878d-fb30bc2e0ed5/invite",
+   "console: Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+   "http 500 ://localhost:5000/api/tow/me/drivers/aca1d638-7219-489c-878d-fb30bc2e0ed5/invite",
+   "console: Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+  ],
+  "landed": "/provider/tow/fleet",
+  "total": 17
+ },
+ {
+  "route": "/provider/tow/messages",
+  "title": "",
+  "elements": [
+   {
+    "i": 0,
+    "role": "button",
+    "name": "Back",
+    "size": "46x46",
+    "small": false,
+    "result": "NAV /provider/tow"
+   },
+   {
+    "i": 1,
+    "role": "button",
+    "name": "Attach a photo or PDF",
+    "size": "44x44",
+    "small": false,
+    "result": "CHANGED"
+   },
+   {
+    "i": 2,
+    "role": "button",
+    "name": "Send",
+    "size": "44x44",
+    "small": false,
+    "result": "ERROR locator.click: Timeout 5000ms exceeded."
+   },
+   {
+    "i": 3,
+    "role": "tab",
+    "name": "Home",
+    "size": "48x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 4,
+    "role": "tab",
+    "name": "Jobs",
+    "size": "48x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 5,
+    "role": "tab",
+    "name": "Fleet",
+    "size": "48x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 6,
+    "role": "tab",
+    "name": "Messages",
+    "size": "138x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 7,
+    "role": "tab",
+    "name": "Profile",
+    "size": "48x50",
+    "small": false,
+    "result": "NAV /provider/tow/profile"
+   }
+  ],
+  "problems": [],
+  "landed": "/provider/tow/messages",
+  "total": 8
+ },
+ {
+  "route": "/provider/tow/profile",
+  "title": "",
+  "elements": [
+   {
+    "i": 0,
+    "role": "button",
+    "name": "Settings",
+    "size": "44x44",
+    "small": false,
+    "result": "CHANGED"
+   },
+   {
+    "i": 1,
+    "role": "button",
+    "name": "Business info",
+    "size": "336x56",
+    "small": false,
+    "result": "NAV /provider/tow/company"
+   },
+   {
+    "i": 2,
+    "role": "button",
+    "name": "Photos and videos",
+    "size": "336x57",
+    "small": false,
+    "result": "NAV /provider/tow/media"
+   },
+   {
+    "i": 3,
+    "role": "button",
+    "name": "Preview as a customer",
+    "size": "336x57",
+    "small": false,
+    "result": "NAV /provider/tow/preview"
+   },
+   {
+    "i": 4,
+    "role": "button",
+    "name": "Statistics",
+    "size": "336x56",
+    "small": false,
+    "result": "NAV /provider/tow/stats"
+   },
+   {
+    "i": 5,
+    "role": "button",
+    "name": "History",
+    "size": "336x57",
+    "small": false,
+    "result": "NAV /provider/tow/history"
+   },
+   {
+    "i": 6,
+    "role": "button",
+    "name": "Live map",
+    "size": "336x57",
+    "small": false,
+    "result": "NAV /provider/tow/live"
+   },
+   {
+    "i": 7,
+    "role": "button",
+    "name": "Active jobs",
+    "size": "336x57",
+    "small": false,
+    "result": "NAV /provider/tow/active"
+   },
+   {
+    "i": 8,
+    "role": "button",
+    "name": "Availability",
+    "size": "336x57",
+    "small": false,
+    "result": "NAV /provider/tow/availability"
+   },
+   {
+    "i": 9,
+    "role": "button",
+    "name": "Service area and map point",
+    "size": "328x56",
+    "small": false,
+    "result": "NAV /provider/tow/service-area"
+   },
+   {
+    "i": 10,
+    "role": "button",
+    "name": "Application and documents",
+    "size": "336x56",
+    "small": false,
+    "result": "NAV /provider/onboarding"
+   },
+   {
+    "i": 11,
+    "role": "button",
+    "name": "Language and theme",
+    "size": "336x56",
+    "small": false,
+    "result": "CHANGED"
+   },
+   {
+    "i": 12,
+    "role": "button",
+    "name": "More settings",
+    "size": "336x57",
+    "small": false,
+    "result": "NAV /provider/tow/settings"
+   },
+   {
+    "i": 13,
+    "role": "button",
+    "name": "Log out",
+    "size": "354x50",
+    "small": false,
+    "result": "SKIP"
+   },
+   {
+    "i": 14,
+    "role": "tab",
+    "name": "Home",
+    "size": "48x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 15,
+    "role": "tab",
+    "name": "Jobs",
+    "size": "48x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 16,
+    "role": "tab",
+    "name": "Fleet",
+    "size": "48x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 17,
+    "role": "tab",
+    "name": "Messages",
+    "size": "48x50",
+    "small": false,
+    "result": "SELF"
+   },
+   {
+    "i": 18,
+    "role": "tab",
+    "name": "Profile",
+    "size": "138x50",
+    "small": false,
+    "result": "SELF"
+   }
+  ],
+  "problems": [],
+  "landed": "/provider/tow/profile",
+  "total": 19
+ },
+ {
+  "route": "/provider/tow/stats",
+  "title": "",
+  "elements": [
+   {
+    "i": 0,
+    "role": "button",
+    "name": "Back",
+    "size": "44x44",
+    "small": false,
+    "result": "NAV /provider/tow"
+   },
+   {
+    "i": 1,
+    "role": "button",
+    "name": "Settings",
+    "size": "44x44",
+    "small": false,
+    "result": "CHANGED"
+   },
+   {
+    "i": 2,
+    "role": "button",
+    "name": "Dashboard",
+    "size": "92x44",
+    "small": false,
+    "result": "NAV /provider/tow"
+   },
+   {
+    "i": 3,
+    "role": "button",
+    "name": "Jobs",
+    "size": "56x44",
+    "small": false,
+    "result": "NAV /provider/tow/dispatch"
+   },
+   {
+    "i": 4,
+    "role": "button",
+    "name": "Active jobs",
+    "size": "90x44",
+    "small": false,
+    "result": "NAV /provider/tow/active"
+   },
+   {
+    "i": 5,
+    "role": "button",
+    "name": "History",
+    "size": "70x44",
+    "small": false,
+    "result": "NAV /provider/tow/history"
+   },
+   {
+    "i": 6,
+    "role": "button",
+    "name": "Trucks",
+    "size": "66x44",
+    "small": false,
+    "result": "NAV /provider/tow/trucks"
+   },
+   {
+    "i": 7,
+    "role": "button",
+    "name": "Drivers",
+    "size": "71x44",
+    "small": false,
+    "result": "NAV /provider/tow/drivers"
+   },
+   {
+    "i": 8,
+    "role": "button",
+    "name": "Profile",
+    "size": "67x44",
+    "small": false,
+    "result": "NAV /provider/tow/company"
+   },
+   {
+    "i": 9,
+    "role": "button",
+    "name": "Media",
+    "size": "64x44",
+    "small": false,
+    "result": "NAV /provider/tow/media"
+   },
+   {
+    "i": 10,
+    "role": "button",
+    "name": "Customer preview",
+    "size": "131x44",
+    "small": false,
+    "result": "NAV /provider/tow/preview"
+   },
+   {
+    "i": 11,
+    "role": "button",
+    "name": "Availability",
+    "size": "93x44",
+    "small": false,
+    "result": "NAV /provider/tow/availability"
+   },
+   {
+    "i": 12,
+    "role": "button",
+    "name": "Service area",
+    "size": "99x44",
+    "small": false,
+    "result": "NAV /provider/tow/service-area"
+   },
+   {
+    "i": 13,
+    "role": "button",
+    "name": "Live map",
+    "size": "80x44",
+    "small": false,
+    "result": "NAV /provider/tow/live"
+   },
+   {
+    "i": 14,
+    "role": "button",
+    "name": "Settings",
+    "size": "75x44",
+    "small": false,
+    "result": "NAV /provider/tow/settings"
+   }
+  ],
+  "problems": [],
+  "landed": "/provider/tow/stats",
+  "total": 15
+ }
+]

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { View } from "react-native";
 import { Card, GIcon, GText, Tap, Timeline, TimelineStep, Tone } from "../../components/garage";
 import { formatPrice } from "../../core/constants/money";
-import { Point } from "../../core/constants/geo";
+import { Point, haversineKm } from "../../core/constants/geo";
 import { useL } from "../../core/hooks/useL";
 import { gShape, gType, useGarageTheme } from "../../theme/garage";
 import { fmtDateTime } from "../requests/requestBits";
@@ -171,17 +171,23 @@ export function OrderMap({ orderId, height, delivery, shop, courier, me, meFresh
  * The owner's position while his delivery screen is open and the order is OUT_FOR_DELIVERY: watched in the foreground only and
  * sent about every 10 s so the customer can follow. Stops when the screen loses focus or the order leaves that status.
  */
-export function useShareLocation(key: string, sharing: boolean, send: (p: Point) => Promise<unknown>) {
+export function useShareLocation(key: string, sharing: boolean, send: (p: Point) => Promise<unknown>, opts: { minMs?: number; minMeters?: number } = {}) {
   const sendRef = useRef(send);
   sendRef.current = send;
   const last = useRef(0);
-  useEffect(() => { last.current = 0; }, [key, sharing]);
+  const lastPoint = useRef<Point | null>(null);
+  const minMs = opts.minMs ?? 9_000, minMeters = opts.minMeters ?? 0;
+  useEffect(() => { last.current = 0; lastPoint.current = null; }, [key, sharing]);
+  // sent at most every `minMs`, and (when minMeters is set) only once the driver moved that far OR 3x the interval passed
   const onFix = useCallback((fix: { point: Point }) => {
     const now = Date.now();
-    if (now - last.current < 9_000) return;
+    if (now - last.current < minMs) return;
+    const prev = lastPoint.current;
+    if (minMeters && prev && haversineKm(prev, fix.point) * 1000 < minMeters && now - last.current < minMs * 3) return;
     last.current = now;
+    lastPoint.current = fix.point;
     sendRef.current(fix.point).catch(() => undefined);
-  }, []);
+  }, [minMs, minMeters]);
   const feed = useForegroundLocationWatch({
     enabled: sharing,
     restartKey: key,
@@ -192,6 +198,8 @@ export function useShareLocation(key: string, sharing: boolean, send: (p: Point)
   return {
     me: sharing ? feed.fix?.point ?? null : null,
     meFresh: feed.fresh,
+    /** the GPS reading is rough (worse than 50 m) */
+    weak: sharing && !!feed.fix && typeof feed.fix.accuracy === "number" && feed.fix.accuracy > 50,
     problem: feed.message,
     issue: feed.issue,
     canOpenSettings: feed.canOpenSettings,

@@ -1,5 +1,7 @@
 // Part maps in the REAL viewer code (sceneHtml.ts via scripts/accessory-fit-check.mjs, headless Chrome, local Three.js), on the E36:
 // stable piece ids, the stock part hidden while an accessory is on and back when off, and the zone fallback without a confirmed map.
+// FIT-QA (visible clipping / floating gaps, refusal) has its own suite (fit-qa-viewer.test.mjs): here the parts run in evidence mode, so
+// this file keeps testing its own mechanism with the E36 demo parts the QA refuses.
 import { test } from 'node:test'; import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process'; import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'; import { resolve } from 'node:path';
 import { ROOT, loadTS } from '../scripts/vehicle-audit-lib.mjs';
@@ -18,7 +20,7 @@ function run(name, args, { zones = {}, partMap, kit } = {}) {
   writeFileSync(resolve(dir, 'config.json'), JSON.stringify({ ...E36, zones }));
   const extra = [];
   if (partMap) { writeFileSync(resolve(dir, 'map.json'), JSON.stringify(partMap)); extra.push(`--partmap=${resolve(dir, 'map.json')}`); }
-  if (kit) { writeFileSync(resolve(dir, 'kit.json'), JSON.stringify(kit)); extra.push(`--kit=${resolve(dir, 'kit.json')}`); }
+  if (kit) { writeFileSync(resolve(dir, 'kit.json'), JSON.stringify({ ...kit, qaEvidence: true })); extra.push(`--kit=${resolve(dir, 'kit.json')}`); }
   const out = execFileSync(process.execPath, [resolve(ROOT, 'backend/scripts/accessory-fit-check.mjs'), `--car=${CAR}`, `--config=${resolve(dir, 'config.json')}`, `--out=${dir}`, ...extra, ...args],
     { encoding: 'utf8', timeout: 180_000, windowsHide: true });
   return { fit: JSON.parse(out.trim().split('\n').pop()).fit, dir };

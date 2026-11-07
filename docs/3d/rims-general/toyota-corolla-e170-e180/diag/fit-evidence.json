@@ -1,0 +1,98 @@
+{
+  "valid": true,
+  "car": {
+    "dimensions": [
+      2.15703384341484,
+      2.2141303783467388,
+      4.6
+    ],
+    "wheelsFound": true,
+    "mappedParts": [],
+    "partMapIn": []
+  },
+  "fit": {
+    "found": true,
+    "viaPartMap": false,
+    "centres": [
+      [
+        -752,
+        408,
+        -1370,
+        408
+      ],
+      [
+        752,
+        408,
+        -1370,
+        408
+      ],
+      [
+        -752,
+        408,
+        1327,
+        408
+      ],
+      [
+        752,
+        408,
+        1327,
+        408
+      ]
+    ],
+    "meshes": [
+      [
+        "corolla_e180_wheels_Material011_0",
+        "Material.011",
+        528,
+        "RL",
+        320,
+        3024,
+        -863,
+        863
+      ],
+      [
+        "corolla_e180_wheels_tyre_side_0",
+        "tyre_side",
+        1452,
+        "FR",
+        202,
+        3017,
+        -884,
+        884
+      ],
+      [
+        "corolla_e180_wheels_main_paint_0",
+        "main_paint",
+        2700,
+        "RL",
+        25,
+        2923,
+        -877,
+        877
+      ],
+      [
+        "corolla_e180_wheels_Material013_0",
+        "Material.013",
+        1188,
+        "FL",
+        81,
+        2917,
+        -817,
+        817
+      ]
+    ],
+    "low": []
+  },
+  "autofit": null,
+  "kit": {
+    "type": "RIMS",
+    "finish": "SILVER",
+    "size": {
+      "rimInches": 17
+    }
+  },
+  "carSha256": "06a56b0e7faac56f1b44f9d00c2b0e3907680fb939488be979138054ab19c4d6",
+  "partSha256": "512a47b76cd1b5569ab11adc0a509fa99abadf5c963dc3499a534369e42d7572",
+  "viewerSha256": "f00c98db364a9ec2575a0c6164fbbb610720bf8d90517da352dba4f8225deac7",
+  "screenshots": []
+}

@@ -185,3 +185,27 @@ export async function sendPasswordResetOtpEmail({
     throw new Error("Password recovery email could not be delivered.");
   return { emailId: data.id };
 }
+
+// A tow company added this person as a driver: the code lets them set a password (same recovery flow, different wording).
+export async function sendDriverInviteEmail({ to, fullName, otp, company }: OtpEmailInput & { company: string }) {
+  const { data, error } = await deliverEmail({
+    to: [to],
+    subject: "MOTEXA | You were added as a tow driver",
+    text: [
+      `Hello ${fullName},`,
+      "",
+      `${company} added you as a tow driver on MOTEXA.`,
+      "To set your password: open MOTEXA, choose Forgot password, enter this email and this code:",
+      "",
+      otp,
+      "",
+      "This code expires in 5 minutes. Never share it with anyone.",
+      "",
+      `أضافتك ${company} كسائق سحب في MOTEXA. لتعيين كلمة المرور: افتح التطبيق واختر "نسيت كلمة المرور" ثم أدخل بريدك وهذا الرمز.`,
+      "",
+      "MOTEXA Team",
+    ].join("\n"),
+  });
+  if (error || !data?.id) throw new Error("Driver invitation email could not be delivered.");
+  return { emailId: data.id };
+}

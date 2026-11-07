@@ -1,6 +1,9 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
+import { Image } from "expo-image";
 import { View } from "react-native";
+import { PickedPhoto, photoErrorText, pickPhoto } from "../../../core/hooks/pickPhoto";
+import { publicImageUrl } from "../../../core/constants/files";
 import { Card, Chip, EmptyState, ErrorState, Field, GarageHero,  GButton, GText, ListRow, Note, Section, Sheet, SkeletonRows, StatusChip, Toggle, Tone } from "../../../components/garage";
 import { ProviderLayout as GaragePage } from "../../../components/layout/ProviderLayout";
 import { useL } from "../../../core/hooks/useL";
@@ -42,7 +45,40 @@ export default function CompanyDrivers() {
     }, [load])
   );
 
-  const [form, setForm] = useState<{ self: boolean; fullName: string; email: string; password: string; phone: string; truckId: string | null } | null>(null);
+  type Form = { self: boolean; fullName: string; email: string; phone: string; licenceNumber: string; photo: PickedPhoto | null; licence: PickedPhoto | null; truckId: string | null };
+  const blank = (self: boolean): Form => ({ self, fullName: "", email: "", phone: "", licenceNumber: "", photo: null, licence: null, truckId: null });
+  const [form, setForm] = useState<Form | null>(null);
+  const pick = async (key: "photo" | "licence") => {
+    setFormErr(null);
+    try {
+      const p = await pickPhoto();
+      if (p) setForm((f) => (f ? { ...f, [key]: p } : f));
+    } catch (e) {
+      setFormErr(photoErrorText(e, t));
+    }
+  };
+  const save = () => {
+    if (!form) return;
+    if (!form.self && form.fullName.trim().length < 3) return setFormErr(t("Enter the driver's full name.", "أدخل الاسم الكامل للسائق."));
+    if (!form.self && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return setFormErr(t("Enter a valid email: the driver gets his sign-in code there.", "أدخل بريدًا صحيحًا: سيصل إليه رمز الدخول."));
+    if (form.phone.trim().length < 8) return setFormErr(t("Enter the driver's phone.", "أدخل هاتف السائق."));
+    if (form.licenceNumber.trim().length < 4) return setFormErr(t("Enter the licence number.", "أدخل رقم الرخصة."));
+    if (!form.licence) return setFormErr(t("Add a photo of the driving licence.", "أضف صورة رخصة القيادة."));
+    void run(
+      () =>
+        companyDispatch.addDriver({
+          self: form.self,
+          fullName: form.fullName.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim(),
+          licenceNumber: form.licenceNumber.trim(),
+          licencePhoto: { dataBase64: form.licence!.base64, name: "licence.jpg" },
+          ...(form.photo ? { photo: { dataBase64: form.photo.base64, name: "driver.jpg" } } : {}),
+          truckId: form.truckId,
+        }),
+      () => setForm(null)
+    );
+  };
   const [truckFor, setTruckFor] = useState<CompanyDriver | null>(null);
   const [busy, setBusy] = useState(false);
   const [formErr, setFormErr] = useState<string | null>(null);
@@ -60,8 +96,9 @@ export default function CompanyDrivers() {
       setBusy(false);
     }
   };
-  const tone: Record<string, Tone> = { FREE: "success", BUSY: "accent", OFFLINE: "neutral", NO_TRUCK: "warning" };
-  const label: Record<string, string> = { FREE: t("Free", "متاح"), BUSY: t("Busy", "مشغول"), OFFLINE: t("Offline", "غير متصل"), NO_TRUCK: t("No truck ready", "لا شاحنة جاهزة") };
+  const tone: Record<string, Tone> = { FREE: "success", BUSY: "accent", OFFLINE: "neutral", NO_TRUCK: "warning", UNAPPROVED: "warning" };
+  const label: Record<string, string> = { FREE: t("Free", "متاح"), BUSY: t("Busy", "مشغول"), OFFLINE: t("Offline", "غير متصل"), NO_TRUCK: t("No truck ready", "لا شاحنة جاهزة"), UNAPPROVED: t("Licence not approved", "الرخصة غير معتمدة") };
+  const approvalText = (d: CompanyDriver) => d.approval === "PENDING" ? t("Waiting for the licence review by MOTEXA.", "بانتظار مراجعة رخصة السائق من موتكسا.") : d.approval === "REJECTED" ? `${t("Licence rejected", "تم رفض الرخصة")}${d.approvalReason ? `: ${d.approvalReason}` : ""}` : d.approval === "SUSPENDED" ? `${t("Suspended by MOTEXA", "أوقفه موتكسا")}${d.approvalReason ? `: ${d.approvalReason}` : ""}` : null;
   const ownerDrives = !!list?.some((d) => d.isOwner);
 
   return (
@@ -81,9 +118,10 @@ export default function CompanyDrivers() {
       {list ? (
         <>
           <View style={[row, { gap: 10 }]}>
-            <GButton flex icon="person-add-outline" label={t("Add a driver", "إضافة سائق")} onPress={() => setForm({ self: false, fullName: "", email: "", password: "", phone: "", truckId: null })} />
-            {!ownerDrives ? <GButton flex variant="secondary" icon="car-outline" label={t("I drive too", "أنا أقود أيضًا")} onPress={() => setForm({ self: true, fullName: "", email: "", password: "", phone: "", truckId: null })} /> : null}
+            <GButton flex icon="person-add-outline" label={t("Add a driver", "إضافة سائق")} onPress={() => { setFormErr(null); setForm(blank(false)); }} />
+            {!ownerDrives ? <GButton flex variant="secondary" icon="car-outline" label={t("I drive too", "أنا أقود أيضًا")} onPress={() => { setFormErr(null); setForm(blank(true)); }} /> : null}
           </View>
+          <View style={{ marginTop: 8 }}><GButton variant="ghost" icon="stats-chart-outline" label={t("Statistics", "الإحصائيات")} onPress={() => router.push("/provider/tow/stats")} /></View>
           <Note>{t("Only free drivers can be chosen by customers. Busy is set automatically from accept until the job ends.", "يمكن للزبائن اختيار السائقين المتاحين فقط. يُضبط «مشغول» تلقائيًا من القبول حتى انتهاء المهمة.")}</Note>
           {!list.length ? (
             <EmptyState photo="empty.requests" text={t("No drivers yet. Add your first driver.", "لا يوجد سائقون بعد. أضف سائقك الأول.")} />
@@ -92,10 +130,13 @@ export default function CompanyDrivers() {
               {list.map((d) => (
                 <Card key={d.id}>
                   <View style={[row, { alignItems: "center", gap: 8 }]}>
+                    {publicImageUrl(d.photoUri) ? <Image source={{ uri: publicImageUrl(d.photoUri)! }} style={{ width: 40, height: 40, borderRadius: 20 }} contentFit="cover" /> : null}
                     <GText style={[gType.title, { flex: 1 }, align]}>{d.isOwner ? `${d.name} (${t("you", "أنت")})` : d.name}</GText>
                     <StatusChip tone={tone[d.status]} label={label[d.status]} />
                   </View>
                   <GText soft style={[gType.caption, align, { writingDirection: "ltr" }]}>{`${d.phone} · ${d.email}`}</GText>
+                  {approvalText(d) ? <Note tone={d.approval === "PENDING" ? "neutral" : "danger"} icon="shield-checkmark-outline">{approvalText(d)!}</Note> : null}
+                  {!d.isOwner ? <GButton variant="ghost" icon="mail-outline" label={t("Send sign-in code again", "إرسال رمز الدخول مرة أخرى")} disabled={busy} onPress={() => void run(() => companyDispatch.invite(d.id))} /> : null}
                   <ListRow icon="car-outline" title={d.truck ? `${type[d.truck.type]} · ${d.truck.plate}` : t("No truck linked", "لا توجد شاحنة")} sub={t("Change truck", "تغيير الشاحنة")} onPress={() => setTruckFor(d)} />
                   {d.job ? (
                     <ListRow divider icon="navigate-outline" title={`${t("Job", "مهمة")}: ${d.job.customerFirstName}`} sub={`${L[d.job.status]} · ${liveLabel(d.live, t)}`} onPress={() => router.push({ pathname: "/provider/tow/dispatch/[id]", params: { id: d.job!.id } })} />
@@ -114,7 +155,7 @@ export default function CompanyDrivers() {
         closeLabel={t("Close", "إغلاق")}
         title={form?.self ? t("I drive too", "أنا أقود أيضًا") : t("Add a driver", "إضافة سائق")}
         tall
-        footer={<GButton label={t("Save", "حفظ")} busy={busy} onPress={() => form && void run(() => companyDispatch.addDriver(form.self ? { self: true, phone: form.phone, truckId: form.truckId } : form), () => setForm(null))} />}
+        footer={<GButton label={t("Save", "حفظ")} busy={busy} onPress={save} />}
       >
         {form ? (
           <View>
@@ -122,11 +163,22 @@ export default function CompanyDrivers() {
               <>
                 <Field label={t("Full name", "الاسم الكامل")} value={form.fullName} onChangeText={(v) => setForm({ ...form, fullName: v })} maxLength={80} />
                 <Field label={t("Email (the driver signs in with it)", "البريد الإلكتروني (يسجّل السائق الدخول به)")} value={form.email} onChangeText={(v) => setForm({ ...form, email: v })} autoCapitalize="none" maxLength={120} />
-                <Field label={t("Password (give it to the driver)", "كلمة المرور (أعطها للسائق)")} value={form.password} onChangeText={(v) => setForm({ ...form, password: v })} autoCapitalize="none" maxLength={128} />
-                <GText soft style={[gType.caption, align, { marginBottom: 10 }]}>{t("8+ characters with uppercase, lowercase, a number and a symbol.", "8 أحرف أو أكثر مع حرف كبير وصغير ورقم ورمز.")}</GText>
+                <GText soft style={[gType.caption, align, { marginBottom: 10 }]}>{t("We email the driver a code to set his own password. Nothing is shared with him until you save.", "نرسل للسائق رمزًا بالبريد ليعيّن كلمة مروره بنفسه.")}</GText>
               </>
             ) : null}
-            <Field label={t("Phone", "الهاتف")} value={form.phone} onChangeText={(v) => setForm({ ...form, phone: v })} keyboardType="phone-pad" maxLength={24} />
+            <Field label={t("Phone (private, never shown to customers)", "الهاتف (خاص، لا يظهر للزبائن)")} value={form.phone} onChangeText={(v) => setForm({ ...form, phone: v })} keyboardType="phone-pad" maxLength={24} />
+            <Field label={t("Driving licence number", "رقم رخصة القيادة")} value={form.licenceNumber} onChangeText={(v) => setForm({ ...form, licenceNumber: v })} autoCapitalize="characters" maxLength={40} />
+            <GText soft style={[gType.caption, align, { marginBottom: 6 }]}>{t("The licence photo is private: only you and MOTEXA's review team see it.", "صورة الرخصة خاصة: لا يراها إلا أنت وفريق المراجعة في موتكسا.")}</GText>
+            <View style={[row, { gap: 10, marginBottom: 12 }]}>
+              <View style={{ flex: 1, gap: 6 }}>
+                {form.licence ? <Image source={{ uri: form.licence.uri }} style={{ height: 90, borderRadius: 12 }} contentFit="cover" accessibilityLabel={t("Licence photo", "صورة الرخصة")} /> : null}
+                <GButton variant="secondary" icon="card-outline" label={form.licence ? t("Change licence photo", "تغيير صورة الرخصة") : t("Licence photo", "صورة الرخصة")} onPress={() => void pick("licence")} />
+              </View>
+              <View style={{ flex: 1, gap: 6 }}>
+                {form.photo ? <Image source={{ uri: form.photo.uri }} style={{ height: 90, borderRadius: 12 }} contentFit="cover" accessibilityLabel={t("Driver photo", "صورة السائق")} /> : null}
+                <GButton variant="secondary" icon="person-circle-outline" label={form.photo ? t("Change driver photo", "تغيير صورة السائق") : t("Driver photo", "صورة السائق")} onPress={() => void pick("photo")} />
+              </View>
+            </View>
             <GText style={[gType.label, align, { marginBottom: 8 }]}>{t("Truck", "الشاحنة")}</GText>
             <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
               <Chip label={t("None", "بدون")} on={!form.truckId} onPress={() => setForm({ ...form, truckId: null })} />

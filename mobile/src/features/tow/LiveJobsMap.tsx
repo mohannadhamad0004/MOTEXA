@@ -52,18 +52,21 @@ export function LiveJobsMap({ jobs, onOpen, showCompany = false }: { jobs: TowJo
       )}
       {chosen ? <RouteSummary route={route} loading={loading} /> : null}
       {jobs.map((j) => (
-        <Tap key={j.id} label={j.customer.firstName} onPress={() => setSel(j.id === sel ? null : j.id)} style={[{ padding: 12, borderRadius: gShape.card, backgroundColor: j.id === sel ? g.tint : g.card, gap: 4 }, shadow(1)]}>
+        <View key={j.id} style={[{ borderRadius: gShape.card, backgroundColor: j.id === sel ? g.tint : g.card, overflow: "hidden" }, shadow(1)]}>
+         <Tap label={j.customer.firstName} onPress={() => setSel(j.id === sel ? null : j.id)} style={{ padding: 12, paddingBottom: 0, gap: 4 }}>
           <View style={[row, { alignItems: "center", gap: 8 }]}>
             <GIcon name="car-outline" size={18} />
             <GText numberOfLines={1} style={[gType.label, { fontWeight: "800", flex: 1 }, align]}>{showCompany ? `${j.company.name} · ${j.customer.firstName}` : `${j.customer.firstName} · ${j.vehicle.make} ${j.vehicle.model}`}</GText>
             <StatusChip tone={towTone(j.status)} label={j.status === "EN_ROUTE" && j.arrivedAt ? L.ARRIVED : L[j.status]} />
           </View>
           <GText soft numberOfLines={1} style={[gType.caption, align]}>{j.driver ? `${j.driver.name} · ${liveLabel(j.driver.live, t)}` : t("No driver yet", "لا يوجد سائق بعد")}</GText>
-          <Tap label={t("Open", "فتح")} onPress={() => onOpen(j.id)} style={[row, { minHeight: 44, alignItems: "center", gap: 4 }]}>
+         </Tap>
+         {/* a sibling of the select Tap, not inside it: a button inside a button is invalid DOM on web */}
+         <Tap label={t("Open", "فتح")} onPress={() => onOpen(j.id)} style={[row, { minHeight: 44, alignItems: "center", gap: 4, paddingHorizontal: 12 }]}>
             <GText style={[gType.caption, { color: g.accentText, fontWeight: "800" }]}>{t("Open", "فتح")}</GText>
             <GIcon name="chevron-forward" size={14} flip />
-          </Tap>
-        </Tap>
+         </Tap>
+        </View>
       ))}
     </View>
   );

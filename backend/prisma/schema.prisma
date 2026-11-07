@@ -383,6 +383,73 @@ model Truck {
   @@index([verificationStatus])
 }
 
+enum TowDriverApproval {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum TowChoice {
+  NEAREST
+  COMPANY
+  DRIVER
+}
+
+// One review per completed job; counts for the driver and for his company. Real ratings only.
+model TowReview {
+  id         String     @id @default(uuid())
+  requestId  String     @unique
+  request    TowRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  customerId String
+  driverId   String
+  driver     TowDriver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  companyId  String
+  stars      Int
+  comment    String?
+  createdAt  DateTime   @default(now())
+
+  @@index([driverId])
+  @@index([companyId])
+}
+
+// In-app chat of one job between the customer and the driver (the company can read).
+model TowRequestMessage {
+  id           String     @id @default(uuid())
+  requestId    String
+  request      TowRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  authorUserId String
+  body         String
+  createdAt    DateTime   @default(now())
+
+  @@index([requestId, createdAt])
+}
+
+// The driver's recent points while a job is active (short trail for the route line). Deleted when the job ends.
+model TowJobTrail {
+  id        String     @id @default(uuid())
+  requestId String
+  request   TowRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  lat       Float
+  lng       Float
+  at        DateTime   @default(now())
+
+  @@index([requestId, at])
+}
+
+// "Report a problem" from the customer; the tow admin reads it.
+model TowReport {
+  id         String     @id @default(uuid())
+  requestId  String
+  request    TowRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  reporterId String
+  body       String
+  closedAt   DateTime?
+  createdAt  DateTime   @default(now())
+
+  @@index([requestId])
+}
+
 // ---- Tow drivers: a login added by the company owner (or the owner himself, "I drive too"), one company, optionally one truck.
 // Status is FREE / BUSY / OFFLINE: OFFLINE is the driver's switch, BUSY is computed (an accepted job not finished yet).
 model TowDriver {
@@ -395,6 +462,15 @@ model TowDriver {
   truck     Truck?            @relation(fields: [truckId], references: [id], onDelete: SetNull)
   phone     String
   offline   Boolean           @default(false)
+
+  // licence review (tow admin). A driver is never FREE / visible to customers unless APPROVED.
+  licenceNumber  String?
+  approval       TowDriverApproval @default(PENDING)
+  approvalReason String?
+  reviewedById   String?
+  reviewedAt     DateTime?
+  files          ProviderFile[]
+  reviews        TowReview[]
 
   // last position, sent every ~10 s while the driver's job screen is open on an active job (foreground only)
   lastLat Float?
@@ -536,6 +612,8 @@ enum ProviderFilePurpose {
   PRODUCT_IMAGE
   PARTS_SHOP_DOCUMENT
   MESSAGE_ATTACHMENT
+  DRIVER_PHOTO // public (shown on the driver card)
+  DRIVER_LICENCE // private: company owner + tow admins only
 }
 
 enum ProviderDocStatus {
@@ -571,6 +649,8 @@ model ProviderFile {
   product      PartsProduct?      @relation(fields: [productId], references: [id], onDelete: Cascade)
   partsShopId  String?
   partsShop    PartsShopProfile?  @relation(fields: [partsShopId], references: [id], onDelete: Cascade)
+  towDriverId  String?
+  towDriver    TowDriver?         @relation(fields: [towDriverId], references: [id], onDelete: Cascade)
 
   label        String?
   originalName String
@@ -936,6 +1016,8 @@ enum TowProblemType {
 enum TowCancelledBy {
   CUSTOMER
   COMPANY
+  SYSTEM // nobody accepted in time
+  ADMIN
 }
 
 model TowRequest {
@@ -969,8 +1051,20 @@ model TowRequest {
   driver            TowDriver? @relation("TowRequestDriver", fields: [driverId], references: [id], onDelete: SetNull)
   requestedDriverId String?
   requestedDriver   TowDriver? @relation("TowRequestRequestedDriver", fields: [requestedDriverId], references: [id], onDelete: SetNull)
-  // the driver reached the customer (status stays EN_ROUTE until towing starts)
+  // the driver reached the customer (status stays EN_ROUTE until towing starts); loading / delivered are stamps in the same way
   arrivedAt         DateTime?
+  loadingAt         DateTime?
+  deliveredAt       DateTime?
+  choiceMode        TowChoice?
+  // the open offer: nobody accepted before this time -> re-offered (NEAREST) or ended (reason TIMEOUT)
+  offerExpiresAt    DateTime?
+  triedDriverIds    String[]   @default([])
+  // total distance driven while the job was active (kept after the exact trail is deleted)
+  distanceMeters    Int?
+  trail             TowJobTrail[]
+  review            TowReview?
+  messages          TowRequestMessage[]
+  reports           TowReport[]
   // Required by the API for new requests; the column default only gives rows that existed before it OTHER.
   problemType    TowProblemType @default(OTHER)
   notes          String?
@@ -1232,6 +1326,18 @@ model VehicleCatalogRequest {
 
 model Vehicle3DImport {
  id String @id @default(uuid())
+ /// Backend-inspected source only; never provider credentials or signed download URLs.
+ sourceProvider String?
+ sourceUid String? @unique
+ sourceMetadata Json?
+ importStage String?
+ errorCode String?
+ leaseToken String?
+ leaseUntil DateTime?
+ queuedAt DateTime?
+ finishedAt DateTime?
+ @@index([status, leaseUntil])
+ @@index([importStage, leaseUntil])
  generationId String
  generation VehicleGeneration @relation(fields: [generationId], references: [id], onDelete: Restrict)
  uploadedByUserId String

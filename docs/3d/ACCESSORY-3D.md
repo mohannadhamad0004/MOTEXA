@@ -197,8 +197,8 @@ a built tyre, and kept stock tyres (moved by name, `fit.shift`; only when each t
 built tyres). Rims off = everything back exactly. Each rim fit measures the stock tyre face vs the fender per wheel (`tyreToFenderMm`,
 < 0 = outside) and suggests the per-axle inset that makes it flush (`wheelInset.suggested`); the admin previews a draft live and saves it.
 The car revision seen by other fitter types ignores the RIMS zone (`revisionOf`), so an inset never makes a wing / bumper fit stale.
-Applied on the dev DB to the 5 cars measured outside the fender (E36 16/29, X5 E53 7/7, W203 2/0, Fabia 3/9, Octavia 0/4 mm): all now
-0-7 mm inside; the other cars have no inset. Evidence: `docs/3d/bodykit-test/rims-fit/bmw-3-series-e36/wheel-inset/`.
+Was applied on the dev DB to 5 cars (E36 16/29, X5 E53 7/7, W203 2/0, Fabia 3/9, Octavia 0/4 mm); since RIMS-GENERAL the move is automatic
+and these overrides were reset on 2026-11-07 (no car has an inset now; the admin override stays available). Evidence: `docs/3d/bodykit-test/rims-fit/bmw-3-series-e36/wheel-inset/`.
 
 Fit versions are per fitter group (`FIT_VERSIONS` + `FIT_GROUPS` in `sceneHtml.ts`, parsed by the server): rims / wings (wing, spoiler,
 roof rack) / bumpers / other. Bump only the group whose fitter changed: only that group's stored fits go stale and are recomputed

@@ -54,7 +54,7 @@ export default function CompanyDispatch({ initialBucket = "new" }: {initialBucke
         />
       }
     >
-      <SearchBar value={q} onChange={setQ} placeholder={t("Search jobs","???? ?? ????")}/>
+      <SearchBar value={q} onChange={setQ} placeholder={t("Search jobs","ابحث في المهام")}/>
       <Tabs
         value={bucket}
         onChange={setBucket}

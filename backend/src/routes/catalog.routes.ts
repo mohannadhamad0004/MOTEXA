@@ -1,4 +1,5 @@
 import { publicProviderMedia } from "../services/public-provider-presentation.js";
+import { freeDriversNear } from "../services/tow-cards.js";
 import {publishedVehicleList} from "../services/vehicle-taxonomy.js";
 import express, { Router } from "express";
 import { readFile } from "node:fs/promises";
@@ -465,6 +466,10 @@ router.get("/tow/companies", async (req, res) => {
         trucks: { where: { verificationStatus: "APPROVED", archivedAt: null }, select: { truckType: true, operationalStatus: true, files: { select: { purpose: true, expiresAt: true } } } },
       },
     });
+    // real numbers only: FREE drivers right now and the stored reviews
+    const freeBy = new Map<string, number>();
+    for (const d of await freeDriversNear(null)) freeBy.set(d._companyId, (freeBy.get(d._companyId) ?? 0) + 1);
+    const rated = await prisma.towReview.groupBy({ by: ["companyId"], _avg: { stars: true }, _count: { _all: true } });
     const rows = companies
       // A company with no approved truck has nothing to offer a customer yet, so it is not listed.
       .filter((c) => c.trucks.length > 0)
@@ -479,6 +484,9 @@ router.get("/tow/companies", async (req, res) => {
         baseLat: round3(c.baseLat),
         baseLng: round3(c.baseLng),
         ...(point ? distanceTo(point, c) : {}),
+        verified: true, // listed = approved by MOTEXA
+        freeDrivers: freeBy.get(c.id) ?? 0,
+        rating: { avg: rated.find((x) => x.companyId === c.id)?._avg.stars ? Math.round(rated.find((x) => x.companyId === c.id)!._avg.stars! * 10) / 10 : null, count: rated.find((x) => x.companyId === c.id)?._count._all ?? 0 },
         approvedTrucks: c.trucks.length,
         // a truck with an expired document is not available for new work
         availableTrucks: c.trucks.filter((t) => t.operationalStatus === "AVAILABLE" && expiredDocuments(t.files).length === 0).length,
@@ -533,6 +541,9 @@ router.get("/tow/companies/:id", async (req, res) => {
     // a truck with an expired document is shown as not available (it cannot take new work)
     const usable = (t: (typeof c.trucks)[number]) => t.operationalStatus === "AVAILABLE" && expiredDocuments(t.files).length === 0;
     const trucks = [...c.trucks].sort((a, b) => Number(usable(b)) - Number(usable(a)));
+    const agg = await prisma.towReview.aggregate({ where: { companyId: c.id }, _avg: { stars: true }, _count: { _all: true } });
+    const reviews = await prisma.towReview.findMany({ where: { companyId: c.id }, orderBy: { createdAt: "desc" }, take: 20, select: { stars: true, comment: true, createdAt: true } });
+    const driversCount = await prisma.towDriver.count({ where: { companyId: c.id, approval: "APPROVED", user: { status: "ACTIVE" } } });
     return res.json({
       success: true,
       company: {
@@ -549,6 +560,11 @@ router.get("/tow/companies/:id", async (req, res) => {
         media: await publicProviderMedia("tow", c.id, trucks.map(t=>t.id)),
         approvedTrucks: trucks.length,
         availableTrucks: trucks.filter(usable).length,
+        verified: true,
+        driversCount,
+        freeDrivers: (await freeDriversNear(null, c.id)).length,
+        rating: { avg: agg._avg.stars === null ? null : Math.round(agg._avg.stars * 10) / 10, count: agg._count._all },
+        reviews, // no reviewer names
       },
       trucks: trucks.map((t) => ({
         id: t.id,

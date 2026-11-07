@@ -15,6 +15,9 @@ import { Chip } from "../catalog/catalogBits";
 import { CONDITIONS, PART_TYPES, usePartLabels } from "../catalog/partAttrs";
 import { CATALOG_GROUPS, labelOf } from "../../core/constants/categories";
 import { VehiclePicker, useVehicleList } from "../catalog/VehiclePicker";
+import { router } from "expo-router";
+import { typesForCategory } from "../accessory3d/api";
+import { Dots, UploadBar } from "../fleet/steps";
 
 // The product form shared by the shop (provider) screen and the MOTEXA admin editor. It knows nothing about who is
 // saving: the caller passes onSubmit (provider or admin service) and onDone.
@@ -31,6 +34,10 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
   const [stock, setStock] = useState(String(initial.stock || ""));
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // five short steps: photos, name + category + condition, price + stock, which cars, optional 3D
+  const [step, setStep] = useState(0);
+  const [more, setMore] = useState(false);
+  const STEPS = [t("Photo", "الصورة"), t("What is it?", "ما هي القطعة؟"), t("Price and stock", "السعر والمخزون"), t("Fits which cars", "تناسب أي سيارات"), t("3D (optional)", "ثلاثي الأبعاد (اختياري)")];
   const picked = f.imageUri !== initial.imageUri; // a local photo chosen in this session, not saved yet
   // "Fits these cars": picked from the vehicle list (no free text), each with its own year range
   const vehicles = useVehicleList("fitment").list;
@@ -57,10 +64,34 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
     setF({ ...f, fitments: [...f.fitments, { make: x.make, model: x.model, ...years }] });
   };
 
+  const isEmptyRow = (x: Fitment) => !x.make.trim() && !x.model.trim();
+  /** The checks of one step (null = fine). The same rules as before, just asked where the field is. */
+  const check = (s: number): string | null => {
+    if (s === 1) {
+      if (!f.name.trim()) return t("Enter the part name.", "أدخل اسم القطعة.");
+      if (!f.category) return t("Choose a category.", "اختر فئة.");
+      if (CATALOG_GROUPS.some((g) => g.categories.some((c) => c.key === f.category && c.children))) return t("Choose a more specific category (for example Bulbs or Headlights under Lighting).", "اختر فئة أدق (مثل المصابيح أو الأضواء الأمامية ضمن الإضاءة).");
+    }
+    if (s === 2) {
+      const p = parseFloat(price || "0"), n = parseInt(stock || "0", 10);
+      if (!(p >= 0) || Number.isNaN(p)) return t("Enter a valid price.", "أدخل سعرًا صحيحًا.");
+      if (!(n >= 0) || Number.isNaN(n)) return t("Enter a valid stock quantity.", "أدخل كمية صحيحة.");
+    }
+    return null;
+  };
+  const next = () => {
+    const v = check(step);
+    if (v) return setErr(v);
+    setErr(null);
+    setStep(step + 1);
+  };
   const save = async () => {
     // at least one car or Universal; every car from the vehicle list with a valid year range (the server checks the same)
-    const isEmptyRow = (x: Fitment) => !x.make.trim() && !x.model.trim();
     const cars = f.fitments.filter((x) => !isEmptyRow(x));
+    for (const s of [1, 2]) {
+      const v = check(s);
+      if (v) { setStep(s); return setErr(v); }
+    }
     if (!cars.length && !f.isUniversal) return setErr(t("Add at least one car this part fits, or mark it Universal.", "أضف سيارة واحدة على الأقل تناسبها القطعة، أو حدّدها كعامة."));
     const bad = cars.find((x) => !listed(x));
     if (bad) return setErr(t(`${bad.make} ${bad.model} is not on the vehicle list. Remove it and add the car from the list.`, `${bad.make} ${bad.model} غير موجودة في قائمة المركبات. أزلها وأضف السيارة من القائمة.`));
@@ -96,6 +127,9 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
           {admin ? t("This listing is hidden from customers. Use Show again on the shop page to publish it.", "هذه القطعة مخفية عن العملاء. استخدم إظهار مرة أخرى من صفحة المتجر لنشرها.") : t("You can edit the details, but only MOTEXA can make this listing visible again.", "يمكنك تعديل التفاصيل، ولكن MOTEXA فقط يمكنها إعادة إظهار هذه القطعة.")}
         </Notice>
       )}
+      <Dots count={STEPS.length} index={step} />
+      <Text style={[{ color: col.text, fontSize: 18, fontWeight: "800", marginBottom: 8 }, align]}>{STEPS[step]}</Text>
+      {step === 0 ? (<>
       <SectionHeader title={t("Product photo", "صورة المنتج")} />
       {!f.imageUri ? (
         <Notice tone="warning" icon="image-outline">
@@ -124,14 +158,19 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
         {picked ? <Button variant="ghost" icon="close-outline" label={t("Cancel selection", "إلغاء الاختيار")} onPress={() => setF({ ...f, imageUri: initial.imageUri })} /> : null}
       </Card>
 
-      <SectionHeader title={t("Details", "التفاصيل")} />
+      </>) : null}
+
+      {step === 1 ? (<>
       <Card>
         <Input label={t("Part name", "اسم القطعة")} value={f.name} onChangeText={(v) => setF({ ...f, name: v })} />
-        <Input label={t("Brand", "العلامة التجارية")} value={f.brand} onChangeText={(v) => setF({ ...f, brand: v })} />
-        <Input label={t("Part number", "رقم القطعة")} value={f.partNumber} autoCapitalize="characters" onChangeText={(v) => setF({ ...f, partNumber: v })} />
-        <Input label={t("Description", "الوصف")} value={f.description} multiline onChangeText={(v) => setF({ ...f, description: v })} />
-        <Input label={t("Price (₪)", "السعر (₪)")} value={price} keyboardType="decimal-pad" onChangeText={setPrice} />
-        <Input label={t("Stock quantity", "الكمية المتوفرة")} value={stock} keyboardType="number-pad" onChangeText={setStock} />
+        <Button variant="ghost" icon={more ? "chevron-up-outline" : "chevron-down-outline"} label={more ? t("Hide more details", "إخفاء التفاصيل الإضافية") : t("More details: brand, part number, description", "المزيد: العلامة ورقم القطعة والوصف")} onPress={() => setMore(!more)} />
+        {more ? (
+          <>
+            <Input label={t("Brand", "العلامة التجارية")} value={f.brand} onChangeText={(v) => setF({ ...f, brand: v })} />
+            <Input label={t("Part number", "رقم القطعة")} value={f.partNumber} autoCapitalize="characters" onChangeText={(v) => setF({ ...f, partNumber: v })} />
+            <Input label={t("Description", "الوصف")} value={f.description} multiline onChangeText={(v) => setF({ ...f, description: v })} />
+          </>
+        ) : null}
       </Card>
 
       <SectionHeader title={t("Condition", "الحالة")} />
@@ -181,6 +220,16 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
         ))}
       </Card>
 
+      </>) : null}
+
+      {step === 2 ? (
+        <Card>
+          <Input label={t("Price (₪)", "السعر (₪)")} value={price} keyboardType="decimal-pad" onChangeText={setPrice} />
+          <Input label={t("Stock quantity", "الكمية المتوفرة")} value={stock} keyboardType="number-pad" onChangeText={setStock} />
+        </Card>
+      ) : null}
+
+      {step === 3 ? (<>
       <SectionHeader title={t("Fits these cars", "تناسب هذه السيارات")} />
       <Card>
         <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
@@ -225,10 +274,27 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
       ) : (
         <Button variant="ghost" icon="add-outline" label={t("Add a car", "إضافة سيارة")} onPress={() => setAdding({ make: "", model: "", year: "" })} />
       )}
+      </>) : null}
+
+      {step === 4 ? (
+        <Card>
+          <Text style={[{ color: col.text, fontSize: 13, lineHeight: 20, marginBottom: 10 }, align]}>
+            {typesForCategory(f.category).length
+              ? product ? t("This part can be shown in 3D on customers' cars.", "يمكن عرض هذه القطعة ثلاثية الأبعاد على سيارات العملاء.") : t("Save the part first, then open it to add its 3D model. You can skip this step.", "احفظ القطعة أولًا ثم افتحها لإضافة نموذجها الثلاثي الأبعاد. يمكنك تخطي هذه الخطوة.")
+              : t("3D is for body kits, exterior accessories and rims. Nothing to do here: save the part.", "الثلاثي الأبعاد لأطقم الهيكل والإكسسوارات الخارجية والجنوط. لا شيء هنا: احفظ القطعة.")}
+          </Text>
+          {product && typesForCategory(f.category).length ? <Button variant="secondary" icon="cube-outline" label={t("Show it in 3D on customers' cars", "اعرضها ثلاثية الأبعاد على سيارات العملاء")} onPress={() => router.push(`/provider/parts/accessory-3d/${product.id}`)} /> : null}
+        </Card>
+      ) : null}
 
       <View style={{ height: 20 }} />
       {err ? <Notice tone="danger" icon="alert-circle-outline">{err}</Notice> : null}
-      <Button label={isNew ? t("Add part", "إضافة القطعة") : t("Save changes", "حفظ التغييرات")} disabled={busy} onPress={save} />
+      <UploadBar />
+      <View style={{ gap: 8 }}>
+        {step < STEPS.length - 1 ? <Button label={t("Next", "التالي")} onPress={next} /> : <Button label={isNew ? t("Add part", "إضافة القطعة") : t("Save changes", "حفظ التغييرات")} disabled={busy} onPress={save} />}
+        {step === 3 ? <Button variant="ghost" label={isNew ? t("Save without 3D", "حفظ بدون ثلاثي الأبعاد") : t("Save changes", "حفظ التغييرات")} disabled={busy} onPress={save} /> : null}
+        {step > 0 ? <Button variant="ghost" label={t("Back", "رجوع")} onPress={() => { setErr(null); setStep(step - 1); }} /> : null}
+      </View>
     </>
   );
 }
