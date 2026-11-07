@@ -1,12 +1,13 @@
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
-import { Card, Chip, EmptyState, ErrorState, GaragePage, HeroLayout, GButton, GIcon, GText, Note, OptionSheet, SearchBar, SkeletonRows, StatusChip, Tap } from "../../../components/garage";
+import { Card, Chip, EmptyState, ErrorState, GaragePage, HeroLayout, GButton, GIcon, GText, ListRow, Note, OptionSheet, SearchBar, SkeletonRows, StatusChip, Tap } from "../../../components/garage";
 import { CITIES, cityLabel, cityToEnglish } from "../../../core/constants/cities";
 import { clearLocationMemory, Point } from "../../../core/constants/geo";
 import { useL } from "../../../core/hooks/useL";
 import { useSessionUser } from "../../../core/session/session";
 import { TowCompanyRow, catalogService } from "../../../features/catalog/catalogService";
+import { RatingText } from "../../../features/tow/DriverCard";
 import { WhileYouWait } from "../../../features/requests/WhileYouWait";
 import { LocationProblem, useCurrentLocation } from "../../../features/shared/useCurrentLocation";
 import type { TruckType } from "../../../features/tow/towService";
@@ -33,7 +34,11 @@ function CompanyCard({ x }: { x: TowCompanyRow }) {
           <GIcon name="car-outline" size={22} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <GText numberOfLines={2} style={[gType.label, { fontWeight: "800", fontSize: 16 }, align]}>{x.name}</GText>
+          <View style={[row, { alignItems: "center", gap: 6 }]}>
+            <GText numberOfLines={2} style={[gType.label, { fontWeight: "800", fontSize: 16, flexShrink: 1 }, align]}>{x.name}</GText>
+            {x.verified ? <GIcon name="checkmark-circle" size={16} color={g.success} /> : null}
+            {x.rating ? <RatingText rating={x.rating} /> : null}
+          </View>
           <View style={[row, { alignItems: "center", gap: 4, flexWrap: "wrap", marginTop: 2 }]}>
             <GIcon name="location-outline" size={13} color={g.soft} />
             <GText soft numberOfLines={1} style={[gType.caption, { flexShrink: 1 }]}>{cityLabel(x.city, isArabic)}</GText>
@@ -46,6 +51,7 @@ function CompanyCard({ x }: { x: TowCompanyRow }) {
               icon={free ? "checkmark-circle" : "time-outline"}
               label={free ? `${x.availableTrucks} ${x.availableTrucks === 1 ? t("truck free", "شاحنة متاحة") : t("trucks free", "شاحنات متاحة")}` : t("No free truck", "لا توجد شاحنة متاحة")}
             />
+            {x.freeDrivers !== undefined ? <GText soft style={[gType.caption, align, { marginTop: 4 }]}>{t(`${x.freeDrivers} free drivers`, `${x.freeDrivers} سائقين متاحين`)}</GText> : null}
           </View>
         </View>
       </View>
@@ -59,7 +65,7 @@ function CompanyCard({ x }: { x: TowCompanyRow }) {
 
 export default function CustomerTow() {
   const user = useSessionUser();
-  const { g, row } = useGarageTheme();
+  const { g, row, align } = useGarageTheme();
   const { t, isArabic } = useL();
   const { type } = useTruckLabels();
   const [city, setCity] = useState("");
@@ -97,21 +103,11 @@ export default function CustomerTow() {
   // "Request nearest available": the closest company that has a free truck, straight into its request form.
   const [nearBusy, setNearBusy] = useState(false);
   const [nearErr, setNearErr] = useState<string | null>(null);
+  // the server picks the nearest FREE driver from the pickup point you give in the form
   const requestNearest = async () => {
     setNearErr(null);
-    const p = me ?? (await useMyLocation());
-    if (!p) return;
-    setNearBusy(true);
-    try {
-      const list = await catalogService.listTowCompanies({ availableOnly: true, sort: "nearest", lat: p.lat, lng: p.lng });
-      const best = list[0];
-      if (!best) setNearErr(t("No company has a free truck right now. Try again soon.", "لا توجد شركة لديها شاحنة متاحة الآن. حاول مرة أخرى قريبًا."));
-      else router.push({ pathname: "/customer/towrequest/new", params: { companyId: best.id } });
-    } catch (e: any) {
-      setNearErr(e.message);
-    } finally {
-      setNearBusy(false);
-    }
+    setNearBusy(false);
+    router.push({ pathname: "/customer/towrequest/new", params: { mode: "NEAREST" } });
   };
 
   const [items, setItems] = useState<TowCompanyRow[]>([]);
@@ -188,6 +184,12 @@ export default function CustomerTow() {
       }
     >
       {loc.dialog}
+      <Card pad={12}>
+        <GText style={[gType.label, { fontWeight: "800", marginBottom: 4 }, align]}>{t("How do you want your tow?", "كيف تريد السحب؟")}</GText>
+        <ListRow icon="navigate-outline" title={t("Nearest available", "الأقرب المتاح")} sub={t("We offer it to the nearest free driver.", "نعرضه على أقرب سائق متاح.")} onPress={requestNearest} />
+        <ListRow divider icon="business-outline" title={t("Choose a company", "اختر شركة")} sub={t("Pick from the companies below.", "اختر من الشركات أدناه.")} />
+        <ListRow divider icon="person-outline" title={t("Choose a driver", "اختر سائقًا")} sub={t("See free drivers near you.", "شاهد السائقين المتاحين بالقرب منك.")} onPress={() => router.push("/customer/tow/drivers")} />
+      </Card>
       {nearErr ? <Note tone="danger" icon="alert-circle-outline">{nearErr}</Note> : null}
 
       <SearchBar value={name} onChangeText={setName} placeholder={t("Company name", "اسم الشركة")} />

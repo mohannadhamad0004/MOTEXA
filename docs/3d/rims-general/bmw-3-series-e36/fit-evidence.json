@@ -26,7 +26,7 @@
   },
   "fit": {
     "type": "RIMS",
-    "fitVersion": 5,
+    "fitVersion": 6,
     "replaces": {
       "how": "part map wheels",
       "hidden": 12
@@ -34,171 +34,137 @@
     "wheels": [
       {
         "wheel": "RL",
-        "stockOuterGapMm": -1.719,
-        "targetInsetMm": 5,
-        "appliedAxleOffsetMm": 0,
-        "finalOuterGapMm": -1.719,
-        "axleConfidence": 0.8202395728485111,
-        "archConfidence": 0.9523809523809523,
-        "tyreMode": "generated",
-        "warnings": [
-          "INNER_CLEARANCE_LIMITED",
-          "USED_STOCK_OFFSET",
-          "FALLBACK_TYRE"
-        ],
         "refusal": null,
-        "center": [
-          -0.7972421401666042,
-          0.32898414991401864,
-          -1.3143712875653781
+        "warnings": [
+          "LIMITED_BY_CLEARANCE",
+          "BUILT_TYRE"
         ],
-        "axle": [
-          -0.9962006049924136,
-          0.08708819964354052,
-          -0.000009777308326478081
-        ],
-        "archSamples": 21,
-        "tyreOuterMm": 636.486,
-        "tyreWidthMm": 274.007,
-        "stockRimMm": 487.784,
-        "stockRimWidthMm": 228.773,
-        "stockRimInches": 18.22,
+        "archGapBeforeMm": 14.1,
+        "archGapAfterMm": 11.8,
+        "movedMm": 2.3,
+        "axleConfidence": 0.826,
+        "steerDeg": 0,
+        "tyreOuterMm": 636.5,
+        "tyreWidthMm": 274,
+        "stockRimMm": 487.8,
+        "stockRimInches": 18.2,
         "rimMm": 456.8,
-        "rimWidthMm": 254.007,
-        "innerFaceMm": -137.003,
-        "outerFaceMm": 137.003,
-        "sidewallMm": 89.843,
+        "rimWidthMm": 254,
+        "sidewallMm": 89.8,
         "faceInsetMm": 4,
         "gapToTyreMm": 0,
         "brakesKept": 0,
-        "tyre": "built (one-piece wheel or changed size)"
+        "tyre": "built",
+        "archSamples": 11,
+        "archConfidence": 0.758,
+        "blockedBy": {
+          "code": "SUSPENSION_CONTACT",
+          "atDeg": 40,
+          "radius": 0.985,
+          "afterMm": 4.6,
+          "by": "E36_coupe_bumper_R_trim_BMWE36_black008_0 BMWE36_black.008"
+        },
+        "hiddenBrakeParts": 0
       },
       {
         "wheel": "RR",
-        "stockOuterGapMm": -6.405,
-        "targetInsetMm": 5,
-        "appliedAxleOffsetMm": 0,
-        "finalOuterGapMm": -6.405,
-        "axleConfidence": 0.8202305182088863,
-        "archConfidence": 0.9523809523809523,
-        "tyreMode": "generated",
-        "warnings": [
-          "INNER_CLEARANCE_LIMITED",
-          "USED_STOCK_OFFSET",
-          "FALLBACK_TYRE"
-        ],
         "refusal": null,
-        "center": [
-          0.8022524002704244,
-          0.32898416525738094,
-          -1.314371287442105
+        "warnings": [
+          "BUILT_TYRE"
         ],
-        "axle": [
-          0.9962004061210203,
-          0.0870904738365554,
-          -0.000014534039314029476
-        ],
-        "archSamples": 21,
-        "tyreOuterMm": 636.486,
-        "tyreWidthMm": 274.006,
-        "stockRimMm": 487.783,
-        "stockRimWidthMm": 228.772,
-        "stockRimInches": 18.22,
+        "archGapBeforeMm": 9,
+        "archGapAfterMm": 5,
+        "movedMm": 4,
+        "axleConfidence": 0.826,
+        "steerDeg": 0,
+        "tyreOuterMm": 636.5,
+        "tyreWidthMm": 274,
+        "stockRimMm": 487.8,
+        "stockRimInches": 18.2,
         "rimMm": 456.8,
-        "rimWidthMm": 254.006,
-        "innerFaceMm": -137.003,
-        "outerFaceMm": 137.003,
-        "sidewallMm": 89.843,
+        "rimWidthMm": 254,
+        "sidewallMm": 89.8,
         "faceInsetMm": 4,
         "gapToTyreMm": 0,
         "brakesKept": 0,
-        "tyre": "built (one-piece wheel or changed size)"
+        "tyre": "built",
+        "archSamples": 11,
+        "archConfidence": 0.758,
+        "blockedBy": null,
+        "hiddenBrakeParts": 0
       },
       {
         "wheel": "FL",
-        "stockOuterGapMm": 3.314,
-        "targetInsetMm": 5,
-        "appliedAxleOffsetMm": 0,
-        "finalOuterGapMm": 3.314,
-        "axleConfidence": 0.8241246558108865,
-        "archConfidence": 0.8095238095238095,
-        "tyreMode": "generated",
-        "warnings": [
-          "INNER_CLEARANCE_LIMITED",
-          "USED_STOCK_OFFSET",
-          "FALLBACK_TYRE"
-        ],
         "refusal": null,
-        "center": [
-          -0.7885646309840058,
-          0.32898416776620715,
-          1.538719237115511
+        "warnings": [
+          "LIMITED_BY_CLEARANCE",
+          "BUILT_TYRE"
         ],
-        "axle": [
-          -0.99620099506826,
-          0.08708373743218363,
-          -0.000009992548436315945
-        ],
-        "archSamples": 21,
-        "tyreOuterMm": 636.459,
-        "tyreWidthMm": 271.059,
-        "stockRimMm": 487.783,
-        "stockRimWidthMm": 226.311,
-        "stockRimInches": 18.22,
+        "archGapBeforeMm": 20,
+        "archGapAfterMm": 13.2,
+        "movedMm": 6.7,
+        "axleConfidence": 0.83,
+        "steerDeg": 0,
+        "tyreOuterMm": 636.5,
+        "tyreWidthMm": 271.1,
+        "stockRimMm": 487.8,
+        "stockRimInches": 18.2,
         "rimMm": 456.8,
-        "rimWidthMm": 251.059,
-        "innerFaceMm": -135.529,
-        "outerFaceMm": 135.529,
-        "sidewallMm": 89.83,
+        "rimWidthMm": 251.1,
+        "sidewallMm": 89.8,
         "faceInsetMm": 4,
         "gapToTyreMm": 0,
         "brakesKept": 0,
-        "tyre": "built (one-piece wheel or changed size)"
+        "tyre": "built",
+        "archSamples": 11,
+        "archConfidence": 0.917,
+        "blockedBy": {
+          "code": "ARCH_CONTACT",
+          "atDeg": 120,
+          "radius": 0.934,
+          "afterMm": 13.8,
+          "by": "E36_coupe_bumper_R_trim_BMWE36_paint_0 BMWE36_paint (paint)"
+        },
+        "hiddenBrakeParts": 0
       },
       {
         "wheel": "FR",
-        "stockOuterGapMm": -0.88,
-        "targetInsetMm": 5,
-        "appliedAxleOffsetMm": 0,
-        "finalOuterGapMm": -0.88,
-        "axleConfidence": 0.8241279836362696,
-        "archConfidence": 0.8095238095238095,
-        "tyreMode": "generated",
-        "warnings": [
-          "INNER_CLEARANCE_LIMITED",
-          "USED_STOCK_OFFSET",
-          "FALLBACK_TYRE"
-        ],
         "refusal": null,
-        "center": [
-          0.7935749131132603,
-          0.32898416484873805,
-          1.5387192372008633
+        "warnings": [
+          "LIMITED_BY_CLEARANCE",
+          "BUILT_TYRE"
         ],
-        "axle": [
-          0.9962011807453366,
-          0.08708161290726633,
-          -0.00001323126041789913
-        ],
-        "archSamples": 21,
-        "tyreOuterMm": 636.459,
-        "tyreWidthMm": 271.06,
-        "stockRimMm": 487.782,
-        "stockRimWidthMm": 226.313,
-        "stockRimInches": 18.22,
+        "archGapBeforeMm": 16,
+        "archGapAfterMm": 11.6,
+        "movedMm": 4.4,
+        "axleConfidence": 0.83,
+        "steerDeg": 0,
+        "tyreOuterMm": 636.5,
+        "tyreWidthMm": 271.1,
+        "stockRimMm": 487.8,
+        "stockRimInches": 18.2,
         "rimMm": 456.8,
-        "rimWidthMm": 251.06,
-        "innerFaceMm": -135.53,
-        "outerFaceMm": 135.53,
-        "sidewallMm": 89.83,
+        "rimWidthMm": 251.1,
+        "sidewallMm": 89.8,
         "faceInsetMm": 4,
         "gapToTyreMm": 0,
         "brakesKept": 0,
-        "tyre": "built (one-piece wheel or changed size)"
+        "tyre": "built",
+        "archSamples": 11,
+        "archConfidence": 0.917,
+        "blockedBy": {
+          "code": "SUSPENSION_CONTACT",
+          "atDeg": 40,
+          "radius": 0.997,
+          "afterMm": 6.8,
+          "by": "E36_coupe_bumper_R_trim_BMWE36_black008_0 BMWE36_black.008"
+        },
+        "hiddenBrakeParts": 0
       }
     ],
     "faceSign": 1,
     "wheelSource": "confirmed",
+    "override": null,
     "copies": 4,
     "turnedDeg": 0,
     "flipped180": false,
@@ -214,16 +180,326 @@
     ],
     "stored": false,
     "partBox": [
-      -0.9614,
-      -0.0001,
-      -1.6327,
-      0.9665,
-      0.658,
-      1.857
+      -0.9638,
+      0.0003,
+      -1.6326,
+      0.9706,
+      0.6584,
+      1.8569
+    ],
+    "wheelDiagnostics": [
+      {
+        "wheel": "RL",
+        "pieces": [
+          {
+            "name": "wheel_bmw_aplg_16x7003_BMWE36_felgen_0_WHEELS",
+            "mat": "BMWE36_felgen",
+            "axis": [
+              0.9963241523659414,
+              -0.08565335046566046,
+              -0.0012988326662597886
+            ],
+            "bounds": [
+              -0.9543190598487854,
+              0.0722016766667366,
+              -1.5630046129226685,
+              -0.6840417385101318,
+              0.5904191136360168,
+              -1.0622020959854126
+            ],
+            "measure": {
+              "lo": -0.09233938082164563,
+              "hi": 0.13644814071575445,
+              "rmin": 0.0018132320834704744,
+              "rmax": 0.25221988946330115,
+              "arc": 12
+            }
+          },
+          {
+            "name": "wheel_bmw_aplg_16x7003_wheel_19a_0_WHEELS",
+            "mat": "wheel_19a",
+            "axis": [
+              0.9960981682858785,
+              -0.08825133290243224,
+              0.00037600327342310347
+            ],
+            "bounds": [
+              -0.8128457069396973,
+              0.2628012001514435,
+              -1.387007474899292,
+              -0.7639792561531067,
+              0.4073876142501831,
+              -1.2378151416778564
+            ],
+            "measure": {
+              "lo": -0.028893627225370977,
+              "hi": 0.00998607208654241,
+              "rmin": 0.04763919455513851,
+              "rmax": 0.07981587458656153,
+              "arc": 9
+            }
+          },
+          {
+            "name": "Object_4004_Scene_-_Root002_0_WHEELS",
+            "mat": "Scene_-_Root.002",
+            "axis": [
+              0.9961913084934941,
+              -0.08719442974160753,
+              0.000091126594237449
+            ],
+            "bounds": [
+              -0.9566968679428101,
+              0.011696066707372665,
+              -1.6326009035110474,
+              -0.6378383040428162,
+              0.6462373733520508,
+              -0.9961416721343994
+            ],
+            "measure": {
+              "lo": -0.13701149049105074,
+              "hi": 0.1370114904910509,
+              "rmin": 0.2318834521820285,
+              "rmax": 0.318343159367326,
+              "arc": 12
+            }
+          }
+        ]
+      },
+      {
+        "wheel": "RR",
+        "pieces": [
+          {
+            "name": "wheel_bmw_aplg_16x7001_BMWE36_felgen_0_WHEELS",
+            "mat": "BMWE36_felgen",
+            "axis": [
+              0.9963241523874722,
+              0.08565335017033013,
+              0.0012988356261885443
+            ],
+            "bounds": [
+              0.6890520453453064,
+              0.0722016766667366,
+              -1.5630046129226685,
+              0.9593293070793152,
+              0.5904191136360168,
+              -1.0622020959854126
+            ],
+            "measure": {
+              "lo": -0.09233932427065283,
+              "hi": 0.13644820291241774,
+              "rmin": 0.0018132302968389942,
+              "rmax": 0.25221987478207025,
+              "arc": 12
+            }
+          },
+          {
+            "name": "wheel_bmw_aplg_16x7001_wheel_19a_0_WHEELS",
+            "mat": "wheel_19a",
+            "axis": [
+              0.9960981656386426,
+              0.088251362880128,
+              -0.00037598022730529415
+            ],
+            "bounds": [
+              0.7689895033836365,
+              0.2628012001514435,
+              -1.387007474899292,
+              0.817855954170227,
+              0.4073876142501831,
+              -1.2378151416778564
+            ],
+            "measure": {
+              "lo": -0.0288935677365971,
+              "hi": 0.009986131294435636,
+              "rmin": 0.047639191877037204,
+              "rmax": 0.07981587238586511,
+              "arc": 9
+            }
+          },
+          {
+            "name": "Object_4001_Scene_-_Root002_0_WHEELS",
+            "mat": "Scene_-_Root.002",
+            "axis": [
+              0.9961913082770059,
+              0.08719443221489359,
+              -0.00009112667067345947
+            ],
+            "bounds": [
+              0.6428484916687012,
+              0.011696066707372665,
+              -1.6326009035110474,
+              0.9617070555686951,
+              0.6462373733520508,
+              -0.9961416721343994
+            ],
+            "measure": {
+              "lo": -0.1370114881383658,
+              "hi": 0.1370114881383661,
+              "rmin": 0.23188345521188136,
+              "rmax": 0.31834315472516117,
+              "arc": 12
+            }
+          }
+        ]
+      },
+      {
+        "wheel": "FL",
+        "pieces": [
+          {
+            "name": "wheel_bmw_aplg_16x7002_BMWE36_felgen_0_WHEELS",
+            "mat": "BMWE36_felgen",
+            "axis": [
+              0.9963218377451613,
+              -0.08568062601122985,
+              -0.0012751307494312067
+            ],
+            "bounds": [
+              -0.9441694617271423,
+              0.07238630950450897,
+              1.290086030960083,
+              -0.6763495206832886,
+              0.5903542041778564,
+              1.7908884286880493
+            ],
+            "measure": {
+              "lo": -0.09134466375869012,
+              "hi": 0.13497862746829947,
+              "rmin": 0.0018341220646829347,
+              "rmax": 0.2522448794368883,
+              "arc": 12
+            }
+          },
+          {
+            "name": "wheel_bmw_aplg_16x7002_wheel_19a_0_WHEELS",
+            "mat": "wheel_19a",
+            "axis": [
+              0.9960994107650273,
+              -0.08823732858694328,
+              0.0003711029575373228
+            ],
+            "bounds": [
+              -0.8040536046028137,
+              0.2629123330116272,
+              1.46608304977417,
+              -0.7556034922599792,
+              0.4074527621269226,
+              1.615275502204895
+            ],
+            "measure": {
+              "lo": -0.028582316252176818,
+              "hi": 0.009878699766074315,
+              "rmin": 0.04766635693198437,
+              "rmax": 0.07983839208715393,
+              "arc": 9
+            }
+          },
+          {
+            "name": "Object_4002_Scene_-_Root002_0_WHEELS",
+            "mat": "Scene_-_Root.002",
+            "axis": [
+              0.9961913591118543,
+              -0.08719385285865983,
+              0.0000897470838038606
+            ],
+            "bounds": [
+              -0.9465477466583252,
+              0.011725296266376972,
+              1.2204896211624146,
+              -0.6306324005126953,
+              0.6462081074714661,
+              1.8569488525390625
+            ],
+            "measure": {
+              "lo": -0.13553579652564907,
+              "hi": 0.13553579652564895,
+              "rmin": 0.23188336816709412,
+              "rmax": 0.3183183782730109,
+              "arc": 12
+            }
+          }
+        ]
+      },
+      {
+        "wheel": "FR",
+        "pieces": [
+          {
+            "name": "wheel_bmw_aplg_16x7_BMWE36_felgen_0_WHEELS",
+            "mat": "BMWE36_felgen",
+            "axis": [
+              0.9963218352194321,
+              0.08568065503968783,
+              0.0012751536978032683
+            ],
+            "bounds": [
+              0.6813598871231079,
+              0.07238630950450897,
+              1.290086030960083,
+              0.9491798281669617,
+              0.5903542041778564,
+              1.7908884286880493
+            ],
+            "measure": {
+              "lo": -0.09134460906019254,
+              "hi": 0.13497868762503604,
+              "rmin": 0.001834119326929725,
+              "rmax": 0.25224497924933337,
+              "arc": 12
+            }
+          },
+          {
+            "name": "wheel_bmw_aplg_16x7_wheel_19a_0_WHEELS",
+            "mat": "wheel_19a",
+            "axis": [
+              0.9960994065110704,
+              0.08823737662327358,
+              -0.0003710996307190474
+            ],
+            "bounds": [
+              0.7606138586997986,
+              0.2629123330116272,
+              1.46608304977417,
+              0.8090639114379883,
+              0.4074527621269226,
+              1.615275502204895
+            ],
+            "measure": {
+              "lo": -0.02858225818015626,
+              "hi": 0.009878757948975945,
+              "rmin": 0.04766635337324181,
+              "rmax": 0.07983838912755462,
+              "arc": 9
+            }
+          },
+          {
+            "name": "Object_4003_Scene_-_Root002_0_WHEELS",
+            "mat": "Scene_-_Root.002",
+            "axis": [
+              0.9961913591222816,
+              0.08719385274181958,
+              -0.00008974485733662831
+            ],
+            "bounds": [
+              0.6356426477432251,
+              0.011725296266376972,
+              1.2204896211624146,
+              0.951557993888855,
+              0.6462081074714661,
+              1.8569488525390625
+            ],
+            "measure": {
+              "lo": -0.13553579466399057,
+              "hi": 0.13553579466398993,
+              "rmin": 0.23188336843303436,
+              "rmax": 0.3183183711154611,
+              "arc": 12
+            }
+          }
+        ]
+      }
     ]
   },
   "autofit": {
-    "version": 5,
+    "version": 6,
     "type": "RIMS",
     "orient": [
       "axle",
@@ -232,10 +508,9 @@
     ],
     "placements": [
       {
-        "wheel": "RL",
         "pos": [
-          -0.8032,
-          0.3295,
+          -0.8055,
+          0.3297,
           -1.3144
         ],
         "sc": [
@@ -244,17 +519,16 @@
           0.118
         ],
         "rot": [
-          -0.00022411151906582492,
-          0.000009777308326634154,
-          3.0543939918926593
+          3.141588673143922,
+          0.00009112659436369104,
+          -3.054287355788695
         ],
         "side": -1
       },
       {
-        "wheel": "RR",
         "pos": [
-          0.8082,
-          0.3295,
+          0.8122,
+          0.3299,
           -1.3144
         ],
         "sc": [
@@ -263,17 +537,16 @@
           0.118
         ],
         "rot": [
-          -6.34092832999348e-7,
-          0.000014534039314541169,
-          0.08720094456894081
+          -0.000003980449323204472,
+          0.00009112667079957982,
+          0.08730530028384084
         ],
         "side": 1
       },
       {
-        "wheel": "FL",
         "pos": [
-          -0.7945,
-          0.3295,
+          -0.8013,
+          0.3301,
           1.5387
         ],
         "sc": [
@@ -282,17 +555,16 @@
           0.118
         ],
         "rot": [
-          -0.00022905694717294988,
-          0.000009992548436482392,
-          3.0543984711213175
+          3.1415887334275223,
+          0.00008974708392446118,
+          -3.0542879348881176
         ],
         "side": -1
       },
       {
-        "wheel": "FR",
         "pos": [
-          0.7996,
-          0.3295,
+          0.8039,
+          0.3299,
           1.5387
         ],
         "sc": [
@@ -301,9 +573,9 @@
           0.118
         ],
         "rot": [
-          -5.771960808366224e-7,
-          0.000013231260418285185,
-          0.08719204984518383
+          -0.0000039200650131653484,
+          0.00008974485745709789,
+          0.08730471858437142
         ],
         "side": 1
       }
@@ -312,67 +584,63 @@
     "tyres": [
       {
         "c": [
-          -0.7972421401666043,
-          0.32898414991401864,
-          -1.3143712875653781
+          -0.7995,
+          0.3292,
+          -1.3144
         ],
-        "ri": 0.21639999999999998,
-        "ro": 0.31824295856383383,
-        "w": 0.27400684237508555,
+        "ri": 0.2164,
+        "ro": 0.3182,
+        "w": 0.274,
         "rot": [
-          -0.00022411151906582492,
-          0.000009777308326634154,
-          3.0543939918926593
-        ],
-        "wheel": "RL"
+          3.141588673143922,
+          0.00009112659436369104,
+          -3.054287355788695
+        ]
       },
       {
         "c": [
-          0.8022524002704244,
-          0.32898416525738094,
-          -1.314371287442105
+          0.8063,
+          0.3293,
+          -1.3144
         ],
-        "ri": 0.21639999999999998,
-        "ro": 0.3182429533299461,
-        "w": 0.27400611098231153,
+        "ri": 0.2164,
+        "ro": 0.3182,
+        "w": 0.274,
         "rot": [
-          -6.34092832999348e-7,
-          0.000014534039314541169,
-          0.08720094456894081
-        ],
-        "wheel": "RR"
+          -0.000003980449323204472,
+          0.00009112667079957982,
+          0.08730530028384084
+        ]
       },
       {
         "c": [
-          -0.7885646309840058,
-          0.32898416776620715,
-          1.538719237115511
+          -0.7953,
+          0.3296,
+          1.5387
         ],
-        "ri": 0.21639999999999998,
-        "ro": 0.3182296170269101,
-        "w": 0.2710585984504963,
+        "ri": 0.2164,
+        "ro": 0.3182,
+        "w": 0.2711,
         "rot": [
-          -0.00022905694717294988,
-          0.000009992548436482392,
-          3.0543984711213175
-        ],
-        "wheel": "FL"
+          3.1415887334275223,
+          0.00008974708392446118,
+          -3.0542879348881176
+        ]
       },
       {
         "c": [
-          0.7935749131132603,
-          0.32898416484873805,
-          1.5387192372008633
+          0.798,
+          0.3294,
+          1.5387
         ],
-        "ri": 0.21639999999999998,
-        "ro": 0.31822961255158966,
-        "w": 0.2710600043095822,
+        "ri": 0.2164,
+        "ro": 0.3182,
+        "w": 0.2711,
         "rot": [
-          -5.771960808366224e-7,
-          0.000013231260418285185,
-          0.08719204984518383
-        ],
-        "wheel": "FR"
+          -0.0000039200650131653484,
+          0.00008974485745709789,
+          0.08730471858437142
+        ]
       }
     ],
     "keep": [],
@@ -390,40 +658,41 @@
         {
           "wheel": "RL",
           "delta": [
-            0,
-            0,
+            -0.00226,
+            0.0002,
             0
           ]
         },
         {
           "wheel": "RR",
           "delta": [
-            0,
-            0,
+            0.00402,
+            0.00035,
             0
           ]
         },
         {
           "wheel": "FL",
           "delta": [
-            0,
-            0,
+            -0.00672,
+            0.00059,
             0
           ]
         },
         {
           "wheel": "FR",
           "delta": [
-            0,
-            0,
+            0.00439,
+            0.00038,
             0
           ]
         }
-      ]
+      ],
+      "hideBrakes": []
     },
     "info": {
       "type": "RIMS",
-      "fitVersion": 5,
+      "fitVersion": 6,
       "replaces": {
         "how": "part map wheels",
         "hidden": 12
@@ -431,171 +700,137 @@
       "wheels": [
         {
           "wheel": "RL",
-          "stockOuterGapMm": -1.719,
-          "targetInsetMm": 5,
-          "appliedAxleOffsetMm": 0,
-          "finalOuterGapMm": -1.719,
-          "axleConfidence": 0.8202395728485111,
-          "archConfidence": 0.9523809523809523,
-          "tyreMode": "generated",
-          "warnings": [
-            "INNER_CLEARANCE_LIMITED",
-            "USED_STOCK_OFFSET",
-            "FALLBACK_TYRE"
-          ],
           "refusal": null,
-          "center": [
-            -0.7972421401666042,
-            0.32898414991401864,
-            -1.3143712875653781
+          "warnings": [
+            "LIMITED_BY_CLEARANCE",
+            "BUILT_TYRE"
           ],
-          "axle": [
-            -0.9962006049924136,
-            0.08708819964354052,
-            -0.000009777308326478081
-          ],
-          "archSamples": 21,
-          "tyreOuterMm": 636.486,
-          "tyreWidthMm": 274.007,
-          "stockRimMm": 487.784,
-          "stockRimWidthMm": 228.773,
-          "stockRimInches": 18.22,
+          "archGapBeforeMm": 14.1,
+          "archGapAfterMm": 11.8,
+          "movedMm": 2.3,
+          "axleConfidence": 0.826,
+          "steerDeg": 0,
+          "tyreOuterMm": 636.5,
+          "tyreWidthMm": 274,
+          "stockRimMm": 487.8,
+          "stockRimInches": 18.2,
           "rimMm": 456.8,
-          "rimWidthMm": 254.007,
-          "innerFaceMm": -137.003,
-          "outerFaceMm": 137.003,
-          "sidewallMm": 89.843,
+          "rimWidthMm": 254,
+          "sidewallMm": 89.8,
           "faceInsetMm": 4,
           "gapToTyreMm": 0,
           "brakesKept": 0,
-          "tyre": "built (one-piece wheel or changed size)"
+          "tyre": "built",
+          "archSamples": 11,
+          "archConfidence": 0.758,
+          "blockedBy": {
+            "code": "SUSPENSION_CONTACT",
+            "atDeg": 40,
+            "radius": 0.985,
+            "afterMm": 4.6,
+            "by": "E36_coupe_bumper_R_trim_BMWE36_black008_0 BMWE36_black.008"
+          },
+          "hiddenBrakeParts": 0
         },
         {
           "wheel": "RR",
-          "stockOuterGapMm": -6.405,
-          "targetInsetMm": 5,
-          "appliedAxleOffsetMm": 0,
-          "finalOuterGapMm": -6.405,
-          "axleConfidence": 0.8202305182088863,
-          "archConfidence": 0.9523809523809523,
-          "tyreMode": "generated",
-          "warnings": [
-            "INNER_CLEARANCE_LIMITED",
-            "USED_STOCK_OFFSET",
-            "FALLBACK_TYRE"
-          ],
           "refusal": null,
-          "center": [
-            0.8022524002704244,
-            0.32898416525738094,
-            -1.314371287442105
+          "warnings": [
+            "BUILT_TYRE"
           ],
-          "axle": [
-            0.9962004061210203,
-            0.0870904738365554,
-            -0.000014534039314029476
-          ],
-          "archSamples": 21,
-          "tyreOuterMm": 636.486,
-          "tyreWidthMm": 274.006,
-          "stockRimMm": 487.783,
-          "stockRimWidthMm": 228.772,
-          "stockRimInches": 18.22,
+          "archGapBeforeMm": 9,
+          "archGapAfterMm": 5,
+          "movedMm": 4,
+          "axleConfidence": 0.826,
+          "steerDeg": 0,
+          "tyreOuterMm": 636.5,
+          "tyreWidthMm": 274,
+          "stockRimMm": 487.8,
+          "stockRimInches": 18.2,
           "rimMm": 456.8,
-          "rimWidthMm": 254.006,
-          "innerFaceMm": -137.003,
-          "outerFaceMm": 137.003,
-          "sidewallMm": 89.843,
+          "rimWidthMm": 254,
+          "sidewallMm": 89.8,
           "faceInsetMm": 4,
           "gapToTyreMm": 0,
           "brakesKept": 0,
-          "tyre": "built (one-piece wheel or changed size)"
+          "tyre": "built",
+          "archSamples": 11,
+          "archConfidence": 0.758,
+          "blockedBy": null,
+          "hiddenBrakeParts": 0
         },
         {
           "wheel": "FL",
-          "stockOuterGapMm": 3.314,
-          "targetInsetMm": 5,
-          "appliedAxleOffsetMm": 0,
-          "finalOuterGapMm": 3.314,
-          "axleConfidence": 0.8241246558108865,
-          "archConfidence": 0.8095238095238095,
-          "tyreMode": "generated",
-          "warnings": [
-            "INNER_CLEARANCE_LIMITED",
-            "USED_STOCK_OFFSET",
-            "FALLBACK_TYRE"
-          ],
           "refusal": null,
-          "center": [
-            -0.7885646309840058,
-            0.32898416776620715,
-            1.538719237115511
+          "warnings": [
+            "LIMITED_BY_CLEARANCE",
+            "BUILT_TYRE"
           ],
-          "axle": [
-            -0.99620099506826,
-            0.08708373743218363,
-            -0.000009992548436315945
-          ],
-          "archSamples": 21,
-          "tyreOuterMm": 636.459,
-          "tyreWidthMm": 271.059,
-          "stockRimMm": 487.783,
-          "stockRimWidthMm": 226.311,
-          "stockRimInches": 18.22,
+          "archGapBeforeMm": 20,
+          "archGapAfterMm": 13.2,
+          "movedMm": 6.7,
+          "axleConfidence": 0.83,
+          "steerDeg": 0,
+          "tyreOuterMm": 636.5,
+          "tyreWidthMm": 271.1,
+          "stockRimMm": 487.8,
+          "stockRimInches": 18.2,
           "rimMm": 456.8,
-          "rimWidthMm": 251.059,
-          "innerFaceMm": -135.529,
-          "outerFaceMm": 135.529,
-          "sidewallMm": 89.83,
+          "rimWidthMm": 251.1,
+          "sidewallMm": 89.8,
           "faceInsetMm": 4,
           "gapToTyreMm": 0,
           "brakesKept": 0,
-          "tyre": "built (one-piece wheel or changed size)"
+          "tyre": "built",
+          "archSamples": 11,
+          "archConfidence": 0.917,
+          "blockedBy": {
+            "code": "ARCH_CONTACT",
+            "atDeg": 120,
+            "radius": 0.934,
+            "afterMm": 13.8,
+            "by": "E36_coupe_bumper_R_trim_BMWE36_paint_0 BMWE36_paint (paint)"
+          },
+          "hiddenBrakeParts": 0
         },
         {
           "wheel": "FR",
-          "stockOuterGapMm": -0.88,
-          "targetInsetMm": 5,
-          "appliedAxleOffsetMm": 0,
-          "finalOuterGapMm": -0.88,
-          "axleConfidence": 0.8241279836362696,
-          "archConfidence": 0.8095238095238095,
-          "tyreMode": "generated",
-          "warnings": [
-            "INNER_CLEARANCE_LIMITED",
-            "USED_STOCK_OFFSET",
-            "FALLBACK_TYRE"
-          ],
           "refusal": null,
-          "center": [
-            0.7935749131132603,
-            0.32898416484873805,
-            1.5387192372008633
+          "warnings": [
+            "LIMITED_BY_CLEARANCE",
+            "BUILT_TYRE"
           ],
-          "axle": [
-            0.9962011807453366,
-            0.08708161290726633,
-            -0.00001323126041789913
-          ],
-          "archSamples": 21,
-          "tyreOuterMm": 636.459,
-          "tyreWidthMm": 271.06,
-          "stockRimMm": 487.782,
-          "stockRimWidthMm": 226.313,
-          "stockRimInches": 18.22,
+          "archGapBeforeMm": 16,
+          "archGapAfterMm": 11.6,
+          "movedMm": 4.4,
+          "axleConfidence": 0.83,
+          "steerDeg": 0,
+          "tyreOuterMm": 636.5,
+          "tyreWidthMm": 271.1,
+          "stockRimMm": 487.8,
+          "stockRimInches": 18.2,
           "rimMm": 456.8,
-          "rimWidthMm": 251.06,
-          "innerFaceMm": -135.53,
-          "outerFaceMm": 135.53,
-          "sidewallMm": 89.83,
+          "rimWidthMm": 251.1,
+          "sidewallMm": 89.8,
           "faceInsetMm": 4,
           "gapToTyreMm": 0,
           "brakesKept": 0,
-          "tyre": "built (one-piece wheel or changed size)"
+          "tyre": "built",
+          "archSamples": 11,
+          "archConfidence": 0.917,
+          "blockedBy": {
+            "code": "SUSPENSION_CONTACT",
+            "atDeg": 40,
+            "radius": 0.997,
+            "afterMm": 6.8,
+            "by": "E36_coupe_bumper_R_trim_BMWE36_black008_0 BMWE36_black.008"
+          },
+          "hiddenBrakeParts": 0
         }
       ],
       "faceSign": 1,
       "wheelSource": "confirmed",
+      "override": null,
       "copies": 4,
       "turnedDeg": 0,
       "flipped180": false,
@@ -620,6 +855,51 @@
   },
   "carSha256": "2f026865272597d4edb718be5c99e2bc74a790f98f53e06f45f33a177e55ab89",
   "partSha256": "512a47b76cd1b5569ab11adc0a509fa99abadf5c963dc3499a534369e42d7572",
-  "viewerSha256": "6f0d1cb648fecf6a75571657e82f4aadb25b7ea855a53d94c9240b8d0fe27c6e",
-  "screenshots": []
+  "viewerSha256": "200221aaa77e9ff60debeb59b0e536e6ddedbe7543b3c2737dfa248febec9017",
+  "screenshots": [
+    {
+      "name": "before-front-three-quarter",
+      "sha256": "c00962a42e4798bfdccf0292343c6c33fb4dd2c715cd3d985a80d27e08bc77c0"
+    },
+    {
+      "name": "before-side",
+      "sha256": "5d111c1ed1b51164cc48016c9f4ac1b3759ec8f25604a2209e9aa22dfc8851e5"
+    },
+    {
+      "name": "on-left-side",
+      "sha256": "f151bfb8906f60214fefdaa9b525e19497524e96326f6d3c8d03ef7e9e64fc6a"
+    },
+    {
+      "name": "on-right-side",
+      "sha256": "fdffd464e0e876766b68be7513774cef724798ea60001dd5bfea2b094a42716a"
+    },
+    {
+      "name": "on-front-three-quarter",
+      "sha256": "b009b9c0f1aae62ca84c0dd53f62353f0602d89ce83a326c67dd77656df8e085"
+    },
+    {
+      "name": "on-wheel-closeup",
+      "sha256": "8fe5347428b93e69bfe8ef06239dc590a298645e5876c4a2c7ecb089fc42a341"
+    },
+    {
+      "name": "on-rear",
+      "sha256": "c640121ed9876db3fcc126770b5d5578fcd034578ffda12a8de99eb8709733b1"
+    },
+    {
+      "name": "off-side",
+      "sha256": "5d111c1ed1b51164cc48016c9f4ac1b3759ec8f25604a2209e9aa22dfc8851e5"
+    },
+    {
+      "name": "off-front-three-quarter",
+      "sha256": "c00962a42e4798bfdccf0292343c6c33fb4dd2c715cd3d985a80d27e08bc77c0"
+    },
+    {
+      "name": "off-wheel-closeup",
+      "sha256": "2c5b11c0f7a63e614338fd50f979117667f779d07728a50d7ad482648a67097f"
+    },
+    {
+      "name": "off-rear",
+      "sha256": "b0f8dcdc71785aa966ff37d7f09b27a17f3258607a1268f41402e551d52ac4da"
+    }
+  ]
 }

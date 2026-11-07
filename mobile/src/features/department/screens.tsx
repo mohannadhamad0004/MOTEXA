@@ -10,6 +10,9 @@ import { useLoad } from "../../core/hooks/useLoad";
 import { useDepartment } from "./DepartmentContext";
 import { Row, Status } from "./departments";
 import { ApplicationsList } from "./applications";
+import { ThreeDRequests, useThreeDCount } from "./ThreeDRequests";
+import { useLocalSearchParams } from "expo-router";
+import { Pressable } from "react-native";
 import { TowAdminHome } from "./TowAdminHome";
 import { PartsAdminHome } from "./PartsAdminHome";
 import { TowCompaniesPage } from "./TowCompaniesPage";
@@ -96,9 +99,40 @@ function RowCard({ row, onPress, children }: { row: Row; onPress?: () => void; c
 // a mechanic opens in Diala's review screen (the Requests tab); company / shop open the application review
 const openRow = (r: Row) => (r.kind === "mechanic" ? () => go("/dept/requests") : () => go(`/dept/review/${r.kind}/${r.id}`));
 
+/** The Parts Admin's Requests: shop applications and the shops' 3D requests, one switch apart (the 3D count is always visible). */
+function PartsRequests() {
+  const d = useDT();
+  const params = useLocalSearchParams<{ seg?: string }>();
+  const [seg, setSeg] = useState<"apps" | "3d">(params.seg === "3d" ? "3d" : "apps");
+  const { list, needs } = useThreeDCount();
+  const header = (
+    <View style={{ flexDirection: d.row, gap: 8, marginBottom: 14 }}>
+      {([["apps", "Shop applications", "طلبات المتاجر", 0], ["3d", "3D requests", "طلبات ثلاثية الأبعاد", needs]] as const).map(([k, en, ar, n]) => {
+        const on = seg === k;
+        return (
+          <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={`${d.t(en, ar)}${n ? ` ${n}` : ""}`} onPress={() => setSeg(k)}
+            style={{ flexDirection: d.row, alignItems: "center", gap: 8, paddingHorizontal: 16, minHeight: 44, borderRadius: 22, borderWidth: 1.5, borderColor: on ? d.fill : d.border, backgroundColor: on ? d.fill : d.surface }}>
+            <Text style={{ color: on ? d.fillInk : d.ink, fontSize: 14, lineHeight: 20, fontWeight: "800" }}>{d.t(en, ar)}</Text>
+            {n ? <View style={{ minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, backgroundColor: on ? d.fillInk : d.fill, alignItems: "center", justifyContent: "center" }}><Text style={{ color: on ? d.fill : d.fillInk, fontSize: 12, lineHeight: 16, fontWeight: "800" }}>{n}</Text></View> : null}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+  if (seg === "apps") return <ApplicationsList kind="PARTS" header={header} />;
+  return (
+    <DeptPage onRefresh={() => void list.reload()} refreshing={list.loading && !!list.data}>
+      {header}
+      <Section title={d.t("3D requests", "طلبات ثلاثية الأبعاد")} caption={d.t("Every request a shop submitted, newest first. Open one to review it.", "كل طلب أرسله متجر، الأحدث أولًا. افتح طلبًا لمراجعته.")} />
+      <ThreeDRequests list={list} />
+    </DeptPage>
+  );
+}
+
 export function DeptRequests() {
   const { active } = useDepartment();
-  // towing / parts: the applications (New, Needs changes, Approved, Rejected); mechanics: Diala's review screen
+  if (active.key === "MANAGE_SPARE_PARTS") return <PartsRequests />;
+  // towing: the applications (New, Needs changes, Approved, Rejected); mechanics: Diala's review screen
   return active.provider && active.requests.mode === "applications" ? <ApplicationsList kind={active.provider} /> : <MechanicReviewScreen />;
 }
 

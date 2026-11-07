@@ -1,28 +1,83 @@
-import { useState } from "react";
-import { Image,View } from "react-native";
-import { ProviderLayout } from "../../../components/layout/ProviderLayout";
+import { Image } from "expo-image";
+import { router, useLocalSearchParams, type Href } from "expo-router";
+import { useEffect, useState } from "react";
+import { View } from "react-native";
+import { Card, Chip, EmptyState, ErrorState, GButton, GText, Note, SkeletonRows, StatusChip } from "../../../components/garage";
 import { SearchBar } from "../../../components/ui/Input";
-import { useLoad } from "../../../core/hooks/useLoad";
-import { useSessionUser,asActor } from "../../../core/session/session";
+import { ProviderLayout } from "../../../components/layout/ProviderLayout";
 import { formatPrice } from "../../../core/constants/money";
+import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
+import { asActor, useSessionUser } from "../../../core/session/session";
+import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 import { partsShopService } from "../partsService";
-import { fitmentSummary } from "../partsBits";
-import { Async,Button,EmptyState,ItemCard,Pill,Text,useDT,go } from "../../provider/portal/ui";
-export default function ProductsPage({mode="products"}:{mode?:"products"|"inventory"|"fitment"}){
- const d=useDT(),user=useSessionUser();const [q,setQ]=useState(""),[page,setPage]=useState(1),[stock,setStock]=useState("");
- const state=useLoad(()=>partsShopService.getMyInventory(asActor(user),{page,q,stock}),[user.id,page,q,stock]);
- return <ProviderLayout area="parts" title={mode==="inventory"?d.t("Inventory","المخزون"):mode==="fitment"?d.t("Vehicle fitment","توافق المركبات"):d.t("Products","المنتجات")} onRefresh={state.reload} refreshing={state.loading&&!!state.data}>
-  <Button label={d.t("Add product","إضافة منتج")} onPress={()=>go("/provider/parts/new")}/>
-  <SearchBar value={q} onChange={v=>{setQ(v);setPage(1);}} placeholder={d.t("Name, brand or part number","الاسم أو العلامة أو رقم القطعة")}/>
-  <View style={{flexDirection:d.row,flexWrap:"wrap",gap:6,marginBottom:16}}>{[["","All","الكل"],["in","In stock","متوفر"],["low","Low stock","منخفض"],["out","Out of stock","نفد"]].map(([key,en,ar])=><Button key={key} size="sm" variant={stock===key?"primary":"ghost"} label={d.t(en,ar)} onPress={()=>{setStock(key);setPage(1);}}/>)}</View>
-  <Async state={state}>{({products,hasMore})=><>
-   {!products.length?<EmptyState icon="images-outline" text={d.t("No matching products. Add a product or change the filters.","لا توجد منتجات مطابقة. أضف منتجًا أو غيّر الفلاتر.")}/>:products.map(p=><ItemCard key={p.id} label={p.name} onPress={()=>go(`/provider/parts/products/${p.id}`)}>
-    <View style={{flexDirection:d.row,gap:12,alignItems:"center"}}>{p.imageUri?<Image source={{uri:p.imageUri}} style={{width:60,height:60,borderRadius:12}}/>:null}<View style={{flex:1,minWidth:0}}><Text style={{color:d.ink,fontSize:16,lineHeight:24,fontWeight:"700",textAlign:d.align}}>{p.name}</Text><Text style={{color:d.muted,textAlign:d.align,fontSize:12}}>{p.brand} · {p.partNumber}</Text><Text style={{color:d.accent,textAlign:d.align,fontWeight:"700"}}>{formatPrice(p.price)}</Text></View></View>
-    <View style={{flexDirection:d.row,flexWrap:"wrap",gap:6,marginTop:10}}><Pill tone={p.customerVisible?"ok":"amber"} label={p.customerVisible?d.t("Visible to customers","ظاهر للعملاء"):p.hidden?d.t("Hidden by MOTEXA","مخفي بواسطة موتكسا"):d.t("Not publicly visible","غير ظاهر للعملاء")}/><Pill label={`${d.t("Available","متاح")}: ${Math.max(0,p.stock-(p.reservedStock??0))}`}/></View>
-    {mode==="inventory"?<Text style={{color:d.muted,textAlign:d.align,marginTop:8}}>{d.t(`Stock ${p.stock} · Reserved ${p.reservedStock??0}`,`المخزون ${p.stock} · المحجوز ${p.reservedStock??0}`)}</Text>:null}
-    <Text style={{color:d.muted,textAlign:d.align,marginTop:8}}>{p.isUniversal?d.t("Universal","عام لجميع المركبات"):fitmentSummary(p,d.t)}</Text>
-   </ItemCard>)}
-   <View style={{flexDirection:d.row,gap:10,marginTop:12}}><Button variant="ghost" disabled={page===1} label={d.t("Previous","السابق")} onPress={()=>setPage(v=>v-1)}/><Button variant="ghost" disabled={!hasMore} label={d.t("Next","التالي")} onPress={()=>setPage(v=>v+1)}/></View>
-  </>}</Async>
- </ProviderLayout>;
+
+type Filter = "" | "low" | "out" | "photo";
+const SERVER: Record<Filter, string> = { "": "", low: "low", out: "out", photo: "" };
+
+/**
+ * The shop's products as one list: search, All / Low stock / Sold out (plus No photo, reached from Home), one card per product
+ * with its photo, price, stock and whether customers can see it. One main action: Add product.
+ * `mode` keeps the old Inventory / Fitment routes working: they are the same list.
+ */
+export default function ProductsPage(_props: { mode?: "products" | "inventory" | "fitment" }) {
+  const { t } = useL();
+  const user = useSessionUser();
+  const { row, align } = useGarageTheme();
+  const params = useLocalSearchParams<{ filter?: string }>();
+  const [filter, setFilter] = useState<Filter>(((["low", "out", "photo"] as string[]).includes(params.filter ?? "") ? params.filter : "") as Filter);
+  useEffect(() => {
+    if (params.filter && (["low", "out", "photo"] as string[]).includes(params.filter)) setFilter(params.filter as Filter);
+  }, [params.filter]);
+  const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
+  const state = useLoad(() => partsShopService.getMyInventory(asActor(user), { page, q, stock: SERVER[filter] }), [user.id, page, q, filter]);
+  const set = (f: Filter) => {
+    setFilter(f);
+    setPage(1);
+  };
+  const shown = (state.data?.products ?? []).filter((p) => filter !== "photo" || !p.imageUri);
+  const chips: [Filter, string][] = [["", t("All", "الكل")], ["low", t("Low stock", "مخزون منخفض")], ["out", t("Sold out", "نفدت")], ["photo", t("No photo", "بلا صورة")]];
+
+  return (
+    <ProviderLayout area="parts" title={t("Products", "المنتجات")} onRefresh={state.reload} refreshing={state.loading && !!state.data}>
+      <GButton icon="add" label={t("Add product", "إضافة منتج")} onPress={() => router.push("/provider/parts/new" as Href)} />
+      <View style={{ height: 12 }} />
+      <SearchBar value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder={t("Name, brand or part number", "الاسم أو العلامة أو رقم القطعة")} />
+      <View style={[row, { flexWrap: "wrap", gap: 8, marginVertical: 12 }]}>
+        {chips.map(([k, label]) => <Chip key={k || "all"} label={label} on={filter === k} onPress={() => set(k)} />)}
+      </View>
+      {state.error && !state.data ? <ErrorState text={state.error} onRetry={state.reload} retryLabel={t("Retry", "إعادة المحاولة")} /> : null}
+      {!state.data && !state.error ? <SkeletonRows count={4} /> : null}
+      {state.data && !shown.length ? <EmptyState photo="empty.search" text={t("No matching products. Add a product or change the filter.", "لا توجد منتجات مطابقة. أضف منتجًا أو غيّر الفلتر.")} /> : null}
+      <View style={{ gap: 10 }}>
+        {shown.map((p) => {
+          const free = Math.max(0, p.stock - (p.reservedStock ?? 0));
+          return (
+            <Card key={p.id} pad={12} label={p.name} onPress={() => router.push(`/provider/parts/${p.id}` as Href)}>
+              <View style={[row, { alignItems: "center", gap: 12 }]}>
+                {p.imageUri ? <Image source={{ uri: p.imageUri }} style={{ width: 64, height: 64, borderRadius: gShape.small }} contentFit="cover" /> : <View style={{ width: 64, height: 64, borderRadius: gShape.small, backgroundColor: "rgba(128,128,128,0.2)" }} />}
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <GText numberOfLines={2} style={[gType.label, { fontWeight: "800" }, align]}>{p.name}</GText>
+                  <GText soft numberOfLines={1} style={[gType.caption, align]}>{[p.brand, p.partNumber].filter(Boolean).join(" · ")}</GText>
+                  <GText style={[gType.caption, { fontWeight: "700" }, align]}>{formatPrice(p.price)}</GText>
+                </View>
+              </View>
+              <View style={[row, { flexWrap: "wrap", gap: 6, marginTop: 8 }]}>
+                <StatusChip tone={free === 0 ? "danger" : free <= 3 ? "warning" : "success"} label={free === 0 ? t("Sold out", "نفدت") : t(`${free} in stock`, `${free} متوفر`)} />
+                <StatusChip tone={p.customerVisible ? "success" : "neutral"} label={p.customerVisible ? t("Visible", "ظاهر") : p.hidden ? t("Hidden by MOTEXA", "مخفي بواسطة موتكسا") : !p.imageUri ? t("Needs a photo", "يحتاج صورة") : t("Not visible", "غير ظاهر")} />
+              </View>
+            </Card>
+          );
+        })}
+      </View>
+      {state.data && (page > 1 || state.data.hasMore) ? (
+        <View style={[row, { gap: 10, marginTop: 12 }]}>
+          <GButton flex variant="secondary" label={t("Previous", "السابق")} disabled={page === 1} onPress={() => setPage((v) => v - 1)} />
+          <GButton flex variant="secondary" label={t("Next", "التالي")} disabled={!state.data.hasMore} onPress={() => setPage((v) => v + 1)} />
+        </View>
+      ) : null}
+      {filter === "photo" ? <Note icon="information-circle-outline">{t("Shows the products on this page that have no photo.", "يعرض منتجات هذه الصفحة التي بلا صورة.")}</Note> : null}
+    </ProviderLayout>
+  );
 }

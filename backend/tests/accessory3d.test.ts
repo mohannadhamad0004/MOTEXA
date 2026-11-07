@@ -66,6 +66,74 @@ test("shop input is validated: category, fits, size, photo counts, 360 set, cons
   await assert.rejects(f.service.get(randomUUID(), f.productId), (e: any) => e.status === 404);
 }));
 
+test("sizes are checked per part type, and submit lists every problem at once (a W203-style draft)", () => fixture(async f => {
+  const save = (type: string, size: Record<string, unknown>) => f.service.save(f.owner, f.productId, { accessoryType: type, fitsGenerationIds: [f.gid], ...size });
+  // a bumper's width must be 1200-2100 mm: 630 (a typo or the wrong field) is refused with the numbers, 1200 and 2100 are fine
+  await assert.rejects(save("FRONT_BUMPER", { widthMm: 630 }), (e: any) => e.code === "INVALID_SIZE" && /front bumper's width must be 1200.2100 mm \(you entered 630\)/.test(e.message));
+  await assert.rejects(save("FRONT_BUMPER", { widthMm: 2200 }), (e: any) => e.code === "INVALID_SIZE");
+  await save("FRONT_BUMPER", { widthMm: 1200 });
+  await save("FRONT_BUMPER", { widthMm: 2100 });
+  await assert.rejects(save("FRONT_BUMPER", { widthMm: 2100.5 }), (e: any) => e.code === "INVALID_SIZE");
+  await assert.rejects(save("SIDE_SKIRTS", { lengthMm: 500 }), (e: any) => /side skirt's length must be 1000.2800/.test(e.message));
+  await assert.rejects(save("MIRROR_COVERS", { widthMm: 1500 }), (e: any) => e.code === "INVALID_SIZE");
+  await save("MIRROR_COVERS", { widthMm: 200 });
+  const got = await f.service.get(f.owner, f.productId);
+  assert.deepEqual(got.sizeRanges.FRONT_BUMPER, { field: "widthMm", min: 1200, max: 2100 });
+  assert.equal(got.productName, "Front bumper");
+  // the draft of the bug report: one car chosen, installed car not set, no size, no photos, no consent
+  await f.service.save(f.owner, f.productId, { accessoryType: "FRONT_BUMPER", fitsGenerationIds: [f.gid], installed360: true });
+  await assert.rejects(f.service.submit(f.owner, f.productId, false), (e: any) => {
+    const fields = (e.issues as { code: string; field: string }[]).map(i => `${i.field}:${i.code}`);
+    assert.deepEqual(fields, ["partPhotos:PART_PHOTOS_REQUIRED", "installedPhotos:INSTALLED_PHOTOS_REQUIRED", "installedGen:INSTALLED_GENERATION_REQUIRED", "size:SIZE_REQUIRED", "consent:CONSENT_REQUIRED"]);
+    assert.match(e.message, /5 things need fixing/);
+    return true;
+  });
+  // an old draft that already holds an impossible size (630) is listed too, not silently accepted
+  const id = got.accessory?.id ?? (await f.service.get(f.owner, f.productId)).accessory!.id;
+  await prisma.productAccessory3D.update({ where: { id }, data: { widthMm: 630, installedGenerationId: f.gid, installed360: false } });
+  for (const c of ["red", "blue"]) await f.service.addPhoto(f.owner, f.productId, "PART", await jpg(c));
+  await f.service.addPhoto(f.owner, f.productId, "INSTALLED", await jpg("green"));
+  await assert.rejects(f.service.submit(f.owner, f.productId, true), (e: any) => e.code === "INVALID_SIZE" && e.issues.length === 1 && e.issues[0].field === "size");
+  await prisma.productAccessory3D.update({ where: { id }, data: { widthMm: 1500 } });
+  assert.equal((await f.service.submit(f.owner, f.productId, true)).status, "PENDING_REVIEW");
+}));
+
+test("the Parts Admin list shows EVERY submitted request (newest first, with shop, photo source and car) and the shop is told about every admin action", () => fixture(async f => {
+  const mine = async () => (await f.service.adminList()).filter(x => x.productId === f.productId);
+  assert.deepEqual(await mine(), [], "a draft is not a request yet");
+  await submitted(f);
+  const [row] = await mine();
+  assert.equal(row.status, "PENDING_REVIEW");
+  assert.equal(row.accessoryType, "FRONT_BUMPER");
+  assert.equal(row.shopName, "Test kit shop");
+  assert.equal(row.productName, "Front bumper");
+  assert.ok(row.firstPartPhotoId, "the first loose-part photo is the thumbnail when the product has no photo");
+  assert.deepEqual(row.cars.map(c => c.id), [f.gid]);
+  assert.ok(row.submittedAt);
+  // newest submission first across the whole list
+  const all = await f.service.adminList();
+  const times = all.map(x => (x.submittedAt ?? x.updatedAt).getTime());
+  assert.deepEqual(times, [...times].sort((x, y) => y - x));
+  assert.equal(all[0].id, row.id, "the request just submitted is the first row");
+  const tell = async () => (await prisma.notification.findMany({ where: { userId: f.owner }, orderBy: { createdAt: "asc" } })).map(n => n.title.split("||")[0]);
+  const id = row.id;
+  await f.service.reject(f.admin, id, "The photos are blurry: retake them on a plain background.");
+  assert.deepEqual(await tell(), ["Changes requested on your 3D request"]);
+  const note = (await prisma.notification.findFirstOrThrow({ where: { userId: f.owner } })).body;
+  assert.match(note, /Front bumper: The photos are blurry/);
+  assert.match(note.split("||")[1], /The photos are blurry/);
+  assert.match((await f.service.get(f.owner, f.productId)).accessory!.reviewNotes ?? "", /blurry/, "the message is on the shop's form too");
+  assert.equal((await mine())[0].status, "REJECTED", "a rejected request stays in the list");
+  // resubmit, approve, start (mock: no credits), each one tells the shop
+  await f.service.submit(f.owner, f.productId, true);
+  await f.service.approve(f.admin, id);
+  process.env.VEHICLE3D_MODE = "mock";
+  await f.service.start(f.admin, id, false);
+  assert.deepEqual(await tell(), ["Changes requested on your 3D request", "Your 3D request was approved", "Your 3D model is being created"]);
+  await f.service.setCredits(f.admin, f.shopId, 7);
+  assert.equal((await tell()).at(-1), "Your monthly 3D allowance changed");
+}));
+
 test("mock generation reaches final review, shows the installed look only after approval, and can never be published", () => fixture(async f => {
   await submitted(f);
   assert.equal(await f.service.forProduct(f.productId).then(x => x!.installed), null);

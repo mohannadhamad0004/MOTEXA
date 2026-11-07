@@ -10,7 +10,8 @@ export const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_BASE64_CHARS = Math.ceil((MAX_FILE_BYTES * 4) / 3) + 8;
 
 /** Decide the type from the actual bytes (never from what the client declares). JPEG and PNG only. */
-export function sniffImage(buf: Buffer): { mime: "image/jpeg" | "image/png"; ext: "jpg" | "png" } | null {
+export function sniffImage(buf: Buffer): { mime: "image/jpeg" | "image/png" | "image/webp"; ext: "jpg" | "png" | "webp" } | null {
+  if (buf.length >= 12 && buf.subarray(0, 4).toString("latin1") === "RIFF" && buf.subarray(8, 12).toString("latin1") === "WEBP") return { mime: "image/webp", ext: "webp" };
   if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return { mime: "image/jpeg", ext: "jpg" };
   if (buf.length >= 8 && buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return { mime: "image/png", ext: "png" };
   return null;
@@ -34,11 +35,11 @@ const cleanName = (v: unknown, fallback: string) => {
 export function parseUpload(input: unknown, fallbackName: string): { file: ParsedUpload } | { error: string } {
   const o = input as { name?: unknown; dataBase64?: unknown } | null;
   if (!o || typeof o !== "object" || typeof o.dataBase64 !== "string" || !o.dataBase64) return { error: "File data is missing." };
-  if (o.dataBase64.length > MAX_BASE64_CHARS) return { error: "Each file must be a JPEG or PNG image of at most 5 MB." };
+  if (o.dataBase64.length > MAX_BASE64_CHARS) return { error: "Each file must be a JPEG, PNG or WEBP image of at most 5 MB." };
   const buffer = Buffer.from(o.dataBase64, "base64");
-  if (!buffer.length || buffer.length > MAX_FILE_BYTES) return { error: "Each file must be a JPEG or PNG image of at most 5 MB." };
+  if (!buffer.length || buffer.length > MAX_FILE_BYTES) return { error: "Each file must be a JPEG, PNG or WEBP image of at most 5 MB." };
   const type = sniffImage(buffer);
-  if (!type) return { error: "Only JPEG and PNG images are accepted." };
+  if (!type) return { error: "Only JPEG, PNG and WEBP images are accepted." };
   return {
     file: {
       buffer,
@@ -87,5 +88,5 @@ export const MIN_PHOTO_BYTES = 2048;
 /** Prisma filter for "has a real, public product photo": every customer-facing product query includes it. */
 export const hasPhoto = { files: { some: { purpose: "PRODUCT_IMAGE", visibility: "PUBLIC", mimeType: { startsWith: "image/" }, sizeBytes: { gte: MIN_PHOTO_BYTES } } } } as const;
 
-export const TOW_PURPOSES = ["TRUCK_PHOTO", "TRUCK_REGISTRATION", "TRUCK_INSURANCE", "TRUCK_OPERATING_LICENSE", "TOW_COMPANY_DOCUMENT"] as const;
+export const TOW_PURPOSES = ["TRUCK_PHOTO", "TRUCK_REGISTRATION", "TRUCK_INSURANCE", "TRUCK_OPERATING_LICENSE", "TOW_COMPANY_DOCUMENT", "DRIVER_PHOTO", "DRIVER_LICENCE"] as const;
 export const PARTS_PURPOSES = ["PRODUCT_IMAGE", "PARTS_SHOP_DOCUMENT"] as const;

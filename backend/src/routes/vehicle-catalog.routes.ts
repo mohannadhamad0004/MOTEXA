@@ -5,8 +5,8 @@ import {createCatalogRequestService} from "../services/vehicle-catalog-requests.
 import {createSubmissionService} from "../services/vehicle3d-submissions.js";
 import {createImportService} from "../services/vehicle3d-imports.js";
 import {Vehicle3DError} from "../services/vehicle3d-validation.js";
-export function createVehicleCatalogRouter(){
- const router=Router(),tax=createTaxonomyService(),requests=createCatalogRequestService(),sub=createSubmissionService(),imports=createImportService();
+export function createVehicleCatalogRouter(imports=createImportService()){
+ const router=Router(),tax=createTaxonomyService(),requests=createCatalogRequestService(),sub=createSubmissionService();
  const c="/catalog/vehicle-requests",a="/admin/parts/vehicle-requests",v="/admin/parts/vehicles",i="/admin/parts/vehicle-3d-imports";
  router.use([c,a,v,i],requireAuth);const json=express.json({limit:"24kb"}),upload=express.json({limit:"29mb"}),photo=express.json({limit:"7mb"});
  const h=(fn:(req:Request,res:Response,uid:string)=>Promise<unknown>)=>async(req:Request,res:Response)=>{try{await fn(req,res,res.locals.authUser.id);}catch(e){if(e instanceof Vehicle3DError){res.status(e.status).json({success:false,code:e.code,message:e.message});return;}const code=(e as any)?.code;res.status(code==="P2002"||code==="P2003"?409:500).json({success:false,message:code==="P2002"?"A matching record already exists.":code==="P2003"?"This record has history. Deactivate it instead.":"Could not complete the vehicle catalog request."});}};
@@ -34,10 +34,14 @@ export function createVehicleCatalogRouter(){
   router.delete(v+"/"+kind+"/:id",requirePartsAdmin,h(async(q,r,u)=>r.json(await tax.remove(u,kind,String(q.params.id)))));
  }
  router.get(i,requirePartsAdmin,h(async(_q,r,u)=>r.json({imports:await imports.list(u)})));
+ router.post(i+"/sketchfab/inspect",requirePartsAdmin,json,h(async(q,r,u)=>r.json({inspection:await imports.inspect(u,q.body?.url)})));
+ router.post(i+"/sketchfab",requirePartsAdmin,json,h(async(q,r,u)=>r.status(202).json({import:await imports.queue(u,q.body)})));
  router.post(i,requirePartsAdmin,upload,h(async(q,r,u)=>r.status(201).json({import:await imports.upload(u,q.body)})));
  router.get(i+"/:id",requirePartsAdmin,h(async(q,r,u)=>r.json({import:await imports.get(u,String(q.params.id))})));
- router.get(i+"/:id/model",requirePartsAdmin,h(async(q,r,u)=>{r.setHeader("Cache-Control","private, no-store");r.type("model/gltf-binary").send(await imports.asset(u,String(q.params.id)));}));
- router.post(i+"/:id/validate",requirePartsAdmin,json,h(async(q,r,u)=>r.json({import:await imports.validate(u,String(q.params.id),q.body?.config)})));
+ router.get(i+"/:id/model",requirePartsAdmin,h(async(q,r,u)=>{r.setHeader("Cache-Control","private, no-store");r.setHeader("X-Content-Type-Options","nosniff");r.type("model/gltf-binary").send(await imports.asset(u,String(q.params.id)));}));
+ router.post(i+"/:id/retry",requirePartsAdmin,json,h(async(q,r,u)=>r.status(202).json({import:await imports.retry(u,String(q.params.id))})));
+ router.post(i+"/:id/discard",requirePartsAdmin,json,h(async(q,r,u)=>r.json({import:await imports.discard(u,String(q.params.id))})));
+ router.post(i+"/:id/validate",requirePartsAdmin,json,h(async(q,r,u)=>{const id=String(q.params.id),current=await imports.get(u,id);r.status(current.provenance?202:200).json({import:current.provenance?await imports.queueValidation(u,id,q.body?.config):await imports.validate(u,id,q.body?.config)});}));
  router.post(i+"/:id/publish",requirePartsAdmin,json,h(async(q,r,u)=>r.json({import:await imports.publish(u,String(q.params.id),q.body)})));
  return router;
 }

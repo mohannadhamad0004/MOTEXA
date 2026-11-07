@@ -1,0 +1,6 @@
+["- **Real parts: all shown.** The E36 front bumper (GOOD 2.2 mm clip / 9.0 mm gap, limit 9 mm) and the E36 wing (GOOD 2.3 / 5.0, limit 6.5) show on the E36; the rim shows on all 21 cars (PERFECT). Before the tiers: bumper 43.3 mm clip + 12.8 mm gap, wing 7 mm gap.",
+"- **Bumper**: the two stock pieces inside its space (headlight washers, one small bracket) are hidden with the stock bumper; the 43 mm corner clip was mostly the stock `bumper_R_trim` and the grille panel edge, now treated as tucked-under; the remaining correction is scale 0.98, 8 mm up, left corner -10 mm y, right corner -10 mm x / -10 mm z. The headlight gap fell from 12.8 mm to 9.0 mm: it stays the widest spot (the part's top edge vs the stock bumper line), still within 0.5 % of the part width.",
+"- **Wing**: seats 2 mm down; its 5 mm rear-edge gap is the Meshy surface (GOOD, not PERFECT).",
+"- **Stand-ins are rigid boxes** (test only): refusals are mostly gaps where a straight box meets a curved car. They measure type coverage, not quality.",
+"- **Grounding**: every car now stands on its real lowest point (the tyres). The Fabia (198 mm) and Corolla E170 (80 mm) are no longer in the air; see the gate table.",
+"- **Part maps**: only the E36 is confirmed; bumpers are not offered on other cars until their map is confirmed."]

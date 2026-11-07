@@ -19,7 +19,7 @@ export const inquiryTone = (s: InquiryStatus): Tone => ({ OPEN: "accent", ANSWER
 const dayKey = (iso: string) => iso.slice(0, 10);
 
 /** Chat: date separators, a system pill for the start (and the close), bubbles (mine on the end side), and the reply box. */
-export function GarageThread({ messages, canReply, busy, error, onSend, startedText, closedText }: { messages: ThreadMessage[]; canReply: boolean; busy: boolean; error: string | null; onSend: (body: string) => Promise<boolean>; startedText?: string; closedText?: string }) {
+export function GarageThread({ messages, canReply, busy, error, onSend, startedText, closedText, otherName }: { otherName?: string; messages: ThreadMessage[]; canReply: boolean; busy: boolean; error: string | null; onSend: (body: string) => Promise<boolean>; startedText?: string; closedText?: string }) {
   const { t, isArabic } = useL();
   const { g, row, align } = useGarageTheme();
   const [text, setText] = useState("");
@@ -35,7 +35,7 @@ export function GarageThread({ messages, canReply, busy, error, onSend, startedT
         return (
           <View key={m.id}>
             {sep ? <DateSeparator label={label(m.createdAt)} /> : null}
-            <Bubble mine={m.mine} text={m.body} meta={`${m.mine ? t("You", "أنت") : m.from === "SHOP" ? t("Shop", "المتجر") : t("Customer", "العميل")} · ${fmtDateTime(m.createdAt).slice(11)}`} />
+            <Bubble mine={m.mine} text={m.body} meta={`${m.mine ? t("You", "أنت") : otherName ? otherName : m.from === "SHOP" ? t("Shop", "المتجر") : t("Customer", "العميل")} · ${fmtDateTime(m.createdAt).slice(11)}`} />
           </View>
         );
       })}

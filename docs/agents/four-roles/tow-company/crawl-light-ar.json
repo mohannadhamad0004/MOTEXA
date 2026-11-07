@@ -1,0 +1,18 @@
+[
+ {
+  "route": "/provider/tow",
+  "title": "",
+  "elements": [],
+  "problems": [],
+  "landed": "/provider/tow",
+  "total": 0
+ },
+ {
+  "route": "/provider/tow/jobs",
+  "title": "",
+  "elements": [],
+  "problems": [],
+  "landed": "/provider/tow/jobs",
+  "total": 0
+ }
+]

@@ -10,8 +10,17 @@ export const isServerFile = (uri?: string | null) => !!uri && (uri.startsWith("/
 /** Public images (truck photo, product image) can be shown with a plain URL. */
 export const publicImageUrl = (path?: string | null) => (path ? (path.startsWith("/") ? API_URL + path : path) : null);
 
+/** Photos already converted by pickPhoto (JPEG, <= 1600 px) are kept here by uri, so no file has to be read back with fetch(). */
+const photoCache = new Map<string, string>();
+export const rememberPhoto = (uri: string, base64: string) => {
+  photoCache.set(uri, base64);
+  if (photoCache.size > 40) photoCache.delete(photoCache.keys().next().value as string);
+};
+
 /** Reads a local image into base64 (no data-URL prefix). The server decides the real type from the bytes. */
 export async function localFileToBase64(uri: string): Promise<string> {
+  const hit = photoCache.get(uri);
+  if (hit) return hit;
   const blob = await (await fetch(uri)).blob();
   return await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();

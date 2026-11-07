@@ -35,7 +35,7 @@ export type AdminAccessory = Accessory & {
   creditsThisMonth: number; monthlyCredits: number; mode: "real" | "mock"; paidEnabled: boolean;
   fits: { id: string; name: string; nameAr: string; years: [number, number]; has3d: boolean }[];
 };
-export type ListedAccessory = Accessory & { productName: string; productBrand: string; shopName: string };
+export type ListedAccessory = Accessory & { productName: string; productBrand: string; shopName: string; shopId: string; productImageId: string | null; firstPartPhotoId: string | null; cars: { id: string; name: string; nameAr: string }[] };
 /** One published (or not yet published: model null) 3D part of a product, for the customer. */
 /** universal = a "Universal by size" rim: shown on any car with a 3D model. */
 export type CustomerPart = { part: KitPart; type: AccessoryType; fitsIds: string[]; universal?: boolean; model: { file: string; size: { widthMm: number | null; lengthMm: number | null; rimInches: number | null }; finish?: RimFinish | null } | null; autoFit: { fit: unknown; adj: FitAdjust | null } | null };
@@ -59,7 +59,11 @@ export type { ZoneBox } from "../car3d/modelConfig";
 /** none = not split yet (running in the background), stale = the model file changed, single = one piece (zones only). */
 export type PartMapStatus = "none" | "stale" | "single" | "proposed" | "confirmed";
 export type PartMapSummary = Partial<Record<PartLabel, { n: number; confidence?: number; by?: string }>>;
-export type PartMapListItem = { key: string; name: string; status: PartMapStatus; pieces: number; confirmedAt: string | null; proposalSummary: PartMapSummary; mapSummary: PartMapSummary };
+/** The accessory quality gate of a car model (backend car-part-map accessoryGate): codes, translated in gate.tsx. */
+type GateProblem = { code: "LENGTH" | "WIDTH" | "HEIGHT" | "SHAPE" | "WHEEL_SIZE" | "WHEELS_IN_AIR"; value: number; range?: [number, number] };
+export type ModelGate = { verdict: "FULL" | "LIMITED" | "REJECTED"; problems: GateProblem[]; warnings?: GateProblem[];
+  limited: Partial<Record<AccessoryType, "NOT_SEPARATE" | "WHEELS_NOT_FOUND" | "NEEDS_WHEELS" | "SINGLE_PIECE">>; text: string[] };
+export type PartMapListItem = { key: string; name: string; status: PartMapStatus; pieces: number; confirmedAt: string | null; proposalSummary: PartMapSummary; mapSummary: PartMapSummary; gate: ModelGate | null };
 export type PartMapDetail = PartMapListItem & { modelSha256: string | null; proposal: Partial<Record<PartLabel, { ids: string[]; confidence: number; by: string }>> | null; map: PartMap | null };
 export type ZoneModel = { key: string; name: string; fileZones: Partial<Record<AccessoryType, AccessoryZone>>; zones: Partial<Record<AccessoryType, AccessoryZone>> };
 /** Add-ons that hide the car's own part while on (mirrors backend REPLACES_STOCK). */
@@ -84,7 +88,7 @@ export const typesForCategory = (category: string | null | undefined): Accessory
 
 const shop = (productId: string, rest = "", part: KitPart = "MAIN") => `/parts/me/products/${productId}/accessory-3d${rest}${part === "MAIN" ? "" : `?part=${part}`}`;
 export const shopAccessoryApi = {
-  get: (productId: string, part: KitPart = "MAIN") => api<{ eligible: boolean; category: string | null; isUniversal: boolean; accessory: Accessory | null; parts: { part: KitPart; type: AccessoryType; status: AccessoryStatus }[] }>("GET", shop(productId, "", part)),
+  get: (productId: string, part: KitPart = "MAIN") => api<{ eligible: boolean; category: string | null; isUniversal: boolean; productName?: string; sizeRanges?: Partial<Record<AccessoryType, { field: "widthMm" | "lengthMm"; min: number; max: number }>>; accessory: Accessory | null; parts: { part: KitPart; type: AccessoryType; status: AccessoryStatus }[] }>("GET", shop(productId, "", part)),
   save: async (productId: string, body: Record<string, unknown>, part: KitPart = "MAIN") => (await api<{ accessory: Accessory }>("PUT", shop(productId, "", part), body)).accessory,
   photo: (productId: string, kind: "PART" | "INSTALLED", dataBase64: string, part: KitPart = "MAIN") => api("POST", shop(productId, `/photos/${kind}`, part), { dataBase64 }),
   removePhoto: (productId: string, photoId: string, part: KitPart = "MAIN") => api("DELETE", shop(productId, `/photos/${photoId}`, part)),

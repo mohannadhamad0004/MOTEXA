@@ -1,3 +1,4 @@
+import { DriverCard } from "../../../features/tow/DriverCard";
 import { TowPublicProfile } from "../../../features/catalog/TowPublicProfile";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
@@ -79,16 +80,10 @@ export default function CustomerTowCompany() {
           {drivers.data?.length ? (
             <Section title={t("Free drivers", "السائقون المتاحون")}>
               <Card pad={12}>
-                {drivers.data.map((d, i) => (
-                  <ListRow
-                    key={d.id}
-                    divider={i > 0}
-                    icon="person-circle-outline"
-                    title={d.firstName}
-                    sub={d.truck ? `${type[d.truck.type]} · ${d.truck.make} ${d.truck.model}` : undefined}
-                    end={<GText style={[gType.caption, { color: g.accentText, fontWeight: "800" }]}>{t("Request", "اطلب")}</GText>}
-                    onPress={() => router.push({ pathname: "/customer/towrequest/new", params: { companyId: id, driverId: d.id } })}
-                  />
+                {drivers.data.map((d) => (
+                  <View key={d.id} style={{ marginBottom: 8 }}>
+                    <DriverCard d={d} onPress={() => router.push({ pathname: "/customer/towrequest/new", params: { companyId: id, driverId: d.id } })} />
+                  </View>
                 ))}
               </Card>
               <GText soft style={[gType.caption, align, { marginTop: 6 }]}>{t("Or request the company: it sends whichever driver is free.", "أو اطلب الشركة: ترسل أي سائق متاح.")}</GText>

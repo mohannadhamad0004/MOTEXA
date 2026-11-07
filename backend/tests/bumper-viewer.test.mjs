@@ -1,6 +1,8 @@
 // Bumper "replace" fit in the REAL viewer code (sceneHtml.ts via scripts/accessory-fit-check.mjs, headless Chrome, local Three.js) on the
 // E36: a bumper made for the car fits with small visible edge gaps; a bumper of another car / a wrong shape is refused; no confirmed part
 // map = refused; a body kit's two bumpers are switched on and off separately and each brings its own stock bumper back.
+// FIT-QA (visible clipping / floating gaps, refusal) has its own suite (fit-qa-viewer.test.mjs): here the parts run in evidence mode, so
+// this file keeps testing its own mechanism with the E36 demo parts the QA refuses.
 import { test } from 'node:test'; import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process'; import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'; import { resolve } from 'node:path';
 import { ROOT, loadTS } from '../scripts/vehicle-audit-lib.mjs';
@@ -16,8 +18,8 @@ function run(name, args, { partMap, kit, kit2 } = {}) {
   const dir = resolve(TMP, name); mkdirSync(dir, { recursive: true });
   writeFileSync(resolve(dir, 'config.json'), JSON.stringify({ ...E36, ...(partMap ? { partMap } : {}) }));
   const extra = [];
-  if (kit) { writeFileSync(resolve(dir, 'kit.json'), JSON.stringify(kit)); extra.push(`--kit=${resolve(dir, 'kit.json')}`); }
-  if (kit2) { writeFileSync(resolve(dir, 'kit2.json'), JSON.stringify(kit2)); extra.push(`--kit2=${resolve(dir, 'kit2.json')}`); }
+  if (kit) { writeFileSync(resolve(dir, 'kit.json'), JSON.stringify({ ...kit, qaEvidence: true })); extra.push(`--kit=${resolve(dir, 'kit.json')}`); }
+  if (kit2) { writeFileSync(resolve(dir, 'kit2.json'), JSON.stringify({ ...kit2, qaEvidence: true })); extra.push(`--kit2=${resolve(dir, 'kit2.json')}`); }
   try {
     const out = execFileSync(process.execPath, [resolve(ROOT, 'backend/scripts/accessory-fit-check.mjs'), `--car=${CAR}`, `--config=${resolve(dir, 'config.json')}`, `--out=${dir}`, ...extra, ...args],
       { encoding: 'utf8', timeout: 240_000, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });

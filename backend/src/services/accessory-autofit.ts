@@ -49,10 +49,20 @@ export function validFit(f: unknown, version = fitVersion(typeOf(f))): boolean {
   if (x && typeof x === "object" && x.version === version && typeof x.type === "string" && typeof x.failed === "string") return x.failed.length <= 500 && JSON.stringify(f).length <= 20_000;
   return !!x && typeof x === "object" && x.version === version && typeof x.type === "string" && Array.isArray(x.orient) && x.orient.length === 3
     && Array.isArray(x.placements) && x.placements.length >= 1 && x.placements.length <= 4
-    && x.placements.every((p: Record<string, unknown>) => triple(p.pos) && triple(p.sc) && triple(p.rot) && (p.side === 1 || p.side === -1))
+    && x.placements.every((p: Record<string, unknown>) => triple(p.pos) && triple(p.sc) && triple(p.rot) && (p.side === 1 || p.side === -1)
+      && (p.warp === undefined || (Array.isArray(p.warp) && p.warp.length === 2 && p.warp.every(e => Array.isArray(e) && e.length === 3 && e.every(n => num(n, 0.016)))))) // bumper corners (fitQA)
     && Array.isArray(x.shadows) && x.shadows.length <= 4 && x.shadows.every((s: Record<string, unknown>) => ["x", "y", "z", "w", "d"].every(k => num(s[k], 50)))
     && (x.shift === undefined || (Array.isArray(x.shift) && x.shift.length <= 40 && x.shift.every((e: unknown) => Array.isArray(e) && typeof e[0] === "string" && num(e[1], 0.05))))
+    && (x.hideMore === undefined || (Array.isArray(x.hideMore) && x.hideMore.length <= 60 && x.hideMore.every(n => typeof n === "string" && n.length <= 200)))
+    && (x.rimRuntime === undefined || validRimRuntime(x.rimRuntime))
     && JSON.stringify(f).length <= 20_000;
+}
+/** = sceneHtml validRimRuntime: which wheels take the rim, which stock tyre pieces stay / brake pieces hide, each wheel's move (<= 5 cm). */
+function validRimRuntime(v: unknown): boolean {
+  const r = v as Record<string, unknown>, names = (a: unknown, max: number) => Array.isArray(a) && a.length <= max && a.every(n => typeof n === "string" && n.length <= 40);
+  return !!r && typeof r === "object" && names(r.active, 4) && names(r.kept, 400) && (r.hideBrakes === undefined || names(r.hideBrakes, 200))
+    && Array.isArray(r.offsets) && r.offsets.length <= 4
+    && r.offsets.every((o: Record<string, unknown>) => !!o && typeof o.wheel === "string" && o.wheel.length <= 40 && Array.isArray(o.delta) && o.delta.length === 3 && o.delta.every(n => num(n, 0.05)));
 }
 export function parseAdj(v: unknown): Adj | null {
   const a = v as Record<string, unknown>;
@@ -61,12 +71,12 @@ export function parseAdj(v: unknown): Adj | null {
 }
 
 /** Run the real viewer's fit for this accessory file on this car (headless, no screenshots). */
-async function computeFit(type: string, size: Record<string, number | null>, privateModelPath: string, key: string) {
+async function computeFit(type: string, size: Record<string, number | null>, privateModelPath: string, key: string, baseAdj: Adj | null = null) {
   const { modelWithZones } = await import("./accessory3d.js");
   const model = await modelWithZones(key); if (!model) return fail("NO_3D_CAR", "That generation has no published 3D car model.", 409);
   const dir = path.join(PRIVATE_3D_DIR, `tmp-fit-${randomUUID()}`); mkdirSync(dir, { recursive: true });
   try {
-    writeFileSync(path.join(dir, "config.json"), JSON.stringify(model)); writeFileSync(path.join(dir, "kit.json"), JSON.stringify({ type, size }));
+    writeFileSync(path.join(dir, "config.json"), JSON.stringify(model)); writeFileSync(path.join(dir, "kit.json"), JSON.stringify({ type, size, ...(baseAdj ? { baseAdj } : {}) })); // the approved correction is checked too
     const { stdout } = await promisify(execFile)(process.execPath, [fileURLToPath(new URL("../../scripts/accessory-fit-check.mjs", import.meta.url)),
       `--car=${path.join(REPO_ROOT, "backend/public/3d", key + ".glb")}`, `--config=${path.join(dir, "config.json")}`, `--part=${privatePath(privateModelPath)}`,
       `--kit=${path.join(dir, "kit.json")}`, `--out=${dir}`, "--views=fit"], { timeout: 120_000, windowsHide: true, maxBuffer: 1024 * 1024 });
@@ -79,13 +89,24 @@ async function computeFit(type: string, size: Record<string, number | null>, pri
 }
 
 type Acc = { id: string; accessoryType: string; privateModelPath: string | null; widthMm: number | null; lengthMm: number | null; rimInches: number | null };
-/** Store a computed fit. Already current = kept as is (computed once, the admin's correction stays); else replaced and back to unreviewed. */
+/** Store a computed fit. Already current = kept as is (computed once, the admin's correction stays). Else replaced: an approved correction
+ *  that still passes the fit check (the viewer checked fit + correction: info.qa.correction) stays approved; one that fails is not dropped
+ *  silently: it is taken off (customers never get it) and kept in fit.previousCorrection with its numbers, and audited. */
 export async function saveFit(a: Acc, generationId: string, key: string, fit: unknown) {
   const version = fitVersion(a.accessoryType); if (!validFit(fit, version)) return fail("INVALID_FIT", "The viewer returned an invalid fit.", 500);
   const carRev = await carRevision(key, a.accessoryType); if (!carRev) return fail("NO_3D_CAR", "That generation has no published 3D car model.", 409);
   const data = { model3dKey: key, carRevision: carRev, partRevision: partRevision(a.privateModelPath), fitVersion: version, fit: fit as Prisma.InputJsonValue };
   const old = await prisma.accessoryAutoFit.findUnique({ where: { accessoryId_generationId: { accessoryId: a.id, generationId } } });
   if (old && old.carRevision === data.carRevision && old.partRevision === data.partRevision && old.fitVersion === version) return old;
+  const f = fit as { failed?: string; info?: { qa?: { correction?: { ok: boolean; clipMm: number; gapMm: number } } } };
+  const check = old?.approvedAt && old.adj ? (f.failed ? { ok: false, reason: f.failed } : f.info?.qa?.correction ?? null) : null;
+  if (old?.approvedAt && old.adj && check?.ok) // still passes on the recomputed fit: stays approved as it was
+    return prisma.accessoryAutoFit.update({ where: { accessoryId_generationId: { accessoryId: a.id, generationId } }, data });
+  if (old?.approvedAt && old.adj) {
+    const previousCorrection = { adj: old.adj, approvedAt: old.approvedAt.toISOString(), approvedByUserId: old.approvedByUserId, result: "fails", ...(check ?? { reason: "not checked" }) };
+    data.fit = { ...(fit as object), previousCorrection } as Prisma.InputJsonValue;
+    await prisma.auditLog.create({ data: { actorId: old.approvedByUserId ?? null, action: "ACCESSORY3D_FIT_CORRECTION_FAILED", targetId: a.id, details: { generationId, ...previousCorrection } as Prisma.InputJsonValue } });
+  }
   return prisma.accessoryAutoFit.upsert({ where: { accessoryId_generationId: { accessoryId: a.id, generationId } }, create: { accessoryId: a.id, generationId, ...data },
     update: { ...data, adj: Prisma.DbNull, approvedAt: null, approvedByUserId: null } });
 }
@@ -112,7 +133,8 @@ export function autoFitAccessory(accessoryId: string) {
       const key = f.generation.model3dKey; if (!key || !f.generation.isPublished) continue;
       const row = a.autoFits.find(r => r.generationId === f.generationId);
       if (row && await current(row, a.privateModelPath)) continue;
-      try { await saveFit(a, f.generationId, key, await computeFit(a.accessoryType, { widthMm: a.widthMm, lengthMm: a.lengthMm, rimInches: a.rimInches }, a.privateModelPath, key)); }
+      const corr = row?.approvedAt && row.adj ? parseAdj(row.adj) : null; // an approved correction is re-checked on the new fit
+      try { await saveFit(a, f.generationId, key, await computeFit(a.accessoryType, { widthMm: a.widthMm, lengthMm: a.lengthMm, rimInches: a.rimInches }, a.privateModelPath, key, corr)); }
       catch { console.error(`Accessory auto-fit failed for ${accessoryId} on ${key}.`); }
     }
   })().finally(() => running.delete(accessoryId)));

@@ -42,7 +42,7 @@ before(async () => {
     const u = await prisma.user.create({ data: { email: `${tag}.${key}@motexa.test`, fullName: `Driver ${key.toUpperCase()} Test`, role: "TOW_DRIVER", status: "ACTIVE", passwordHash: "x" } });
     users.push(u.id);
     const t = await prisma.truck.create({ data: { companyId, plateNumber: `${tag}-${key}`, make: "Isuzu", model: "NPR", truckType: "FLATBED", verificationStatus: "APPROVED", operationalStatus: "AVAILABLE" } });
-    const d = await prisma.towDriver.create({ data: { userId: u.id, companyId, truckId: t.id, phone: "0599222222" } });
+    const d = await prisma.towDriver.create({ data: { userId: u.id, companyId, truckId: t.id, phone: "0599222222", approval: "APPROVED" } });
     drv[key] = { id: d.id, userId: u.id, truckId: t.id };
   }
 });
@@ -92,7 +92,13 @@ test("transitions and permissions: only the assigned driver moves the job, in or
   assert.equal((await prisma.towDriver.findUniqueOrThrow({ where: { id: drv.a.id } })).lastLat, 32.2);
   await driverMove(drv.a.userId, r.id, "ARRIVED");
   assert.equal(await code(driverMove(drv.a.userId, r.id, "ARRIVED")), 409); // once
+  assert.equal(await code(driverMove(drv.a.userId, r.id, "IN_PROGRESS")), 409); // loading first, no skipping
+  assert.equal(await code(driverMove(drv.a.userId, r.id, "DELIVERED")), 409);
+  await driverMove(drv.a.userId, r.id, "LOADING");
+  assert.equal(await code(driverMove(drv.a.userId, r.id, "ARRIVED")), 409); // no going back
   await driverMove(drv.a.userId, r.id, "IN_PROGRESS");
+  assert.equal(await code(driverMove(drv.a.userId, r.id, "COMPLETED")), 409); // delivered first
+  await driverMove(drv.a.userId, r.id, "DELIVERED");
   await driverMove(drv.a.userId, r.id, "COMPLETED");
   assert.equal(await truckState("a"), "AVAILABLE");
   assert.equal(await status("a"), "FREE");
@@ -118,11 +124,21 @@ test("reassign before the start: an accepted job goes back to waiting and frees 
   await finishAll();
 });
 
-test("the company can't reassign once the driver is on the way", async () => {
+test("the company can reassign while the driver is on the way, not once towing started", async () => {
   await freeTrucks();
   const r = await newRequest(drv.a.id);
   await driverAccept(drv.a.userId, r.id);
   await driverMove(drv.a.userId, r.id, "EN_ROUTE");
-  assert.equal(await code(assign(ownerId, r.id, drv.b.id)), 409);
+  await assign(ownerId, r.id, drv.b.id); // back to "waiting for the new driver", the old truck is free again
+  const moved = await prisma.towRequest.findUniqueOrThrow({ where: { id: r.id } });
+  assert.equal(moved.status, "REQUESTED");
+  assert.equal(moved.enRouteAt, null);
+  assert.equal(await truckState("a"), "AVAILABLE");
+  await driverAccept(drv.b.userId, r.id);
+  await driverMove(drv.b.userId, r.id, "EN_ROUTE");
+  await driverMove(drv.b.userId, r.id, "ARRIVED");
+  await driverMove(drv.b.userId, r.id, "LOADING");
+  await driverMove(drv.b.userId, r.id, "IN_PROGRESS");
+  assert.equal(await code(assign(ownerId, r.id, drv.a.id)), 409);
   await finishAll();
 });

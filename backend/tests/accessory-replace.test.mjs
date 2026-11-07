@@ -1,6 +1,8 @@
 // Replaced zones in the REAL viewer code (sceneHtml.ts via scripts/accessory-fit-check.mjs, headless Chrome, local Three.js):
 // a front bumper never shows two bumpers (the car's own bumper surface is fully hidden while the part is on), and an add-on's
 // replace zone hides the stock part while on and brings it back when off (E36 + the published wing).
+// FIT-QA (visible clipping / floating gaps, refusal) has its own suite (fit-qa-viewer.test.mjs): here the parts run in evidence mode, so
+// this file keeps testing its own mechanism with the E36 demo parts the QA refuses.
 import { test } from 'node:test'; import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process'; import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'; import { resolve } from 'node:path';
 import { ROOT, loadTS } from '../scripts/vehicle-audit-lib.mjs';
@@ -16,7 +18,7 @@ const E36_BUMPER = { box: { x: [0, 1], y: [0, 0.34], z: [0.905, 1] } };
 
 function check(name, zones, part, kit) {
   const dir = resolve(TMP, name); mkdirSync(dir, { recursive: true });
-  writeFileSync(resolve(dir, 'config.json'), JSON.stringify({ ...E36, zones })); writeFileSync(resolve(dir, 'kit.json'), JSON.stringify(kit));
+  writeFileSync(resolve(dir, 'config.json'), JSON.stringify({ ...E36, zones })); writeFileSync(resolve(dir, 'kit.json'), JSON.stringify({ ...kit, qaEvidence: true }));
   const out = execFileSync(process.execPath, [resolve(ROOT, 'backend/scripts/accessory-fit-check.mjs'), `--car=${CAR}`, `--config=${resolve(dir, 'config.json')}`,
     `--part=${part}`, `--kit=${resolve(dir, 'kit.json')}`, `--out=${dir}`, '--views=check'], { encoding: 'utf8', timeout: 180_000, windowsHide: true });
   return JSON.parse(out.trim().split('\n').pop()).fit;

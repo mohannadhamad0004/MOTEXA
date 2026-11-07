@@ -1,0 +1,257 @@
+{
+  "evidence": "Mocked UI states using a retained production model; no live Sketchfab import.",
+  "results": [
+    {
+      "file": "01-form-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "02-inspection-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "03-progress-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "04-review-original-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "04-review-paint-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "05-published-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "06-error-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "01-form-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "02-inspection-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "03-progress-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "04-review-original-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "04-review-paint-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "05-published-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "06-error-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "01-form-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "02-inspection-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "03-progress-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "04-review-original-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "04-review-paint-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "05-published-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "06-error-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "01-form-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "02-inspection-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "03-progress-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "04-review-original-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "04-review-paint-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "05-published-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    },
+    {
+      "file": "06-error-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "fixture": true
+    }
+  ]
+}

@@ -19,6 +19,8 @@ import filesRoutes from "./routes/files.routes.js";
 import catalogRoutes from "./routes/catalog.routes.js";
 import partInquiryRoutes from "./routes/part-inquiries.routes.js";
 import towRequestRoutes from "./routes/tow-requests.routes.js";
+import towJobExtrasRoutes from "./routes/tow-job-extras.routes.js";
+import { startOfferSweeper } from "./services/tow-offers.js";
 import catalogMechanicRoutes from "./routes/catalog-mechanics.routes.js";
 import mechanicRequestRoutes from "./routes/mechanic-requests.routes.js";
 import providerRegistrationRoutes from "./routes/provider-registration.routes.js";
@@ -41,7 +43,7 @@ app.use("/api", providerPortalRoutes);
 app.use("/api",managedVehicleCatalogRoutes);
 app.use("/api", (req, res, next) => /^\/(catalog\/(vehicle-3d-submissions|3d-models)|admin\/parts\/vehicle-3d-submissions)(\/|$)/.test(req.path) ? vehicle3DRoutes(req, res, next) : next());
 // Feature 2: shop accessories in 3D (guards per route; photo bodies have their own limit)
-app.use("/api", (req, res, next) => /accessory-3d|accessory-zones/.test(req.path) ? accessory3DRoutes(req, res, next) : next());
+app.use("/api", (req, res, next) => /accessory-3d|accessory-zones|\/admin\/parts\/(part-maps|auto-fits)(\/|$)/.test(req.path) ? accessory3DRoutes(req, res, next) : next());
 // Public 3D car models (backend/public/3d, optimised GLBs; no customer data). Long cache: a new model gets a new file name.
 app.use("/api/3d", async (req, res, next) => {
   if (req.path.startsWith("/accessories/acc-")) { // generated shop accessories: only while their product is PUBLISHED
@@ -76,6 +78,7 @@ app.use("/api/catalog", catalogMechanicRoutes);
 // Request routes parse their own (small) JSON bodies after authentication.
 app.use("/api", partInquiryRoutes);
 app.use("/api", towRequestRoutes);
+app.use("/api", towJobExtrasRoutes); // chat, review, report of a tow job
 app.use("/api", mechanicRequestRoutes);
 // Provider onboarding (documents arrive as base64, so these routers parse their own body after authentication)
 app.use("/api/provider", providerOnboardingRoutes);
@@ -106,4 +109,5 @@ app.listen(PORT, () => {
   console.log(`MOTEXA Server running on http://localhost:${PORT}`);
 });
 
+startOfferSweeper(); // tow offers nobody answered in time
 void startVehicle3DWorker().catch(() => console.error("Vehicle 3D worker startup failed; check migrations and storage."));

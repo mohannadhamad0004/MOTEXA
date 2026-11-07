@@ -86,13 +86,29 @@ function rimArchEstimate(samples) {
   var good=a.filter(function(x){return Math.abs(x-m)<=tol;});
   return good.length<5 || good.length<a.length*0.6 ? {value:null,confidence:0} : {value:rimMedian(good),confidence:Math.min(1,good.length/12)*(good.length/a.length)};
 }
+var RIM_TARGET = 0.005, RIM_MAX_MOVE = 0.04; // the tyre face 5 mm inside the arch line (3-8 mm accepted), the whole wheel moved at most 40 mm
+/** The whole-wheel move along its own axle (+ = out). gap = arch line - stock tyre face (+ = the tyre is inside). Target RIM_TARGET inside,
+ *  clamped to 40 mm, then the largest move between that and stock that safe(move) allows; override (Parts Admin, metres) replaces the target. */
 function rimOffsetSearch(gap, safe, override) {
-  var target=0.005, warnings=[], desired=gap===null?0:gap-target;
-  if(gap===null) warnings.push("ARCH_UNCERTAIN");
-  if(typeof override==="number") { desired=override; warnings.push("ADMIN_INSET_OVERRIDE"); }
-  var d=Math.max(-0.04,Math.min(0.04,desired)); if(Math.abs(desired-d)>1e-8) warnings.push("OFFSET_CLAMPED");
-  for(var i=0;i<=20;i++) { var x=d*(1-i/20); if(safe(x)) { if(i) warnings.push("INNER_CLEARANCE_LIMITED"); if(!x && desired) warnings.push("USED_STOCK_OFFSET"); return {offset:x,warnings:warnings}; } }
-  warnings.push("USED_STOCK_OFFSET","INNER_CLEARANCE_LIMITED"); return {offset:0,warnings:warnings,unsafe:true};
+  var warnings = [], desired;
+  if (typeof override === "number") { desired = override; warnings.push("ADMIN_OVERRIDE"); }
+  else if (gap === null) return { offset: 0, warnings: ["ARCH_NOT_MEASURED"] };
+  else desired = gap - RIM_TARGET;
+  var d = Math.max(-RIM_MAX_MOVE, Math.min(RIM_MAX_MOVE, desired)); if (Math.abs(desired - d) > 1e-6) warnings.push("MOVE_CLAMPED_40MM");
+  if (Math.abs(d) < 0.0005) return { offset: 0, warnings: warnings };
+  for (var i = 0; i < 20; i++) { var x = d * (1 - i / 20); if (safe(x)) { if (i) warnings.push("LIMITED_BY_CLEARANCE"); return { offset: x, warnings: warnings }; } }
+  warnings.push("KEPT_STOCK_POSITION"); return { offset: 0, warnings: warnings };
+}
+/** The axle refined from a first guess: the direction across which the wheel is narrowest (a tyre is a short cylinder). PCA alone tilts with
+ *  uneven vertex density (tread detail on one side); the narrowest width does not. Pattern search on yaw / pitch, 4 deg down to 0.05 deg. */
+function rimNarrowestAxis(points, axis) {
+  var step = Math.max(1, Math.floor(points.length / 20000)), P = []; for (var i = 0; i < points.length; i += step) P.push(points[i]);
+  var dir = function (yaw, pitch) { return [Math.cos(pitch) * Math.cos(yaw), Math.sin(pitch), Math.cos(pitch) * Math.sin(yaw)]; };
+  var width = function (v) { var lo = Infinity, hi = -Infinity; for (var j = 0; j < P.length; j++) { var d = v[0] * P[j][0] + v[1] * P[j][1] + v[2] * P[j][2]; if (d < lo) lo = d; if (d > hi) hi = d; } return hi - lo; };
+  var s0 = axis[0] < 0 ? -1 : 1, a = [axis[0] * s0, axis[1] * s0, axis[2] * s0], yaw = Math.atan2(a[2], a[0]), pitch = Math.asin(Math.max(-1, Math.min(1, a[1]))), best = width(dir(yaw, pitch));
+  for (var st = 4 * Math.PI / 180; st > 0.05 * Math.PI / 180; st /= 2) { var moved = true;
+    while (moved) { moved = false; [[st, 0], [-st, 0], [0, st], [0, -st]].forEach(function (m) { var w = width(dir(yaw + m[0], pitch + m[1])); if (w < best - 1e-9) { best = w; yaw += m[0]; pitch += m[1]; moved = true; } }); } }
+  var r = dir(yaw, pitch); return [r[0] * s0, r[1] * s0, r[2] * s0];
 }
 // Jacobi eigensolver for a real symmetric 3x3 covariance. Sorted eigenvectors; deterministic sweep order.
 function rimPCA(points) {
@@ -115,7 +131,7 @@ function rimPCA(points) {
 // AUTO-FIT RULES (pure, no three.js: also run by the tests). Fit versions per fitter group: bump only the group whose fitter changed, so only
 // that group's stored fits are recomputed (approved / admin-corrected fits of other groups stay). Both objects are JSON: the server parses them.
 export const FIT_RULES_JS = String.raw`
-var FIT_VERSIONS = {"rims": 5, "wings": 2, "bumpers": 2, "other": 2};
+var FIT_VERSIONS = {"rims": 8, "wings": 4, "bumpers": 4, "other": 4};
 // wings = the add-on fitter (wing, spoiler, roof rack); every type not listed is "other"
 var FIT_GROUPS = {"RIMS": "rims", "WING": "wings", "SPOILER": "wings", "ROOF_RACK": "wings", "FRONT_BUMPER": "bumpers", "REAR_BUMPER": "bumpers"};
 function fitVersion(type) { return FIT_VERSIONS[FIT_GROUPS[type] || "other"]; }
@@ -670,9 +686,22 @@ function bumperGaps(car, zone, node) {
   Object.defineProperty(out, "worst", { value: worst.sort(function (a, b) { return b.mm - a.mm; }).slice(0, 12) }); // for the evidence, not the stored fit
   return out;
 }
-function fitBumper(car, src, type, zone, info, force) {
+/** Small stock pieces that sit in / on the stock bumper's space (headlight washers, brackets, fillers): they go with the stock bumper.
+ *  A mesh counts when EVERY piece of it is small (< 20 cm) and inside the stock bumper's box grown by 5 cm, and it is not a light, glass,
+ *  a wheel, a mechanical part or another mapped part; hidden by name, so every mesh of that name must qualify (names repeat in some files).
+ *  (ponytail: whole meshes only; a bracket merged into a bigger mesh stays, its piece would have to be split off like the part map does) */
+function coveredStock(car, zone) {
+  var R = zone.T.clone().expandByScalar(0.05), sz = new THREE.Vector3(), ok = new Map();
+  car.root.traverse(function (o) { if (!o.isMesh) return; var nm = o.name + " " + (o.material.name || "");
+    var yes = o.visible && zone.hide.indexOf(o) < 0 && car.wheels.meshes.indexOf(o) < 0 && !o.userData.label && !LIGHTISH.test(nm) && !GLASS.test(nm) && !MECHANICAL.test(nm)
+      && segment(o).boxes.every(function (b) { b.getSize(sz); return R.containsBox(b) && Math.max(sz.x, sz.y, sz.z) < 0.2; });
+    ok.set(o.name, (ok.has(o.name) ? ok.get(o.name) : true) && yes); });
+  var out = []; ok.forEach(function (v, k) { if (v && k) out.push(k); }); return out.slice(0, 40);
+}
+function fitBumper(car, src, type, zone, info, force, raw) { // raw (evidence only): the stock covered pieces stay, as before FIT-QA tiers
   var front = type === "FRONT_BUMPER", end = KIT[type].end;
   if (!zone || zone.how !== "part map") throw new Error("no confirmed " + (front ? "front" : "rear") + " bumper in this car's part map: 3D preview not available for this car");
+  var covered = raw ? [] : coveredStock(car, zone); info.hidesWithStock = covered; // hidden with the stock bumper (buildAccessory: hideMore)
   var T = zone.T, ts = T.getSize(new THREE.Vector3()), o = orientPart(src(), "x", end, "top"), node = o.node;
   var u = ts.x / o.size.x, sy = clamp(ts.y / (o.size.y * u), 0.95, 1.05), sz = clamp(ts.z / (o.size.z * u), 0.95, 1.05);
   node.scale.set(u, u * sy, u * sz); node.position.set((T.min.x + T.max.x) / 2, T.max.y, end > 0 ? T.max.z : T.min.z);
@@ -686,26 +715,30 @@ function fitBumper(car, src, type, zone, info, force) {
     var msg = "this bumper does not fit this car cleanly (" + why.join(", ") + ")";
     if (force) info.wouldFail = msg; else { var e = new Error(msg); e.info = info; throw e; } // force: evidence renders only
   }
-  return { o: o, placements: [{ pos: node.position.toArray().map(r4), sc: node.scale.toArray().map(r4), rot: [0, 0, 0], side: 1 }], orient: ["x", end, "top"], shadows: [] };
+  return { o: o, placements: [{ pos: node.position.toArray().map(r4), sc: node.scale.toArray().map(r4), rot: [0, 0, 0], side: 1 }], orient: ["x", end, "top"], shadows: [], hideMore: covered };
 }
-// ---- RIMS: one rim part used x4 ----
-// wheelParts(car): per wheel (findWheels: confirmed part map WHEELS, else named wheel meshes, else round pieces standing on the ground)
-// every car mesh lying wholly inside that wheel's cylinder, sorted into tyre (named, or a ring reaching the tread), brake (named, or
-// sitting inboard of the spokes: never hidden) and rim (the rest). Measured: the tyre's outer radius, tread width / centre, outer face
-// and the inner edge of its outer sidewall; the stock rim's radius and face. A wheel without a separate tyre is all "rim".
-// fitRims: the stock rim hidden, the new rim (same diameter as the stock one, or scaled by the product's inches / the stock inches) placed
-// on the axle with its face where the stock face was, facing outward (mirrored left / right). The stock tyre stays when it is its own
-// piece and the rim size did not change; else a tyre is built in code (stock outer diameter and width) around the new rim.
-// Wheel inset (Parts Admin, the car's RIMS zone wheelInsetMm {front, rear}): while rims are on, the whole wheel (rim + tyre) moves inward
-// by that much per axle, for models whose stock wheels stand outside the fenders. A kept stock tyre is moved with it (only when its mesh
-// is one wheel side / axle and uniquely named), else that car gets built tyres. Measured per wheel: the stock tyre face vs the fender
-// (tyreToFenderMm, < 0 = outside), and the suggested inset per axle that puts the tyre face flush with the fender.
-// Fit errors: less than 2 cm of sidewall left, or the rim face past the tyre face, or past the wheel arch further out than the stock wheel
-// (some models already sit their stock wheels outside the arch: that clearance is reported, not refused).
+// ---- RIMS: one rim part used x4, placed automatically on every car (no per-car settings) ----
+// rimPieces(car): the four wheels. A seed only LOCATES each wheel (confirmed part map WHEELS, else the stored automatic proposal, else
+// wheel-named meshes, else round pieces standing on the ground): centre, real axle and radius from its points. Then every connected piece
+// of any car mesh lying wholly inside that wheel's cylinder is the wheel (tyre, rim, nuts, a wheel merged into the body mesh; a partial
+// seed or a steered wheel works the same). Brake / hub / suspension / steering-wheel names are never taken. Original meshes are never
+// edited: while rims are on, a shared mesh is hidden and its non-wheel triangles are drawn as a residual (rimRuntime).
+// wheelParts(car): per wheel the axle (PCA of its points: steered / cambered wheels too), the tyre / rim / brake split (a ring reaching the
+// tread = tyre; a piece inboard of the tyre centre and well inside the rim = brake, kept), tyre radius and faces, stock rim radius and face.
+// fitRims: the new rim at the stock rim face, facing outward, same diameter (or the product's inches); the stock tyre kept when it is its own
+// piece and the size is unchanged, else a tyre is built (stock outer size). Then each wheel on its own: the arch line (rimArch) and the
+// whole wheel moved along its own axle so the tyre face sits 5 mm inside it (rimOffsetSearch: <= 40 mm, the largest move rimSafety allows);
+// no arch line = stock position + a warning. A Parts Admin inset (RIMS zone wheelInsetMm, mm inward per axle) overrides the automatic move.
+// Fit errors: a wheel that cannot be measured (all four must take the rim), or less than 2 cm of tyre sidewall left.
 var RIM_FINISH = { silver: [0xc9ccd0, 1, 0.32], black: [0x1c1d1f, 0.55, 0.42], gunmetal: [0x4a4e54, 0.9, 0.38], chrome: [0xf1f3f5, 1, 0.06] };
 var TYRE_MAT = new THREE.MeshStandardMaterial({ color: 0x1b1b1c, roughness: 0.92, metalness: 0 });
-/** A tyre along the x axis: a lathed rounded profile from the rim edge (ri) to the tread (ro), width w. */
-function tyreGeometry(ri, ro, w) {
+/** A tyre along the x axis: a lathed profile from the rim edge (ri) to the tread (ro), width w. prof = the stock tyre's outline (largest radius
+ *  per twelfth of its width, inner face first): the built tyre then has exactly the stock tyre's shape; else a generic rounded one. */
+function tyreGeometry(ri, ro, w, prof) {
+  if (prof && prof.length === 12 && prof.every(function (r) { return r > ri; })) {
+    var q = [new THREE.Vector2(ri, -w / 2)]; prof.forEach(function (r, k) { q.push(new THREE.Vector2(r * 0.998, -w / 2 + (k + 0.5) * w / 12)); }); q.push(new THREE.Vector2(ri, w / 2));
+    var lg = new THREE.LatheGeometry(q, 48); lg.rotateZ(-Math.PI / 2); return lg;
+  }
   var pts = [], k = Math.min(0.35 * (ro - ri), 0.3 * w), seg = 6, i, a;
   var arc = function (cx, cy, a0, a1) { for (i = 0; i <= seg; i++) { a = a0 + (a1 - a0) * i / seg; pts.push(new THREE.Vector2(cx + k * Math.cos(a), cy + k * Math.sin(a))); } };
   pts.push(new THREE.Vector2(ri, -w / 2 * 0.9));
@@ -714,144 +747,260 @@ function tyreGeometry(ri, ro, w) {
   var g = new THREE.LatheGeometry(pts, 48); g.rotateZ(-Math.PI / 2); // lathe axis y -> x (the axle)
   return g;
 }
-// RIMS-only extraction. Original geometry, visibility and transforms are never edited.
-// The temporary residuals preserve non-wheel triangles in shared meshes while rims are on.
+function meshName(m) { return m.name + " " + (m.material && m.material.name || ""); }
+function triCount(g) { return Math.floor((g.index ? g.index.count : g.attributes.position.count) / 3); }
+var round1 = function (n) { return Math.round(n * 10) / 10; };
+/** A wheel's frame from its points: axle = least-variance direction (pointing out of the car), centre, radius (mean of the two round extents). */
+function wheelFrame(pts, side) {
+  var pca = rimPCA(pts); if (!pca) return null;
+  var axis = new THREE.Vector3().fromArray(rimNarrowestAxis(pts, pca.axis[0])); if (axis.x * side < 0) axis.negate();
+  var up = new THREE.Vector3(0, 1, 0).addScaledVector(axis, -axis.y).normalize(), tangent = new THREE.Vector3().crossVectors(axis, up).normalize();
+  var R = [axis, up, tangent].map(function (v) { var lo = Infinity, hi = -Infinity; pts.forEach(function (p) { var d = v.x * p[0] + v.y * p[1] + v.z * p[2]; if (d < lo) lo = d; if (d > hi) hi = d; }); return [lo, hi]; });
+  var center = new THREE.Vector3(); [axis, up, tangent].forEach(function (v, j) { center.addScaledVector(v, (R[j][0] + R[j][1]) / 2); });
+  var hu = R[1][1] - R[1][0], ht = R[2][1] - R[2][0], circular = Math.min(hu, ht) / Math.max(hu, ht);
+  return { center: center, axis: axis, up: up, tangent: tangent, ro: (hu + ht) / 4, half: (R[0][1] - R[0][0]) / 2, circular: circular, confidence: clamp(1 - pca.values[0] / pca.values[1], 0, 1) * circular };
+}
 function rimPieces(car) {
-  if(car.rimPieces)return car.rimPieces;
-  var root=car.root, mid=car.rb.getCenter(new THREE.Vector3()), sz=car.rb.getSize(new THREE.Vector3()), corners=[[],[],[],[]], sources=[];
-  var confirmed=car.parts.WHEELS, proposal=car.rimProposal, ids=new Set(proposal?proposal.ids:[]), fallback=!confirmed&&!ids.size;
-  var named=fallback?findWheels(root,car.rb).meshes:[], meshes=[]; root.updateMatrixWorld(true);
-  root.traverse(function(m){if(m.isMesh&&m.visible)meshes.push(m);});
-  meshes.forEach(function(m,mi){
-    var mapped=confirmed&&confirmed.indexOf(m)>=0, proposed=!confirmed&&ids.size&&m.userData.pi!==undefined;
-    if(!mapped&&!proposed&&named.indexOf(m)<0)return;
-    var g=m.geometry, nt=(g.index?g.index.count:g.attributes.position.count)/3, seg=proposed?segment(m):null, buckets=[[],[],[],[]], rest=[], vs=[new THREE.Vector3(),new THREE.Vector3(),new THREE.Vector3()];
-    for(var t=0;t<nt;t++){
-      var eligible=mapped || (proposed?ids.has("m"+m.userData.pi+"c"+seg.tri[t]):named.indexOf(m)>=0), center=new THREE.Vector3(), ti=[];
-      for(var j=0;j<3;j++){var vi=triVert(g,t,j);ti.push(vi);vs[j].fromBufferAttribute(g.attributes.position,vi).applyMatrix4(m.matrixWorld);center.add(vs[j]);}center.multiplyScalar(1/3);
-      if(center.y>car.rb.min.y+sz.y*0.6||Math.abs(center.x-mid.x)<sz.x*0.22)eligible=false;
-      var corner=(center.x>mid.x?1:0)+(center.z>mid.z?2:0); (eligible?buckets[corner]:rest).push.apply(eligible?buckets[corner]:rest,ti);
-    }
-    if(!buckets.some(function(x){return x.length;}))return;
-    var source={mesh:m,rest:rest,pieces:[]};sources.push(source);
-    buckets.forEach(function(ix,i){if(!ix.length)return;
-      var obj=new THREE.Mesh(subGeo(g,ix),m.material);obj.geometry.applyMatrix4(m.matrixWorld);obj.name="rimPiece_"+mi+"_"+i;
-      var box=exactBox(obj), d=box.getSize(new THREE.Vector3());
-      // A shell/bumper cannot become a wheel merely because its name contains 'rim'.
-      if(d.y<0.08||d.y>1.15||d.z>1.25||d.x>0.85){source.rest.push.apply(source.rest,ix);obj.geometry.dispose();return;}
-      var piece={obj:obj,source:source,indices:ix,id:obj.name,box:box};corners[i].push(piece);source.pieces.push(piece);
-    });
+  if (car.rimPieces) return car.rimPieces;
+  var root = car.root, rb = car.rb, mid = rb.getCenter(new THREE.Vector3()), sz = rb.getSize(new THREE.Vector3()), v = new THREE.Vector3(), d = new THREE.Vector3();
+  var confirmed = car.parts.WHEELS, ids = new Set(car.rimProposal ? car.rimProposal.ids : []), via = confirmed ? "confirmed" : ids.size ? "proposal" : "deterministic";
+  var named = via === "deterministic" ? findWheels(root, rb).meshes : [], meshes = []; root.updateMatrixWorld(true);
+  root.traverse(function (m) { if (m.isMesh && m.visible && m.geometry.attributes.position) meshes.push(m); });
+  var low = function (p) { return p.y < rb.min.y + sz.y * 0.6 && Math.abs(p.x - mid.x) > sz.x * 0.22; };
+  // 1. seed points per corner (rubber = tyre-named points: the cleanest ring)
+  var seeds = [0, 1, 2, 3].map(function () { return { all: new Map(), rubber: new Map() }; });
+  meshes.forEach(function (m) {
+    var whole = (confirmed && confirmed.indexOf(m) >= 0) || named.indexOf(m) >= 0, seg = !whole && !confirmed && ids.size && m.userData.pi !== undefined ? segment(m) : null;
+    if (!whole && !seg) return;
+    var g = m.geometry, n = triCount(g), rub = TYRE.test(meshName(m));
+    for (var t = 0; t < n; t++) { if (seg && !ids.has("m" + m.userData.pi + "c" + seg.tri[t])) continue;
+      for (var j = 0; j < 3; j++) { v.fromBufferAttribute(g.attributes.position, triVert(g, t, j)).applyMatrix4(m.matrixWorld); if (!low(v)) continue;
+        var s = seeds[(v.x > mid.x ? 1 : 0) + (v.z > mid.z ? 2 : 0)], k = Math.round(v.x * 1e4) + "," + Math.round(v.y * 1e4) + "," + Math.round(v.z * 1e4);
+        s.all.set(k, v.toArray()); if (rub) s.rubber.set(k, v.toArray()); } }
   });
-  return car.rimPieces={corners:corners,sources:sources,via:confirmed?"confirmed":ids.size?"proposal":"deterministic"};
+  // 2. each seed only locates its wheel: a cylinder round its axle, radius = the tyre (at least the centre's height above the ground)
+  var cyl = seeds.map(function (s, i) {
+    var pts = Array.from((s.rubber.size >= 24 ? s.rubber : s.all).values()), f = pts.length >= 12 ? wheelFrame(pts, i & 1 ? 1 : -1) : null;
+    if (!f || f.confidence < 0.3) return null;
+    var r = Math.max(f.ro, f.center.y - rb.min.y) * 1.03 + 0.005;
+    // generous along the axle: a seed may be a thin slice of the tyre; outboard of a wheel there is only air inside its radius
+    return { f: f, r2: r * r, lo: -f.half - 0.3, hi: f.half + 0.3, box: new THREE.Box3().setFromCenterAndSize(f.center, new THREE.Vector3(1, 1, 1).multiplyScalar(2 * (r + 0.3))) };
+  });
+  var rr = 0, inside = function (c, p) { d.subVectors(p, c.f.center); var ax = d.dot(c.f.axis); rr = d.lengthSq() - ax * ax; return ax >= c.lo && ax <= c.hi && rr <= c.r2; };
+  var bits = function (x) { var n = 0; while (x) { n += x & 1; x >>= 1; } return n; };
+  var near = function (b) { return cyl.some(function (c) { return c && b.intersectsBox(c.box); }); };
+  // 3a. every connected piece of every mesh near a wheel: which cylinder holds it wholly, its radii, the sectors it covers, its axial span
+  var cand = [], gr = function (w) { return Math.max(cyl[w].f.ro, cyl[w].f.center.y - rb.min.y); };
+  meshes.forEach(function (m, mi) {
+    if (NOT_WHEEL_PART.test(meshName(m)) || !near(new THREE.Box3().setFromObject(m))) return;
+    var seg = segment(m), g = m.geometry, n = triCount(g), nc = seg.boxes.length, own = new Int8Array(nc).fill(-2), t;
+    var rmin = new Float32Array(nc).fill(Infinity), rmax = new Float32Array(nc), arc = new Uint16Array(nc), amin = new Float32Array(nc).fill(Infinity), amax = new Float32Array(nc).fill(-Infinity);
+    seg.boxes.forEach(function (b, c) { if (!near(b)) own[c] = -1; });
+    for (t = 0; t < n; t++) { var c = seg.tri[t]; if (own[c] === -1) continue;
+      for (var j = 0; j < 3 && own[c] !== -1; j++) { v.fromBufferAttribute(g.attributes.position, triVert(g, t, j)).applyMatrix4(m.matrixWorld);
+        if (own[c] === -2) { own[c] = -1; for (var i = 0; i < 4; i++) if (cyl[i] && inside(cyl[i], v)) { own[c] = i; break; } }
+        else if (!inside(cyl[own[c]], v)) own[c] = -1;
+        if (own[c] >= 0) { var F = cyl[own[c]].f, ax = d.dot(F.axis); rmin[c] = Math.min(rmin[c], rr); rmax[c] = Math.max(rmax[c], rr); amin[c] = Math.min(amin[c], ax); amax[c] = Math.max(amax[c], ax);
+          if (rr > 4e-4) arc[c] |= 1 << (Math.floor((Math.atan2(d.dot(F.tangent), d.dot(F.up)) + Math.PI) / (2 * Math.PI) * 12) % 12); } } }
+    var inT = 0; for (var c4 = 0; c4 < nc; c4++) if (own[c4] >= 0) inT += seg.tris[c4];
+    if (inT) cand.push({ m: m, mi: mi, seg: seg, n: n, own: own, rmin: rmin, rmax: rmax, arc: arc, amin: amin, amax: amax, wheelMesh: inT >= 0.5 * n });
+  });
+  // a tyre-like ring: reaches the tread, goes round, hollow (radii 0.52 / 0.91 of the tyre, squared)
+  var ring = function (e, c) { var w = e.own[c], R2 = gr(w) * gr(w); return bits(e.arc[c]) >= 9 && e.rmin[c] > 0.27 * R2 && e.rmax[c] > 0.83 * R2; };
+  // 3b. each wheel's tyre faces (along the seed axle) from its rings
+  var face = [0, 1, 2, 3].map(function () { return { lo: Infinity, hi: -Infinity, bore: Infinity }; });
+  cand.forEach(function (e) { for (var c = 0; c < e.own.length; c++) if (e.own[c] >= 0 && ring(e, c)) { var f = face[e.own[c]]; f.lo = Math.min(f.lo, e.amin[c]); f.hi = Math.max(f.hi, e.amax[c]); f.bore = Math.min(f.bore, e.rmin[c]); } });
+  // 3c. the wheel: a wheel mesh (most of it inside the wheels: a tread of separate blocks) keeps every piece; in a mesh shared with the car a
+  // piece must go round the wheel (rim, disc: 9 of 12 sectors) or sit at its centre (nuts, cap), or be a small part of the rim face (inside
+  // the tyre's bore, in the outer quarter of the wheel: inserts, bolts). Calipers, brackets, liners and underbody bits stay with the car.
+  var corners = [[], [], [], []], sources = [];
+  cand.forEach(function (e) {
+    var g = e.m.geometry, nc = e.own.length, t;
+    if (!e.wheelMesh) for (var c3 = 0; c3 < nc; c3++) { var w3 = e.own[c3]; if (w3 < 0 || bits(e.arc[c3]) >= 9 || e.rmax[c3] < Math.pow(0.35 * gr(w3), 2)) continue;
+      var F3 = face[w3], q3 = F3.hi - (F3.hi - F3.lo) / 4; if (!(F3.hi > F3.lo && e.rmax[c3] < F3.bore && e.amin[c3] > q3)) e.own[c3] = -1; }
+    // per corner two pieces of this mesh: its tyre rings and the rest (rim, nuts, ...), so a mesh holding tyre and rim still keeps its tyre;
+    // a tyre welded to its rim stays one piece (split unclear: a tyre is built)
+    var buckets = [[], [], [], [], [], [], [], []], rest = [];
+    for (t = 0; t < e.n; t++) { var c2 = e.seg.tri[t], w = e.own[c2];
+      (w < 0 ? rest : buckets[w * 2 + (ring(e, c2) ? 1 : 0)]).push(triVert(g, t, 0), triVert(g, t, 1), triVert(g, t, 2)); }
+    if (!buckets.some(function (x) { return x.length; })) return;
+    var source = { mesh: e.m, rest: rest, pieces: [] }; sources.push(source);
+    buckets.forEach(function (ix, b) { if (!ix.length) return;
+      var obj = new THREE.Mesh(subGeo(g, ix), e.m.material); obj.geometry.applyMatrix4(e.m.matrixWorld); obj.name = "rimPiece_" + e.mi + "_" + (b >> 1) + (b & 1 ? "t" : "r");
+      var piece = { obj: obj, source: source, indices: ix, id: obj.name, box: exactBox(obj) }; corners[b >> 1].push(piece); source.pieces.push(piece); });
+  });
+  return car.rimPieces = { corners: corners, sources: sources, via: via, seeded: cyl.map(function (c) { return !!c; }) };
 }
 function rimPoints(pieces) {
   var out=[], seen=new Set(); pieces.forEach(function(e){eachVert(e.obj,function(v){var k=Math.round(v.x*10000)+","+Math.round(v.y*10000)+","+Math.round(v.z*10000);if(!seen.has(k)){seen.add(k);out.push(v.toArray());}});});return out;
 }
 function wheelParts(car) {
-  if(car.wheelParts)return car.wheelParts;
-  var data=rimPieces(car);
-  return car.wheelParts=data.corners.map(function(pieces,i){
-    var side=i&1?1:-1, front=i&2?1:-1, q={wheel:(front>0?"F":"R")+(side>0?"R":"L"),side:side,front:front,pieces:pieces,warnings:[],tyre:[],rim:[],brake:[]};
-    if(!pieces.length){q.refusal="NO_WHEEL_GEOMETRY";return q;}
-    var rubber=pieces.filter(function(e){return TYRE.test(e.obj.material.name||"")||TYRE.test(e.source.mesh.name);});
-    var pts=rimPoints(rubber.length?rubber:pieces), pca=rimPCA(pts);if(!pca){q.refusal="AXLE_UNRESOLVABLE";return q;}
-    var axis=new THREE.Vector3().fromArray(pca.axis[0]);if(axis.x*side<0)axis.negate();
-    var up=new THREE.Vector3(0,1,0).addScaledVector(axis,-axis.y).normalize(), tangent=new THREE.Vector3().crossVectors(axis,up).normalize();
-    var ranges=[axis,up,tangent].map(function(v){var lo=Infinity,hi=-Infinity;pts.forEach(function(p){var d=v.x*p[0]+v.y*p[1]+v.z*p[2];lo=Math.min(lo,d);hi=Math.max(hi,d);});return [lo,hi];});
-    var center=new THREE.Vector3();[axis,up,tangent].forEach(function(v,j){center.addScaledVector(v,(ranges[j][0]+ranges[j][1])/2);});
-    var diam=(ranges[1][1]-ranges[1][0]+ranges[2][1]-ranges[2][0])/2, width=ranges[0][1]-ranges[0][0];
-    var circular=Math.min(ranges[1][1]-ranges[1][0],ranges[2][1]-ranges[2][0])/Math.max(ranges[1][1]-ranges[1][0],ranges[2][1]-ranges[2][0]);
-    var confidence=Math.min(1,Math.max(0,1-pca.values[0]/pca.values[1]))*circular;
-    Object.assign(q,{center:center,axis:axis,up:up,tangent:tangent,ro:diam/2,tw:width,axleConfidence:confidence});
-    if(confidence<0.5||circular<0.8||width<0.08||width>0.5||diam<0.3||diam>1.1||Math.abs(axis.y)>0.5){q.refusal="AXLE_UNRESOLVABLE";q.warnings.push("LOW_AXLE_CONFIDENCE");return q;}
-    if(confidence<0.72)q.warnings.push("LOW_AXLE_CONFIDENCE");
-    var measure=function(e){var lo=Infinity,hi=-Infinity,rmin=Infinity,rmax=0;eachVert(e.obj,function(v){var d=v.clone().sub(center),ax=d.dot(axis),r=Math.sqrt(Math.max(0,d.lengthSq()-ax*ax));lo=Math.min(lo,ax);hi=Math.max(hi,ax);rmin=Math.min(rmin,r);rmax=Math.max(rmax,r);});return {lo:lo,hi:hi,rmin:rmin,rmax:rmax};};
-    pieces.forEach(function(e){e.measure=measure(e);var m=e.measure,n=e.source.mesh.name+" "+(e.obj.material.name||"");
-      if(NOT_WHEEL.test(n)||/hub|susp|shaft/i.test(n))q.brake.push(e);
-      else if(m.rmin>0.52*q.ro&&m.rmax>0.91*q.ro)q.tyre.push(e);else q.rim.push(e);
-    });
-    // A reliable tyre is a hollow outer ring, regardless of a misleading material name.
-    var ring=q.tyre.length?q.tyre:pieces.filter(function(e){return q.brake.indexOf(e)<0;});
-    var outer=-Infinity,inner=Infinity;ring.forEach(function(e){outer=Math.max(outer,e.measure.hi);inner=Math.min(inner,e.measure.lo);});
-    q.outer=outer;q.inner=inner;q.tw=outer-inner;q.cAx=(outer+inner)/2;
-    q.faceInner=q.tyre.length?Math.min.apply(null,q.tyre.map(function(e){return e.measure.rmin;})):q.ro*0.7;
-    q.rimR=q.rim.length?Math.max.apply(null,q.rim.map(function(e){return e.measure.rmax;})):q.faceInner;
-    q.rimR=Math.min(q.rimR,q.faceInner+0.012);q.rimFace=q.rim.length?Math.min(outer,Math.max.apply(null,q.rim.map(function(e){return e.measure.hi;}))):outer-0.01;
-    q.rimWidth=q.rim.length?Math.max.apply(null,q.rim.map(function(e){return e.measure.hi;}))-Math.min.apply(null,q.rim.map(function(e){return e.measure.lo;})):null;
+  if (car.wheelParts) return car.wheelParts;
+  var data = rimPieces(car), d = new THREE.Vector3();
+  return car.wheelParts = data.corners.map(function (pieces, i) {
+    var side = i & 1 ? 1 : -1, front = i & 2 ? 1 : -1, q = { wheel: (front > 0 ? "F" : "R") + (side > 0 ? "R" : "L"), side: side, front: front, pieces: pieces, warnings: [], tyre: [], rim: [], brake: [] };
+    if (!pieces.length) { q.refusal = data.seeded[i] ? "NO_WHEEL_GEOMETRY" : "NO_WHEEL_FOUND"; return q; }
+    // the axle from the tyre ring when there is one (the cleanest circle), else from every piece not named as a brake
+    var rings = pieces.filter(function (e) { return /t$/.test(e.id) && !NOT_WHEEL.test(meshName(e.source.mesh)); }), pts = rimPoints(rings);
+    if (pts.length < 24) pts = rimPoints(pieces.filter(function (e) { return !NOT_WHEEL.test(meshName(e.source.mesh)); }));
+    var f = wheelFrame(pts, side);
+    if (f) q.frame = { confidence: round3(f.confidence), circular: round3(f.circular), roMm: round1(f.ro * 1000), axisY: round3(f.axis.y), points: pts.length };
+    if (!f || f.confidence < 0.5 || f.circular < 0.8 || f.ro < 0.15 || f.ro > 0.55 || Math.abs(f.axis.y) > 0.5) { q.refusal = "AXLE_NOT_MEASURABLE"; return q; }
+    if (f.confidence < 0.72) q.warnings.push("LOW_AXLE_CONFIDENCE");
+    Object.assign(q, { center: f.center, axis: f.axis, up: f.up, tangent: f.tangent, ro: f.ro, axleConfidence: round3(f.confidence), steerDeg: round1(Math.asin(clamp(Math.abs(f.axis.z), 0, 1)) * 180 / Math.PI) });
+    pieces.forEach(function (e) { var lo = Infinity, hi = -Infinity, rmin = Infinity, rmax = 0, arc = new Uint8Array(12);
+      eachVert(e.obj, function (p) { d.subVectors(p, f.center); var ax = d.dot(f.axis), r = Math.sqrt(Math.max(0, d.lengthSq() - ax * ax)); if (ax < lo) lo = ax; if (ax > hi) hi = ax; if (r < rmin) rmin = r; if (r > rmax) rmax = r;
+        if (r > 0.02) arc[Math.floor((Math.atan2(d.dot(f.tangent), d.dot(f.up)) + Math.PI) / (2 * Math.PI) * 12) % 12] = 1; });
+      e.measure = { lo: lo, hi: hi, rmin: rmin, rmax: rmax, arc: arc.reduce(function (a, b) { return a + b; }, 0) };
+      if (NOT_WHEEL.test(meshName(e.source.mesh) + " " + (e.obj.material.name || ""))) q.brake.push(e);
+      else if (rmin > 0.52 * q.ro && rmax > 0.91 * q.ro) q.tyre.push(e); else q.rim.push(e); });
+    // the tread faces: the tyre ring, or (one-piece wheels) the pieces reaching the tread
+    var tread = q.tyre.length ? q.tyre : q.rim.filter(function (e) { return e.measure.rmax > 0.9 * q.ro; }), outer = -Infinity, inner = Infinity;
+    if (!tread.length) { q.refusal = "AXLE_NOT_MEASURABLE"; return q; }
+    tread.forEach(function (e) { outer = Math.max(outer, e.measure.hi); inner = Math.min(inner, e.measure.lo); });
+    q.outer = outer; q.inner = inner; q.tw = outer - inner; q.cAx = (outer + inner) / 2;
+    // sideways (steering taken out, camber kept): the fender runs along the car, so the arch is measured across it; a steered tyre's
+    // outermost point is a corner of its tread
+    q.lat = new THREE.Vector3(f.axis.x, f.axis.y, 0).normalize(); q.latTangent = new THREE.Vector3().crossVectors(q.lat, f.up).normalize();
+    var lo2 = Infinity, hi2 = -Infinity; tread.forEach(function (e) { eachVert(e.obj, function (p) { var a2 = d.subVectors(p, f.center).dot(q.lat); if (a2 < lo2) lo2 = a2; if (a2 > hi2) hi2 = a2; }); });
+    q.outerLat = hi2; q.cLat = (hi2 + lo2) / 2; q.latPerAxle = f.axis.dot(q.lat); // sideways shift per metre moved along the axle
+    q.profile = []; for (var b = 0; b < 12; b++) q.profile.push(0); // the tyre's real outline: largest radius per twelfth of its width
+    tread.forEach(function (e) { eachVert(e.obj, function (p) { d.subVectors(p, f.center); var ax = d.dot(f.axis), k = clamp(Math.floor((ax - inner) / (outer - inner) * 12), 0, 11); q.profile[k] = Math.max(q.profile[k], Math.sqrt(Math.max(0, d.lengthSq() - ax * ax))); }); });
+    if (q.tw < 0.06 || q.tw > 0.5) { q.refusal = "TYRE_NOT_MEASURABLE"; return q; }
+    q.faceInner = q.tyre.length ? Math.min.apply(null, q.tyre.map(function (e) { return e.measure.rmin; })) : q.ro * 0.7;
+    // brakes without a name: a disc / hub inboard of the tyre centre well inside the rim, or a caliper-like piece (a small arc of the wheel)
+    // reaching back from the outer quarter (rim-face inserts and bolts sit in the outer quarter and go with the rim)
+    q.rim = q.rim.filter(function (e) { var m = e.measure;
+      if ((m.hi < q.cAx - 0.005 && m.rmax < 0.8 * q.faceInner) || (m.arc <= 3 && m.rmax > 0.35 * q.ro && m.lo < q.outer - q.tw / 4)) { q.brake.push(e); return false; } return true; });
+    q.rimR = q.rim.length ? Math.max.apply(null, q.rim.map(function (e) { return e.measure.rmax; })) : q.faceInner;
+    q.rimR = Math.min(q.rimR, q.faceInner + 0.012); q.rimFace = q.rim.length ? Math.min(outer, Math.max.apply(null, q.rim.map(function (e) { return e.measure.hi; }))) : outer - 0.01;
+    q.rimWidth = q.rim.length ? Math.max.apply(null, q.rim.map(function (e) { return e.measure.hi; })) - Math.min.apply(null, q.rim.map(function (e) { return e.measure.lo; })) : null;
     return q;
   });
 }
-function rimBodyTargets(car) {
-  if(car.rimBody)return car.rimBody;
-  var result=[], excluded=new Set();Object.keys(car.parts).forEach(function(k){(car.parts[k]||[]).forEach(function(m){excluded.add(m);});});
-  car.paintMeshes.forEach(function(m){var name=m.name+" "+(m.material.name||"");
-    if(!m.visible||excluded.has(m)||NOT_BODY.test(name)||MIRROR.test(name)||/spoiler|wing|rack|accessory|ground|plane|wheel|tyre|tire/i.test(name))return;
-    var b=exactBox(m),d=b.getSize(new THREE.Vector3());if(d.y<0.08||d.z<0.3)return;
-    var proxy=new THREE.Mesh(m.geometry,RAY_MAT);proxy.matrixAutoUpdate=false;proxy.matrixWorld.copy(m.matrixWorld);result.push(proxy);
-  });return car.rimBody=result;
+/** Per measured wheel, the car geometry around it as two ray targets (world space): body = the painted shell (the fender / arch), other =
+ *  everything else that is not a wheel piece (brakes, hubs, suspension, liners). One pass over the car. */
+function rimNear(car) {
+  if (car.rimNear) return car.rimNear;
+  var P = wheelParts(car), data = rimPieces(car), p = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], restOf = new Map();
+  data.sources.forEach(function (s) { restOf.set(s.mesh, s.rest); });
+  var body = new Set(car.paintMeshes.filter(function (m) { var n = meshName(m); return !NOT_BODY.test(n) && !MIRROR.test(n); }));
+  var near = P.map(function (q) { return q.refusal ? null : { box: new THREE.Box3().setFromCenterAndSize(q.center, new THREE.Vector3(1, 1, 1).multiplyScalar(2 * Math.max(1.8 * q.ro, 0.5))), body: [], other: [], bodyBy: [], otherBy: [], otherOwn: [] }; });
+  var who = "", whoObj = null, push = function (arr, by, own) { for (var j = 0; j < 3; j++) arr.push(p[j].x, p[j].y, p[j].z); by.push(who); if (own) own.push(whoObj); };
+  car.root.updateMatrixWorld(true);
+  car.root.traverse(function (m) {
+    if (!m.isMesh || !m.visible || !m.geometry.attributes.position) return;
+    var mb = new THREE.Box3().setFromObject(m), hits = near.filter(function (n) { return n && mb.intersectsBox(n.box); }); if (!hits.length) return;
+    var g = m.geometry, list = restOf.get(m), n = list ? list.length / 3 : triCount(g), isBody = body.size ? body.has(m) : true; who = meshName(m); whoObj = m;
+    for (var t = 0; t < n; t++) {
+      for (var j = 0; j < 3; j++) p[j].fromBufferAttribute(g.attributes.position, list ? list[t * 3 + j] : triVert(g, t, j)).applyMatrix4(m.matrixWorld);
+      hits.forEach(function (h) { if (h.box.containsPoint(p[0]) || h.box.containsPoint(p[1]) || h.box.containsPoint(p[2])) isBody ? push(h.body, h.bodyBy) : push(h.other, h.otherBy, h.otherOwn); });
+    }
+  });
+  P.forEach(function (q, i) { if (near[i]) q.brake.forEach(function (e) { var g = e.obj.geometry; who = meshName(e.source.mesh) + " (brake)"; whoObj = e; for (var t = 0; t < triCount(g); t++) { for (var j = 0; j < 3; j++) p[j].fromBufferAttribute(g.attributes.position, triVert(g, t, j)); push(near[i].other, near[i].otherBy, near[i].otherOwn); } }); });
+  var mk = function (arr, by, own) { if (!arr.length) return null; var geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(arr), 3)); var m = new THREE.Mesh(geo, RAY_MAT); m.updateMatrixWorld(true); m.userData.by = by; m.userData.own = own; return m; };
+  return car.rimNear = near.map(function (n) { return n && { body: mk(n.body, n.bodyBy), other: mk(n.other, n.otherBy, n.otherOwn) }; });
 }
-function rimArch(car,q) {
-  var targets=rimBodyTargets(car), samples=[];
-  // Each sample follows the measured axle; samples span the upper arch, not global vehicle width.
-  [45,60,75,90,105,120,135].forEach(function(deg){[1.06,1.14,1.23].forEach(function(rad){
-    var a=deg*Math.PI/180, p=q.center.clone().addScaledVector(q.up,Math.sin(a)*q.ro*rad).addScaledVector(q.tangent,Math.cos(a)*q.ro*rad);
-    RAY.set(p.clone().addScaledVector(q.axis,0.65),q.axis.clone().negate());RAY.far=1.2;
-    var hits=RAY.intersectObjects(targets,false).filter(function(h){var ax=h.point.clone().sub(q.center).dot(q.axis);return Math.abs(ax-q.outer)<0.22&&h.point.y>q.center.y;});
-    if(hits.length)samples.push(hits[0].point.clone().sub(q.center).dot(q.axis));
-  });});RAY.far=Infinity;
-  var estimate=rimArchEstimate(samples);estimate.samples=samples;return estimate;
+/** The arch line of one wheel, as a sideways distance (q.lat) from the wheel centre: around the top of the arch (40-140 deg) rays come in
+ *  from outside along the axle at growing radii; the first one that meets the painted body outboard of the tyre centre is the arch edge, and
+ *  the outermost body point just above it (16 mm) is the line. Median of the angles, outliers dropped (rimArchEstimate). */
+function rimArch(car, q, i) {
+  var n = rimNear(car)[i], target = n && n.body, samples = [], p = new THREE.Vector3(), dir = q.lat.clone().negate();
+  if (!target) return { value: null, confidence: 0, samples: samples };
+  var hit = function (rr, a) { p.copy(q.center).addScaledVector(q.up, Math.sin(a) * rr).addScaledVector(q.latTangent, Math.cos(a) * rr).addScaledVector(q.lat, q.outerLat + 0.3);
+    RAY.set(p, dir); RAY.far = 0.6; var h = RAY.intersectObject(target, false)[0]; return h ? h.point.sub(q.center).dot(q.lat) : null; };
+  for (var deg = 40; deg <= 140; deg += 10) { var a = deg * Math.PI / 180;
+    for (var k = 0; k <= 60; k++) { var rr = q.ro * (1 + k * 0.01), ax = hit(rr, a); if (ax === null || ax <= q.cLat) continue;
+      for (var k2 = 1; k2 <= 4; k2++) { var a2 = hit(rr + 0.004 * k2, a); if (a2 !== null && a2 > ax) ax = a2; }
+      samples.push(ax); break; } }
+  RAY.far = Infinity; var est = rimArchEstimate(samples); est.samples = samples; return est;
 }
-function rimSafety(car,q,rad,width,face,shift) {
-  // Brake/hub/suspension clearance in the wheel frame. Reject newly introduced overlap, never hide a separate brake.
-  var bad=false, back=face-width+shift;
-  car.root.traverse(function(m){if(!m.isMesh||!m.visible||bad)return;var n=m.name+" "+(m.material.name||"");if(!/brake|disc|caliper|hub|susp|strut|shaft|freio/i.test(n))return;
-    eachVert(m,function(v){var d=v.clone().sub(q.center),ax=d.dot(q.axis),r=Math.sqrt(Math.max(0,d.lengthSq()-ax*ax));
-      if(r<rad*0.85&&r>rad*0.2&&ax>back+0.003&&ax<face+shift-0.006&&ax<=face-width+0.003)bad=true;
-      if(r>q.faceInner&&r<q.ro&&ax>q.inner+shift&&ax<q.outer+shift&&!(ax>q.inner&&ax<q.outer))bad=true;
-    });
-  });if(bad)return false;
-  // Swept tyre surface rays catch new body/inner-arch crossings between stock and candidate.
-  if(Math.abs(shift)>0.0001){var targets=rimBodyTargets(car), dir=q.axis.clone().multiplyScalar(Math.sign(shift));
-    for(var i=0;i<24;i++){var a=i*Math.PI/12;for(var j=0;j<3;j++){
-      var p=q.center.clone().addScaledVector(q.up,q.ro*Math.sin(a)).addScaledVector(q.tangent,q.ro*Math.cos(a)).addScaledVector(q.axis,q.inner+(q.outer-q.inner)*j/2);
-      RAY.set(p,dir);RAY.far=Math.abs(shift)+0.001;if(RAY.intersectObjects(targets,false).length){RAY.far=Infinity;return false;}
-    }}RAY.far=Infinity;
-  }return true;
+/** How far the brake / hub / suspension inside the new rim pokes out in front of the rim's spokes (metres, <= 0 = hidden behind them) with the
+ *  wheel moved d. depth[b] = how far the spokes' front surface sits back from the rim face at radius band b (twelfths of 85 % of the rim
+ *  radius; null = no spokes there, or open deeper than half the rim width: a brake can show through). Points outboard of the stock rim face are not brakes. */
+function rimBrakeOverlap(car, q, i, d, face, depth, rad, front) {
+  var n = rimNear(car)[i]; if (!n || !n.other) return 0;
+  var pos = n.other.geometry.attributes.position, v = new THREE.Vector3(), worst = -Infinity;
+  for (var k = 0; k < pos.count; k++) { v.fromBufferAttribute(pos, k).sub(q.center); var ax = v.dot(q.axis), b = Math.floor(Math.sqrt(Math.max(0, v.lengthSq() - ax * ax)) / (0.85 * rad) * 12);
+    if (ax > q.rimFace + 0.005 || b > 11 || depth[b] === null) continue; var o = ax - (face + d - depth[b]); if (front && o > 0.002) front.add(n.other.userData.own[Math.floor(k / 3)]); if (o > worst) { worst = o; rimBrakeOverlap.at = { band: b, ax: round3(ax - face), by: n.other.userData.by[Math.floor(k / 3)] }; } }
+  return worst;
+}
+/** null when the whole wheel can move d along its axle (+ = out), else why not. The leading face of the tyre (outer face moving out, inner
+ *  face moving in) is swept from stock to the new place: no body (arch / inner arch) or other part (suspension, liner) may be in the way.
+ *  Moving in, the brake / hub may not reach further into the new rim's spokes than it does at the stock place. */
+function rimSafety(car, q, i, d, face, depth, rad) {
+  if (Math.abs(d) < 1e-4) return null;
+  var n = rimNear(car)[i]; if (!n) return null;
+  var targets = [n.body, n.other].filter(Boolean), dir = q.axis.clone().multiplyScalar(Math.sign(d)), p = new THREE.Vector3(), why = null, pts = [], w = (q.outer - q.inner) / 12;
+  // the leading half of the tyre's outline (each slice 1 mm under its largest radius) and its leading face down to the rim edge
+  for (var b = 0; b < 12; b++) if ((d > 0 ? b >= 6 : b < 6) && q.profile[b] > 0) pts.push([q.profile[b] - 0.001, q.inner + (b + (d > 0 ? 1 : 0)) * w]);
+  var lead = d > 0 ? q.outer : q.inner, rf = q.profile[d > 0 ? 11 : 0] - 0.001; pts.push([(rf + q.faceInner) / 2, lead], [q.faceInner, lead]);
+  var radii = pts.map(function (x) { return x[0]; });
+  for (var s = 0; s < 36 && !why; s++) { var a = s * Math.PI / 18;
+    for (var j = 0; j < pts.length && !why; j++) {
+      p.copy(q.center).addScaledVector(q.up, Math.sin(a) * pts[j][0]).addScaledVector(q.tangent, Math.cos(a) * pts[j][0]).addScaledVector(q.axis, pts[j][1]);
+      RAY.set(p, dir); RAY.far = Math.abs(d) + 0.002;
+      var h = RAY.intersectObjects(targets, false).find(function (x) { return x.distance > 0.0015; });
+      if (h) why = { code: h.object === n.body ? "ARCH_CONTACT" : "SUSPENSION_CONTACT", atDeg: s * 10, radius: round3(radii[j] / q.ro), afterMm: round1(h.distance * 1000), by: String(h.object.userData.by[h.faceIndex] || "").slice(0, 80) };
+    } }
+  RAY.far = Infinity; if (why) return why;
+  if (d < 0) { var at0 = rimBrakeOverlap(car, q, i, 0, face, depth, rad), at = rimBrakeOverlap(car, q, i, d, face, depth, rad);
+    if (at > Math.max(at0, 0) + 0.001) return { code: "BRAKE_CONTACT", intoSpokesMm: round1(at * 1000), atStockMm: round1(at0 * 1000), where: rimBrakeOverlap.at }; }
+  return null;
 }
 function fitRims(car,src,size,zone,info) {
-  var P=wheelParts(car),o=orientPart(src(),"axle",0,"mid"),pb=exactBox(o.node),pw=pb.max.x-pb.min.x,pc=(pb.min.x+pb.max.x)/2,R=0,sx=0,n=0;
-  eachVert(o.node,function(v){R=Math.max(R,Math.hypot(v.y,v.z));});
-  eachVert(o.node,function(v){var r=Math.hypot(v.y,v.z);if(r>0.3*R&&r<0.75*R){sx+=v.x-pc;n++;}});var face=n&&sx/n<0?-1:1;
-  var placements=[],tyres=[],per=[],active=[],kept=[],offsets=[], inset=(car.tuned.RIMS||{}).wheelInsetMm;
-  P.forEach(function(q){
-    var report={wheel:q.wheel,stockOuterGapMm:null,targetInsetMm:5,appliedAxleOffsetMm:0,finalOuterGapMm:null,axleConfidence:q.axleConfidence||0,archConfidence:0,tyreMode:"stock",warnings:q.warnings.slice(),refusal:q.refusal||null};per.push(report);if(q.refusal)return;
-    var arch=rimArch(car,q),gap=arch.value===null?null:arch.value-q.outer,stockIn=(2*q.rimR-0.025)/0.0254, want=size.rimInches>0?size.rimInches:stockIn;
-    var rad=want*0.0254/2+0.0125,u=rad/R,ux=Math.min(u,(q.tw-0.02)/pw),width=pw*ux,fa=Math.min(q.rimFace,q.outer-0.004),keep=q.tyre.length>0&&Math.abs(rad-q.rimR)<=0.006;
-    Object.assign(report,{center:q.center.toArray(),axle:q.axis.toArray(),stockOuterGapMm:gap===null?null:round3(gap*1000),archConfidence:arch.confidence,archSamples:arch.samples.length,tyreOuterMm:round3(q.ro*2000),tyreWidthMm:round3(q.tw*1000),stockRimMm:round3(q.rimR*2000),stockRimWidthMm:q.rimWidth===null?null:round3(q.rimWidth*1000),stockRimInches:round3(stockIn),rimMm:round3(rad*2000),rimWidthMm:round3(width*1000),innerFaceMm:round3(q.inner*1000),outerFaceMm:round3(q.outer*1000),sidewallMm:round3((q.ro-rad)*1000),faceInsetMm:round3((q.outer-fa)*1000),gapToTyreMm:keep?round3((q.faceInner-rad)*1000):0,brakesKept:q.brake.length});
-    if(rad>q.ro-0.02||width<=0||!Number.isFinite(u)){report.refusal="RIM_EXCEEDS_TYRE";return;}
-    var override=inset?-(q.front>0?inset.front:inset.rear)/1000:undefined;
-    var search=rimOffsetSearch(gap,function(d){if(arch.value!==null&&gap-d<0&&Math.abs(d)>1e-7)return false;return rimSafety(car,q,rad,width,fa,d);},override),d=search.offset;
-    report.warnings.push.apply(report.warnings,search.warnings);report.appliedAxleOffsetMm=round3(d*1000);report.finalOuterGapMm=gap===null?null:round3((gap-d)*1000);
-    report.tyreMode=keep?"retained":"generated";report.tyre=keep?"stock":"built (one-piece wheel or changed size)";if(!keep)report.warnings.push("FALLBACK_TYRE");
-    var rotation=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(1,0,0),q.axis),euler=new THREE.Euler().setFromQuaternion(rotation),pos=q.center.clone().addScaledVector(q.axis,fa-width/2+d-pc*ux*face);
-    placements.push({wheel:q.wheel,pos:pos.toArray().map(r4),sc:[r4(ux*face),r4(u),r4(u)],rot:[euler.x,euler.y,euler.z],side:q.side});active.push(q.wheel);offsets.push({wheel:q.wheel,delta:q.axis.clone().multiplyScalar(d).toArray()});
-    if(keep)q.tyre.forEach(function(e){kept.push(e.id);});
-    else tyres.push({c:q.center.clone().addScaledVector(q.axis,q.cAx+d).toArray(),ri:rad-0.012,ro:q.ro,w:q.tw,rot:[euler.x,euler.y,euler.z],wheel:q.wheel});
+  var P = wheelParts(car), o = orientPart(src(), "axle", 0, "mid"), pb = exactBox(o.node), pw = pb.max.x - pb.min.x, pc = (pb.min.x + pb.max.x) / 2, R = 0, sx = 0, n = 0;
+  eachVert(o.node, function (v) { R = Math.max(R, Math.hypot(v.y, v.z)); });
+  eachVert(o.node, function (v) { var r = Math.hypot(v.y, v.z); if (r > 0.3 * R && r < 0.75 * R) { sx += v.x - pc; n++; } }); var face = n && sx / n < 0 ? -1 : 1; // the spokes stand out on the face side
+  // the spokes' front surface per radius band, as a share of the rim's width back from its face: what a brake must stay behind
+  var dish = []; for (var b = 0; b < 12; b++) dish.push(null); eachVert(o.node, function (v) { var k = Math.floor(Math.hypot(v.y, v.z) / (0.85 * R) * 12), x = Math.abs((face > 0 ? pb.max.x : pb.min.x) - v.x) / pw; if (k < 12) dish[k] = dish[k] === null ? x : Math.min(dish[k], x); });
+  var placements = [], tyres = [], rings = [], per = [], active = [], kept = [], offsets = [], hideMore = [], hideBrakes = [], inset = (car.tuned.RIMS || {}).wheelInsetMm;
+  P.forEach(function (q, i) {
+    var w = { wheel: q.wheel, refusal: q.refusal || null, warnings: q.warnings.slice(), archGapBeforeMm: null, archGapAfterMm: null, movedMm: 0, axleConfidence: q.axleConfidence || 0, steerDeg: q.steerDeg || 0 };
+    per.push(w); if (q.refusal) return;
+    var stockIn = (2 * q.rimR - 0.025) / 0.0254, want = size.rimInches > 0 ? size.rimInches : stockIn;
+    var rad = want * 0.0254 / 2 + 0.0125, u = rad / R, ux = Math.min(u, (q.tw - 0.02) / pw), width = pw * ux, fa = Math.min(q.rimFace, q.outer - 0.004), keep = q.tyre.length > 0 && Math.abs(rad - q.rimR) <= 0.006;
+    Object.assign(w, { tyreOuterMm: round1(q.ro * 2000), tyreWidthMm: round1(q.tw * 1000), stockRimMm: round1(q.rimR * 2000), stockRimInches: round1(stockIn), rimMm: round1(rad * 2000), rimWidthMm: round1(width * 1000),
+      sidewallMm: round1((q.ro - rad) * 1000), faceInsetMm: round1((q.outer - fa) * 1000), gapToTyreMm: keep ? round1((q.faceInner - rad) * 1000) : 0, brakesKept: q.brake.length, tyre: keep ? "stock" : "built" });
+    if (rad > q.ro - 0.02 || width <= 0 || !isFinite(u)) { w.refusal = "RIM_EXCEEDS_TYRE"; return; }
+    // gap and the search are sideways (arch line - the tyre's outermost point); the wheel then moves along its own axle: x / latPerAxle
+    var arch = rimArch(car, q, i), gap = arch.value === null ? null : arch.value - q.outerLat, block = null, k = q.latPerAxle;
+    var override = inset ? -(q.front > 0 ? inset.front : inset.rear) / 1000 : undefined;
+    var depthW = dish.map(function (k) { return k === null || k > 0.5 ? null : k * width; });
+    var s = rimOffsetSearch(gap, function (x) { var why = rimSafety(car, q, i, x / k, fa, depthW, rad); block = block || why; return !why; }, override), dd = s.offset / k;
+    Object.assign(w, { archGapBeforeMm: gap === null ? null : round1(gap * 1000), archGapAfterMm: gap === null ? null : round1((gap - s.offset) * 1000), movedMm: round1(dd * 1000), archSamples: arch.samples.length, archConfidence: round3(arch.confidence), blockedBy: block });
+    w.warnings.push.apply(w.warnings, s.warnings); if (!keep) w.warnings.push("BUILT_TYRE");
+    // the same rim on both sides, turned (not mirrored) so its face points out of the car along the wheel's own axle
+    var rot = new THREE.Quaternion(); if (q.side < 0) rot.setFromAxisAngle(UP, Math.PI); rot.premultiply(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(q.side, 0, 0), q.axis));
+    var e = new THREE.Euler().setFromQuaternion(rot), pos = q.center.clone().addScaledVector(q.axis, fa - width / 2 + dd).sub(new THREE.Vector3(pc * ux * face, 0, 0).applyQuaternion(rot));
+    placements.push({ pos: pos.toArray().map(r4), sc: [r4(ux * face), r4(u), r4(u)], rot: [e.x, e.y, e.z], side: q.side }); active.push(q.wheel); offsets.push({ wheel: q.wheel, delta: q.axis.clone().multiplyScalar(dd).toArray().map(function (x) { return Math.round(x * 1e5) / 1e5; }) });
+    // brake / hub parts that would stand in front of the new spokes (a deeper rim than the stock one) are hidden while the rims are on
+    var front = new Set(); rimBrakeOverlap(car, q, i, dd, fa, depthW, rad, front);
+    front.forEach(function (x) { if (x && x.isMesh) { if (x.name && hideMore.indexOf(x.name) < 0) hideMore.push(x.name); } else if (x && x.id) hideBrakes.push(x.id); });
+    w.hiddenBrakeParts = front.size;
+    if (keep) q.tyre.forEach(function (t) { kept.push(t.id); });
+    else tyres.push({ c: q.center.clone().addScaledVector(q.axis, q.cAx + dd).toArray().map(r4), ri: r4(rad - 0.012), ro: r4(q.ro), w: r4(q.tw), rot: [e.x, e.y, e.z], prof: q.profile.map(r4) });
+    // seams: a soft dark ring where the rim lip meets the tyre, and the arch's shadow behind the top of the tyre
+    rings.push({ c: q.center.clone().addScaledVector(q.axis, fa + dd - 0.002).toArray().map(r4), rot: [e.x, e.y, e.z], ri: r4(rad - 0.003), ro: r4(rad + 0.016), a: 0.5 });
+    rings.push({ c: q.center.clone().addScaledVector(q.axis, q.inner + dd).toArray().map(r4), rot: [e.x, e.y, e.z], ri: r4(q.ro * 0.97), ro: r4(q.ro * 1.3), a: 0.55, half: 1 });
   });
-  info.wheels=per;info.faceSign=face;info.wheelSource=rimPieces(car).via;
-  if(!placements.length){var err=new Error(per.map(function(w){return w.wheel+": "+w.refusal;}).join("; "));err.info=info;throw err;}
-  return {o:o,placements:placements,orient:["axle",0,"mid"],shadows:[],tyres:tyres,keep:[],hideMore:[],shift:[],rimRuntime:{active:active,kept:kept,offsets:offsets}};
+  info.wheels = per; info.faceSign = face; info.wheelSource = rimPieces(car).via; info.override = inset || null;
+  if (per.some(function (w) { return w.refusal === "RIM_EXCEEDS_TYRE"; })) { var big = new Error("this rim size does not fit this car cleanly (less than 2 cm of tyre sidewall left)"); big.info = info; throw big; }
+  if (placements.length < 4) { var err = new Error("no wheels found on this car model (" + per.filter(function (w) { return w.refusal; }).map(function (w) { return w.wheel + ": " + w.refusal; }).join(", ") + ")"); err.info = info; throw err; }
+  return { o: o, placements: placements, orient: ["axle", 0, "mid"], shadows: [], tyres: tyres, rings: rings, keep: [], hideMore: hideMore.slice(0, 60), shift: [], rimRuntime: { active: active, kept: kept, offsets: offsets, hideBrakes: hideBrakes } };
 }
-// Build an ON-only overlay from the stable extraction. Residual body and unsolved wheels remain exactly at stock transforms.
+// While rims are on: the measured wheels' pieces hidden (their source meshes hidden, the rest of a shared mesh drawn as a residual), kept stock
+// tyres drawn moved with their wheel; brakes and refused wheels stay exactly at stock. Off = the group removed and the source meshes shown again.
 function rimRuntime(car,f,group) {
-  var P=wheelParts(car),data=rimPieces(car),hidden=[],moving=[],selected=new Set(f.rimRuntime.active),kept=new Set(f.rimRuntime.kept);
+  var P=wheelParts(car),data=rimPieces(car),hidden=[],moving=[],selected=new Set(f.rimRuntime.active),kept=new Set(f.rimRuntime.kept),gone=new Set(f.rimRuntime.hideBrakes||[]);
   data.sources.forEach(function(source){var rest=source.rest.slice(), changed=false;
     source.pieces.forEach(function(e){var q=P.find(function(w){return w.pieces.indexOf(e)>=0;});
+      if(gone.has(e.id)){changed=true;return;}
       if(!selected.has(q.wheel)||q.brake.indexOf(e)>=0){rest.push.apply(rest,e.indices);return;}changed=true;
-      if(kept.has(e.id)){var clone=e.obj.clone();var offset=f.rimRuntime.offsets.find(function(x){return x.wheel===q.wheel;});clone.position.fromArray(offset.delta);clone.userData.shadow=true;group.add(clone);moving.push(clone);}
+      if(kept.has(e.id)){var clone=e.obj.clone(),offset=f.rimRuntime.offsets.find(function(x){return x.wheel===q.wheel;});if(offset)clone.position.fromArray(offset.delta);clone.userData.shadow=true;clone.userData.tyre=true;group.add(clone);moving.push(clone);}
     });
     if(!changed)return;hidden.push(source.mesh);
-    if(rest.length){var m=new THREE.Mesh(subGeo(source.mesh.geometry,rest),source.mesh.material);m.geometry.applyMatrix4(source.mesh.matrixWorld);m.userData.shadow=true;group.add(m);}
+    if(rest.length){var m=new THREE.Mesh(subGeo(source.mesh.geometry,rest),source.mesh.material);m.geometry.applyMatrix4(source.mesh.matrixWorld);m.userData.shadow=true;m.userData.residual=true;group.add(m);}
   });return {hide:hidden,moving:moving};
 }
 function fitAccessory(car, src, type, size, zone) {
@@ -861,7 +1010,7 @@ function fitAccessory(car, src, type, size, zone) {
   var stretch = function (o, T, u, ax) { return clamp(T.getSize(new THREE.Vector3())[ax] / (o.size[ax] * u), 0.85, 1.15); };
   if (zone && !k.replace) info.replaces = { how: zone.how, hidden: zone.hide.length };
   if (type === "RIMS") r = fitRims(car, src, size, zone, info);
-  else if (type === "FRONT_BUMPER" || type === "REAR_BUMPER") r = fitBumper(car, src, type, zone, info, size.forceFit === true);
+  else if (type === "FRONT_BUMPER" || type === "REAR_BUMPER") r = fitBumper(car, src, type, zone, info, size.forceFit === true, size.qaRaw === true);
   else if (type === "WING" || type === "SPOILER" || type === "ROOF_RACK") r = fitOnTop(car, src, type, size, zone, info);
   else if (type === "FRONT_LIP" || type === "REAR_DIFFUSER") r = fitUnder(car, src, type, size, info);
   if (r) { o = r.o; pl = r.placements; orient = r.orient; }
@@ -887,13 +1036,224 @@ function fitAccessory(car, src, type, size, zone) {
   } else throw new Error("unknown accessory " + type);
   info.copies = pl.length; info.turnedDeg = o.turned; info.flipped180 = o.flipped; info.partSize = o.size.toArray().map(round3); info.scale = round3(Math.abs(pl[0].sc[0]));
   info.nonUniform = [round3(pl[0].sc[1] / Math.abs(pl[0].sc[0])), round3(pl[0].sc[2] / Math.abs(pl[0].sc[0]))];
-  return { version: fitVersion(type), type: type, orient: orient, placements: pl, shadows: r ? r.shadows : [], tyres: r && r.tyres || [], keep: r && r.keep || [], hideMore: r && r.hideMore || [], shift: r && r.shift || [], ...(r && r.rimRuntime ? {rimRuntime:r.rimRuntime} : {}), info: info };
+  return { version: fitVersion(type), type: type, orient: orient, placements: pl, shadows: r ? r.shadows : [], tyres: r && r.tyres || [], keep: r && r.keep || [], hideMore: r && r.hideMore || [], shift: r && r.shift || [], ...(r && r.rings ? {rings:r.rings} : {}), ...(r && r.rimRuntime ? {rimRuntime:r.rimRuntime} : {}), info: info };
+}
+// ---- FIT QA (every type, the part exactly as drawn): does it look physically fitted? ----
+// Samples spread over the whole placed part (area-weighted, deterministic) against the visible car around it (the stock part it replaces
+// excluded; while rims are on, their residual meshes included): a sample is INSIDE the car when it lies behind the nearest car surface (by
+// that surface's own normal) by more than QA_CLIP_MM. Contact = samples within QA_NEAR of the car (wheels never count as contact); each
+// contact cluster is cut into 5 cm slices along its length and a slice's gap is its closest point: a foot or edge whose every slice
+// touches is attached, a slice that stays QA_GAP_MM away somewhere along the edge floats there. A fit that fails is moved / scaled a
+// little (<= 10 mm, +-2 %) and checked again; if nothing passes it is refused with the measured reason. Rims keep their own placement
+// (arch / brake rules): they are measured, never moved. The contact clusters become soft seam ribbons (seams) on the part.
+var QA_CLIP_MM = 2, QA_GAP_MM = 3, QA_NEAR = 0.015, QA_CELL = 0.04;
+function qaSamples(node, budget) { // part-local points of every visible mesh of a placed node, area-weighted, plus its vertices
+  node.updateMatrixWorld(true); var inv = new THREE.Matrix4().copy(node.matrixWorld).invert(), tris = [], area = 0, out = [], a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+  node.traverse(function (m) { if (!m.isMesh || m.userData.seam || (m.userData.shadow && !m.userData.tyre)) return; var g = m.geometry, p = g.attributes.position, M = new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld);
+    for (var t = 0; t < triCount(g); t++) { a.fromBufferAttribute(p, triVert(g, t, 0)).applyMatrix4(M); b.fromBufferAttribute(p, triVert(g, t, 1)).applyMatrix4(M); c.fromBufferAttribute(p, triVert(g, t, 2)).applyMatrix4(M);
+      var tr = new THREE.Triangle(a.clone(), b.clone(), c.clone()), ar = tr.getArea(); tris.push(tr); area += ar; } });
+  var per = area / budget, lattice = [[1 / 3, 1 / 3], [0.1, 0.1], [0.8, 0.1], [0.1, 0.8], [0.45, 0.1], [0.1, 0.45], [0.45, 0.45], [0.7, 0.2], [0.2, 0.7], [0.25, 0.25]];
+  tris.forEach(function (tr) { out.push(tr.a.clone()); // every corner (duplicates are harmless) and points inside big triangles
+    var k = Math.min(lattice.length, Math.floor(tr.getArea() / per)); for (var i = 0; i < k; i++) { var u = lattice[i][0], v = lattice[i][1];
+      out.push(new THREE.Vector3().copy(tr.a).multiplyScalar(1 - u - v).addScaledVector(tr.b, u).addScaledVector(tr.c, v)); } });
+  var step = Math.max(1, Math.floor(out.length / (budget * 1.5))); return out.filter(function (_, i) { return i % step === 0; });
+}
+/** The car near a box as a 4 cm grid of world triangles (with vertex normals; wheel = inside a wheel's cylinder: clips, never a contact). */
+function qaBody(car, box, skip, extra) {
+  var cells = new Map(), tris = [], v = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], n = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], nm = new THREE.Matrix3();
+  var wheelAt = function (p) { return car.wheels.list.some(function (w) { return Math.hypot(p.y - w.center.y, p.z - w.center.z) < w.r * 1.04 && Math.abs(p.x - w.center.x) < 0.25; }); };
+  var edge = new Set(), ek = function (p) { return Math.round(p.x * 100) + "," + Math.round(p.y * 100) + "," + Math.round(p.z * 100); };
+  var add = function (m) { var g = m.geometry, P = g.attributes.position, N = g.attributes.normal; m.updateMatrixWorld(true); nm.getNormalMatrix(m.matrixWorld);
+    if (!new THREE.Box3().setFromObject(m).intersectsBox(box)) return;
+    // open edges (used by one triangle, vertices welded at 0.1 mm): where a panel ends (a fender edge a bumper tucks under)
+    var cnt = new Map(), w = function (i) { v[0].fromBufferAttribute(P, i); return Math.round(v[0].x * 1e4) + "," + Math.round(v[0].y * 1e4) + "," + Math.round(v[0].z * 1e4); };
+    for (var t0 = 0; t0 < triCount(g); t0++) { var ids = [w(triVert(g, t0, 0)), w(triVert(g, t0, 1)), w(triVert(g, t0, 2))];
+      for (var e0 = 0; e0 < 3; e0++) { var a0 = ids[e0], b0 = ids[(e0 + 1) % 3], key0 = a0 < b0 ? a0 + "|" + b0 : b0 + "|" + a0; cnt.set(key0, (cnt.get(key0) || 0) + 1); } }
+    cnt.forEach(function (c, key0) { if (c !== 1) return; key0.split("|").forEach(function (s0) { var q = s0.split(",").map(function (x) { return +x / 1e4; }); var wp = new THREE.Vector3(q[0], q[1], q[2]).applyMatrix4(m.matrixWorld); if (box.containsPoint(wp)) edge.add(ek(wp)); }); });
+    for (var t = 0; t < triCount(g); t++) { for (var j = 0; j < 3; j++) { var k = triVert(g, t, j); v[j].fromBufferAttribute(P, k).applyMatrix4(m.matrixWorld); if (N) n[j].fromBufferAttribute(N, k).applyMatrix3(nm).normalize(); }
+      var tb = new THREE.Box3().setFromPoints(v); if (!tb.intersectsBox(box)) continue;
+      var tr = new THREE.Triangle(v[0].clone(), v[1].clone(), v[2].clone()), fn = tr.getNormal(new THREE.Vector3()), ns = N ? [n[0].clone(), n[1].clone(), n[2].clone()] : [fn, fn, fn];
+      var id = tris.length; tris.push({ t: tr, n: ns, wheel: wheelAt(tr.getMidpoint(new THREE.Vector3())), by: m.name, id: id });
+      for (var x = Math.floor(tb.min.x / QA_CELL); x <= Math.floor(tb.max.x / QA_CELL); x++) for (var y = Math.floor(tb.min.y / QA_CELL); y <= Math.floor(tb.max.y / QA_CELL); y++) for (var z = Math.floor(tb.min.z / QA_CELL); z <= Math.floor(tb.max.z / QA_CELL); z++) {
+        var key = x + "," + y + "," + z, l = cells.get(key); if (!l) cells.set(key, l = []); l.push(id); } } };
+  car.root.traverse(function (m) { if (m.isMesh && m.visible && skip.indexOf(m) < 0) add(m); });
+  (extra || []).forEach(add);
+  // can a viewer outside the car see this car triangle? a ray from it along its normal, straight up or out to the side escapes (cached)
+  var occl = []; car.root.updateMatrixWorld(true); car.root.traverse(function (m) { if (m.isMesh && m.visible && skip.indexOf(m) < 0) { var pr = new THREE.Mesh(m.geometry, RAY_MAT); pr.matrixAutoUpdate = false; pr.matrixWorld.copy(m.matrixWorld); occl.push(pr); } });
+  (extra || []).forEach(function (m) { var pr = new THREE.Mesh(m.geometry, RAY_MAT); pr.matrixAutoUpdate = false; pr.matrixWorld.copy(m.matrixWorld); occl.push(pr); });
+  var partOccl = [], seenOut = new Map(), exterior = function (h) { if (seenOut.has(h.tri)) return seenOut.get(h.tri); var o = false;
+    [h.n.clone(), UP.clone(), new THREE.Vector3(Math.sign(h.c.x) || 1, 0, 0)].forEach(function (dir) { if (o) return; RAY.set(h.c.clone().addScaledVector(dir, 0.004), dir); RAY.far = 4;
+      // the part itself hides a crossing too (a tyre in front of the inner arch), but not within 5 cm: that is the part at its own crossing
+      if (!RAY.intersectObjects(occl, false).length && !RAY.intersectObjects(partOccl, false).some(function (x) { return x.distance > 0.05; })) o = true; });
+    RAY.far = Infinity; seenOut.set(h.tri, o); return o; };
+  return { cells: cells, tris: tris, exterior: exterior, setPart: function (nodes) { partOccl = []; nodes.forEach(function (n) { n.updateMatrixWorld(true); n.traverse(function (m) { if (!m.isMesh) return; var pr = new THREE.Mesh(m.geometry, RAY_MAT); pr.matrixAutoUpdate = false; pr.matrixWorld.copy(m.matrixWorld); partOccl.push(pr); }); }); }, nearEdge: function (p) { var x = Math.round(p.x * 100), y = Math.round(p.y * 100), z = Math.round(p.z * 100);
+    for (var a = -1; a <= 1; a++) for (var b = -1; b <= 1; b++) for (var c = -1; c <= 1; c++) if (edge.has((x + a) + "," + (y + b) + "," + (z + c))) return true; return false; } };
+}
+/** Nearest car surface to p within 8 cm: { d (m, >= 0), s = signed (negative = behind the surface, inside), wheel, c, n } or null. */
+function qaNearest(body, p) {
+  var best = null, cp = new THREE.Vector3(), bc = new THREE.Vector3(), cx = Math.floor(p.x / QA_CELL), cy = Math.floor(p.y / QA_CELL), cz = Math.floor(p.z / QA_CELL), seen = new Set();
+  for (var x = cx - 2; x <= cx + 2; x++) for (var y = cy - 2; y <= cy + 2; y++) for (var z = cz - 2; z <= cz + 2; z++) (body.cells.get(x + "," + y + "," + z) || []).forEach(function (id) {
+    if (seen.has(id)) return; seen.add(id); var e = body.tris[id]; e.t.closestPointToPoint(p, cp); var d = cp.distanceTo(p); if (d > 0.08 || (best && d >= best.d)) return;
+    THREE.Triangle.getBarycoord(cp, e.t.a, e.t.b, e.t.c, bc); var nn = new THREE.Vector3().addScaledVector(e.n[0], bc.x).addScaledVector(e.n[1], bc.y).addScaledVector(e.n[2], bc.z).normalize();
+    best = { d: d, c: cp.clone(), n: nn, wheel: e.wheel, by: e.by, tri: e.id }; });
+  if (best) best.s = best.d * (p.clone().sub(best.c).dot(best.n) < 0 ? -1 : 1);
+  return best;
+}
+/** Measure the placed nodes: max clip (mm), max floating gap (mm) over every contact slice, and the contact clusters (for seams). */
+function qaMeasure(body, nodes, samples, ignoreWheel) {
+  var behind = [], front = [], contacts = [], total = 0;
+  nodes.forEach(function (node, i) { node.updateMatrixWorld(true);
+    samples[i].forEach(function (q) { var p = q.clone().applyMatrix4(node.matrixWorld), h = qaNearest(body, p); total++; if (!h || (ignoreWheel && h.wheel)) return;
+      if (h.s < -QA_CLIP_MM / 1000) { if (!body.nearEdge(h.c)) behind.push({ p: p, d: -h.s, by: h.by, node: i, h: h }); }
+      else { if (h.d <= 0.02) front.push({ p: p, node: i, c: h.c }); if (!h.wheel && h.d <= QA_NEAR) contacts.push({ p: p, d: Math.max(0, h.s), c: h.c, n: h.n, node: i }); } }); });
+  // visible clipping: the part goes behind the car's surface right next to where it is in front of it (a crossing you can see), away from
+  // the open edge of a panel (a bumper tucked under a fender edge is how it is built). Deeper hidden parts (behind a grille) do not count.
+  var fg = new Map(), fk = function (p) { return Math.floor(p.x / 0.04) + "," + Math.floor(p.y / 0.04) + "," + Math.floor(p.z / 0.04); };
+  front.forEach(function (f) { var k = fk(f.p), l = fg.get(k); if (!l) fg.set(k, l = []); l.push(f); });
+  var clip = 0, clipN = 0, clipAt = null, cand = [];
+  behind.forEach(function (b) { var x = Math.floor(b.p.x / 0.04), y = Math.floor(b.p.y / 0.04), z = Math.floor(b.p.z / 0.04), crossing = false;
+    for (var a = -1; a <= 1 && !crossing; a++) for (var c = -1; c <= 1 && !crossing; c++) for (var e = -1; e <= 1 && !crossing; e++) (fg.get((x + a) + "," + (y + c) + "," + (z + e)) || []).forEach(function (f) { if (f.node === b.node && f.p.distanceToSquared(b.p) < 0.0016) crossing = crossing || (body.nearEdge(f.c) ? "tuck" : true); });
+    if (crossing === true) cand.push(b); }); // a crossing right at the open edge of a panel = the part tucked under that edge (how it is built)
+  // deepest first; a crossing only a camera inside the car could see does not count. At most 30 looked at
+  // (ponytail: ray casts without a BVH are slow on big models; a BVH would allow every candidate)
+  cand.sort(function (p, q) { return q.d - p.d; });
+  var clipTop = []; // the visible crossings, deepest first (diagnosis: one per 10 cm, at most 4)
+  for (var ci = 0; ci < cand.length && ci < 30 && clipTop.length < 4; ci++) if (!clipTop.some(function (x) { return cand[ci].p.distanceTo(x.p) < 0.1; }) && body.exterior(cand[ci].h)) { clipTop.push(cand[ci]); if (clipTop.length === 1) { clip = cand[ci].d; clipAt = { at: cand[ci].p.toArray().map(round3), by: String(cand[ci].by).slice(0, 60) }; } }
+  clipN = cand.length;
+  // a part mostly buried in the car (no visible crossing: nothing of it shows) is not fitted either: its deepest point counts
+  if (behind.length > 0.5 * total) { var deep = behind.reduce(function (m, x) { return x.d > m.d ? x : m; }); if (deep.d > clip) { clip = deep.d; clipAt = { at: deep.p.toArray().map(round3), by: String(deep.by).slice(0, 60), buried: true }; } }
+  // contact clusters: points within QA_NEAR of the car, linked within 6 cm (same placed copy)
+  var lab = new Int32Array(contacts.length).fill(-1), clusters = [];
+  for (var i = 0; i < contacts.length; i++) { if (lab[i] >= 0) continue; var cl = [i], k = 0; lab[i] = clusters.length;
+    while (k < cl.length) { var a1 = contacts[cl[k++]]; for (var j = 0; j < contacts.length; j++) if (lab[j] < 0 && contacts[j].node === a1.node && contacts[j].p.distanceToSquared(a1.p) < 0.0036) { lab[j] = clusters.length; cl.push(j); } }
+    clusters.push(cl.map(function (x) { return contacts[x]; })); }
+  // floating: a cluster that touches nowhere floats by its closest point; a touching one is cut into 5 cm slices along its contact footprint
+  // (points <= 6 mm) and each slice must touch (<= QA_GAP_MM) too: a corner or a heel lifting off counts, not just the measured points
+  var gap = 0, worst = null, spots = []; // spots: every floating slice (diagnosis: the 4 widest, one per 10 cm)
+  clusters.forEach(function (cl) {
+    var mn = Math.min.apply(null, cl.map(function (c) { return c.d; }));
+    if (mn > QA_GAP_MM / 1000) { spots.push({ d: mn, p: cl[0].p }); if (mn > gap) { gap = mn; worst = cl[0].p.toArray().map(round3); } return; }
+    var fp = cl.filter(function (c) { return c.d <= 0.006; }), bx = new THREE.Box3(); fp.forEach(function (c) { bx.expandByPoint(c.p); });
+    var sz = bx.getSize(new THREE.Vector3()), ax = sz.x >= sz.y && sz.x >= sz.z ? "x" : sz.y >= sz.z ? "y" : "z", sl = {};
+    cl.forEach(function (c) { if (c.p[ax] < bx.min[ax] || c.p[ax] > bx.max[ax]) return; var s1 = Math.floor((c.p[ax] - bx.min[ax]) / 0.05); if (!sl[s1] || c.d < sl[s1].d) sl[s1] = c; });
+    Object.keys(sl).forEach(function (s1) { if (sl[s1].d > QA_GAP_MM / 1000) spots.push(sl[s1]); if (sl[s1].d > gap) { gap = sl[s1].d; worst = sl[s1].p.toArray().map(round3); } }); });
+  spots.sort(function (p, q) { return q.d - p.d; }); var gapTop = []; spots.forEach(function (c) { if (gapTop.length < 4 && !gapTop.some(function (x) { return c.p.distanceTo(x.p) < 0.1; })) gapTop.push(c); });
+  return { clipMm: round1(clip * 1000), clipSamples: clipN, clipAt: clipAt, clipTop: clipTop.map(function (c) { return { mm: round1(c.d * 1000), at: c.p.toArray().map(round3), by: String(c.by).slice(0, 60) }; }), gapMm: round1(gap * 1000), gapAt: worst, gapTop: gapTop.map(function (c) { return { mm: round1(c.d * 1000), at: c.p.toArray().map(round3) }; }), samples: total, contacts: clusters.length, clusters: clusters };
+}
+// Tiers: PERFECT = clip <= 2 mm and gap <= 3 mm (a label only); GOOD (shown) = both <= 6 mm, or <= 0.5 % of the part's size when that is
+// larger (one copy: a rim, a skirt, a whole bumper); worse = REFUSED. Only visible clipping counts (qaMeasure), so these are what you see.
+var QA_GOOD_MM = 6, QA_GOOD_FRAC = 0.005;
+function qaLimit(node) { var s = new THREE.Box3().setFromObject(node, true).getSize(new THREE.Vector3()); return round1(Math.max(QA_GOOD_MM, QA_GOOD_FRAC * Math.max(s.x, s.y, s.z) * 1000)); }
+var qaPerfect = function (m) { return m.clipMm <= QA_CLIP_MM && m.gapMm <= QA_GAP_MM; };
+var qaGood = function (m, lim) { return m.clipMm <= lim && m.gapMm <= lim; };
+var qaTier = function (m, lim) { return qaPerfect(m) ? "PERFECT" : qaGood(m, lim) ? "GOOD" : "REFUSED"; };
+var qaScore = function (m) { return Math.max(0, m.clipMm - QA_CLIP_MM) + Math.max(0, m.gapMm - QA_GAP_MM); };
+// Bumper corners: each end of the part bent on its own (x / y / z, <= 15 mm), fading in from 40 % of the half width to the end (part space;
+// w = [[x, y, z] for the -x end, [x, y, z] for the +x end] in metres, divided by the placement's scale).
+function cornerT(x, hw) { var a = clamp((Math.abs(x) / hw - 0.4) / 0.6, 0, 1); return a * a * (3 - 2 * a); }
+function warpPts(pts, w, hw, sc) { return pts.map(function (q) { var t = cornerT(q.x, hw), e = w[q.x < 0 ? 0 : 1]; return t ? new THREE.Vector3(q.x + e[0] * t / sc[0], q.y + e[1] * t / sc[1], q.z + e[2] * t / sc[2]) : q; }); }
+function warpNode(node, w, hw, sc) {
+  node.updateMatrixWorld(true); var inv = new THREE.Matrix4().copy(node.matrixWorld).invert(), v = new THREE.Vector3();
+  node.traverse(function (m) { if (!m.isMesh || m.userData.shadow) return; var M = new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld), Mi = M.clone().invert(), g = m.geometry.clone(), p = g.attributes.position;
+    for (var i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(M); v.copy(warpPts([v], w, hw, sc)[0]).applyMatrix4(Mi); p.setXYZ(i, v.x, v.y, v.z); }
+    g.computeBoundingBox(); g.computeBoundingSphere(); m.geometry = g; });
+}
+/** Seam ribbons (part-local quads) along each contact cluster: 2 cm slices, the point closest to the car, 3 cm wide on the car's surface. */
+function qaSeams(m, nodes) {
+  var out = nodes.map(function () { return []; });
+  m.clusters.forEach(function (cl) { var node = cl[0].node, bx = new THREE.Box3(); cl.forEach(function (c) { bx.expandByPoint(c.p); });
+    var sz = bx.getSize(new THREE.Vector3()), ax = sz.x >= sz.y && sz.x >= sz.z ? "x" : sz.y >= sz.z ? "y" : "z", sl = {};
+    cl.forEach(function (c) { if (c.d > 0.008) return; var s = Math.floor((c.p[ax] - bx.min[ax]) / 0.02); if (!sl[s] || c.d < sl[s].d) sl[s] = c; });
+    var pts = Object.keys(sl).map(Number).sort(function (a, b) { return a - b; }).map(function (s) { return sl[s]; });
+    if (pts.length === 1) pts = [{ c: pts[0].c.clone().add(new THREE.Vector3(0.01, 0, 0)), n: pts[0].n }, { c: pts[0].c.clone().add(new THREE.Vector3(-0.01, 0, 0)), n: pts[0].n }];
+    var inv = new THREE.Matrix4().copy(nodes[node].matrixWorld).invert();
+    for (var i = 0; i + 1 < pts.length && out[node].length < 32; i++) { var A = pts[i].c, B = pts[i + 1].c; if (A.distanceTo(B) > 0.06) continue;
+      var n = pts[i].n.clone().add(pts[i + 1].n).normalize(), side = new THREE.Vector3().subVectors(B, A).cross(n).normalize().multiplyScalar(0.015), lift = n.clone().multiplyScalar(0.0015);
+      out[node].push([A.clone().add(lift).sub(side), A.clone().add(lift).add(side), B.clone().add(lift).add(side), B.clone().add(lift).sub(side)].map(function (v) { return v.applyMatrix4(inv).toArray().map(r4); }).flat()); } });
+  return out;
+}
+var SEAM_MAT = new THREE.MeshBasicMaterial({ color: 0x000000, vertexColors: true, transparent: true, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -3, side: THREE.DoubleSide });
+/** One soft ribbon mesh from seam quads [a,b,c,d] (part-local, b-c on one side): three rows of vertices, dark in the middle, clear at the edges. */
+function seamMesh(quads) {
+  var pos = [], col = [], idx = [], A = 0.42;
+  quads.forEach(function (q) { var base = pos.length / 3, P = function (i) { return [q[i * 3], q[i * 3 + 1], q[i * 3 + 2]]; }, mid = function (i, j) { return P(i).map(function (x, k) { return (x + P(j)[k]) / 2; }); };
+    [P(0), mid(0, 1), P(1), P(3), mid(3, 2), P(2)].forEach(function (v, k) { pos.push(v[0], v[1], v[2]); col.push(0, 0, 0, k % 3 === 1 ? A : 0); });
+    idx.push(base, base + 1, base + 4, base, base + 4, base + 3, base + 1, base + 2, base + 5, base + 1, base + 5, base + 4); });
+  var g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("color", new THREE.Float32BufferAttribute(col, 4)); g.setIndex(idx);
+  var m = new THREE.Mesh(g, SEAM_MAT); m.userData.shadow = true; m.userData.seam = true; m.renderOrder = 2; return m;
+}
+/** A soft ring (rims: the rim lip in the tyre, the shadow in the arch behind the tyre): alpha a at radius ri fading to 0 at ro, facing +x. */
+function softRing(ri, ro, a) {
+  var g = new THREE.RingGeometry(ri, ro, 64, 1); g.rotateY(Math.PI / 2); var p = g.attributes.position, col = [];
+  for (var i = 0; i < p.count; i++) { var r = Math.hypot(p.getY(i), p.getZ(i)); col.push(0, 0, 0, Math.abs(r - ri) < Math.abs(r - ro) ? a : 0); }
+  g.setAttribute("color", new THREE.Float32BufferAttribute(col, 4)); var m = new THREE.Mesh(g, SEAM_MAT); m.userData.shadow = true; m.userData.seam = true; m.renderOrder = 2; return m;
+}
+/** QA of a fresh fit inside buildAccessory: measure, auto-correct (not rims), refuse; then the correction (baseAdj) as the admin set it. */
+function fitQA(car, type, f, place, zone, group, baseAdj, noRefuse, raw) { // raw (evidence only): measured as placed, no auto-correct
+  var nodes = place.map(function (p) { return p.o.node; }), skip = zone ? zone.hide.slice() : [], extra = [];
+  group.traverse(function (o) { if (o.isMesh && o.userData.residual) extra.push(o); });
+  if (type === "RIMS") group.traverse(function (o) { if (o.isMesh && o.userData.tyre) nodes.push(o); }); // built / kept tyres move with the rims
+  var setPl = function (j, dx, dy, dz, s) { place.forEach(function (p) { var n = p.o.node, b = p.base; n.position.set(b.pos[0] + (j.x + dx) * p.side, b.pos[1] + j.y + dy, b.pos[2] + j.z + dz);
+    n.rotation.set(b.rot[0] + j.rx, b.rot[1] + j.ry * p.side, b.rot[2]); n.scale.fromArray(b.sc).multiplyScalar(j.s * s); n.updateMatrixWorld(true); }); };
+  var none = { x: 0, y: 0, z: 0, rx: 0, ry: 0, s: 1 };
+  setPl(none, 0, 0, 0, 1); var box = new THREE.Box3(); nodes.forEach(function (n) { box.expandByObject(n); }); box.expandByScalar(0.12);
+  var body = qaBody(car, box, skip, extra); body.setPart(nodes); var samples = nodes.map(function (n) { return qaSamples(n, Math.round(2400 / nodes.length)); });
+  // the car's OWN part measured the same way (stock wheels / stock bumper / stock spoiler...): when it already clips as deep, the model is the cause
+  var stock = type === "RIMS" ? wheelParts(car).reduce(function (a, q) { return a.concat(q.tyre.concat(q.rim).map(function (e) { return e.obj; })); }, []) : zone ? zone.hide.filter(function (o) { return o.isMesh; }) : [];
+  var IW = type === "RIMS", sm = stock.length ? qaMeasure(body, stock, stock.map(function (o) { return qaSamples(o, Math.round(2400 / stock.length)); }), IW) : null;
+  var lim = qaLimit(nodes[0]), BUMPER = type === "FRONT_BUMPER" || type === "REAR_BUMPER", hw = place[0].o.size.x / 2, warpOf = function (w, sc) { return w ? [warpPts(samples[0], w, hw, sc || nodes[0].scale.toArray())].concat(samples.slice(1)) : samples; };
+  var m0 = qaMeasure(body, nodes, samples, IW), best = { m: m0, d: [0, 0, 0, 1], w: null }, info = { clipMm: m0.clipMm, clipSamples: m0.clipSamples, clipAt: m0.clipAt, gapMm: m0.gapMm, samples: m0.samples, contacts: m0.contacts, gapAt: m0.gapAt, limitMm: lim };
+  if (!raw && !qaPerfect(m0) && type !== "RIMS") { // auto-correct towards PERFECT: one axis at a time (a wing's base plate seats down / up to 10 mm), the two best together, scale
+    var better = function (m) { var g = qaGood(m, lim), gb = qaGood(best.m, lim); return g !== gb ? g : qaScore(m) < qaScore(best.m) - 1e-6; }; // GOOD first, then closest to PERFECT
+    var tryD = function (d) { setPl(none, d[0], d[1], d[2], d[3]); var m = qaMeasure(body, nodes, samples, IW); if (better(m)) best = { m: m, d: d, w: null }; return qaPerfect(m); };
+    var axisBest = [0, 0, 0], done = false;
+    for (var a = 0; a < 3 && !done; a++) { var ab = Infinity; [0.002, -0.002, 0.004, -0.004, 0.006, -0.006, 0.008, -0.008, 0.01, -0.01].forEach(function (mv) { if (done) return; var d = [0, 0, 0, 1]; d[a] = mv; setPl(none, d[0], d[1], d[2], 1); var m = qaMeasure(body, nodes, samples, IW);
+      if (qaScore(m) < ab) { ab = qaScore(m); axisBest[a] = mv; } if (better(m)) best = { m: m, d: d, w: null }; if (qaPerfect(m)) done = true; }); }
+    if (!done) done = tryD([axisBest[0], axisBest[1], axisBest[2], 1]);
+    (BUMPER ? [1.01, 0.99, 1.02, 0.98, 1.03, 0.97] : [1.02, 0.98]).forEach(function (sc) { if (!done) done = tryD([best.d[0], best.d[1], best.d[2], sc]); }); // bumpers +-3 %
+    if (BUMPER && !done) { // each corner on its own: x / y / z up to 15 mm, the best value per axis kept (-x end, +x end, again)
+      setPl(none, best.d[0], best.d[1], best.d[2], best.d[3]); var w = [[0, 0, 0], [0, 0, 0]];
+      for (var pass = 0; pass < 4 && !done; pass++) for (var sd = pass % 2, ax = 0; ax < 3 && !done; ax++) [0.005, -0.005, 0.01, -0.01, 0.015, -0.015].forEach(function (mv) { if (done) return;
+        var t = w.map(function (e) { return e.slice(); }); t[sd][ax] = mv; var m = qaMeasure(body, nodes, warpOf(t), IW); if (better(m)) { best = { m: m, d: best.d, w: t }; w = t; } if (qaPerfect(m)) done = true; });
+    }
+    setPl(none, best.d[0], best.d[1], best.d[2], best.d[3]);
+    if (qaGood(best.m, lim) && (best.w || best.d.some(function (x, i) { return x !== (i < 3 ? 0 : 1); }))) { // bake the correction into the fit
+      f.placements = f.placements.map(function (p, i) { var n = nodes[i]; return Object.assign({}, p, { pos: n.position.toArray().map(r4), sc: n.scale.toArray().map(r4) }, i === 0 && best.w ? { warp: best.w.map(function (e) { return e.map(r4); }) } : {}); });
+      place.forEach(function (p, i) { p.base = f.placements[i]; });
+      if (best.w) warpNode(nodes[0], best.w, hw, f.placements[0].sc);
+      info.corrected = { moveMm: best.d.slice(0, 3).map(function (x) { return round1(x * 1000); }), scale: best.d[3] }; if (best.w) info.corrected.cornersMm = best.w.map(function (e) { return e.map(function (x) { return round1(x * 1000); }); });
+      info.clipMm = best.m.clipMm; info.gapMm = best.m.gapMm; info.clipAt = best.m.clipAt; info.gapAt = best.m.gapAt;
+    }
+  }
+  if (type === "RIMS") { // the wheel-to-arch gap is meant to be there: a rim's contact is its lip in the tyre (built tyres sit 12 mm over it)
+    var seat = Math.max(0, Math.max.apply(null, (f.info.wheels || []).map(function (w) { return w.gapToTyreMm || 0; })));
+    best.m = Object.assign({}, m0, { gapMm: round1(seat) }); info.gapMm = best.m.gapMm; info.gapAt = null; info.contacts = 0; }
+  if (sm) info.stock = { clipMm: sm.clipMm, clipAt: sm.clipAt };
+  info.clipTop = best.m.clipTop || []; info.gapTop = best.m.gapTop || [];
+  info.before = { clipMm: m0.clipMm, gapMm: type === "RIMS" ? info.gapMm : m0.gapMm, clipTop: m0.clipTop, gapTop: type === "RIMS" ? [] : m0.gapTop }; info.ok = qaGood(best.m, lim); info.tier = qaTier(best.m, lim);
+  if (!info.ok) { info.clipMm = best.m.clipMm; info.gapMm = best.m.gapMm; info.clipAt = best.m.clipAt; info.gapAt = best.m.gapAt; info.bestTryMm = best.d.slice(0, 3).map(function (x) { return round1(x * 1000); }).concat([best.d[3]]); if (best.w) info.bestCornersMm = best.w.map(function (e) { return e.map(function (x) { return round1(x * 1000); }); }); } // the closest it gets
+  f.info.qa = info;
+  if (!info.ok) { var why = []; if (best.m.clipMm > lim) why.push("goes " + best.m.clipMm + " mm into the car body"); if (best.m.gapMm > lim) why.push("floats " + best.m.gapMm + " mm off the car along a contact edge");
+    var msg = "this part does not look fitted on this car (" + why.join(", ") + "; limit " + lim + " mm)"; if (noRefuse) f.info.qa.wouldRefuse = msg; else { var err = new Error(msg); err.info = f.info; throw err; } }
+  if (type !== "RIMS") { var seams = qaSeams(best.m, nodes.slice(0, place.length)); f.placements.forEach(function (p, i) { if (seams[i].length) p.seam = seams[i]; }); }
+  if (baseAdj) { setPl(addAdj(none, baseAdj), 0, 0, 0, 1); var mc = qaMeasure(body, nodes, warpOf(f.placements[0].warp, f.placements[0].sc), IW); if (type === "RIMS") mc.gapMm = best.m.gapMm; f.info.qa.correction = { adj: baseAdj, clipMm: mc.clipMm, gapMm: mc.gapMm, ok: qaGood(mc, lim), tier: qaTier(mc, lim) }; }
+  setPl(none, 0, 0, 0, 1);
+}
+/** A stored rims runtime (replayed from the server): which wheels take the rim, which stock tyre pieces stay, each wheel's move (<= 5 cm). */
+function validRimRuntime(r) {
+  var name = function (x) { return typeof x === "string" && x.length <= 40; };
+  return !!r && Array.isArray(r.active) && r.active.length <= 4 && r.active.every(name) && Array.isArray(r.kept) && r.kept.length <= 400 && r.kept.every(name) && (r.hideBrakes === undefined || (Array.isArray(r.hideBrakes) && r.hideBrakes.length <= 200 && r.hideBrakes.every(name)))
+    && Array.isArray(r.offsets) && r.offsets.length <= 4 && r.offsets.every(function (o) { return o && name(o.wheel) && Array.isArray(o.delta) && o.delta.length === 3 && o.delta.every(function (n) { return typeof n === "number" && isFinite(n) && Math.abs(n) <= 0.05; }); });
 }
 function validFit(f, type) {
   return !!f && f.version === fitVersion(type) && f.type === type && Array.isArray(f.orient) && f.orient.length === 3 && Array.isArray(f.placements) && f.placements.length > 0 && f.placements.length <= 4
     && f.placements.every(function (p) { return [p.pos, p.sc, p.rot].every(function (a) { return Array.isArray(a) && a.length === 3 && a.every(function (n) { return typeof n === "number" && isFinite(n) && Math.abs(n) < 50; }); }) && (p.side === 1 || p.side === -1); })
     && (!f.tyres || (Array.isArray(f.tyres) && f.tyres.length <= 4)) && (!f.keep || (Array.isArray(f.keep) && f.keep.length <= 40)) && (!f.hideMore || (Array.isArray(f.hideMore) && f.hideMore.length <= 60 && f.hideMore.every(function (n) { return typeof n === "string"; })))
-    && (!f.shift || (Array.isArray(f.shift) && f.shift.length <= 40 && f.shift.every(function (x) { return Array.isArray(x) && typeof x[0] === "string" && typeof x[1] === "number" && Math.abs(x[1]) <= 0.05; })));
+    && (!f.shift || (Array.isArray(f.shift) && f.shift.length <= 40 && f.shift.every(function (x) { return Array.isArray(x) && typeof x[0] === "string" && typeof x[1] === "number" && Math.abs(x[1]) <= 0.05; })))
+    && (!f.rimRuntime || validRimRuntime(f.rimRuntime))
+    && (!f.rings || (Array.isArray(f.rings) && f.rings.length <= 8 && f.rings.every(function (g) { return g && [g.c, g.rot].every(function (a) { return Array.isArray(a) && a.length === 3 && a.every(function (n) { return typeof n === "number" && isFinite(n) && Math.abs(n) < 50; }); }) && [g.ri, g.ro, g.a].every(function (n) { return typeof n === "number" && n >= 0 && n < 2; }); })))
+    && f.placements.every(function (p) { return p.warp === undefined || (Array.isArray(p.warp) && p.warp.length === 2 && p.warp.every(function (e) { return Array.isArray(e) && e.length === 3 && e.every(function (n) { return typeof n === "number" && isFinite(n) && Math.abs(n) <= 0.016; }); })); })
+    && f.placements.every(function (p) { return p.seam === undefined || (Array.isArray(p.seam) && p.seam.length <= 32 && p.seam.every(function (q) { return Array.isArray(q) && q.length === 12 && q.every(function (n) { return typeof n === "number" && isFinite(n) && Math.abs(n) < 100; }); })); });
 }
 /** Build the fitted accessory: the stored fit for this accessory x car (kit.fit) when it is current, else fitAccessory now. */
 async function buildAccessory(car, kit) {
@@ -908,13 +1268,18 @@ async function buildAccessory(car, kit) {
       m.position.set(sh.x, sh.y + 0.002 / Math.abs(p.sc[1]), sh.z); m.scale.set(sh.w * 1.8, sh.d * 1.8, 1); o.node.add(m); });
     group.add(o.node); return { o: o, side: p.side, base: p };
   });
-  (f.tyres || []).forEach(function (ty) { var m = new THREE.Mesh(tyreGeometry(ty.ri, ty.ro, ty.w), TYRE_MAT); m.position.fromArray(ty.c); if(ty.rot)m.rotation.fromArray(ty.rot); m.userData.shadow = true; group.add(m); }); // built tyres (not painted / finished)
+  if (stored) place.forEach(function (p, i) { var w = f.placements[i].warp; if (w) warpNode(p.o.node, w, p.o.size.x / 2, f.placements[i].sc); }); // bumper corners (fitQA)
+  (f.tyres || []).forEach(function (ty) { var m = new THREE.Mesh(tyreGeometry(ty.ri, ty.ro, ty.w, Array.isArray(ty.prof) && ty.prof.every(function (n) { return typeof n === "number" && n > 0 && n < 2; }) ? ty.prof : null), TYRE_MAT); m.position.fromArray(ty.c); if(ty.rot)m.rotation.fromArray(ty.rot); m.userData.shadow = true; m.userData.tyre = true; group.add(m); }); // built tyres (not painted / finished)
+  (f.rings || []).forEach(function (g) { var m = softRing(g.ri, g.ro, g.a); if (g.half) { m.geometry.dispose(); m.geometry = new THREE.RingGeometry(g.ri, g.ro, 48, 1, 0, Math.PI); m.geometry.rotateY(Math.PI / 2); var p = m.geometry.attributes.position, col = []; for (var i = 0; i < p.count; i++) col.push(0, 0, 0, Math.abs(Math.hypot(p.getY(i), p.getZ(i)) - g.ri) < Math.abs(Math.hypot(p.getY(i), p.getZ(i)) - g.ro) ? g.a : 0); m.geometry.setAttribute("color", new THREE.Float32BufferAttribute(col, 4)); }
+    m.position.fromArray(g.c); m.rotation.fromArray(g.rot); group.add(m); }); // rims: soft seams (rim lip in the tyre, arch shadow over the tyre)
   if (zone && f.keep && f.keep.length) zone = Object.assign({}, zone, { hide: zone.hide.filter(function (o) { return f.keep.indexOf(o.name) < 0; }) }); // the stock tyres stay
   if (zone && f.hideMore && f.hideMore.length) { var more = []; car.root.traverse(function (o) { if (o.isMesh && f.hideMore.indexOf(o.name) >= 0 && zone.hide.indexOf(o) < 0) more.push(o); }); zone = Object.assign({}, zone, { hide: zone.hide.concat(more) }); } // rims: pieces that would clash with the new spokes
   var shifts = []; (f.shift || []).forEach(function (x) { car.root.traverse(function (o) { if (!o.isMesh || o.name !== x[0]) return;
     var p0 = o.getWorldPosition(new THREE.Vector3()), a = o.parent.worldToLocal(p0.clone()), b = o.parent.worldToLocal(p0.clone().add(new THREE.Vector3(x[1], 0, 0)));
     shifts.push({ o: o, orig: o.position.clone(), d: b.sub(a) }); }); });
-  if(type === "RIMS" && f.rimRuntime) { var rr=rimRuntime(car,f,group); zone={hide:rr.hide,T:car.rb.clone(),box:car.rb.clone(),how:"runtime wheels"}; }
+  if(type === "RIMS" && f.rimRuntime) { var rr=rimRuntime(car,f,group), more2=[]; car.root.traverse(function (o) { if (o.isMesh && (f.hideMore || []).indexOf(o.name) >= 0 && rr.hide.indexOf(o) < 0) more2.push(o); }); zone={hide:rr.hide.concat(more2),T:car.rb.clone(),box:car.rb.clone(),how:"runtime wheels"}; }
+  if (!stored) fitQA(car, type, f, place, zone, group, kit.baseAdj && typeof kit.baseAdj === "object" ? kit.baseAdj : null, kit.qaEvidence === true, !!(kit.size && kit.size.qaRaw === true)); // measures, may correct the placements, or throws the reason
+  place.forEach(function (p, i) { var sm = f.placements[i].seam; if (sm && sm.length) p.o.node.add(seamMesh(sm)); }); // soft seams along every contact
   var mats = [], tally = new Map(); group.traverse(function (m) { if (m.isMesh && !m.userData.shadow) { mats.push({ o: m, orig: m.material }); tally.set(m.material.uuid, (tally.get(m.material.uuid) || 0) + (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count)); } });
   var mainId = null; tally.forEach(function (n, id) { if (!mainId || n > tally.get(mainId)) mainId = id; });
   mats.forEach(function (e) { e.main = e.orig.uuid === mainId; });
@@ -949,6 +1314,10 @@ async function build(s) {
   if (m.centerX !== undefined) c.x = m.centerX * k; // loose / one-sided parts (a single mirror) would shift a bounding-box centre
   root.position.set(-c.x, -bb.min.y + (m.groundOffset || 0), -c.z);
   group.updateMatrixWorld(true);
+  // stand on the real lowest point (the tyres on every catalog car): the loose box above counts rotated meshes' boxes and can reach far
+  // below them (Fabia 198 mm, Corolla E170 80 mm, E36 12 mm of floating). Before the part map: piece boxes are measured after this.
+  var low = new THREE.Box3().setFromObject(root, true).min.y - (m.groundOffset || 0);
+  if (low > 0.0005) { root.position.y -= low; group.updateMatrixWorld(true); }
 
   // baked paint: ONE shared material for the whole car (the paint is in the photo texture); texels in the paint's hue window are
   // re-coloured, keeping their light / shade, everything else (glass, tyres, chrome, lights, reflections) is left alone

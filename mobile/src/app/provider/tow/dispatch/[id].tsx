@@ -79,7 +79,7 @@ export default function CompanyDispatchDetail() {
         <View style={{ gap: 12 }}>
           {error ? <Note tone="danger" icon="alert-circle-outline">{error}</Note> : null}
           <Card pad={12}>
-            <ListRow icon="person-circle-outline" title={r.driver ? `${t("Driver", "السائق")}: ${r.driver.name}` : t("No driver yet", "لا يوجد سائق بعد")} sub={r.driver ? `${r.driver.phone} · ${liveLabel(live, t)}` : undefined} />
+            <ListRow icon="person-circle-outline" title={r.driver ? `${t("Driver", "السائق")}: ${r.driver.name}` : t("No driver yet", "لا يوجد سائق بعد")} sub={r.driver ? `${liveLabel(live, t)}` : undefined} />
             {r.requestedDriver ? <ListRow divider icon="star-outline" title={t("The customer asked for", "طلب الزبون")} sub={r.requestedDriver.name} /> : null}
           </Card>
 
@@ -94,7 +94,7 @@ export default function CompanyDispatchDetail() {
               ) : (
                 <Note>{drivers.length ? t("No other driver is free right now.", "لا يوجد سائق آخر متاح الآن.") : t("You have no drivers yet. Add them under Drivers, or answer it on the classic screen.", "ليس لديك سائقون بعد. أضفهم من «السائقون» أو أجب من الشاشة الكلاسيكية.")}</Note>
               )}
-              {r.status === "ACCEPTED" && r.driver ? <Note icon="information-circle-outline">{t("Transferring frees the current truck; the new driver accepts with his own.", "التحويل يحرّر الشاحنة الحالية؛ ويقبل السائق الجديد بشاحنته.")}</Note> : null}
+              {(r.status === "ACCEPTED" || r.status === "EN_ROUTE") && r.driver ? <Note icon="information-circle-outline">{t("Transferring frees the current truck; the customer is told and sees the new driver's card; the new driver accepts with his own truck.", "التحويل يحرّر الشاحنة الحالية؛ يُبلَّغ الزبون ويرى بطاقة السائق الجديد؛ ويقبل السائق الجديد بشاحنته.")}</Note> : null}
             </Section>
           ) : null}
           {!r.driver && r.status === "REQUESTED" && !drivers.length ? (

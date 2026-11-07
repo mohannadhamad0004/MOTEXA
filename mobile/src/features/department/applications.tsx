@@ -31,7 +31,7 @@ const kindLabel = (t: (en: string, ar: string) => string, k: Kind) => (k === "TO
 export const AppStatusPill = ({ status }: { status: string }) => <StatusChip status={status} />;
 
 // ---------------------------------------------------------------- list with tabs
-export function ApplicationsList({ kind }: { kind: Kind }) {
+export function ApplicationsList({ kind, header }: { kind: Kind; header?: React.ReactNode }) {
   const d = useDT();
   const [tab, setTab] = useState<Tab>("NEW");
   const counts = useLoad(() => review.counts(kind), [kind], 15000);
@@ -44,6 +44,7 @@ export function ApplicationsList({ kind }: { kind: Kind }) {
   ];
   return (
     <DeptPage onRefresh={() => (void counts.reload(), void list.reload())} refreshing={list.loading && !!list.data}>
+      {header}
       <Section title={d.t("Applications", "الطلبات")} caption={kindLabel(d.t, kind) + " · " + d.t("review, request changes, approve", "راجع واطلب تعديلات ووافق")} />
       <View style={{ flexDirection: d.row, flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
         {tabs.map((x) => {

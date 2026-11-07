@@ -111,13 +111,18 @@ export type TowCompanyRow = {
   /** only with a position: straight-line km from the company's base point ("base") or from its city centre ("city") */
   distanceKm?: number | null;
   distanceSource?: "base" | "city" | null;
+  /** approved by MOTEXA (every listed company is) */
+  verified?: boolean;
+  /** drivers FREE right now, and the real rating (avg null = no reviews yet) */
+  freeDrivers?: number;
+  rating?: { avg: number | null; count: number };
   approvedTrucks: number;
   availableTrucks: number;
   truckTypes: TruckType[];
 };
 
 /** The company page adds the fields the list leaves out. */
-export type TowCompanyDetail = Omit<TowCompanyRow, "truckTypes"> & { address: string | null; description: string | null; media?: ProviderMedia[] };
+export type TowCompanyDetail = Omit<TowCompanyRow, "truckTypes"> & { address: string | null; description: string | null; media?: ProviderMedia[]; driversCount?: number; reviews?: { stars: number; comment: string | null; createdAt: string }[] };
 
 export type TowFilters = { city?: string; serviceCity?: string; q?: string; truckType?: TruckType; sort?: "nearest" | "available" | "name"; availableOnly?: boolean; lat?: number; lng?: number };
 

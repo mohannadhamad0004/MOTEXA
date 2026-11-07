@@ -17,18 +17,20 @@ import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 // The tow request as three steps (pickup + destination, car + problem + phone, confirm) with a sticky bar. The rules live in
 // useTowRequestForm (shared with the map page); a sent request shows a short confirmation, then the status page.
 export default function NewTowRequest() {
-  const { companyId, driverId } = useLocalSearchParams<{ companyId: string; driverId?: string }>();
+  const { companyId, driverId, mode } = useLocalSearchParams<{ companyId?: string; driverId?: string; mode?: string }>();
+  const nearest = mode === "NEAREST";
   const { t, isArabic } = useL();
   const { g, row, align } = useGarageTheme();
   const problem = useProblemLabels();
-  const state = useLoad(() => catalogService.getTowCompany(companyId), [companyId]);
-  const form = useTowRequestForm({ id: companyId, city: state.data?.company.city ?? "" });
+  const state = useLoad(() => (companyId ? catalogService.getTowCompany(companyId) : Promise.resolve(null)), [companyId]);
+  const form = useTowRequestForm(companyId ? { id: companyId, city: state.data?.company.city ?? "" } : null);
   // who comes: any driver of the company (it assigns) or one of its FREE drivers
-  const drivers = useLoad(() => freeDriversOf(companyId), [companyId]);
+  const drivers = useLoad(() => (companyId ? freeDriversOf(companyId) : Promise.resolve([])), [companyId]);
   useEffect(() => {
+    if (nearest) form.setNearest(true);
     if (driverId) form.setDriverId(driverId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [driverId]);
+  }, [driverId, nearest]);
   const [step, setStep] = useState(0);
   const [stepErr, setStepErr] = useState<string | null>(null);
   const [sent, setSent] = useState<string | null>(null);
@@ -59,11 +61,12 @@ export default function NewTowRequest() {
 
   const co = state.data?.company;
   const noTruck = !!co && co.availableTrucks === 0;
+  const ready = nearest || !!co;
   return (
     <GaragePage
-      hero={<GarageHero variant="detail" onBack={back} title={t("Request a tow", "اطلب سحبًا")} line={co ? `${co.name} · ${cityLabel(co.city, isArabic)}` : undefined} />}
+      hero={<GarageHero variant="detail" onBack={back} title={t("Request a tow", "اطلب سحبًا")} line={co ? `${co.name} · ${cityLabel(co.city, isArabic)}` : nearest ? t("Nearest available driver", "أقرب سائق متاح") : undefined} />}
       bottom={
-        co && !noTruck && !sent ? (
+        ready && !noTruck && !sent ? (
           <StickyActionBar>
             {step > 0 ? <GButton variant="secondary" label={t("Back", "رجوع")} onPress={back} /> : null}
             {step < 2 ? <GButton flex icon="arrow-forward" label={t("Next", "التالي")} onPress={next} /> : <GButton flex icon="send" label={t("Send request", "إرسال الطلب")} busy={form.busy} onPress={send} />}
@@ -79,9 +82,9 @@ export default function NewTowRequest() {
           <GText style={[gType.title, { textAlign: "center" }]}>{t("Request sent", "تم إرسال الطلب")}</GText>
           <GText soft style={[gType.bodySm, { textAlign: "center" }]}>{t("Opening your request…", "جارٍ فتح طلبك…")}</GText>
         </Card>
-      ) : state.error && !co ? (
+      ) : !nearest && state.error && !co ? (
         <ErrorState text={state.error} onRetry={state.reload} retryLabel={t("Retry", "إعادة المحاولة")} />
-      ) : !co ? (
+      ) : !ready ? (
         <SkeletonBlock height={220} radius={gShape.card} />
       ) : noTruck ? (
         <Note tone="danger" icon="alert-circle-outline">{t(`${co.name} has no available truck right now. Please try another company or come back later.`, `لا توجد شاحنة متاحة لدى ${co.name} حاليًا. جرّب شركة أخرى أو عد لاحقًا.`)}</Note>
@@ -130,19 +133,19 @@ export default function NewTowRequest() {
             </>
           ) : (
             <Card pad={12}>
-              <ListRow icon="business-outline" title={t("Company", "الشركة")} sub={`${co.name} · ${cityLabel(co.city, isArabic)}`} />
-              <View style={{ paddingVertical: 8, gap: 8 }}>
+              {co ? <ListRow icon="business-outline" title={t("Responsible company", "الشركة المسؤولة")} sub={`${co.name} · ${cityLabel(co.city, isArabic)}`} /> : <ListRow icon="navigate-outline" title={t("Nearest available", "الأقرب المتاح")} sub={t("We offer your request to the nearest free driver. You will see his company and card as soon as he is assigned.", "نعرض طلبك على أقرب سائق متاح. سترى شركته وبطاقته فور تعيينه.")} />}
+              {co ? <View style={{ paddingVertical: 8, gap: 8 }}>
                 <GText style={[gType.label, { fontWeight: "800" }, align]}>{t("Who should come?", "من يأتي؟")}</GText>
                 <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
                   <Chip icon="business-outline" label={t(`Any driver from ${co.name}`, `أي سائق من ${co.name}`)} on={!form.driverId} onPress={() => form.setDriverId(null)} />
                   {(drivers.data ?? []).map((d) => (
-                    <Chip key={d.id} icon="person-outline" label={d.truck ? `${d.firstName} · ${d.truck.make}` : d.firstName} on={form.driverId === d.id} onPress={() => form.setDriverId(d.id)} />
+                    <Chip key={d.id} icon="person-outline" label={d.truck ? `${d.name} · ${d.truck.make}` : d.name} on={form.driverId === d.id} onPress={() => form.setDriverId(d.id)} />
                   ))}
                 </View>
                 {form.driverId && drivers.data && !drivers.data.some((d) => d.id === form.driverId) ? (
                   <Note tone="warning" icon="alert-circle-outline">{t("That driver is no longer free. The company will assign another one.", "هذا السائق لم يعد متاحًا. ستُسند الشركة سائقًا آخر.")}</Note>
                 ) : null}
-              </View>
+              </View> : null}
               <ListRow divider icon="location-outline" title={t("Pickup", "الاستلام")} sub={form.pickup.trim()} />
               <ListRow divider icon="flag-outline" title={t("Destination", "الوجهة")} sub={form.dropoff.trim()} />
               <ListRow divider icon="car-sport-outline" title={t("Car", "السيارة")} sub={[form.make, form.model, form.year].map((x) => x.trim()).filter(Boolean).join(" ")} />

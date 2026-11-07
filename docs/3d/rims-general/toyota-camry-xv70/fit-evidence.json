@@ -12,7 +12,7 @@
   },
   "fit": {
     "type": "RIMS",
-    "fitVersion": 5,
+    "fitVersion": 6,
     "replaces": {
       "how": "wheel analysis",
       "hidden": 2
@@ -20,167 +20,130 @@
     "wheels": [
       {
         "wheel": "RL",
-        "stockOuterGapMm": 4.889,
-        "targetInsetMm": 5,
-        "appliedAxleOffsetMm": -0.111,
-        "finalOuterGapMm": 5,
-        "axleConfidence": 0.6567689528815767,
-        "archConfidence": 0.34722222222222227,
-        "tyreMode": "generated",
-        "warnings": [
-          "LOW_AXLE_CONFIDENCE",
-          "FALLBACK_TYRE"
-        ],
         "refusal": null,
-        "center": [
-          -0.7943846213359725,
-          0.3287996524677256,
-          -1.3517347435026
+        "warnings": [
+          "BUILT_TYRE"
         ],
-        "axle": [
-          -0.9949734293286862,
-          0.043872042030469745,
-          -0.09001732532124357
-        ],
-        "archSamples": 6,
-        "tyreOuterMm": 660.85,
-        "tyreWidthMm": 284.738,
-        "stockRimMm": 486.595,
-        "stockRimWidthMm": 284.738,
-        "stockRimInches": 18.173,
+        "archGapBeforeMm": 2.8,
+        "archGapAfterMm": 5,
+        "movedMm": -2.2,
+        "axleConfidence": 0.798,
+        "steerDeg": 0,
+        "tyreOuterMm": 657.6,
+        "tyreWidthMm": 229,
+        "stockRimMm": 478.3,
+        "stockRimInches": 17.8,
         "rimMm": 456.8,
-        "rimWidthMm": 264.738,
-        "innerFaceMm": -142.369,
-        "outerFaceMm": 142.369,
-        "sidewallMm": 102.025,
-        "faceInsetMm": 4,
+        "rimWidthMm": 209,
+        "sidewallMm": 100.4,
+        "faceInsetMm": 4.7,
         "gapToTyreMm": 0,
         "brakesKept": 0,
-        "tyre": "built (one-piece wheel or changed size)"
+        "tyre": "built",
+        "archSamples": 11,
+        "archConfidence": 0.917,
+        "blockedBy": null,
+        "hiddenBrakeParts": 0
       },
       {
         "wheel": "RR",
-        "stockOuterGapMm": 6.674,
-        "targetInsetMm": 5,
-        "appliedAxleOffsetMm": 1.674,
-        "finalOuterGapMm": 5,
-        "axleConfidence": 0.6566231630497842,
-        "archConfidence": 0.34722222222222227,
-        "tyreMode": "generated",
-        "warnings": [
-          "LOW_AXLE_CONFIDENCE",
-          "FALLBACK_TYRE"
-        ],
         "refusal": null,
-        "center": [
-          0.7943978051800556,
-          0.32879955717711895,
-          -1.35173648389566
+        "warnings": [
+          "BUILT_TYRE"
         ],
-        "axle": [
-          0.9950942756544506,
-          0.04854333031794725,
-          -0.08620282849992132
-        ],
-        "archSamples": 6,
-        "tyreOuterMm": 660.982,
-        "tyreWidthMm": 284.059,
-        "stockRimMm": 486.688,
-        "stockRimWidthMm": 284.059,
-        "stockRimInches": 18.177,
+        "archGapBeforeMm": 3.1,
+        "archGapAfterMm": 5,
+        "movedMm": -1.9,
+        "axleConfidence": 0.809,
+        "steerDeg": 0,
+        "tyreOuterMm": 657.6,
+        "tyreWidthMm": 228.7,
+        "stockRimMm": 587.1,
+        "stockRimInches": 22.1,
         "rimMm": 456.8,
-        "rimWidthMm": 264.059,
-        "innerFaceMm": -142.03,
-        "outerFaceMm": 142.03,
-        "sidewallMm": 102.091,
+        "rimWidthMm": 208.7,
+        "sidewallMm": 100.4,
         "faceInsetMm": 4,
         "gapToTyreMm": 0,
         "brakesKept": 0,
-        "tyre": "built (one-piece wheel or changed size)"
+        "tyre": "built",
+        "archSamples": 11,
+        "archConfidence": 0.917,
+        "blockedBy": null,
+        "hiddenBrakeParts": 0
       },
       {
         "wheel": "FL",
-        "stockOuterGapMm": 5.276,
-        "targetInsetMm": 5,
-        "appliedAxleOffsetMm": 0.276,
-        "finalOuterGapMm": 5,
-        "axleConfidence": 0.6582677502013699,
-        "archConfidence": 0.375,
-        "tyreMode": "generated",
-        "warnings": [
-          "LOW_AXLE_CONFIDENCE",
-          "FALLBACK_TYRE"
-        ],
         "refusal": null,
-        "center": [
-          -0.7944181068407914,
-          0.32880187325456234,
-          1.456772023234443
+        "warnings": [
+          "KEPT_STOCK_POSITION",
+          "BUILT_TYRE"
         ],
-        "axle": [
-          -0.9956887698340909,
-          0.03805765310861215,
-          0.08459012156356706
-        ],
-        "archSamples": 8,
-        "tyreOuterMm": 660.402,
-        "tyreWidthMm": 280.607,
-        "stockRimMm": 486.282,
-        "stockRimWidthMm": 280.607,
-        "stockRimInches": 18.161,
+        "archGapBeforeMm": 0.8,
+        "archGapAfterMm": 0.8,
+        "movedMm": 0,
+        "axleConfidence": 0.739,
+        "steerDeg": 0,
+        "tyreOuterMm": 657.5,
+        "tyreWidthMm": 228.7,
+        "stockRimMm": 477.9,
+        "stockRimInches": 17.8,
         "rimMm": 456.8,
-        "rimWidthMm": 260.607,
-        "innerFaceMm": -140.304,
-        "outerFaceMm": 140.304,
-        "sidewallMm": 101.801,
-        "faceInsetMm": 4,
+        "rimWidthMm": 208.7,
+        "sidewallMm": 100.3,
+        "faceInsetMm": 4.7,
         "gapToTyreMm": 0,
         "brakesKept": 0,
-        "tyre": "built (one-piece wheel or changed size)"
+        "tyre": "built",
+        "archSamples": 11,
+        "archConfidence": 0.917,
+        "blockedBy": {
+          "code": "SUSPENSION_CONTACT",
+          "atDeg": 210,
+          "radius": 0.941,
+          "afterMm": 1.6,
+          "by": "Object_5 Index_0_1"
+        },
+        "hiddenBrakeParts": 0
       },
       {
         "wheel": "FR",
-        "stockOuterGapMm": -0.771,
-        "targetInsetMm": 5,
-        "appliedAxleOffsetMm": -5.771,
-        "finalOuterGapMm": 5,
-        "axleConfidence": 0.6556287749661379,
-        "archConfidence": 0.42857142857142855,
-        "tyreMode": "generated",
-        "warnings": [
-          "LOW_AXLE_CONFIDENCE",
-          "FALLBACK_TYRE"
-        ],
         "refusal": null,
-        "center": [
-          0.7944123994276293,
-          0.32880159472794007,
-          1.4567716747139436
+        "warnings": [
+          "KEPT_STOCK_POSITION",
+          "BUILT_TYRE"
         ],
-        "axle": [
-          0.9957543671222642,
-          0.038669877007285754,
-          0.08353371157311729
-        ],
-        "archSamples": 7,
-        "tyreOuterMm": 659.757,
-        "tyreWidthMm": 280.318,
-        "stockRimMm": 485.83,
-        "stockRimWidthMm": 280.318,
-        "stockRimInches": 18.143,
+        "archGapBeforeMm": 0.8,
+        "archGapAfterMm": 0.8,
+        "movedMm": 0,
+        "axleConfidence": 0.739,
+        "steerDeg": 0,
+        "tyreOuterMm": 657,
+        "tyreWidthMm": 228.7,
+        "stockRimMm": 478,
+        "stockRimInches": 17.8,
         "rimMm": 456.8,
-        "rimWidthMm": 260.318,
-        "innerFaceMm": -140.159,
-        "outerFaceMm": 140.159,
-        "sidewallMm": 101.478,
-        "faceInsetMm": 4,
+        "rimWidthMm": 208.7,
+        "sidewallMm": 100.1,
+        "faceInsetMm": 4.7,
         "gapToTyreMm": 0,
         "brakesKept": 0,
-        "tyre": "built (one-piece wheel or changed size)"
+        "tyre": "built",
+        "archSamples": 11,
+        "archConfidence": 0.917,
+        "blockedBy": {
+          "code": "SUSPENSION_CONTACT",
+          "atDeg": 330,
+          "radius": 0.942,
+          "afterMm": 1.8,
+          "by": "Object_5 Index_0_1"
+        },
+        "hiddenBrakeParts": 0
       }
     ],
     "faceSign": 1,
     "wheelSource": "proposal",
+    "override": null,
     "copies": 4,
     "turnedDeg": 0,
     "flipped180": false,
@@ -189,15 +152,15 @@
       3.872,
       3.855
     ],
-    "scale": 0.114,
+    "scale": 0.09,
     "nonUniform": [
-      1.031,
-      1.031
+      1.307,
+      1.307
     ],
     "stored": false,
     "partBox": [
       -1.0559,
-      -0.1424,
+      -0.0001,
       -2.4237,
       1.0559,
       1.4536,
@@ -205,7 +168,7 @@
     ]
   },
   "autofit": {
-    "version": 5,
+    "version": 6,
     "type": "RIMS",
     "orient": [
       "axle",
@@ -214,78 +177,74 @@
     ],
     "placements": [
       {
-        "wheel": "RL",
         "pos": [
-          -0.8002,
-          0.3291,
-          -1.3523
+          -0.7975,
+          0.3288,
+          -1.3517
         ],
         "sc": [
-          0.1144,
+          0.0903,
           0.118,
           0.118
         ],
         "rot": [
-          -2.2326143250315584,
-          0.09013934094623048,
-          3.097527514682274
+          3.1415925632285675,
+          -0.00041333303105958,
+          3.1411554215452075
         ],
         "side": -1
       },
       {
-        "wheel": "RR",
         "pos": [
-          0.802,
-          0.3292,
-          -1.3524
+          0.7985,
+          0.3288,
+          -1.3517
         ],
         "sc": [
-          0.1141,
+          0.0902,
           0.118,
           0.118
         ],
         "rot": [
-          -0.0021052690840054566,
-          0.08630994825105273,
-          0.04874400290985074
+          -2.854116958173344e-16,
+          1.575462583621572e-8,
+          3.623211351186118e-8
         ],
         "side": 1
       },
       {
-        "wheel": "FL",
         "pos": [
-          -0.8007,
-          0.329,
-          1.4573
-        ],
-        "sc": [
-          0.1126,
-          0.118,
-          0.118
-        ],
-        "rot": [
-          2.294421235785999,
-          -0.08469132839575302,
-          3.103388812202759
-        ],
-        "side": -1
-      },
-      {
-        "wheel": "FR",
-        "pos": [
-          0.7946,
+          -0.7997,
           0.3288,
           1.4568
         ],
         "sc": [
-          0.1125,
+          0.0902,
           0.118,
           0.118
         ],
         "rot": [
-          0.001624232554229653,
-          -0.08363116594495282,
-          0.03881525004123412
+          -3.141592653543651,
+          -0.000012433924006808536,
+          -3.1415852315603243
+        ],
+        "side": -1
+      },
+      {
+        "pos": [
+          0.7997,
+          0.3288,
+          1.4569
+        ],
+        "sc": [
+          0.0902,
+          0.118,
+          0.118
+        ],
+        "rot": [
+          -4.017400142349135e-10,
+          -0.000009159247324137307,
+          -0.00008772336847281616
         ],
         "side": 1
       }
@@ -294,67 +253,63 @@
     "tyres": [
       {
         "c": [
-          -0.7942742028623313,
-          0.32879478371065757,
-          -1.351724753712551
+          -0.7922,
+          0.3288,
+          -1.3517
         ],
-        "ri": 0.21639999999999998,
-        "ro": 0.33042496684705525,
-        "w": 0.2847379314445908,
+        "ri": 0.2164,
+        "ro": 0.3288,
+        "w": 0.229,
         "rot": [
-          -2.2326143250315584,
-          0.09013934094623048,
-          3.097527514682274
-        ],
-        "wheel": "RL"
+          3.1415925632285675,
+          -0.00041333303105958,
+          3.1411554215452075
+        ]
       },
       {
         "c": [
-          0.7960639877056571,
-          0.32888083796697887,
-          -1.3518808216232683
+          0.7925,
+          0.3288,
+          -1.3517
         ],
-        "ri": 0.21639999999999998,
-        "ro": 0.3304911538796109,
-        "w": 0.2840594534645614,
+        "ri": 0.2164,
+        "ro": 0.3288,
+        "w": 0.2287,
         "rot": [
-          -0.0021052690840054566,
-          0.08630994825105273,
-          0.04874400290985074
-        ],
-        "wheel": "RR"
+          -2.854116958173344e-16,
+          1.575462583621572e-8,
+          3.623211351186118e-8
+        ]
       },
       {
         "c": [
-          -0.7946926803687804,
-          0.328812368124443,
-          1.4567953500096507
+          -0.7944,
+          0.3288,
+          1.4568
         ],
-        "ri": 0.21639999999999998,
-        "ro": 0.33020110200949754,
-        "w": 0.28060728249327366,
+        "ri": 0.2164,
+        "ro": 0.3287,
+        "w": 0.2287,
         "rot": [
-          2.294421235785999,
-          -0.08469132839575302,
-          3.103388812202759
-        ],
-        "wheel": "FL"
+          -3.141592653543651,
+          -0.000012433924006808536,
+          -3.1415852315603243
+        ]
       },
       {
         "c": [
-          0.7886657032104538,
-          0.3285784231875946,
-          1.4562895850740145
+          0.7944,
+          0.3288,
+          1.4569
         ],
-        "ri": 0.21639999999999998,
-        "ro": 0.3298784844638624,
-        "w": 0.28031812354807717,
+        "ri": 0.2164,
+        "ro": 0.3285,
+        "w": 0.2287,
         "rot": [
-          0.001624232554229653,
-          -0.08363116594495282,
-          0.03881525004123412
-        ],
-        "wheel": "FR"
+          -4.017400142349135e-10,
+          -0.000009159247324137307,
+          -0.00008772336847281616
+        ]
       }
     ],
     "keep": [],
@@ -372,40 +327,41 @@
         {
           "wheel": "RL",
           "delta": [
-            0.00011041847364138298,
-            -0.000004868757068018925,
-            0.000009989790048924033
+            0.00219,
+            0,
+            0
           ]
         },
         {
           "wheel": "RR",
           "delta": [
-            0.0016661825256013745,
-            0.00008128078985990031,
-            -0.00014433772760829032
+            -0.00189,
+            0,
+            0
           ]
         },
         {
           "wheel": "FL",
           "delta": [
-            -0.00027457352798876557,
-            0.000010494869880620874,
-            0.00002332677520765579
+            0,
+            0,
+            0
           ]
         },
         {
           "wheel": "FR",
           "delta": [
-            -0.005746696217175398,
-            -0.00022317154034547264,
-            -0.00048208963992915296
+            0,
+            0,
+            0
           ]
         }
-      ]
+      ],
+      "hideBrakes": []
     },
     "info": {
       "type": "RIMS",
-      "fitVersion": 5,
+      "fitVersion": 6,
       "replaces": {
         "how": "wheel analysis",
         "hidden": 2
@@ -413,167 +369,130 @@
       "wheels": [
         {
           "wheel": "RL",
-          "stockOuterGapMm": 4.889,
-          "targetInsetMm": 5,
-          "appliedAxleOffsetMm": -0.111,
-          "finalOuterGapMm": 5,
-          "axleConfidence": 0.6567689528815767,
-          "archConfidence": 0.34722222222222227,
-          "tyreMode": "generated",
-          "warnings": [
-            "LOW_AXLE_CONFIDENCE",
-            "FALLBACK_TYRE"
-          ],
           "refusal": null,
-          "center": [
-            -0.7943846213359725,
-            0.3287996524677256,
-            -1.3517347435026
+          "warnings": [
+            "BUILT_TYRE"
           ],
-          "axle": [
-            -0.9949734293286862,
-            0.043872042030469745,
-            -0.09001732532124357
-          ],
-          "archSamples": 6,
-          "tyreOuterMm": 660.85,
-          "tyreWidthMm": 284.738,
-          "stockRimMm": 486.595,
-          "stockRimWidthMm": 284.738,
-          "stockRimInches": 18.173,
+          "archGapBeforeMm": 2.8,
+          "archGapAfterMm": 5,
+          "movedMm": -2.2,
+          "axleConfidence": 0.798,
+          "steerDeg": 0,
+          "tyreOuterMm": 657.6,
+          "tyreWidthMm": 229,
+          "stockRimMm": 478.3,
+          "stockRimInches": 17.8,
           "rimMm": 456.8,
-          "rimWidthMm": 264.738,
-          "innerFaceMm": -142.369,
-          "outerFaceMm": 142.369,
-          "sidewallMm": 102.025,
-          "faceInsetMm": 4,
+          "rimWidthMm": 209,
+          "sidewallMm": 100.4,
+          "faceInsetMm": 4.7,
           "gapToTyreMm": 0,
           "brakesKept": 0,
-          "tyre": "built (one-piece wheel or changed size)"
+          "tyre": "built",
+          "archSamples": 11,
+          "archConfidence": 0.917,
+          "blockedBy": null,
+          "hiddenBrakeParts": 0
         },
         {
           "wheel": "RR",
-          "stockOuterGapMm": 6.674,
-          "targetInsetMm": 5,
-          "appliedAxleOffsetMm": 1.674,
-          "finalOuterGapMm": 5,
-          "axleConfidence": 0.6566231630497842,
-          "archConfidence": 0.34722222222222227,
-          "tyreMode": "generated",
-          "warnings": [
-            "LOW_AXLE_CONFIDENCE",
-            "FALLBACK_TYRE"
-          ],
           "refusal": null,
-          "center": [
-            0.7943978051800556,
-            0.32879955717711895,
-            -1.35173648389566
+          "warnings": [
+            "BUILT_TYRE"
           ],
-          "axle": [
-            0.9950942756544506,
-            0.04854333031794725,
-            -0.08620282849992132
-          ],
-          "archSamples": 6,
-          "tyreOuterMm": 660.982,
-          "tyreWidthMm": 284.059,
-          "stockRimMm": 486.688,
-          "stockRimWidthMm": 284.059,
-          "stockRimInches": 18.177,
+          "archGapBeforeMm": 3.1,
+          "archGapAfterMm": 5,
+          "movedMm": -1.9,
+          "axleConfidence": 0.809,
+          "steerDeg": 0,
+          "tyreOuterMm": 657.6,
+          "tyreWidthMm": 228.7,
+          "stockRimMm": 587.1,
+          "stockRimInches": 22.1,
           "rimMm": 456.8,
-          "rimWidthMm": 264.059,
-          "innerFaceMm": -142.03,
-          "outerFaceMm": 142.03,
-          "sidewallMm": 102.091,
+          "rimWidthMm": 208.7,
+          "sidewallMm": 100.4,
           "faceInsetMm": 4,
           "gapToTyreMm": 0,
           "brakesKept": 0,
-          "tyre": "built (one-piece wheel or changed size)"
+          "tyre": "built",
+          "archSamples": 11,
+          "archConfidence": 0.917,
+          "blockedBy": null,
+          "hiddenBrakeParts": 0
         },
         {
           "wheel": "FL",
-          "stockOuterGapMm": 5.276,
-          "targetInsetMm": 5,
-          "appliedAxleOffsetMm": 0.276,
-          "finalOuterGapMm": 5,
-          "axleConfidence": 0.6582677502013699,
-          "archConfidence": 0.375,
-          "tyreMode": "generated",
-          "warnings": [
-            "LOW_AXLE_CONFIDENCE",
-            "FALLBACK_TYRE"
-          ],
           "refusal": null,
-          "center": [
-            -0.7944181068407914,
-            0.32880187325456234,
-            1.456772023234443
+          "warnings": [
+            "KEPT_STOCK_POSITION",
+            "BUILT_TYRE"
           ],
-          "axle": [
-            -0.9956887698340909,
-            0.03805765310861215,
-            0.08459012156356706
-          ],
-          "archSamples": 8,
-          "tyreOuterMm": 660.402,
-          "tyreWidthMm": 280.607,
-          "stockRimMm": 486.282,
-          "stockRimWidthMm": 280.607,
-          "stockRimInches": 18.161,
+          "archGapBeforeMm": 0.8,
+          "archGapAfterMm": 0.8,
+          "movedMm": 0,
+          "axleConfidence": 0.739,
+          "steerDeg": 0,
+          "tyreOuterMm": 657.5,
+          "tyreWidthMm": 228.7,
+          "stockRimMm": 477.9,
+          "stockRimInches": 17.8,
           "rimMm": 456.8,
-          "rimWidthMm": 260.607,
-          "innerFaceMm": -140.304,
-          "outerFaceMm": 140.304,
-          "sidewallMm": 101.801,
-          "faceInsetMm": 4,
+          "rimWidthMm": 208.7,
+          "sidewallMm": 100.3,
+          "faceInsetMm": 4.7,
           "gapToTyreMm": 0,
           "brakesKept": 0,
-          "tyre": "built (one-piece wheel or changed size)"
+          "tyre": "built",
+          "archSamples": 11,
+          "archConfidence": 0.917,
+          "blockedBy": {
+            "code": "SUSPENSION_CONTACT",
+            "atDeg": 210,
+            "radius": 0.941,
+            "afterMm": 1.6,
+            "by": "Object_5 Index_0_1"
+          },
+          "hiddenBrakeParts": 0
         },
         {
           "wheel": "FR",
-          "stockOuterGapMm": -0.771,
-          "targetInsetMm": 5,
-          "appliedAxleOffsetMm": -5.771,
-          "finalOuterGapMm": 5,
-          "axleConfidence": 0.6556287749661379,
-          "archConfidence": 0.42857142857142855,
-          "tyreMode": "generated",
-          "warnings": [
-            "LOW_AXLE_CONFIDENCE",
-            "FALLBACK_TYRE"
-          ],
           "refusal": null,
-          "center": [
-            0.7944123994276293,
-            0.32880159472794007,
-            1.4567716747139436
+          "warnings": [
+            "KEPT_STOCK_POSITION",
+            "BUILT_TYRE"
           ],
-          "axle": [
-            0.9957543671222642,
-            0.038669877007285754,
-            0.08353371157311729
-          ],
-          "archSamples": 7,
-          "tyreOuterMm": 659.757,
-          "tyreWidthMm": 280.318,
-          "stockRimMm": 485.83,
-          "stockRimWidthMm": 280.318,
-          "stockRimInches": 18.143,
+          "archGapBeforeMm": 0.8,
+          "archGapAfterMm": 0.8,
+          "movedMm": 0,
+          "axleConfidence": 0.739,
+          "steerDeg": 0,
+          "tyreOuterMm": 657,
+          "tyreWidthMm": 228.7,
+          "stockRimMm": 478,
+          "stockRimInches": 17.8,
           "rimMm": 456.8,
-          "rimWidthMm": 260.318,
-          "innerFaceMm": -140.159,
-          "outerFaceMm": 140.159,
-          "sidewallMm": 101.478,
-          "faceInsetMm": 4,
+          "rimWidthMm": 208.7,
+          "sidewallMm": 100.1,
+          "faceInsetMm": 4.7,
           "gapToTyreMm": 0,
           "brakesKept": 0,
-          "tyre": "built (one-piece wheel or changed size)"
+          "tyre": "built",
+          "archSamples": 11,
+          "archConfidence": 0.917,
+          "blockedBy": {
+            "code": "SUSPENSION_CONTACT",
+            "atDeg": 330,
+            "radius": 0.942,
+            "afterMm": 1.8,
+            "by": "Object_5 Index_0_1"
+          },
+          "hiddenBrakeParts": 0
         }
       ],
       "faceSign": 1,
       "wheelSource": "proposal",
+      "override": null,
       "copies": 4,
       "turnedDeg": 0,
       "flipped180": false,
@@ -582,10 +501,10 @@
         3.872,
         3.855
       ],
-      "scale": 0.114,
+      "scale": 0.09,
       "nonUniform": [
-        1.031,
-        1.031
+        1.307,
+        1.307
       ]
     }
   },
@@ -598,6 +517,6 @@
   },
   "carSha256": "7d7edefd0f7eefa6aafe56606b70e359b600adb885ce003fcb8eaca78fd405c7",
   "partSha256": "512a47b76cd1b5569ab11adc0a509fa99abadf5c963dc3499a534369e42d7572",
-  "viewerSha256": "6f0d1cb648fecf6a75571657e82f4aadb25b7ea855a53d94c9240b8d0fe27c6e",
+  "viewerSha256": "200221aaa77e9ff60debeb59b0e536e6ddedbe7543b3c2737dfa248febec9017",
   "screenshots": []
 }

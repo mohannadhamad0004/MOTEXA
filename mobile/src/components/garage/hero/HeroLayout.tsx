@@ -120,7 +120,7 @@ export function HeroLayout({ config }: { config: HeroConfig }) {
             </GText>
             {config.line ? <GText soft numberOfLines={2} style={[gType.bodySm, align, { marginTop: 4 }]}>{config.line}</GText> : null}
           </View>
-          <ActionPill a={config.action} />
+          {config.action ? <ActionPill a={config.action} /> : null}
         </View>
         <MediaBox tab={config.tab} />
       </View>

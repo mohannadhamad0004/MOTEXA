@@ -12,10 +12,12 @@ import { api } from "../../core/config/api";
 import { cityLabel } from "../../core/constants/cities";
 import { useLoad } from "../../core/hooks/useLoad";
 import { review } from "../provider/api";
+import { adminAccessoryApi } from "../accessory3d/api";
 import { fmtDay } from "../provider/labels";
 import type { Verification } from "../parts/partsService";
 import { Head, Kpi, Rise, Skeleton, Tap } from "./TowAdminHome";
-import { Avatar, DeptPage, Empty, Pill, StatusChip, cardStyle, useDT } from "./ui";
+import { Avatar, CountBadge, DeptPage, Empty, Pill, StatusChip, cardStyle, useDT } from "./ui";
+import { useThreeDCount } from "./ThreeDRequests";
 
 const go = (path: string) => router.push(path as Href);
 
@@ -52,6 +54,8 @@ export function PartsAdminHome() {
   const stats = useLoad(async () => api<{ stats: Record<string, number> }>("GET", "/admin/parts/stats").then((r) => r.stats), []);
   const shops = useLoad(async () => api<{ shops: ShopRow[] }>("GET", "/admin/parts/shops").then((r) => r.shops), []);
   const queue = useLoad(() => review.list("PARTS", "NEW"), [], 15000);
+  const partMaps = useLoad(() => adminAccessoryApi.partMaps(), []);
+  const threeD = useThreeDCount();
 
   const num = (v: number | undefined) => (stats.data ? String(v ?? 0) : stats.loading ? "…" : "—");
   const pending = stats.data?.pendingShops ?? 0;
@@ -62,6 +66,15 @@ export function PartsAdminHome() {
 
   return (
     <DeptPage hero={<Hero />} onRefresh={reload} refreshing={(stats.loading || shops.loading || queue.loading) && !!(stats.data || shops.data)}>
+      {/* every shop 3D request: ONE place (Requests > 3D requests), the count is what waits for the Parts Admin */}
+      <Tap label={`${d.t("3D requests", "طلبات ثلاثية الأبعاد")}${threeD.needs ? ` ${threeD.needs}` : ""}`} onPress={() => go("/dept/requests?seg=3d")} style={{ ...cardStyle(d), padding: 16, marginBottom: 14, flexDirection: d.row, alignItems: "center", gap: 12 }}>
+        <Ionicons name="cube-outline" size={26} color="#E0A36F" />
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: d.ink, fontSize: 16, fontWeight: "800", textAlign: d.align }}>{d.t("3D requests", "طلبات ثلاثية الأبعاد")}</Text>
+          <Text style={{ color: d.muted, marginTop: 2, textAlign: d.align }}>{threeD.list.data ? (threeD.needs ? d.t(`${threeD.needs} waiting for you · ${threeD.list.data.length} in all`, `${threeD.needs} بانتظارك · ${threeD.list.data.length} بالمجموع`) : d.t(`Nothing waiting · ${threeD.list.data.length} in all`, `لا شيء بانتظارك · ${threeD.list.data.length} بالمجموع`)) : threeD.list.error ? threeD.list.error : d.t("Loading…", "جارٍ التحميل…")}</Text>
+        </View>
+        <CountBadge n={threeD.needs} />
+      </Tap>
       <Tap label={d.t("Vehicle catalog and customer requests", "كتالوج المركبات وطلبات العملاء")} onPress={()=>go("/dept/vehicles")} style={{...cardStyle(d),padding:16,marginBottom:18}}>
         <Text style={{color:d.ink,fontSize:16,fontWeight:"700"}}>{d.t("Vehicle catalog and customer requests", "كتالوج المركبات وطلبات العملاء")}</Text>
       </Tap>
@@ -77,9 +90,17 @@ export function PartsAdminHome() {
         <Text style={{ color: d.muted, marginTop: 4, textAlign: d.align }}>{d.t("Inspect photos and models before catalog approval.", "افحص الصور والنماذج قبل اعتمادها في الكتالوج.")}</Text>
       </Tap>
 
-      <Tap label={d.t("Shop accessories in 3D", "إكسسوارات المتاجر ثلاثية الأبعاد")} onPress={() => go("/dept/accessory3d")} style={{ ...cardStyle(d), padding: 16, marginBottom: 22 }}>
+      {/* one task per published car until its part map is confirmed: then every future accessory fits it automatically */}
+      <Tap label={d.t("Confirm car part maps", "تأكيد خرائط قطع السيارات")} onPress={() => go("/dept/accessory-zones")} style={{ ...cardStyle(d), padding: 16, marginBottom: 12 }}>
+        <Text style={{ color: d.ink, fontSize: 16, fontWeight: "800", textAlign: d.align }}>{d.t("Confirm car part maps", "تأكيد خرائط قطع السيارات")}</Text>
+        <Text style={{ color: d.muted, marginTop: 4, textAlign: d.align }}>{partMaps.data
+          ? `${d.t("To confirm", "بانتظار التأكيد")}: ${partMaps.data.filter(m => m.status !== "confirmed").length} / ${partMaps.data.length} · ${d.t("each confirmed car fits every future accessory automatically", "كل سيارة مؤكدة تُركَّب عليها الإكسسوارات القادمة تلقائيًا")}`
+          : partMaps.error ? partMaps.error : d.t("Loading…", "جارٍ التحميل…")}</Text>
+      </Tap>
+
+      <Tap label={d.t("Shop accessories in 3D", "إكسسوارات المتاجر ثلاثية الأبعاد")} onPress={() => go("/dept/requests?seg=3d")} style={{ ...cardStyle(d), padding: 16, marginBottom: 22 }}>
         <Text style={{ color: d.ink, fontSize: 16, fontWeight: "800", textAlign: d.align }}>{d.t("Shop accessories in 3D", "إكسسوارات المتاجر ثلاثية الأبعاد")}</Text>
-        <Text style={{ color: d.muted, marginTop: 4, textAlign: d.align }}>{d.t("Review photos, start generation, check the fit on a car, publish.", "راجع الصور، ابدأ الإنشاء، تحقق من التركيب على سيارة، انشر.")}</Text>
+        <Text style={{ color: d.muted, marginTop: 4, textAlign: d.align }}>{d.t("Review photos, start generation, check the fit on a car, publish: see Requests > 3D requests.", "راجع الصور، ابدأ الإنشاء، تحقق من التركيب على سيارة، انشر: في الطلبات > طلبات ثلاثية الأبعاد.")}</Text>
       </Tap>
 
       {/* parts orders (read only): all orders, and the deliveries in progress on the map */}
