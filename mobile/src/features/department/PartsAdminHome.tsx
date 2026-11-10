@@ -66,6 +66,7 @@ export function PartsAdminHome() {
 
   return (
     <DeptPage hero={<Hero />} onRefresh={reload} refreshing={(stats.loading || shops.loading || queue.loading) && !!(stats.data || shops.data)}>
+      <Tap label={d.t("3D workspace", "مساحة العمل ثلاثية الأبعاد")} onPress={()=>go("/dept/3d")} style={{...cardStyle(d),padding:16,marginBottom:14}}><Text style={{color:d.ink,fontSize:18,fontWeight:"800",textAlign:d.align}}>{d.t("3D workspace", "مساحة العمل ثلاثية الأبعاد")}</Text><Text style={{color:d.muted,textAlign:d.align,marginTop:5}}>{d.t("Vehicle models · accessory models · imports · fit review", "نماذج السيارات · نماذج القطع · الاستيراد · مراجعة التركيب")}</Text></Tap>
       {/* every shop 3D request: ONE place (Requests > 3D requests), the count is what waits for the Parts Admin */}
       <Tap label={`${d.t("3D requests", "طلبات ثلاثية الأبعاد")}${threeD.needs ? ` ${threeD.needs}` : ""}`} onPress={() => go("/dept/requests?seg=3d")} style={{ ...cardStyle(d), padding: 16, marginBottom: 14, flexDirection: d.row, alignItems: "center", gap: 12 }}>
         <Ionicons name="cube-outline" size={26} color="#E0A36F" />

@@ -1,4 +1,8 @@
 import * as SecureStore from "../../components/SessionStore"; // same token store as the login (SecureStore on a phone, session storage on web)
+import { router } from "expo-router";
+import { Alert, Platform } from "react-native";
+import { expiredText, isSessionExpiry } from "../session/sessionExpiry";
+import { errorTextFor } from "../session/errorText";
 
 const API_ROOT = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/+$/, "").replace(/\/api$/, "");
 
@@ -43,15 +47,33 @@ function xhrJson(method: string, url: string, headers: Record<string, string>, b
   });
 }
 
+// 401 on an authenticated call = the 15-minute token ran out: clear it, say so once, go to login. (Refresh tokens: see STATUS.md, "For Diala".)
+let expiring = false;
+async function sessionExpired() {
+  if (expiring) return;
+  expiring = true;
+  try {
+    const text = expiredText(await SecureStore.getItemAsync("motexa_language").catch(() => null));
+    await SecureStore.deleteItemAsync("motexa_access_token");
+    router.replace("/auth/login");
+    if (Platform.OS === "web") globalThis.alert?.(text);
+    else Alert.alert(text);
+  } catch {
+    /* the redirect is best effort */
+  }
+}
+
 /** Authenticated JSON request to the real backend. Throws Error(message) on non-2xx (with `status` and `data`; no `status` = it never reached the server). */
 export async function api<T = any>(method: string, path: string, body?: unknown): Promise<T> {
   const token = await SecureStore.getItemAsync("motexa_access_token");
+  if (token) expiring = false; // a new sign-in re-arms the handler
   const json = body === undefined ? undefined : JSON.stringify(body);
   if (json && json.length > BIG) {
     setProgress(0);
     try {
       const r = await xhrJson(method, `${API_URL}${path}`, { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, json);
-      if (!r.ok) throw Object.assign(new Error(r.data?.message ?? `Request failed (${r.status})`), { status: r.status, data: r.data });
+      if (!r.ok && isSessionExpiry(r.status, !!token)) void sessionExpired();
+      if (!r.ok) throw await failure(r.status, r.data);
       return r.data as T;
     } finally {
       setProgress(null);
@@ -64,8 +86,9 @@ export async function api<T = any>(method: string, path: string, body?: unknown)
   });
   const data = await res.json().catch(() => null);
   if (!res.ok) {
+    if (isSessionExpiry(res.status, !!token)) void sessionExpired();
     // Callers can read extra fields the server sent with an error, e.g. `existingInquiryId` on a 409.
-    throw Object.assign(new Error(data?.message ?? `Request failed (${res.status})`), { status: res.status, data });
+    throw await failure(res.status, data);
   }
   return data as T;
 }
@@ -74,4 +97,11 @@ export async function api<T = any>(method: string, path: string, body?: unknown)
 export async function privateImageSource(path: string) {
   const token = await SecureStore.getItemAsync("motexa_access_token");
   return { uri: `${API_URL}${path}`, headers: { Authorization: `Bearer ${token ?? ""}` } };
+}
+
+/** The error thrown for a non-2xx answer: message in the saved language when the server sent a known errorCode (English text kept in `serverMessage`). */
+async function failure(status: number, data: any) {
+  const english = data?.message ?? `Request failed (${status})`;
+  const language = data?.errorCode ? await SecureStore.getItemAsync("motexa_language").catch(() => null) : null;
+  return Object.assign(new Error(errorTextFor(data?.errorCode, language, english)), { status, data, serverMessage: english, errorCode: data?.errorCode });
 }

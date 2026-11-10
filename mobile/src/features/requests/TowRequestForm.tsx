@@ -66,6 +66,10 @@ export function useTowRequestForm(company: { id: string; city: string } | null) 
   const [spot, setSpot] = useState<Point | null>(null);
   const [auto, setAuto] = useState(false); // the pickup text was filled in from the map, so moving the pin may refresh it
   const [finding, setFinding] = useState(false);
+  // The destination pin (optional): sent as dropoffLat / dropoffLng so the driver gets the road route and distance to it.
+  const [destSpot, setDestSpot] = useState<Point | null>(null);
+  const [destAuto, setDestAuto] = useState(false); // the destination text came from the map
+  const destLookup = useRef(0);
   const loc = useCurrentLocation("tow-request", user.id);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -85,6 +89,34 @@ export function useTowRequestForm(company: { id: string; city: string } | null) 
     },
     []
   );
+  const placeDest = (p: Point) => {
+    const at = roundPoint(p);
+    setDestSpot(at);
+    if (dropoff.trim() && !destAuto) return;
+    const mine = ++destLookup.current;
+    void reverseGeocode(at).then((text) => {
+      if (mine !== destLookup.current || !text) return;
+      setDropoff(text);
+      setDestAuto(true);
+    });
+  };
+  const editDropoff = (v: string) => {
+    setDropoff(v);
+    setDestAuto(false);
+  };
+  const startDestPin = () => {
+    const point = spot ?? cityCentre(company?.city ?? "");
+    if (!point) {
+      setErr(t("Place the pickup pin or choose a valid company city first.", "ضع دبوس الاستلام أو اختر مدينة الشركة الصحيحة أولًا."));
+      return;
+    }
+    setErr(null);
+    placeDest({ lat: point.lat + 0.005, lng: point.lng + 0.005 });
+  };
+  const removeDestPin = () => {
+    destLookup.current++;
+    setDestSpot(null);
+  };
   const place = (p: Point, replaceText: boolean) => {
     const at = roundPoint(p);
     setSpot(at);
@@ -159,6 +191,7 @@ export function useTowRequestForm(company: { id: string; city: string } | null) 
         vehicleModel: model.trim(),
         vehicleYear: y,
         ...(spot ? { pickupLat: spot.lat, pickupLng: spot.lng } : {}),
+        ...(destSpot ? { dropoffLat: destSpot.lat, dropoffLng: destSpot.lng } : {}),
         problemType: problem,
         notes: notes.trim(),
         ...(driverId && !nearest ? { driverId } : {}),
@@ -178,7 +211,7 @@ export function useTowRequestForm(company: { id: string; city: string } | null) 
     return null;
   };
 
-  return { loc, spot, place, useHere, editPickup, removePin, startPin, finding, busy, err, submit, setErr, pickup, dropoff, setDropoff, make, setMake, model, setModel, year, setYear, problem, setProblem, phone, setPhone, notes, setNotes, driverId, setDriverId, nearest, setNearest, cancelLookup };
+  return { destSpot, placeDest, startDestPin, removeDestPin, editDropoff, loc, spot, place, useHere, editPickup, removePin, startPin, finding, busy, err, submit, setErr, pickup, dropoff, setDropoff, make, setMake, model, setModel, year, setYear, problem, setProblem, phone, setPhone, notes, setNotes, driverId, setDriverId, nearest, setNearest, cancelLookup };
 }
 export type TowForm = ReturnType<typeof useTowRequestForm>;
 
@@ -227,7 +260,18 @@ export function TowRequestFields({ form, pinMap, numbered = true }: { form: TowF
               <Button variant="ghost" icon="map-outline" label={t("Place the pin on the map", "ضع الدبوس على الخريطة")} onPress={form.startPin} />
             )
           ) : null}
-          <Input label={t("Destination", "الوجهة")} value={form.dropoff} onChangeText={form.setDropoff} multiline maxLength={300} />
+          <Input label={t("Destination", "الوجهة")} value={form.dropoff} onChangeText={form.editDropoff} multiline maxLength={300} />
+          {MAPS_AVAILABLE ? (
+            form.destSpot ? (
+              <>
+                <PinMap point={form.destSpot} onChange={form.placeDest} />
+                <Text style={{ color: c.soft, fontSize: 11, marginBottom: 10 }}>{t("Drag the pin to the place where the car should be taken.", "اسحب الدبوس إلى المكان الذي ستُنقل إليه السيارة.")}</Text>
+                <Button variant="ghost" icon="trash-outline" label={t("Remove the destination pin", "إزالة دبوس الوجهة")} onPress={form.removeDestPin} />
+              </>
+            ) : (
+              <Button variant="ghost" icon="flag-outline" label={t("Choose the destination on the map", "اختر الوجهة على الخريطة")} onPress={form.startDestPin} />
+            )
+          ) : null}
         </Card>
       )}
       {wrap(

@@ -1,0 +1,273 @@
+{
+  "fixture": "Stock-derived E36 rear diagnostic geometry. Not a shop product or a passed real fit.",
+  "valid": true,
+  "car": {
+    "dimensions": [
+      1.972522671149907,
+      1.362777228188965,
+      4.649999875966968
+    ],
+    "wheelsFound": true,
+    "mappedParts": [
+      "FRONT_BUMPER",
+      "REAR_BUMPER",
+      "MIRRORS",
+      "SPOILER",
+      "SIDE_SKIRTS",
+      "WHEELS"
+    ],
+    "partMapIn": [
+      "WHEELS",
+      "MIRRORS",
+      "SPOILER",
+      "REAR_BUMPER",
+      "SIDE_SKIRTS",
+      "FRONT_BUMPER"
+    ]
+  },
+  "fit": {
+    "type": "REAR_BUMPER",
+    "fitVersion": 5,
+    "hidesWithStock": [],
+    "zone": {
+      "how": "part map",
+      "size": [
+        1.831,
+        0.412,
+        0.783
+      ],
+      "hidden": 2
+    },
+    "stretch": [
+      1,
+      1,
+      1
+    ],
+    "deeperThanStockMm": 0,
+    "gapsMm": {
+      "bonnetBootLine": {
+        "n": 163,
+        "p90": 0,
+        "max": 0
+      },
+      "fendersArches": {
+        "n": 67,
+        "p90": 0,
+        "max": 0
+      },
+      "other": {
+        "n": 23,
+        "p90": 0,
+        "max": 0
+      }
+    },
+    "worstSeamPoints": [],
+    "copies": 1,
+    "turnedDeg": 0,
+    "flipped180": false,
+    "partSize": [
+      1.831,
+      0.412,
+      0.783
+    ],
+    "scale": 1,
+    "nonUniform": [
+      1,
+      1
+    ],
+    "qa": {
+      "clipMm": 21.6,
+      "clipSamples": 153,
+      "clipAt": {
+        "at": [
+          -0.849,
+          0.403,
+          -1.689
+        ],
+        "by": "E36_coupe_bumper_R_trim_BMWE36_black008_0"
+      },
+      "gapMm": 12.7,
+      "samples": 4403,
+      "contacts": 48,
+      "gapAt": [
+        0.763,
+        0.556,
+        -1.876
+      ],
+      "limitMm": 9.2,
+      "stock": {
+        "clipMm": 43.1,
+        "clipAt": {
+          "at": [
+            -0.438,
+            0.581,
+            -2.217
+          ],
+          "by": "E36_coupe_bumper_R_trim_BMWE36_paint_0"
+        }
+      },
+      "clipTop": [
+        {
+          "mm": 21.6,
+          "at": [
+            -0.849,
+            0.403,
+            -1.689
+          ],
+          "by": "E36_coupe_bumper_R_trim_BMWE36_black008_0"
+        },
+        {
+          "mm": 17.5,
+          "at": [
+            0.781,
+            0.439,
+            -1.624
+          ],
+          "by": "E36_coupe_bumper_R_trim_BMWE36_black008_0"
+        }
+      ],
+      "gapTop": [
+        {
+          "mm": 12.7,
+          "at": [
+            0.763,
+            0.556,
+            -1.876
+          ]
+        },
+        {
+          "mm": 12.5,
+          "at": [
+            0.81,
+            0.547,
+            -1.73
+          ]
+        },
+        {
+          "mm": 12.3,
+          "at": [
+            0.818,
+            0.542,
+            -1.63
+          ]
+        },
+        {
+          "mm": 12,
+          "at": [
+            0.494,
+            0.351,
+            -2.161
+          ]
+        }
+      ],
+      "before": {
+        "clipMm": 43.1,
+        "gapMm": 12.8,
+        "clipTop": [
+          {
+            "mm": 43.1,
+            "at": [
+              -0.438,
+              0.581,
+              -2.217
+            ],
+            "by": "E36_coupe_bumper_R_trim_BMWE36_paint_0"
+          },
+          {
+            "mm": 36.7,
+            "at": [
+              -0.875,
+              0.404,
+              -1.712
+            ],
+            "by": "E36_coupe_bumper_R_trim_BMWE36_black008_0"
+          },
+          {
+            "mm": 34.4,
+            "at": [
+              0.899,
+              0.478,
+              -1.666
+            ],
+            "by": "E36_coupe_bumper_R_trim_BMWE36_black008_0"
+          },
+          {
+            "mm": 29.6,
+            "at": [
+              0.745,
+              0.371,
+              -1.704
+            ],
+            "by": "E36_coupe_bumper_R_trim_BMWE36_underbody_0"
+          }
+        ],
+        "gapTop": [
+          {
+            "mm": 12.8,
+            "at": [
+              0.658,
+              0.503,
+              -2.14
+            ]
+          },
+          {
+            "mm": 11.9,
+            "at": [
+              -0.717,
+              0.36,
+              -1.823
+            ]
+          },
+          {
+            "mm": 10.3,
+            "at": [
+              0,
+              0.456,
+              -2.191
+            ]
+          },
+          {
+            "mm": 8.8,
+            "at": [
+              0.716,
+              0.341,
+              -1.889
+            ]
+          }
+        ]
+      },
+      "ok": false,
+      "tier": "REFUSED",
+      "bestTryMm": [
+        0,
+        0,
+        8,
+        1.03
+      ],
+      "bestCornersMm": [
+        [
+          -5,
+          0,
+          0
+        ],
+        [
+          10,
+          -15,
+          -10
+        ]
+      ]
+    },
+    "refused": "this part does not look fitted on this car (goes 21.6 mm into the car body, floats 12.7 mm off the car along a contact edge; limit 9.2 mm)"
+  },
+  "autofit": null,
+  "kit": {
+    "type": "REAR_BUMPER",
+    "size": {
+      "widthMm": 1831
+    }
+  },
+  "carSha256": "2f026865272597d4edb718be5c99e2bc74a790f98f53e06f45f33a177e55ab89",
+  "partSha256": "12521e9ea55adfa1edcae77b85cd1598811acba4323d1b026048f908809e4f37",
+  "viewerSha256": "6df90e2df79943dd8e472bfd5c0d4cb12141072b9f741a9a9765e6e37b0c7d04",
+  "screenshots": []
+}

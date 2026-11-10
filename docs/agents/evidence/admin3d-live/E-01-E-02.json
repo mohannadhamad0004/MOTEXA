@@ -1,0 +1,23 @@
+{
+  "E01": {
+    "driverId": "465fcc78-0cac-45ba-8e03-17d7b163ee29",
+    "unchangedTruckId": "aa06b826-0145-4a69-b087-bbfdb1de0b5e",
+    "result": {
+      "status": 409,
+      "body": {
+        "success": false,
+        "message": "Change the truck after the current job."
+      }
+    }
+  },
+  "E02": {
+    "driverId": "aca1d638-7219-489c-878d-fb30bc2e0ed5",
+    "beforeOffline": false,
+    "changeStatus": 200,
+    "persistedOffline": true,
+    "auditsBefore": 0,
+    "auditsAfter": 0,
+    "restoreStatus": 200,
+    "restoredOffline": false
+  }
+}

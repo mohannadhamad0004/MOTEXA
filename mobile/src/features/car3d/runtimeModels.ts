@@ -35,6 +35,10 @@ export function refreshRuntimeModels(){
   return pending;
 }
 export function useCatalogModel(car:Pick<Car,"generation">|null){return useCatalogModelKey(car?.generation?.model3dKey);}
+export function useRuntimeModels(){
+  const user=useSessionUser();const list=useSyncExternalStore(subscribe,snapshot,snapshot);
+  useEffect(()=>{if(user.id)void refreshRuntimeModels();},[user.id]);return list;
+}
 /** An active catalog model by its key (the Parts Admin zone editor previews any car). */
 export function useCatalogModelKey(key:string|null|undefined){
   const user=useSessionUser();const list=useSyncExternalStore(subscribe,snapshot,snapshot);

@@ -2,7 +2,7 @@
 // A car without a real model gets a quiet "3D for <car> is coming soon" card with its colour dot instead (no toy fallback).
 import { router } from "expo-router";
 import { View } from "react-native";
-import { GIcon, GText, Tap } from "../../components/garage";
+import { GIcon, GText, Tap,GButton } from "../../components/garage";
 import { useL } from "../../core/hooks/useL";
 import { gShape, gType, useGarageTheme } from "../../theme/garage";
 import { carName } from "../catalog/catalogBits";
@@ -22,6 +22,7 @@ export function ComingSoon({ car }: { car: Car }) {
       <View style={{ flex: 1, minWidth: 0 }}>
         <GText style={[gType.label, { fontWeight: "800" }, align]}>{t(`3D for ${name} is coming soon`, `العرض ثلاثي الأبعاد لـ ${name} قريبًا`)}</GText>
         <GText soft style={[gType.caption, align]}>{t("We're adding real 3D models car by car.", "نضيف نماذج ثلاثية الأبعاد حقيقية سيارة بعد سيارة.")}</GText>
+        <GButton variant="ghost" label={t("Request my car in 3D","طلب سيارتي ثلاثية الأبعاد")} onPress={()=>router.push({pathname:"/customer/vehicle-requests/[id]",params:{id:"new",...(car.id?{garageCarId:car.id}:{})}} as never)}/>
       </View>
     </View>
   );

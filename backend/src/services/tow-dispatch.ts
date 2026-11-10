@@ -12,12 +12,13 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
 import { haversineKm, inBox } from "../geo.js";
 import { expiredDocuments, noExpiredDocument } from "./truck-eligibility.js";
-import { notify } from "./provider-onboarding.js";
+import { adminIds, notify } from "./provider-onboarding.js";
 import { randomBytes } from "node:crypto";
 import { parseUpload, removeStoredFile, storeFile } from "../uploads/providerFiles.js";
 import { createPasswordResetStore, requestPasswordReset } from "./password-reset.service.js";
 import { sendDriverInviteEmail } from "./email.service.js";
 
+const EMAIL_TAKEN = "This email cannot be used for a new driver. Use another email."; // neutral: never says whether the address is registered
 export class DispatchError extends Error {
   constructor(public code: number, message: string) {
     super(message);
@@ -32,6 +33,11 @@ export const offerMs = () => Math.max(1, Number(process.env.TOW_OFFER_MINUTES) |
 export const newDeadline = () => new Date(Date.now() + offerMs());
 /** The exact trail is private to the job: it is deleted when the job ends (only the distance summary stays). */
 export const dropTrail = (requestId: string) => prisma.towJobTrail.deleteMany({ where: { requestId } });
+/** The job ended or moved on: delete its trail and forget the driver's last point, so a later job never shows it. */
+export async function endTrail(tx: Prisma.TransactionClient, requestId: string, driverId: string | null) {
+  await tx.towJobTrail.deleteMany({ where: { requestId } });
+  if (driverId) await tx.towDriver.update({ where: { id: driverId }, data: { lastLat: null, lastLng: null, lastAt: null } });
+}
 export type DriverStatus = "FREE" | "BUSY" | "OFFLINE" | "NO_TRUCK" | "UNAPPROVED";
 
 const truckReady = { verificationStatus: "APPROVED" as const, operationalStatus: "AVAILABLE" as const, archivedAt: null, ...noExpiredDocument() };
@@ -125,7 +131,7 @@ export async function addDriver(ownerUserId: string, b: any) {
     if (fullName.length < 3 || fullName.length > 80) throw new DispatchError(400, "The driver's full name is required.");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new DispatchError(400, "A valid email is required (the driver signs in with it).");
     if (b?.password !== undefined && !passwordOk(b.password)) throw new DispatchError(400, PASSWORD_RULE);
-    if (await prisma.user.findUnique({ where: { email } })) throw new DispatchError(409, "An account with this email already exists.");
+    if (await prisma.user.findUnique({ where: { email } })) throw new DispatchError(409, EMAIL_TAKEN);
     // no password given: a random one nobody knows; the driver sets his own through the emailed code
     passwordHash = await argon2.hash(b.password ?? randomBytes(24).toString("base64url") + "Aa1!", { type: argon2.argon2id });
   } else if (await prisma.towDriver.findUnique({ where: { userId: ownerUserId } })) throw new DispatchError(409, "You are already one of your drivers.");
@@ -143,11 +149,12 @@ export async function addDriver(ownerUserId: string, b: any) {
       const company = await prisma.towCompanyProfile.findUniqueOrThrow({ where: { id: c.id }, select: { companyName: true } });
       await inviteDriver(email, company.companyName).catch((e) => console.error("Driver invite email failed:", e));
     }
-    const admins = await prisma.user.findMany({ where: { role: "ADMIN", adminPermissions: { some: { permission: "MANAGE_TOWING" } }, status: "ACTIVE" }, select: { id: true } });
-    await notify(admins.map((a) => a.id), B("Driver licence to review", "رخصة سائق بانتظار المراجعة"), B("A tow company added a driver.", "أضافت شركة سحب سائقًا."));
+    // super admins and tow admins
+    await notify(await adminIds("TOW"), B("Driver licence to review", "رخصة سائق بانتظار المراجعة"), B("A tow company added a driver.", "أضافت شركة سحب سائقًا."));
     return d;
   } catch (e) {
     await Promise.all(stored.map((k) => removeStoredFile(k)));
+    if ((e as { code?: string }).code === "P2002") throw new DispatchError(409, EMAIL_TAKEN); // lost a race with another sign-up
     throw e;
   }
 }
@@ -178,7 +185,7 @@ export async function updateDriver(ownerUserId: string, driverId: string, b: any
   if (b?.truckId !== undefined) {
     const t = await ownTruck(c.id, b.truckId);
     if (t?.takenBy && t.takenBy !== d.id) throw new DispatchError(409, "That truck already has a driver.");
-    if (await prisma.towRequest.count({ where: { driverId: d.id, status: { in: [...WORKING] } } })) throw new DispatchError(409, "Change the truck after the current job.");
+    if ((t?.truck.id ?? null) !== d.truckId && await prisma.towRequest.count({ where: { driverId: d.id, status: { in: [...WORKING] } } })) throw new DispatchError(409, "Change the truck after the current job.");
     data.truckId = t?.truck.id ?? null;
   }
   if (b?.offline !== undefined) {
@@ -281,7 +288,7 @@ export async function assign(ownerUserId: string, requestId: string, driverId: s
     });
     if (!moved.count) throw new DispatchError(409, "The job changed meanwhile. Refresh and try again.");
     if (r.status !== "REQUESTED") await releaseTruck(tx, r.assignedTruckId);
-    await tx.towJobTrail.deleteMany({ where: { requestId: r.id } });
+    await endTrail(tx, r.id, r.driverId);
     await tx.auditLog.create({ data: { actorId: ownerUserId, action: "TOW_JOB_ASSIGNED", targetId: r.id, details: { from: r.driverId, to: d.id } } });
     return { d, row: await tx.towRequest.findUniqueOrThrow({ where: { id: r.id } }) };
   });
@@ -373,12 +380,13 @@ export async function driverMove(userId: string, requestId: string, to: DriverSt
   const step = STEP[to];
   if (!step) throw new DispatchError(400, `status must be one of ${Object.keys(STEP).join(", ")}.`);
   const { d, r } = await myJob(userId, requestId);
+  if (d.approval === "SUSPENDED") throw new DispatchError(403, "Your driver account is suspended. Contact your company.");
   await prisma.$transaction(async (tx) => {
     const moved = await tx.towRequest.updateMany({ where: { id: r.id, driverId: d.id, ...step.where }, data: step.data(new Date()) });
     if (!moved.count) throw new DispatchError(409, `This job can't move to ${to.toLowerCase().replace("_", " ")} now.`);
     if (to === "COMPLETED") {
       await releaseTruck(tx, r.assignedTruckId);
-      await tx.towJobTrail.deleteMany({ where: { requestId: r.id } });
+      await endTrail(tx, r.id, r.driverId);
     }
     await tx.auditLog.create({ data: { actorId: userId, action: `TOW_REQUEST_${to}`, targetId: r.id, details: { driverId: d.id } } });
   });
@@ -393,7 +401,7 @@ export async function driverCancel(userId: string, requestId: string, reason: un
     const moved = await tx.towRequest.updateMany({ where: { id: r.id, driverId: d.id, status: { in: ["ACCEPTED", "EN_ROUTE"] } }, data: { status: "CANCELLED", cancelledAt: new Date(), cancelledBy: "COMPANY", cancelReason: why } });
     if (!moved.count) throw new DispatchError(409, "Only a job that is accepted or on the way can be cancelled.");
     await releaseTruck(tx, r.assignedTruckId);
-    await tx.towJobTrail.deleteMany({ where: { requestId: r.id } });
+    await endTrail(tx, r.id, r.driverId);
     await tx.auditLog.create({ data: { actorId: userId, action: "TOW_REQUEST_CANCELLED", targetId: r.id, details: { by: "DRIVER", driverId: d.id, reason: why } } });
   });
   await tell(r, userId, B("Your tow was cancelled", "تم إلغاء طلب السحب"), B(why, why));

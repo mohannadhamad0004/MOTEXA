@@ -1,7 +1,8 @@
+import { errorBody } from "../services/error-codes.js";
 import { Router } from "express";
 import express from "express";
 import { prisma } from "../prisma.js";
-import { requireAuth, requireCustomer } from "../middleware/auth.middleware.js";
+import { requireAuth, requireCustomer, requireTowDriver } from "../middleware/auth.middleware.js";
 import { notify, adminIds } from "../services/provider-onboarding.js";
 import { DispatchError } from "../services/tow-dispatch.js";
 
@@ -17,9 +18,9 @@ const ACTIVE_CHAT = ["ACCEPTED", "EN_ROUTE", "IN_PROGRESS"];
 const uid = (res: any) => (res.locals.authUser as { id: string; role: string }).id;
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const send = (res: any, e: unknown, label: string) => {
-  if (e instanceof DispatchError) return res.status(e.code).json({ success: false, message: e.message });
+  if (e instanceof DispatchError) return res.status(e.code).json(errorBody(e.message));
   console.error(`${label}:`, e);
-  return res.status(500).json({ success: false, message: "Internal server error." });
+  return res.status(500).json(errorBody("Internal server error."));
 };
 
 type Who = "CUSTOMER" | "DRIVER" | "COMPANY";
@@ -52,7 +53,7 @@ async function post(res: any, who: Who, jobId: string, body: unknown) {
 }
 
 const customer = [requireAuth, requireCustomer];
-const driverOrCompany = [requireAuth];
+const driverOrCompany = [requireAuth, requireTowDriver]; // the company owner reads the chat through the same link check (jobFor)
 router.get("/requests/tow/:id/messages", ...customer, (req, res) => list(res, "CUSTOMER", String(req.params.id)).catch((e) => send(res, e, "Tow chat list")));
 router.post("/requests/tow/:id/messages", ...customer, json, (req, res) => post(res, "CUSTOMER", String(req.params.id), req.body?.body).catch((e) => send(res, e, "Tow chat post")));
 router.get("/driver/jobs/:id/messages", ...driverOrCompany, (req, res) => list(res, "DRIVER", String(req.params.id)).catch((e) => send(res, e, "Tow chat list")));

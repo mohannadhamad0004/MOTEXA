@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-11-09T19:30:28.901Z",
+  "database": "motexa_dev",
+  "readOnly": "on",
+  "sql": "SELECT g.id,v.make,v.model,g.code,g.\"yearFrom\",g.\"yearTo\",g.\"model3dKey\" FROM \"VehicleGeneration\" g JOIN \"Vehicle\" v ON v.id=g.\"vehicleId\" WHERE g.\"isPublished\"=true AND NOT EXISTS(SELECT 1 FROM \"Vehicle3DRevision\" r WHERE r.\"generationId\"=g.id) ORDER BY v.make,v.model,g.code",
+  "rows": [],
+  "currentSql": "SELECT g.id,g.\"model3dKey\" FROM \"VehicleGeneration\" g WHERE g.\"isPublished\"=true AND NOT EXISTS(SELECT 1 FROM \"Vehicle3DRevision\" r WHERE r.key=g.\"model3dKey\")",
+  "currentRows": []
+}

@@ -1,7 +1,7 @@
 import {prisma} from "../prisma.js";
 import type {Prisma} from "../generated/prisma/client.js";
 import {fail} from "./vehicle3d-validation.js";
-import {activeModels} from "./vehicle3d-catalog.js";
+import {effectiveVehicleModels} from "./vehicle3d-revisions.js";
 type Tx=Prisma.TransactionClient;
 export const catalogNorm=(s:string)=>s.normalize("NFKC").toLocaleLowerCase().replace(/[^\p{L}\p{N}]/gu,"");
 export const makeNorm=(s:string)=>["mercedes","mercedesbenz"].includes(catalogNorm(s))?"mercedesbenz":catalogNorm(s);
@@ -12,9 +12,15 @@ export function modelNorm(name:string,brand:{name:string;aliases:string[]}){let 
 export const catalogLock=async(tx:Tx)=>{await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(762493031)`;};
 export async function requirePartsActor(tx:Tx,uid:string){const u=await tx.user.findUnique({where:{id:uid},include:{adminPermissions:true}});if(!u||u.status!=="ACTIVE"||!(u.role==="SUPER_ADMIN"||u.role==="ADMIN"&&u.adminPermissions.some(p=>p.permission==="MANAGE_SPARE_PARTS")))return fail("PARTS_ADMIN_REQUIRED","Parts Admin access required.",403);}
 export async function publishedVehicleList(tx:Tx,all=false){
- const keys=activeModels().map(m=>m.key);
+ const available=await effectiveVehicleModels(tx),keys=[...available.values()].map(m=>m.key);
  const vehicles=await tx.vehicle.findMany({where:all?{}:{isActive:true,brand:{isActive:true},generations:{some:{isActive:true,isPublished:true,model3dKey:{in:keys}}}},include:{brand:true,generations:{where:all?{}:{isActive:true,isPublished:true,model3dKey:{in:keys}},orderBy:{yearFrom:"asc"}}},orderBy:[{make:"asc"},{model:"asc"}]});
- return vehicles.map(v=>({...v,displayMake:v.brand?.name??v.make,makeAr:v.brand?.nameAr??v.makeAr,...(!all?{yearFrom:Math.min(...v.generations.map(g=>g.yearFrom)),yearTo:Math.max(...v.generations.map(g=>g.yearTo))}:{})}));
+ return vehicles.map(v=>({...v,generations:v.generations.map(g=>({...g,effectiveAvailable:available.has(g.id)})),displayMake:v.brand?.name??v.make,makeAr:v.brand?.nameAr??v.makeAr,...(!all?{yearFrom:Math.min(...v.generations.map(g=>g.yearFrom)),yearTo:Math.max(...v.generations.map(g=>g.yearTo))}:{})}));
+}
+/** Taxonomy availability is independent of 3D publication. Inactive ancestry never becomes selectable. */
+export async function managedVehicleList(tx:Tx){
+ const available=await effectiveVehicleModels(tx);
+ const rows=await tx.vehicle.findMany({where:{isActive:true,brand:{isActive:true},generations:{some:{isActive:true}}},include:{brand:true,generations:{where:{isActive:true},orderBy:{yearFrom:"asc"}}},orderBy:[{make:"asc"},{model:"asc"}]});
+ return rows.map(v=>({...v,generations:v.generations.map(g=>({...g,effectiveAvailable:available.has(g.id),model3dKey:available.get(g.id)?.key??null})),displayMake:v.brand!.name,makeAr:v.brand!.nameAr,yearFrom:Math.min(...v.generations.map(g=>g.yearFrom)),yearTo:Math.max(...v.generations.map(g=>g.yearTo))}));
 }
 export function createTaxonomyService(){
  const run=<T>(uid:string,fn:(tx:Tx)=>Promise<T>)=>prisma.$transaction(async tx=>{await requirePartsActor(tx,uid);await catalogLock(tx);return fn(tx);},{timeout:30000});

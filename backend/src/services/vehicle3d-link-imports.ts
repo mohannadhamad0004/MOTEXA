@@ -38,7 +38,7 @@ export function linkImportActions(client=createSketchfabClient()) {
    const metadata=await client.inspect(input?.url);assertImportAllowed(metadata);
    return prisma.$transaction(async tx=>{
     await requirePartsActor(tx,uid);await catalogLock(tx);
-    const duplicate=await existingSketchfab(tx,metadata.uid);if(duplicate)return fail("DUPLICATE_IMPORT","This Sketchfab model has already been imported.",409);
+    const duplicate=await existingSketchfab(tx,metadata.uid);if(duplicate)return fail("DUPLICATE_MODEL","This Sketchfab model has already been imported.",409);
     const g=await tx.vehicleGeneration.findUnique({where:{id:field(input.generationId,"generation")},include:{vehicle:{include:{brand:true}}}});
     if(!g?.isActive||!g.vehicle.isActive||!g.vehicle.brand?.isActive)return fail("GENERATION_REQUIRED","Choose an active managed generation.");
     const from=yearField(input.yearFrom??g.yearFrom),to=yearField(input.yearTo??g.yearTo);

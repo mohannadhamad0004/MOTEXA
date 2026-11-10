@@ -111,7 +111,18 @@ export default function NewTowRequest() {
                   </View>
                 )
               ) : null}
-              <Field label={t("Destination", "الوجهة")} value={form.dropoff} onChangeText={form.setDropoff} multiline maxLength={300} />
+              <Field label={t("Destination", "الوجهة")} value={form.dropoff} onChangeText={form.editDropoff} multiline maxLength={300} />
+              {MAPS_AVAILABLE ? (
+                form.destSpot ? (
+                  <View style={{ marginBottom: 12, borderRadius: gShape.small, overflow: "hidden" }}>
+                    <PinMap point={form.destSpot} onChange={form.placeDest} />
+                    <GText soft style={[gType.tiny, align, { marginVertical: 6 }]}>{t("Drag the pin to the place where the car should be taken.", "اسحب الدبوس إلى المكان الذي ستُنقل إليه السيارة.")}</GText>
+                    <GButton variant="ghost" icon="trash-outline" label={t("Remove the destination pin", "إزالة دبوس الوجهة")} onPress={form.removeDestPin} />
+                  </View>
+                ) : (
+                  <GButton variant="ghost" icon="flag-outline" label={t("Choose the destination on the map", "اختر الوجهة على الخريطة")} onPress={form.startDestPin} />
+                )
+              ) : null}
             </Card>
           ) : step === 1 ? (
             <>

@@ -1,0 +1,15 @@
+ M docs/3d/CREDITS.md
+ M docs/3d/CUSTOMER-3D-WORKFLOW.md
+ M docs/3d/IMPLEMENTATION-REPORT.md
+ M docs/3d/models.json
+ M docs/3d/sketchfab-import/05-published-en-dark.png
+ M docs/3d/sketchfab-import/05-published-en-light.png
+ M docs/3d/sketchfab-import/ui-results.json
+ M docs/agents/STATUS.md
+ M mobile/src/features/car3d/models.ts
+?? backend/public/3d/manual-19febfb9-3b4a-4a5f-b2c0-ce33547da350-ad65d3b3205c45de.glb
+?? docs/3d/SKETCHFAB-IMPORT.md
+?? docs/3d/sketchfab-import/FINAL-GIT-STATUS.txt
+?? docs/3d/sketchfab-import/live/runtime/
+?? docs/3d/sketchfab-import/validation-results.json
+?? graphify-out/

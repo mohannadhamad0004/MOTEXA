@@ -1,0 +1,150 @@
+{
+  "F02": {
+    "fault": "Browser network denial (no response stubbing)",
+    "pattern": "*://*/api/catalog/products/*/accessory-3d*",
+    "text": "\nRear wing for BMW E36\nGaragistic-style LTW · E36-LTW-WING-TEST\n\nNew\n⁦₪ 450.00⁩\n\nLow stock\n\nNew\n\nNot listed for your C-Class 1999\nQuantity\n\n1\n\n\nYour car is not on this part's list. Check the list below or ask the shop.\nPart details\n\nBrand\nGaragistic-style LTW\n\nPart number\nE36-LTW-WING-TEST\n\nCondition\nNew\n\nCategory\nExterior accessories\nجناح خلفي لسيارة BMW E36\nFits these cars\nCar\nYears\nEngine\nBMW 3 Series\n1990–2000\n—\nSold by\n\nAl-Mahaba Genuine & Aftermarket Auto Parts Trading Est.\n\nRamallah\n\nVerified\nSimilar parts\nNew\nRear bumper\n33\nAMG · New\n⁦₪ 500.00⁩\nIn stock\n\nNot listed for your C-Class 1999\nOnly 3 left\nRoof Rack Cross Bars\nTH-711200\nThule · New\n⁦₪ 520.00⁩\nLow stock\n\nNot sure? Ask the shop\n⁦₪ 450.00⁩\n\n\nBuy",
+    "events": [
+      {
+        "path": "/api/catalog/garage",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/parts/b79d66c1-f153-478f-86e4-5d9a954707ac",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/products/b79d66c1-f153-478f-86e4-5d9a954707ac/accessory-3d",
+        "error": "inspector"
+      },
+      {
+        "path": "/api/catalog/products/b79d66c1-f153-478f-86e4-5d9a954707ac/accessory-3d/garage",
+        "error": "inspector"
+      },
+      {
+        "path": "/api/catalog/parts",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/products/b79d66c1-f153-478f-86e4-5d9a954707ac/accessory-3d",
+        "error": "inspector"
+      },
+      {
+        "path": "/api/catalog/products/b79d66c1-f153-478f-86e4-5d9a954707ac/accessory-3d/garage",
+        "error": "inspector"
+      },
+      {
+        "path": "/api/catalog/garage",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/parts/b79d66c1-f153-478f-86e4-5d9a954707ac",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/products/b79d66c1-f153-478f-86e4-5d9a954707ac/accessory-3d",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/accessory-3d/photos/e888c2db-e5ec-4ad0-8e28-39c33e739590",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/accessory-3d/photos/7dd07625-7489-47e6-ba0a-32de97aad714",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/parts",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/accessory-3d/photos/5bda645d-c7bd-4a1b-b8f5-e4dab063e245",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/products/b79d66c1-f153-478f-86e4-5d9a954707ac/accessory-3d/garage",
+        "status": 200
+      }
+    ],
+    "recoveredText": "\nRear wing for BMW E36\nGaragistic-style LTW · E36-LTW-WING-TEST\n\nNew\n⁦₪ 450.00⁩\n\nLow stock\n\nNew\n\nNot listed for your C-Class 1999\nQuantity\n\n1\n\n\nNo compatible Garage car is available. Add or choose a compatible car.\nInstalled look\nShown on BMW 3 Series E36\nPhotos from the shop, checked by MOTEXA.\n\nYour car is not on this part's list. Check the list below or ask the shop.\nPart details\n\nBrand\nGaragistic-style LTW\n\nPart number\nE36-LTW-WING-TEST\n\nCondition\nNew\n\nCategory\nExterior accessories\nجناح خلفي لسيارة BMW E36\nFits these cars\nCar\nYears\nEngine\nBMW 3 Series\n1990–2000\n—\nSold by\n\nAl-Mahaba Genuine & Aftermarket Auto Parts Trading Est.\n\nRamallah\n\nVerified\nSimilar parts\nNew\nRear bumper\n33\nAMG · New\n⁦₪ 500.00⁩\nIn stock\n\nNot listed for your C-Class 1999\nOnly 3 left\nRoof Rack Cross Bars\nTH-711200\nThule · New\n⁦₪ 520.00⁩\nLow stock\n\nNot sure? Ask the shop\n⁦₪ 450.00⁩\n\n\nBuy"
+  },
+  "F03": {
+    "fault": "Browser network denial (no response stubbing)",
+    "pattern": "*://*/api/catalog/accessory-3d/photos/*",
+    "text": "\nRear wing for BMW E36\nGaragistic-style LTW · E36-LTW-WING-TEST\n\nNew\n⁦₪ 450.00⁩\n\nLow stock\n\nNew\n\nNot listed for your C-Class 1999\nQuantity\n\n1\n\n\nNo compatible Garage car is available. Add or choose a compatible car.\nInstalled look\nShown on BMW 3 Series E36\nLoading…\nLoading…\nLoading…\nPhotos from the shop, checked by MOTEXA.\n\nYour car is not on this part's list. Check the list below or ask the shop.\nPart details\n\nBrand\nGaragistic-style LTW\n\nPart number\nE36-LTW-WING-TEST\n\nCondition\nNew\n\nCategory\nExterior accessories\nجناح خلفي لسيارة BMW E36\nFits these cars\nCar\nYears\nEngine\nBMW 3 Series\n1990–2000\n—\nSold by\n\nAl-Mahaba Genuine & Aftermarket Auto Parts Trading Est.\n\nRamallah\n\nVerified\nSimilar parts\nNew\nRear bumper\n33\nAMG · New\n⁦₪ 500.00⁩\nIn stock\n\nNot listed for your C-Class 1999\nOnly 3 left\nRoof Rack Cross Bars\nTH-711200\nThule · New\n⁦₪ 520.00⁩\nLow stock\n\nNot sure? Ask the shop\n⁦₪ 450.00⁩\n\n\nBuy",
+    "events": [
+      {
+        "path": "/api/catalog/garage",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/parts/b79d66c1-f153-478f-86e4-5d9a954707ac",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/products/b79d66c1-f153-478f-86e4-5d9a954707ac/accessory-3d",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/accessory-3d/photos/7dd07625-7489-47e6-ba0a-32de97aad714",
+        "error": "inspector"
+      },
+      {
+        "path": "/api/catalog/accessory-3d/photos/e888c2db-e5ec-4ad0-8e28-39c33e739590",
+        "error": "inspector"
+      },
+      {
+        "path": "/api/catalog/accessory-3d/photos/5bda645d-c7bd-4a1b-b8f5-e4dab063e245",
+        "error": "inspector"
+      },
+      {
+        "path": "/api/catalog/parts",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/products/b79d66c1-f153-478f-86e4-5d9a954707ac/accessory-3d/garage",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/products/b79d66c1-f153-478f-86e4-5d9a954707ac/accessory-3d",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/products/b79d66c1-f153-478f-86e4-5d9a954707ac/accessory-3d/garage",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/garage",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/parts/b79d66c1-f153-478f-86e4-5d9a954707ac",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/products/b79d66c1-f153-478f-86e4-5d9a954707ac/accessory-3d",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/parts",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/products/b79d66c1-f153-478f-86e4-5d9a954707ac/accessory-3d/garage",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/accessory-3d/photos/7dd07625-7489-47e6-ba0a-32de97aad714",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/accessory-3d/photos/e888c2db-e5ec-4ad0-8e28-39c33e739590",
+        "status": 200
+      },
+      {
+        "path": "/api/catalog/accessory-3d/photos/5bda645d-c7bd-4a1b-b8f5-e4dab063e245",
+        "status": 200
+      }
+    ],
+    "recoveredText": "\nRear wing for BMW E36\nGaragistic-style LTW · E36-LTW-WING-TEST\n\nNew\n⁦₪ 450.00⁩\n\nLow stock\n\nNew\n\nNot listed for your C-Class 1999\nQuantity\n\n1\n\n\nNo compatible Garage car is available. Add or choose a compatible car.\nInstalled look\nShown on BMW 3 Series E36\nPhotos from the shop, checked by MOTEXA.\n\nYour car is not on this part's list. Check the list below or ask the shop.\nPart details\n\nBrand\nGaragistic-style LTW\n\nPart number\nE36-LTW-WING-TEST\n\nCondition\nNew\n\nCategory\nExterior accessories\nجناح خلفي لسيارة BMW E36\nFits these cars\nCar\nYears\nEngine\nBMW 3 Series\n1990–2000\n—\nSold by\n\nAl-Mahaba Genuine & Aftermarket Auto Parts Trading Est.\n\nRamallah\n\nVerified\nSimilar parts\nNew\nRear bumper\n33\nAMG · New\n⁦₪ 500.00⁩\nIn stock\n\nNot listed for your C-Class 1999\nOnly 3 left\nRoof Rack Cross Bars\nTH-711200\nThule · New\n⁦₪ 520.00⁩\nLow stock\n\nNot sure? Ask the shop\n⁦₪ 450.00⁩\n\n\nBuy"
+  }
+}

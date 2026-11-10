@@ -1,3 +1,5 @@
+import { SESSION_EXPIRED } from "../../../core/session/sessionExpiry";
+const EXPIRED = "SESSION_EXPIRED";
 import { jobAfterLocationError } from "../../../features/shared/locationPolicy";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useRef, useState } from "react";
@@ -40,7 +42,7 @@ export default function DriverJob() {
     } catch (e: any) {
       if (sequence !== loadSequence.current) return;
       setJ(previous => jobAfterLocationError(previous, e));
-      setError(e.message);
+      setError(e.status === 401 ? EXPIRED : e.message);
     }
   }, [id]);
   useFocusEffect(
@@ -54,7 +56,7 @@ export default function DriverJob() {
   // every step is confirmed with a second tap, in order, and cannot be skipped or undone (the server enforces it too)
   const [confirm, setConfirm] = useState<DriverStep | null>(null);
   // foreground only: a point at most every 5 s, and only after 20 m of movement (every 15 s while standing still)
-  const { me, meFresh, weak, problem: locProblem, canOpenSettings, openSettings } = useShareLocation(id, working, (p) => driverApi.ping(id, p), { minMs: 5_000, minMeters: 20 });
+  const { me, meFresh, weak, notReaching, problem: locProblem, canOpenSettings, openSettings } = useShareLocation(id, working, (p) => driverApi.ping(id, p), { minMs: 5_000, minMeters: 20 });
 
   const act = async (key: string, fn: () => Promise<unknown>) => {
     setBusy(key);
@@ -100,11 +102,12 @@ export default function DriverJob() {
         </GarageHero>
       }
     >
-      {error && !j ? <ErrorState text={error} onRetry={load} retryLabel={t("Retry", "إعادة المحاولة")} /> : null}
+      {error && !j ? <ErrorState text={error === EXPIRED ? t(...SESSION_EXPIRED) : error} onRetry={load} retryLabel={t("Retry", "إعادة المحاولة")} /> : null}
       {!j && !error ? <SkeletonBlock height={Math.round(height * 0.5)} radius={gShape.card} /> : null}
       {j ? (
         <View style={{ gap: 12 }}>
-          {error ? <Note tone="danger" icon="alert-circle-outline">{error}</Note> : null}
+          {error ? <Note tone="danger" icon="alert-circle-outline">{error === EXPIRED ? t(...SESSION_EXPIRED) : error}</Note> : null}
+          {notReaching ? <Note tone="danger" icon="cloud-offline-outline">{t("Your location isn't reaching the customer", "موقعك لا يصل إلى الزبون")}</Note> : null}
           {locProblem ? <Note tone="danger" icon="location-outline">{locProblem}</Note> : null}
           {weak && !locProblem ? <Note tone="warning" icon="cellular-outline">{t("GPS signal is weak: the customer may see your position late. Move to an open area.", "إشارة GPS ضعيفة: قد يرى الزبون موقعك متأخرًا. انتقل إلى مكان مكشوف.")}</Note> : null}
           {locProblem && canOpenSettings ? <GButton variant="secondary" icon="settings-outline" label={t("Open Settings", "فتح الإعدادات")} onPress={() => void openSettings()} /> : null}

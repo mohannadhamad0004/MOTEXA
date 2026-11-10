@@ -1,0 +1,10 @@
+{
+  "driverId": "465fcc78-0cac-45ba-8e03-17d7b163ee29",
+  "result": {
+    "status": 409,
+    "body": {
+      "success": false,
+      "message": "Change the truck after the current job."
+    }
+  }
+}

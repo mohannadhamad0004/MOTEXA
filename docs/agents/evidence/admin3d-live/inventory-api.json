@@ -1,0 +1,92 @@
+{
+  "admin.parts /admin/parts/vehicles": {
+    "status": 200,
+    "keys": [
+      "brands",
+      "vehicles"
+    ],
+    "counts": {
+      "brands": 21,
+      "vehicles": 103
+    }
+  },
+  "admin.parts /admin/parts/vehicle-3d-models": {
+    "status": 200,
+    "keys": [
+      "models"
+    ],
+    "counts": {
+      "models": 22
+    }
+  },
+  "admin.parts /admin/parts/vehicle-3d-imports": {
+    "status": 200,
+    "keys": [
+      "imports"
+    ],
+    "counts": {
+      "imports": 4
+    }
+  },
+  "admin.parts /admin/parts/accessory-3d": {
+    "status": 200,
+    "keys": [
+      "accessories"
+    ],
+    "counts": {
+      "accessories": 4
+    }
+  },
+  "admin.parts /admin/parts/part-maps": {
+    "status": 200,
+    "keys": [
+      "models"
+    ],
+    "counts": {
+      "models": 22
+    }
+  },
+  "admin.tow /admin/tow/drivers": {
+    "status": 200,
+    "keys": [
+      "success",
+      "drivers"
+    ],
+    "counts": {
+      "drivers": 3
+    }
+  },
+  "shop /parts/me/products": {
+    "status": 200,
+    "keys": [
+      "success",
+      "products",
+      "hasMore"
+    ],
+    "counts": {
+      "products": 14
+    }
+  },
+  "tow /tow/me/drivers": {
+    "status": 200,
+    "keys": [
+      "success",
+      "drivers"
+    ],
+    "counts": {
+      "drivers": 2
+    }
+  },
+  "customer /catalog/3d-models": {
+    "status": 200,
+    "keys": [
+      "revision",
+      "activeKeys",
+      "models"
+    ],
+    "counts": {
+      "activeKeys": 22,
+      "models": 22
+    }
+  }
+}

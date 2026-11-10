@@ -25,7 +25,7 @@ test("Sketchfab persistent workflow, real preparation/viewer, auth, publication 
  const before=new Map([...catalogFiles(readManifest()).keys()].map(f=>[f,readFileSync(f,"utf8")]));const keys:string[]=[];
  let brandId="",vehicleId="",generationId="",otherGenerationId="",id="",downloads=0,apiCalls=0;
  const d=await new NodeIO().readBinary(await mockVehicleGLB());for(const n of d.getRoot().listNodes())n.setName(n.getName().replace("MOCK_generic","Fixture"));for(const n of d.getRoot().listMeshes())n.setName(n.getName().replace("MOCK_generic","Fixture"));for(const m of d.getRoot().listMaterials())m.setName(m.getName().replace("MOCK_generic","Fixture"));const bytes=Buffer.from(await new NodeIO().writeBinary(d));
- const client=createSketchfabClient({token:"test-credential-never-live",fetcher:(async(request)=>{
+ const client=createSketchfabClient({accessToken:"test-credential-never-live",fetcher:(async(request)=>{
   apiCalls++;const u=String(request);if(u.includes("/archives/")){downloads++;return new Response(bytes,{headers:{"content-type":"model/gltf-binary"}});}
   if(u.endsWith("/download"))return Response.json({glb:{url:"https://sketchfab-prod-media.s3.amazonaws.com/archives/test?signature=never-serialize",size:bytes.length}});
   return Response.json({uid:sourceUid,name:"Isolated test car",viewerUrl:url,user:{displayName:"Test fixture artist"},isDownloadable:true,license:{slug:"by",label:"CC BY 4.0",url:"https://creativecommons.org/licenses/by/4.0/"}});
@@ -52,7 +52,7 @@ test("Sketchfab persistent workflow, real preparation/viewer, auth, publication 
   await t.test("inspect persists audit only, never downloads; concurrent queue attempts reserve one UID",async()=>{
    const r=await call("POST",`${base}/sketchfab/inspect`,admin,{url});assert.equal(r.status,200);assert.equal(r.data.inspection.allowed,true);assert.equal(downloads,0);
    const result=await Promise.allSettled([service.queue(admin,{url,generationId}),service.queue(admin,{url,generationId})]);
-   assert.equal(result.filter(r=>r.status==="fulfilled").length,1,JSON.stringify(result.map(r=>r.status==="rejected"?r.reason.message:r.value.id)));assert.equal((result.find(r=>r.status==="rejected") as PromiseRejectedResult).reason.code,"DUPLICATE_IMPORT");
+   assert.equal(result.filter(r=>r.status==="fulfilled").length,1,JSON.stringify(result.map(r=>r.status==="rejected"?r.reason.message:r.value.id)));assert.equal((result.find(r=>r.status==="rejected") as PromiseRejectedResult).reason.code,"DUPLICATE_MODEL");
    id=(result.find(r=>r.status==="fulfilled") as PromiseFulfilledResult<any>).value.id;
    assert.equal((await service.get(admin,id)).status,"QUEUED");assert.equal(downloads,0);
    assert.equal((await service.inspect(admin,url)).duplicate?.importId,id);
@@ -79,7 +79,7 @@ test("Sketchfab persistent workflow, real preparation/viewer, auth, publication 
    assert.equal((await prisma.vehicleGeneration.findUniqueOrThrow({where:{id:otherGenerationId}})).model3dKey,null);
    const map=await prisma.carPartMap.findUniqueOrThrow({where:{model3dKey:modelKey}});assert.equal(map.modelSha256,r.validation.sha256);assert.equal(map.confirmedAt,null);
    assert.equal((await confirmedPartMaps([modelKey])).size,0);
-   await assert.rejects(service.discard(admin,id),{code:"IMPORT_PUBLISHED"});await assert.rejects(service.queue(admin,{url,generationId}),{code:"DUPLICATE_IMPORT"});
+   await assert.rejects(service.discard(admin,id),{code:"IMPORT_PUBLISHED"});await assert.rejects(service.queue(admin,{url,generationId}),{code:"DUPLICATE_MODEL"});
   });
   await t.test("matching Garage resolves new published model through production runtime catalog; credits contain real fixture evidence only",async()=>{
    await createGarageService().create(customer,{make:prefix,model:"Fixture",year:2005,generationId});
@@ -107,7 +107,7 @@ test("Sketchfab persistent workflow, real preparation/viewer, auth, publication 
   const rows=await prisma.vehicle3DImport.findMany({where:{uploadedByUserId:{in:users}}});for(const r of rows){removePrivate(r.rawModelPath);removePrivate(r.privateModelPath);if(r.publishedModel3dKey&&!keys.includes(r.publishedModel3dKey))keys.push(r.publishedModel3dKey);}
   await prisma.carPartMap.deleteMany({where:{model3dKey:{in:keys}}});for(const key of keys){const file=path.join(REPO_ROOT,"backend/public/3d",key+".glb");if(existsSync(file))unlinkSync(file);}
   await prisma.customerGarageCar.deleteMany({where:{userId:{in:users}}});await prisma.vehicle3DImport.deleteMany({where:{uploadedByUserId:{in:users}}});
-  if(vehicleId){await prisma.vehicleGeneration.deleteMany({where:{vehicleId}});await prisma.vehicle.delete({where:{id:vehicleId}});}if(brandId)await prisma.vehicleBrand.delete({where:{id:brandId}});
+  if(vehicleId){await prisma.vehicle3DRevision.deleteMany({where:{generation:{vehicleId}}});await prisma.vehicleGeneration.deleteMany({where:{vehicleId}});await prisma.vehicle.delete({where:{id:vehicleId}});}if(brandId)await prisma.vehicleBrand.delete({where:{id:brandId}});
   await prisma.auditLog.deleteMany({where:{OR:[{actorId:{in:users}},{targetId:{in:keys}}]}});await prisma.adminPermission.deleteMany({where:{adminId:{in:users}}});await prisma.user.deleteMany({where:{id:{in:users}}});await prisma.$disconnect();
  }
 });

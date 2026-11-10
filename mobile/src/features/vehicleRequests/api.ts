@@ -1,6 +1,6 @@
 import {api} from "../../core/config/api";
 import type {Submission} from "../vehicle3d/api";
-export type VehicleRequest=Submission&{submissionId:string;requestedMake:string;requestedModel:string;requestedYear:number;requestedGeneration:string|null;trim:string|null;notes:string|null;requestStatus:string;initialReviewState:string;initialReviewNotes:string|null;consentAt:string|null};
+export type VehicleRequest=Submission&{taxonomyState?:string;vehicle3dMissing?:boolean;demandCount?:number;submissionId:string;requestedMake:string;requestedModel:string;requestedYear:number;requestedGeneration:string|null;trim:string|null;notes:string|null;requestStatus:string;initialReviewState:string;initialReviewNotes:string|null;consentAt:string|null};
 export const requestPath=(admin=false)=>admin?"/admin/parts/vehicle-requests":"/catalog/vehicle-requests";
 export const vehicleRequests={
  list:async(admin=false)=>(await api<{requests:VehicleRequest[]}>("GET",requestPath(admin))).requests,

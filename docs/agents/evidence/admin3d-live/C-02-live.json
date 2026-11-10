@@ -1,0 +1,24 @@
+{
+  "entered": {
+    "price": "12abc",
+    "stock": "1.9"
+  },
+  "submitted": {
+    "price": 12,
+    "stock": 1
+  },
+  "saveStatus": 200,
+  "persisted": {
+    "price": "12.00",
+    "stock": 1
+  },
+  "restoreStatus": 200,
+  "restored": {
+    "price": "32.50",
+    "stock": 24
+  },
+  "before": {
+    "price": "32.50",
+    "stock": 24
+  }
+}

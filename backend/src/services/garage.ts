@@ -1,5 +1,5 @@
 import type { CustomerGarageCar, Prisma } from "../generated/prisma/client.js";
-import {activeModels} from "./vehicle3d-catalog.js";
+import {effectiveVehicleModels} from "./vehicle3d-revisions.js";
 import { prisma } from "../prisma.js";
 
 export const MAX_GARAGE_CARS = 10;
@@ -36,12 +36,10 @@ async function validate(tx: Tx, input: Input, existing?: CustomerGarageCar) {
   if(unchanged)return {make:existing.make,model:existing.model,year:existing.year,generationId:existing.generationId,color:typeof color==="string"?color.toLowerCase():null,nickname:typeof nickname==="string"?nickname.trim()||null:null};
   const vehicle = await tx.vehicle.findUnique({ where: { makeNormalized_modelNormalized: { makeNormalized: norm(make), modelNormalized: norm(model) } }, include: { brand:true,generations: true } });
   if (!vehicle) return invalid("Choose a car from the list.");
-  const keys=new Set(activeModels().map(m=>m.key));
   if(!vehicle.isActive||!vehicle.brand?.isActive)return invalid("This vehicle is no longer selectable. Request your car instead.");
   const carYear = year as number;
-  if (carYear < vehicle.yearFrom || carYear > vehicle.yearTo) return invalid(`The ${vehicle.make} ${vehicle.model} is listed for ${vehicle.yearFrom}-${vehicle.yearTo}.`);
-  const matches = vehicle.generations.filter(g => g.isActive&&g.isPublished&&g.model3dKey&&keys.has(g.model3dKey)&&g.yearFrom <= carYear && g.yearTo >= carYear);
-  if(!matches.length)return invalid("This year has no published supported generation. Request your car instead.");
+  const matches = vehicle.generations.filter(g => g.isActive && g.yearFrom <= carYear && g.yearTo >= carYear);
+  if(!matches.length)return invalid("This year has no managed generation. Request your car instead.");
   // Explicit null means Not sure. Omission on create auto-selects only an unambiguous generation.
   // On PATCH the existing choice is revalidated, even when only make/model/year changed.
   const asked = value.generationId;
@@ -55,7 +53,7 @@ async function myCarShape(tx: Tx, car: CustomerGarageCar | null) {
   if (!car) return null;
   const vehicle = await tx.vehicle.findUnique({ where: { makeNormalized_modelNormalized: { makeNormalized: norm(car.make), modelNormalized: norm(car.model) } }, select: { bodyType: true } });
   const generation = car.generationId ? await tx.vehicleGeneration.findUnique({ where: { id: car.generationId }, select: GEN_FIELDS }) : null;
-  return { make: car.make, model: car.model, year: car.year, color: car.color, bodyType: vehicle?.bodyType ?? null, generation };
+  return { make: car.make, model: car.model, year: car.year, color: car.color, bodyType: vehicle?.bodyType ?? null, generation: generation ? { ...generation, effectiveAvailable: (await effectiveVehicleModels(tx)).has(generation.id), model3dKey: (await effectiveVehicleModels(tx)).get(generation.id)?.key ?? null } : null };
 }
 
 /** A runner can be supplied by integration tests to roll the entire test session back. */
@@ -92,10 +90,10 @@ export function createGarageService(run: Run = work => prisma.$transaction(work,
     }
   };
   return {
-    list: (userId: string) => run(tx => tx.customerGarageCar.findMany({ where: { userId }, orderBy: order, select: {
+    list: (userId: string) => run(async tx => { const available = await effectiveVehicleModels(tx); const cars = await tx.customerGarageCar.findMany({ where: { userId }, orderBy: order, select: {
       id: true, nickname: true, make: true, model: true, year: true, color: true, generationId: true,
       generation: { select: GEN_FIELDS }, isActive: true, lastSelectedAt: true, createdAt: true, updatedAt: true,
-    } })),
+    } }); return cars.map(car => ({ ...car, generation: car.generation ? { ...car.generation, effectiveAvailable: available.has(car.generation.id), model3dKey: available.get(car.generation.id)?.key ?? null } : null })); }),
     create: (userId: string, input: unknown) => mutate(userId, tx => add(tx, userId, body(input, false))),
     update: (userId: string, id: string, input: unknown) => mutate(userId, async tx => {
       const car = await owned(tx, userId, id);

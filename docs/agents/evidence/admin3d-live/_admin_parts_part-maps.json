@@ -1,0 +1,1582 @@
+{
+  "status": 200,
+  "body": {
+    "models": [
+      {
+        "key": "toyota-corolla-e170-e180",
+        "status": "proposed",
+        "modelSha256": "06a56b0e7faac56f1b44f9d00c2b0e3907680fb939488be979138054ab19c4d6",
+        "pieces": 251,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:25:53.231Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 24,
+            "confidence": 0.6,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "LIMITED",
+          "problems": [],
+          "warnings": [],
+          "limited": {
+            "FRONT_BUMPER": "NOT_SEPARATE",
+            "REAR_BUMPER": "NOT_SEPARATE",
+            "MIRROR_COVERS": "NOT_SEPARATE"
+          },
+          "text": [
+            "FRONT_BUMPER: not a separate piece (the automatic part map cannot split it off)",
+            "REAR_BUMPER: not a separate piece (the automatic part map cannot split it off)",
+            "MIRROR_COVERS: not a separate piece (the automatic part map cannot split it off)"
+          ],
+          "checks": {
+            "dimsM": [
+              2.157,
+              2.214,
+              4.6
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.66,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.66,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.66,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.66,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": false,
+            "singlePiece": false
+          }
+        },
+        "name": "Toyota Corolla E170/E180"
+      },
+      {
+        "key": "bmw-3-series-e36",
+        "status": "confirmed",
+        "modelSha256": "2f026865272597d4edb718be5c99e2bc74a790f98f53e06f45f33a177e55ab89",
+        "pieces": 2082,
+        "confirmedAt": "2026-11-06T06:29:39.377Z",
+        "segmentedAt": "2026-11-06T06:25:55.357Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 51,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "MIRRORS": {
+            "n": 6,
+            "confidence": 0.7,
+            "by": "name+shape"
+          },
+          "SPOILER": {
+            "n": 3,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "REAR_BUMPER": {
+            "n": 7,
+            "confidence": 0.48,
+            "by": "shape"
+          },
+          "SIDE_SKIRTS": {
+            "n": 2,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 16,
+            "confidence": 0.48,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {
+          "WHEELS": {
+            "n": 51
+          },
+          "MIRRORS": {
+            "n": 6
+          },
+          "SPOILER": {
+            "n": 3
+          },
+          "REAR_BUMPER": {
+            "n": 7
+          },
+          "SIDE_SKIRTS": {
+            "n": 2
+          },
+          "FRONT_BUMPER": {
+            "n": 16
+          }
+        },
+        "gate": {
+          "verdict": "FULL",
+          "problems": [],
+          "warnings": [],
+          "limited": {},
+          "text": [],
+          "checks": {
+            "dimsM": [
+              1.973,
+              1.363,
+              4.65
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.64,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.64,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.64,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.64,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": true,
+            "singlePiece": false
+          }
+        },
+        "name": "BMW 3 Series E36"
+      },
+      {
+        "key": "bmw-x5-e53",
+        "status": "proposed",
+        "modelSha256": "008826fb9296952cfab5a86da75a569ffbacf36b8833a17e1e28c8a794455e6d",
+        "pieces": 1894,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:25:57.622Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 126,
+            "confidence": 0.9,
+            "by": "name+shape"
+          },
+          "MIRRORS": {
+            "n": 8,
+            "confidence": 0.68,
+            "by": "name+shape"
+          },
+          "SPOILER": {
+            "n": 11,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "ROOF_RAILS": {
+            "n": 2,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "REAR_BUMPER": {
+            "n": 13,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 150,
+            "confidence": 0.6,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "FULL",
+          "problems": [],
+          "warnings": [],
+          "limited": {},
+          "text": [],
+          "checks": {
+            "dimsM": [
+              2.229,
+              1.805,
+              4.9
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.78,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.78,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.76,
+                "bottomMm": 4
+              },
+              {
+                "diameterM": 0.76,
+                "bottomMm": 4
+              }
+            ],
+            "stockSpoilerSeparate": true,
+            "singlePiece": false
+          }
+        },
+        "name": "BMW X5 E53"
+      },
+      {
+        "key": "hyundai-accent-lc",
+        "status": "proposed",
+        "modelSha256": "84c98dad483865b89c4f0f1e4872707e11381655862238d0c50bd38c934a0b62",
+        "pieces": 257,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:26:00.108Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 30,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "MIRRORS": {
+            "n": 3,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "ROOF_RAILS": {
+            "n": 2,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "REAR_BUMPER": {
+            "n": 1,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 32,
+            "confidence": 0.6,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "FULL",
+          "problems": [],
+          "warnings": [],
+          "limited": {},
+          "text": [],
+          "checks": {
+            "dimsM": [
+              1.955,
+              1.46,
+              4.3
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.61,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.61,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.61,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.61,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": false,
+            "singlePiece": false
+          }
+        },
+        "name": "Hyundai Accent LC"
+      },
+      {
+        "key": "mercedes-c-class-w203",
+        "status": "proposed",
+        "modelSha256": "3967c05d3649a85ea103d29bdd2e43ff0c9cff382c27b3822c7f08ae3c3a93c7",
+        "pieces": 14549,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:26:04.795Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 596,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "MIRRORS": {
+            "n": 19,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "SIDE_SKIRTS": {
+            "n": 1,
+            "confidence": 0.3,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "LIMITED",
+          "problems": [],
+          "warnings": [],
+          "limited": {
+            "FRONT_BUMPER": "NOT_SEPARATE",
+            "REAR_BUMPER": "NOT_SEPARATE"
+          },
+          "text": [
+            "FRONT_BUMPER: not a separate piece (the automatic part map cannot split it off)",
+            "REAR_BUMPER: not a separate piece (the automatic part map cannot split it off)"
+          ],
+          "checks": {
+            "dimsM": [
+              2.055,
+              1.496,
+              4.7
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.67,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.67,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.67,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.67,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": false,
+            "singlePiece": false
+          }
+        },
+        "name": "Mercedes-Benz C-Class W203"
+      },
+      {
+        "key": "mercedes-e-class-w212",
+        "status": "proposed",
+        "modelSha256": "23141ceca7968dabda13a088320a72b9ad65f3f51de5f21dd29fb31554565692",
+        "pieces": 737,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:26:07.705Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 36,
+            "confidence": 0.9,
+            "by": "name+shape"
+          },
+          "MIRRORS": {
+            "n": 42,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "SPOILER": {
+            "n": 1,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "REAR_BUMPER": {
+            "n": 2,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "SIDE_SKIRTS": {
+            "n": 2,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 1,
+            "confidence": 0.6,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "FULL",
+          "problems": [],
+          "warnings": [],
+          "limited": {},
+          "text": [],
+          "checks": {
+            "dimsM": [
+              2.159,
+              1.458,
+              4.9
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.66,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.66,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.66,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.66,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": true,
+            "singlePiece": false
+          }
+        },
+        "name": "Mercedes-Benz E-Class W212"
+      },
+      {
+        "key": "mercedes-vito-w447",
+        "status": "proposed",
+        "modelSha256": "cadf440a618348bd514ffdd7f2ab3ec394bc6a4adc3f15fff60c44e5cc43bc07",
+        "pieces": 301,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:26:10.583Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 32,
+            "confidence": 0.9,
+            "by": "name+shape"
+          },
+          "MIRRORS": {
+            "n": 5,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "REAR_BUMPER": {
+            "n": 5,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 26,
+            "confidence": 0.6,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "FULL",
+          "problems": [],
+          "warnings": [],
+          "limited": {},
+          "text": [],
+          "checks": {
+            "dimsM": [
+              2.088,
+              1.795,
+              5
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.66,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.66,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.66,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.66,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": false,
+            "singlePiece": false
+          }
+        },
+        "name": "Mercedes-Benz Vito W447"
+      },
+      {
+        "key": "peugeot-208-2nd-gen-p21",
+        "status": "proposed",
+        "modelSha256": "99c4280641b3da240dbbd42b1e3d262e4fef96359879a1d3489ce612c37cf1d6",
+        "pieces": 803,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:26:12.704Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 4,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "MIRRORS": {
+            "n": 10,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "SPOILER": {
+            "n": 15,
+            "confidence": 0.48,
+            "by": "shape"
+          },
+          "REAR_BUMPER": {
+            "n": 43,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 370,
+            "confidence": 0.6,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "FULL",
+          "problems": [],
+          "warnings": [],
+          "limited": {},
+          "text": [],
+          "checks": {
+            "dimsM": [
+              1.892,
+              1.576,
+              4.05
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.63,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.63,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.63,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.63,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": true,
+            "singlePiece": false
+          }
+        },
+        "name": "Peugeot 208 2nd gen / P21"
+      },
+      {
+        "key": "peugeot-308-2nd-gen-t9",
+        "status": "proposed",
+        "modelSha256": "9135e4f066b38edc9f4c183fda479fc609dcd83d199269463a902713a9005081",
+        "pieces": 443,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:26:14.622Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 96,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "MIRRORS": {
+            "n": 4,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "SPOILER": {
+            "n": 4,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 59,
+            "confidence": 0.6,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "LIMITED",
+          "problems": [],
+          "warnings": [],
+          "limited": {
+            "REAR_BUMPER": "NOT_SEPARATE"
+          },
+          "text": [
+            "REAR_BUMPER: not a separate piece (the automatic part map cannot split it off)"
+          ],
+          "checks": {
+            "dimsM": [
+              1.802,
+              1.732,
+              4.3
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.67,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.67,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.67,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.67,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": true,
+            "singlePiece": false
+          }
+        },
+        "name": "Peugeot 308 2nd gen / T9"
+      },
+      {
+        "key": "renault-fluence-l38",
+        "status": "proposed",
+        "modelSha256": "ccf4bea5e360d44980d7683cafb3385f50c68fb551b4de20b9f4b08383857061",
+        "pieces": 15305,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:26:18.596Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 11776,
+            "confidence": 0.9,
+            "by": "name+shape"
+          },
+          "MIRRORS": {
+            "n": 6,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "REAR_BUMPER": {
+            "n": 3853,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 1542,
+            "confidence": 0.6,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "FULL",
+          "problems": [],
+          "warnings": [],
+          "limited": {},
+          "text": [],
+          "checks": {
+            "dimsM": [
+              1.963,
+              1.731,
+              4.5
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.62,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.62,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.62,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.62,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": false,
+            "singlePiece": false
+          }
+        },
+        "name": "Renault Fluence L38"
+      },
+      {
+        "key": "skoda-fabia-mk2-5j",
+        "status": "proposed",
+        "modelSha256": "378372933fd2971889eb49835c3cc2f5b4bd56bef413926bd09eca8ba39f411b",
+        "pieces": 1387,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:26:21.398Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 1160,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "MIRRORS": {
+            "n": 6,
+            "confidence": 0.7,
+            "by": "name+shape"
+          },
+          "SPOILER": {
+            "n": 1,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "REAR_BUMPER": {
+            "n": 85,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 116,
+            "confidence": 0.6,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "FULL",
+          "problems": [],
+          "warnings": [],
+          "limited": {},
+          "text": [],
+          "checks": {
+            "dimsM": [
+              1.868,
+              1.953,
+              4
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.6,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.6,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.6,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.6,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": true,
+            "singlePiece": false
+          }
+        },
+        "name": "Skoda Fabia Mk2 / 5J"
+      },
+      {
+        "key": "skoda-octavia-mk2-1z",
+        "status": "proposed",
+        "modelSha256": "88690ccf766b1b00bf7edd31ab8ce9de5cde55a113c6f33663a7d5f55f80c4ad",
+        "pieces": 615,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:26:23.333Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 325,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "MIRRORS": {
+            "n": 10,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "REAR_BUMPER": {
+            "n": 2,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 18,
+            "confidence": 0.48,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "FULL",
+          "problems": [],
+          "warnings": [],
+          "limited": {},
+          "text": [],
+          "checks": {
+            "dimsM": [
+              1.877,
+              1.441,
+              4.65
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.62,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.62,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.62,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.62,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": false,
+            "singlePiece": false
+          }
+        },
+        "name": "Skoda Octavia Mk2 / 1Z"
+      },
+      {
+        "key": "toyota-c-hr-1st-gen",
+        "status": "proposed",
+        "modelSha256": "28c157c4fc33807b77b766e1ad1515c8710317c150842c3ff5af8e391d43b60a",
+        "pieces": 711,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:26:26.123Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 271,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "MIRRORS": {
+            "n": 15,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "SPOILER": {
+            "n": 11,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "ROOF_RAILS": {
+            "n": 2,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 73,
+            "confidence": 0.48,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "LIMITED",
+          "problems": [],
+          "warnings": [],
+          "limited": {
+            "REAR_BUMPER": "NOT_SEPARATE"
+          },
+          "text": [
+            "REAR_BUMPER: not a separate piece (the automatic part map cannot split it off)"
+          ],
+          "checks": {
+            "dimsM": [
+              2.056,
+              1.568,
+              4.36
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.69,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.69,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.69,
+                "bottomMm": 1
+              },
+              {
+                "diameterM": 0.69,
+                "bottomMm": 1
+              }
+            ],
+            "stockSpoilerSeparate": true,
+            "singlePiece": false
+          }
+        },
+        "name": "Toyota C-HR 1st gen"
+      },
+      {
+        "key": "toyota-camry-xv20",
+        "status": "proposed",
+        "modelSha256": "73a44628c7f7944f714ad886848019f3725b0bfe2f5f3bf7e9589b89afd3d7d4",
+        "pieces": 48517,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:26:34.280Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 8973,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "MIRRORS": {
+            "n": 14,
+            "confidence": 0.64,
+            "by": "name+shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "LIMITED",
+          "problems": [],
+          "warnings": [],
+          "limited": {
+            "FRONT_BUMPER": "NOT_SEPARATE",
+            "REAR_BUMPER": "NOT_SEPARATE"
+          },
+          "text": [
+            "FRONT_BUMPER: not a separate piece (the automatic part map cannot split it off)",
+            "REAR_BUMPER: not a separate piece (the automatic part map cannot split it off)"
+          ],
+          "checks": {
+            "dimsM": [
+              1.92,
+              1.419,
+              4.85
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.68,
+                "bottomMm": 1
+              },
+              {
+                "diameterM": 0.68,
+                "bottomMm": 1
+              },
+              {
+                "diameterM": 0.68,
+                "bottomMm": 1
+              },
+              {
+                "diameterM": 0.68,
+                "bottomMm": 1
+              }
+            ],
+            "stockSpoilerSeparate": false,
+            "singlePiece": false
+          }
+        },
+        "name": "Toyota Camry XV20"
+      },
+      {
+        "key": "toyota-camry-xv70",
+        "status": "proposed",
+        "modelSha256": "7d7edefd0f7eefa6aafe56606b70e359b600adb885ce003fcb8eaca78fd405c7",
+        "pieces": 359,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:26:38.208Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 93,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "MIRRORS": {
+            "n": 6,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "REAR_BUMPER": {
+            "n": 5,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "SIDE_SKIRTS": {
+            "n": 2,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 59,
+            "confidence": 0.48,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "FULL",
+          "problems": [],
+          "warnings": [],
+          "limited": {},
+          "text": [],
+          "checks": {
+            "dimsM": [
+              2.122,
+              1.461,
+              4.85
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.66,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.66,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.66,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.66,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": false,
+            "singlePiece": false
+          }
+        },
+        "name": "Toyota Camry XV70"
+      },
+      {
+        "key": "toyota-corolla-e210",
+        "status": "proposed",
+        "modelSha256": "0d9ec461a976badc487e5ecece5a6d121f8c92502ce01f6c11b4a774d9b8dd94",
+        "pieces": 800,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:26:40.867Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 75,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "MIRRORS": {
+            "n": 12,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "SPOILER": {
+            "n": 1,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "ROOF_RAILS": {
+            "n": 2,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "REAR_BUMPER": {
+            "n": 4,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 488,
+            "confidence": 0.6,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "FULL",
+          "problems": [],
+          "warnings": [],
+          "limited": {},
+          "text": [],
+          "checks": {
+            "dimsM": [
+              2.062,
+              1.441,
+              4.6
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.64,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.64,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.64,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.64,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": true,
+            "singlePiece": false
+          }
+        },
+        "name": "Toyota Corolla E210"
+      },
+      {
+        "key": "volkswagen-caddy-sb-latest",
+        "status": "proposed",
+        "modelSha256": "a7b5535630d4502c95684b49fd07f66fe7486173537b57f2e4ceed7dcd470d96",
+        "pieces": 583,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:26:43.149Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 64,
+            "confidence": 0.68,
+            "by": "name+shape"
+          },
+          "MIRRORS": {
+            "n": 4,
+            "confidence": 0.68,
+            "by": "name+shape"
+          },
+          "SPOILER": {
+            "n": 16,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "ROOF_RAILS": {
+            "n": 2,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "REAR_BUMPER": {
+            "n": 88,
+            "confidence": 0.48,
+            "by": "shape"
+          },
+          "SIDE_SKIRTS": {
+            "n": 2,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 183,
+            "confidence": 0.6,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "FULL",
+          "problems": [],
+          "warnings": [],
+          "limited": {},
+          "text": [],
+          "checks": {
+            "dimsM": [
+              2.076,
+              1.805,
+              4.4
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.68,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.68,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.69,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.69,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": true,
+            "singlePiece": false
+          }
+        },
+        "name": "Volkswagen Caddy SB / latest"
+      },
+      {
+        "key": "volkswagen-polo-mk4-9n",
+        "status": "proposed",
+        "modelSha256": "0909350091fd10492752d376bdf9679f2d0683c2f17a01abc5cf12f1c046d728",
+        "pieces": 937,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:26:46.438Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 63,
+            "confidence": 0.9,
+            "by": "name+shape"
+          },
+          "MIRRORS": {
+            "n": 6,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 193,
+            "confidence": 0.6,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "LIMITED",
+          "problems": [],
+          "warnings": [],
+          "limited": {
+            "REAR_BUMPER": "NOT_SEPARATE"
+          },
+          "text": [
+            "REAR_BUMPER: not a separate piece (the automatic part map cannot split it off)"
+          ],
+          "checks": {
+            "dimsM": [
+              2.085,
+              1.882,
+              4
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.68,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.71,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.68,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.65,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": false,
+            "singlePiece": false
+          }
+        },
+        "name": "Volkswagen Polo Mk4 / 9N"
+      },
+      {
+        "key": "audi-a4-b5",
+        "status": "proposed",
+        "modelSha256": "827b7878bb967fc2e8fbc144942b4a4dcb4a13a0cb3eec110fd46c26df703fd3",
+        "pieces": 310,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:26:48.185Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 12,
+            "confidence": 0.9,
+            "by": "name+shape"
+          },
+          "MIRRORS": {
+            "n": 6,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "REAR_BUMPER": {
+            "n": 2,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "SIDE_SKIRTS": {
+            "n": 2,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 21,
+            "confidence": 0.6,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "FULL",
+          "problems": [],
+          "warnings": [],
+          "limited": {},
+          "text": [],
+          "checks": {
+            "dimsM": [
+              1.978,
+              1.479,
+              4.75
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.69,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.69,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.69,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.69,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": false,
+            "singlePiece": false
+          }
+        },
+        "name": "Audi A4 B5"
+      },
+      {
+        "key": "audi-q3-8u",
+        "status": "proposed",
+        "modelSha256": "8314b563cc0ede1fd5169dc20bae4ca7375d28b725f0629d1e8a8bffed4a4e83",
+        "pieces": 902,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:26:50.619Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 78,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "MIRRORS": {
+            "n": 14,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "SPOILER": {
+            "n": 11,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "ROOF_RAILS": {
+            "n": 2,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "REAR_BUMPER": {
+            "n": 39,
+            "confidence": 0.48,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 332,
+            "confidence": 0.6,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "FULL",
+          "problems": [],
+          "warnings": [],
+          "limited": {},
+          "text": [],
+          "checks": {
+            "dimsM": [
+              1.961,
+              1.617,
+              4.4
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.76,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.76,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.73,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.73,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": true,
+            "singlePiece": false
+          }
+        },
+        "name": "Audi Q3 8U"
+      },
+      {
+        "key": "opel-corsa-b",
+        "status": "proposed",
+        "modelSha256": "ba562898f177f7391140b84587205f0964542146a1f1003738bd5abefe4fa089",
+        "pieces": 9274,
+        "confirmedAt": null,
+        "segmentedAt": "2026-11-06T06:26:54.405Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 1981,
+            "confidence": 0.76,
+            "by": "name+shape"
+          },
+          "REAR_BUMPER": {
+            "n": 1530,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 460,
+            "confidence": 0.48,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {},
+        "gate": {
+          "verdict": "LIMITED",
+          "problems": [],
+          "warnings": [],
+          "limited": {
+            "MIRROR_COVERS": "NOT_SEPARATE"
+          },
+          "text": [
+            "MIRROR_COVERS: not a separate piece (the automatic part map cannot split it off)"
+          ],
+          "checks": {
+            "dimsM": [
+              1.932,
+              1.991,
+              4.05
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.62,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.62,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.62,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.62,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": false,
+            "singlePiece": false
+          }
+        },
+        "name": "Opel Corsa B"
+      },
+      {
+        "key": "manual-19febfb9-3b4a-4a5f-b2c0-ce33547da350-ad65d3b3205c45de",
+        "status": "confirmed",
+        "modelSha256": "ad65d3b3205c45de56ab9b2ff4b50f66d960737793950d6b67aa4920bad6e1dd",
+        "pieces": 521,
+        "confirmedAt": "2026-11-07T19:09:35.386Z",
+        "segmentedAt": "2026-11-07T18:04:01.639Z",
+        "proposalSummary": {
+          "WHEELS": {
+            "n": 135,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "MIRRORS": {
+            "n": 6,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "REAR_BUMPER": {
+            "n": 3,
+            "confidence": 0.6,
+            "by": "shape"
+          },
+          "FRONT_BUMPER": {
+            "n": 3,
+            "confidence": 0.6,
+            "by": "shape"
+          }
+        },
+        "mapSummary": {
+          "WHEELS": {
+            "n": 135
+          },
+          "MIRRORS": {
+            "n": 6
+          },
+          "REAR_BUMPER": {
+            "n": 3
+          },
+          "FRONT_BUMPER": {
+            "n": 3
+          }
+        },
+        "gate": {
+          "verdict": "FULL",
+          "problems": [],
+          "warnings": [],
+          "limited": {},
+          "text": [],
+          "checks": {
+            "dimsM": [
+              1.738,
+              1.69,
+              4.5
+            ],
+            "wheels": [
+              {
+                "diameterM": 0.72,
+                "bottomMm": 3
+              },
+              {
+                "diameterM": 0.72,
+                "bottomMm": 2
+              },
+              {
+                "diameterM": 0.72,
+                "bottomMm": 0
+              },
+              {
+                "diameterM": 0.72,
+                "bottomMm": 0
+              }
+            ],
+            "stockSpoilerSeparate": false,
+            "singlePiece": false
+          }
+        },
+        "name": "Volkswagen Beetle Type 1"
+      }
+    ]
+  }
+}

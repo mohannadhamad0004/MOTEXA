@@ -79,10 +79,10 @@ export function TowCompaniesPage() {
       accessibilityRole="button"
       accessibilityState={{ selected: view === k }}
       onPress={() => setView(k)}
-      style={{ flex: 1, minHeight: 40, borderRadius: 20, flexDirection: d.row, alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: view === k ? "#E0A36F" : "transparent" }}
+      style={{ flex: 1, minHeight: 40, borderRadius: 20, flexDirection: d.row, alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: view === k ? d.fill : "transparent" }}
     >
-      <Ionicons name={icon} size={17} color={view === k ? "#332218" : d.muted} />
-      <Text style={{ color: view === k ? "#332218" : d.ink, fontSize: 13, fontWeight: "700" }}>{d.t(en, ar)}</Text>
+      <Ionicons name={icon} size={17} color={view === k ? d.fillInk : d.muted} />
+      <Text style={{ color: view === k ? d.fillInk : d.ink, fontSize: 13, fontWeight: "700" }}>{d.t(en, ar)}</Text>
     </InteractiveButton>
   );
 
@@ -93,7 +93,7 @@ export function TowCompaniesPage() {
         {toggle("list", "List", "قائمة", "list-outline")}
         {toggle("map", "Map", "خريطة", "map-outline")}
       </View>
-      <View style={{ flexDirection: d.row, alignItems: "center", gap: 10, borderRadius: 17, borderWidth: 1, borderColor: d.border, backgroundColor: d.dark ? "#3A2E24" : "#FFF8ED", paddingHorizontal: 14, marginBottom: 12 }}>
+      <View style={{ flexDirection: d.row, alignItems: "center", gap: 10, borderRadius: 17, borderWidth: 1, borderColor: d.border, backgroundColor: d.paper, paddingHorizontal: 14, marginBottom: 12 }}>
         <Ionicons name="search-outline" size={20} color={d.muted} />
         <TextInput
           value={q}
@@ -111,9 +111,9 @@ export function TowCompaniesPage() {
             accessibilityRole="button"
             accessibilityState={{ selected: filter === f.k }}
             onPress={() => setFilter(f.k)}
-            style={{ paddingHorizontal: 14, minHeight: 38, borderRadius: 19, borderWidth: 1, alignItems: "center", justifyContent: "center", borderColor: filter === f.k ? "#E0A36F" : d.border, backgroundColor: filter === f.k ? "#E0A36F" : "transparent" }}
+            style={{ paddingHorizontal: 14, minHeight: 38, borderRadius: 19, borderWidth: 1, alignItems: "center", justifyContent: "center", borderColor: filter === f.k ? d.fill : d.border, backgroundColor: filter === f.k ? d.fill : "transparent" }}
           >
-            <Text style={{ color: filter === f.k ? "#332218" : d.ink, fontSize: 13, fontWeight: "600" }}>
+            <Text style={{ color: filter === f.k ? d.fillInk : d.ink, fontSize: 13, fontWeight: "600" }}>
               {d.t(f.en, f.ar)}
               {data ? ` (${count(f.k)})` : ""}
             </Text>

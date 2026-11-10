@@ -1,6 +1,6 @@
 import { publicProviderMedia } from "../services/public-provider-presentation.js";
 import { freeDriversNear } from "../services/tow-cards.js";
-import {publishedVehicleList} from "../services/vehicle-taxonomy.js";
+import {managedVehicleList} from "../services/vehicle-taxonomy.js";
 import express, { Router } from "express";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -53,7 +53,7 @@ const productInclude = {
   fitments: { orderBy: { position: "asc" as const } },
   shop: { select: { id: true, shopName: true, city: true } },
   // published 3D parts only (a customer never sees a draft); drives the "3D · View on my car" badge and the "Front + rear" label
-  accessory3d: { where: { status: "PUBLISHED" as const }, select: { kitPart: true, accessoryType: true, fits: { select: { generationId: true } } } },
+  accessory3d: { where: { status: "PUBLISHED" as const,deactivatedAt:null }, select: { kitPart: true, accessoryType: true, fits: { select: { generationId: true } } } },
 };
 type ProductRow = Prisma.PartsProductGetPayload<{ include: typeof productInclude }>;
 
@@ -359,8 +359,7 @@ router.get("/shops/:id/storefront", async (req, res) => {
 // fixed, so it is sent in one go and the client narrows it. Each model carries its generations (years may overlap).
 router.get("/vehicle-list", async (req, res) => {
   try {
-    const fitment=req.query.purpose==="fitment"&&["PARTS_PROVIDER","ADMIN","SUPER_ADMIN"].includes(res.locals.authUser.role);
-    const vehicles=await prisma.$transaction(tx=>publishedVehicleList(tx,fitment));
+    const vehicles=await prisma.$transaction(tx=>managedVehicleList(tx));
     return res.json({ success: true, vehicles });
   } catch (e) {
     return fail(res, "Vehicle list error", e);
@@ -418,12 +417,17 @@ export function readPoint(query: any): { lat: number; lng: number } | null | str
   return inBox(p.lat, p.lng) ? p : GEO_BOX_MESSAGE;
 }
 
-/** Straight-line distance from `from` to a company: from its base point, else from the centre of its city. */
+/** Straight-line distance (whole km: provider positions are not exact outside a job) from `from` to a company: from its base point, else from the centre of its city. */
 export function distanceTo(from: { lat: number; lng: number }, c: { city: string; baseLat: number | null; baseLng: number | null }) {
-  if (c.baseLat !== null && c.baseLng !== null) return { distanceKm: Math.round(haversineKm(from, { lat: c.baseLat, lng: c.baseLng }) * 10) / 10, distanceSource: "base" as const };
+  const km = exactKmTo(from, c);
+  const source = c.baseLat !== null && c.baseLng !== null ? ("base" as const) : ("city" as const);
+  return km === null ? { distanceKm: null, distanceSource: null } : { distanceKm: Math.round(km), distanceSource: source };
+}
+/** The exact distance, used only for sorting; customers get it rounded (distanceTo). */
+export function exactKmTo(from: { lat: number; lng: number }, c: { city: string; baseLat: number | null; baseLng: number | null }) {
+  if (c.baseLat !== null && c.baseLng !== null) return haversineKm(from, { lat: c.baseLat, lng: c.baseLng });
   const centre = cityCentre(c.city);
-  if (centre) return { distanceKm: Math.round(haversineKm(from, centre) * 10) / 10, distanceSource: "city" as const };
-  return { distanceKm: null, distanceSource: null };
+  return centre ? haversineKm(from, centre) : null;
 }
 
 // ?city= &q= (company name) contains, case-insensitive. ?serviceCity= company city OR a service city contains it. ?truckType= at least one APPROVED truck of that type.
@@ -470,6 +474,7 @@ router.get("/tow/companies", async (req, res) => {
     const freeBy = new Map<string, number>();
     for (const d of await freeDriversNear(null)) freeBy.set(d._companyId, (freeBy.get(d._companyId) ?? 0) + 1);
     const rated = await prisma.towReview.groupBy({ by: ["companyId"], _avg: { stars: true }, _count: { _all: true } });
+    const exact = new Map(companies.map((c) => [c.id, point ? exactKmTo(point, c) : null]));
     const rows = companies
       // A company with no approved truck has nothing to offer a customer yet, so it is not listed.
       .filter((c) => c.trucks.length > 0)
@@ -494,7 +499,7 @@ router.get("/tow/companies", async (req, res) => {
       }))
       .filter((c) => !availableOnly || c.availableTrucks > 0)
       .sort((a, b) => {
-        const km = (x: object) => (x as { distanceKm?: number | null }).distanceKm ?? Infinity;
+        const km = (x: { id: string }) => exact.get(x.id) ?? Infinity;
         const byDistance = sortRaw === "nearest" ? km(a) - km(b) : 0;
         return (Number.isNaN(byDistance) ? 0 : byDistance) || (sortRaw === "available" ? b.availableTrucks - a.availableTrucks : 0) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
       });

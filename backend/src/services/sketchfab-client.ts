@@ -1,4 +1,4 @@
-import {fail, digest} from "./vehicle3d-validation.js";
+import {fail, digest, Vehicle3DError} from "./vehicle3d-validation.js";
 
 export const MAX_SOURCE_BYTES = 128 * 1024 * 1024;
 export type AcceptedLicense = "CC0" | "CC BY" | "CC BY-SA";
@@ -11,13 +11,16 @@ export type SketchfabInspection = {
 /** Exact hosts and model-page paths only. Query/fragment are discarded, never fetched. */
 export function parseSketchfabUrl(value: unknown): {uid: string; url: string} {
   if (typeof value !== "string" || value.length > 2000 || /[\x00-\x20\x7f\\]/.test(value.trim()))
-    return fail("BAD_LINK", "Enter a valid Sketchfab model URL.");
+    return fail("INVALID_SKETCHFAB_URL", "Enter a valid Sketchfab model URL.");
   let u: URL;
-  try { u = new URL(value.trim()); } catch { return fail("BAD_LINK", "Enter a valid Sketchfab model URL."); }
+  try { u = new URL(value.trim()); } catch { return fail("INVALID_SKETCHFAB_URL", "Enter a valid Sketchfab model URL."); }
   if (u.protocol !== "https:" || !["sketchfab.com", "www.sketchfab.com"].includes(u.hostname) || u.port || u.username || u.password)
-    return fail("BAD_LINK", "Enter a valid Sketchfab model URL.");
-  const match = u.pathname.match(/^\/3d-models\/(?:[a-z0-9][a-z0-9-]*-)?([a-f0-9]{32})\/?$/i);
-  if (!match) return fail("BAD_LINK", "Enter a valid Sketchfab model URL.");
+    return fail("INVALID_SKETCHFAB_URL", "Enter a valid Sketchfab model URL.");
+  const segment = u.pathname.match(/^\/3d-models\/([^/]+)\/?$/)?.[1];
+  let slug = "";
+  try { slug = segment ? decodeURIComponent(segment) : ""; } catch { /* Invalid escaping is an invalid model URL. */ }
+  const match = !/[\/\\\x00-\x20\x7f]/.test(slug) ? slug.match(/(?:^|-)([a-f0-9]{32})$/i) : null;
+  if (!match) return fail("INVALID_SKETCHFAB_URL", "Enter a valid Sketchfab model URL.");
   const uid = match[1]!.toLowerCase();
   return {uid, url: `https://sketchfab.com/3d-models/${uid}`};
 }
@@ -51,7 +54,7 @@ export function classifyLicense(license: unknown): AcceptedLicense | null {
 }
 export function inspectMetadata(m: any, uid: string, now = new Date()): SketchfabInspection {
   if (m?.uid !== uid || !text(m.name) || !text(m.user?.displayName ?? m.user?.username))
-    return fail("SKETCHFAB_API_FAILED", "Unable to read this Sketchfab model.",502);
+    return fail("SKETCHFAB_UNAVAILABLE", "Sketchfab returned invalid model metadata.",502);
   const licenseClass = classifyLicense(m.license), downloadable = m.isDownloadable === true;
   const paid = typeof m.price === "number" && m.price > 0 || m.isPurchasable === true;
   const refusalCode = !downloadable ? "NOT_DOWNLOADABLE" : !licenseClass || paid ? "LICENSE_NOT_ALLOWED" : null;
@@ -67,7 +70,7 @@ export function inspectMetadata(m: any, uid: string, now = new Date()): Sketchfa
     licenseClass,downloadable,allowed:!refusalCode,refusalCode,inspectedAt:now.toISOString()};
 }
 export function assertImportAllowed(m: SketchfabInspection) {
-  if (!m.downloadable) return fail("NOT_DOWNLOADABLE", "This model is not downloadable through Sketchfab.",409);
+  if (!m.downloadable) return fail("MODEL_NOT_DOWNLOADABLE", "This model is not downloadable through Sketchfab.",409);
   if (!m.allowed || !m.licenseClass) return fail("LICENSE_NOT_ALLOWED", "This model cannot be imported because its license does not allow the required use.",409);
 }
 /** Only download hosts documented/used by Sketchfab. No arbitrary S3 bucket or user-supplied URL. */
@@ -87,17 +90,28 @@ async function bounded(response: Response, max: number, code: string): Promise<B
   } finally { await reader.cancel().catch(()=>{}); reader.releaseLock(); }
   return Buffer.concat(chunks,size);
 }
-export function createSketchfabClient(options: {token?: string; fetcher?: typeof fetch} = {}) {
+export function createSketchfabClient(options: {token?: string; accessToken?: string; fetcher?: typeof fetch} = {}) {
   const fetcher=options.fetcher??fetch;
   const api=async(endpoint:string)=>{
-    const token=options.token??process.env.SKETCHFAB_API_TOKEN;
-    if (!token?.trim()) return fail("SKETCHFAB_API_FAILED","Sketchfab inspection is unavailable. Check backend configuration.",503);
+    const oauth=(options.accessToken??(options.token===undefined?process.env.SKETCHFAB_ACCESS_TOKEN:undefined))?.trim();
+    const token=(options.token??process.env.SKETCHFAB_API_TOKEN)?.trim();
+    // Sketchfab's Download API requires OAuth. A personal API token remains valid for metadata inspection.
+    const download=endpoint.endsWith('/download');
+    if (!oauth && (download || !token)) return fail("SKETCHFAB_TOKEN_MISSING",download?"Set the backend Sketchfab OAuth access token before downloading.":"Sketchfab credentials are missing from the backend.",503);
     try {
-      const r=await fetcher(`https://api.sketchfab.com/v3/${endpoint}`,{headers:{Authorization:`Token ${token.trim()}`},redirect:"error",signal:AbortSignal.timeout(20000)});
+      const r=await fetcher(`https://api.sketchfab.com/v3/${endpoint}`,{headers:{Authorization:oauth?`Bearer ${oauth}`:`Token ${token}`},redirect:"error",signal:AbortSignal.timeout(20000)});
       if(r.status===404)return fail("SKETCHFAB_NOT_FOUND","Unable to read this Sketchfab model.",404);
-      if(!r.ok)return fail("SKETCHFAB_API_FAILED","Unable to read this Sketchfab model.",502);
-      return JSON.parse((await bounded(r,1024*1024,"SKETCHFAB_API_FAILED")).toString("utf8"));
-    } catch(e) { if (e instanceof Error && "code" in e) throw e; return fail("SKETCHFAB_API_FAILED","Unable to read this Sketchfab model.",502); }
+      if(r.status===401||r.status===403)return fail("SKETCHFAB_UNAUTHORIZED","Sketchfab rejected the backend credential. Check its type, expiry and download access.",502);
+      if(r.status===429)return fail("SKETCHFAB_RATE_LIMITED","Sketchfab is rate limiting requests. Try again later.",429);
+      if(!r.ok)return fail("SKETCHFAB_UNAVAILABLE","Sketchfab is temporarily unavailable.",502);
+      const body=await bounded(r,1024*1024,"SKETCHFAB_UNAVAILABLE");
+      try{return JSON.parse(body.toString("utf8"));}catch{return fail("SKETCHFAB_UNAVAILABLE","Sketchfab returned an invalid response.",502);}
+    } catch(e) {
+      if (e instanceof Vehicle3DError) throw e;
+      const cause=(e as {cause?:{code?:string};code?:string})?.cause?.code??(e as {code?:string})?.code;
+      console.warn("Sketchfab transport failed.",{operation:download?"download-link":"metadata",cause:typeof cause==="string"&&/^[A-Z0-9_]{1,60}$/.test(cause)?cause:"timeout-or-network"});
+      return fail("NETWORK_ERROR","The backend could not connect to Sketchfab.",502);
+    }
   };
   return {
     inspect:async(value:unknown)=>{const {uid}=parseSketchfabUrl(value);return inspectMetadata(await api(`models/${uid}`),uid);},

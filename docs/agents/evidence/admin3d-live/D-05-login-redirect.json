@@ -1,0 +1,24 @@
+{
+  "url": "http://127.0.0.1:8085/auth/login",
+  "text": "\nMOTEXA\nEN\nAR\n\n\n\n\nWelcome Back\nSign in\n01 / ACCESS\nYour world. Beautifully connected.\nEmail address\n\nPassword\nForgot password?\n\n\nSave sign-in details\nRemembers your email. Your device password manager can save and fill your password.\nEnter workspace\n\nNew to MOTEXA?\nCreate a new account\n\nSECURE BY DESIGN",
+  "inputs": [
+    {
+      "value": "",
+      "label": "Email address",
+      "placeholder": "Enter your email address",
+      "inputmode": null
+    },
+    {
+      "value": "",
+      "label": "Password",
+      "placeholder": "Enter your password",
+      "inputmode": null
+    }
+  ],
+  "events": [
+    {
+      "path": "/api/api/auth/me",
+      "status": 404
+    }
+  ]
+}

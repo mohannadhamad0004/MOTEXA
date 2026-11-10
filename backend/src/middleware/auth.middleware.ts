@@ -270,3 +270,13 @@ export function requireCustomer(
 
   next();
 }
+
+/** Driver app access: a TOW_DRIVER login, or a tow company owner who drives too (the TowDriver link is checked by myDriver). */
+export function requireTowDriver(_req: Request, res: Response, next: NextFunction) {
+  const role = res.locals.authUser?.role;
+  if (role !== "TOW_DRIVER" && role !== "TOW_PROVIDER") {
+    res.status(403).json({ success: false, message: "Driver access required." });
+    return;
+  }
+  next();
+}

@@ -1,3 +1,4 @@
+import { errorBody } from "./error-codes.js";
 // Provider onboarding (tow companies and parts shops): ONE set of rules for both kinds.
 // Pattern follows the mechanic onboarding: register -> DRAFT -> fill in -> submit -> admin review -> NEEDS_CHANGES / APPROVED / REJECTED.
 // PENDING in the enum means "submitted, waiting for review".
@@ -340,7 +341,7 @@ export async function requireApprovedProvider(_req: Request, res: Response, next
     if (u?.role === "TOW_PROVIDER") status = (await prisma.towCompanyProfile.findUnique({ where: { userId: u.id }, select: { verificationStatus: true } }))?.verificationStatus;
     else if (u?.role === "PARTS_PROVIDER") status = (await prisma.partsShopProfile.findUnique({ where: { userId: u.id }, select: { verificationStatus: true } }))?.verificationStatus;
     if (status !== "APPROVED") {
-      res.status(403).json({ success: false, message: "Your application has not been approved yet." });
+      res.status(403).json(errorBody("Your application has not been approved yet."));
       return;
     }
     next();

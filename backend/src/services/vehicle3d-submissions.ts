@@ -11,6 +11,7 @@ import {requirePartsActor} from "./vehicle-taxonomy.js";
 import { genKey } from "../generations.js";
 import { REPO_ROOT, atomicWrite, catalogFiles, readManifest, safeKey, type ModelMetadata, type ViewerConfig } from "./vehicle3d-catalog.js";
 import { fail, digest, normalizeVehicle, verifyViewer } from "./vehicle3d-validation.js";
+import { generationMode, paidGenerationEnabled, testProviderRuntime } from "./generation-runtime.js";
 
 import {PRIVATE_3D_DIR,VIEWS,privatePath,storePrivate,removePrivate,type PhotoView} from "./vehicle3d-private-assets.js";
 export {PRIVATE_3D_DIR,VIEWS,privatePath,storePrivate} from "./vehicle3d-private-assets.js";
@@ -18,11 +19,12 @@ type Tx=Prisma.TransactionClient;
 export type Runner=<T>(fn:(tx:Tx)=>Promise<T>)=>Promise<T>;
 const missing=():never=>fail("SUBMISSION_NOT_FOUND","Submission not found.",404);
 export function submissionShape(s: Vehicle3DSubmission) {
+  const blocked = !testProviderRuntime() && (s.generationMode === "mock" || s.provider === "MOCK");
   return { id: s.id, garageCarId: s.garageCarId, make: s.make, model: s.model, generationId: s.generationId,
-    generationName: s.generationName, year: s.year, status: s.status, reviewNotes: s.reviewNotes,
+    generationName: s.generationName, year: s.year, status: blocked ? "FAILED" : s.status, reviewNotes: s.reviewNotes,
     submittedAt: s.submittedAt, reviewedAt: s.reviewedAt, createdAt: s.createdAt, updatedAt: s.updatedAt,
-    approvedModel3dKey: s.approvedModel3dKey, hasModel: !!s.privateModelPath, generationMode: s.generationMode,
-    failureReason: s.failureReason, validation: s.validation, lengthM: s.lengthM,
+    approvedModel3dKey: s.approvedModel3dKey, hasModel: !blocked && !!s.privateModelPath, generationMode: s.generationMode,
+    failureReason: blocked ? "An old test result is unavailable. A real generation is required." : s.failureReason, validation: blocked ? null : s.validation, lengthM: s.lengthM,
     photos: Object.fromEntries(VIEWS.map(v => [v, !!s[`${v}PhotoPath`]])),
     initialApprovedAt:s.initialApprovedAt,provider:s.provider, providerState:s.providerState, providerProgress:s.providerProgress, generationStage:s.generationStage,
     generationRevision:s.generationRevision,generationErrorCode:s.generationErrorCode,catalogConsentAt:s.catalogConsentAt,
@@ -95,6 +97,12 @@ export function createSubmissionService(run: Runner = work => prisma.$transactio
       const s = await owned(tx, uid, id, true);
       if(!s.initialApprovedAt||!s.initialApprovedByUserId)return fail("INITIAL_REVIEW_REQUIRED","Parts Admin must approve this request before generation.",409);
       if(s.status==="PROCESSING")return submissionShape(s);
+      if(s.generationId){
+        await tx.$queryRaw`SELECT "id" FROM "VehicleGeneration" WHERE "id"=${s.generationId} FOR UPDATE`;
+        const g=await tx.vehicleGeneration.findUniqueOrThrow({where:{id:s.generationId}}),request=await tx.vehicleCatalogRequest.findUnique({where:{submissionId:id}});
+        if(g.isPublished&&g.model3dKey&&request){const approval=await tx.auditLog.findFirst({where:{action:"VEHICLE_REQUEST_INITIAL_APPROVE",targetId:request.id},orderBy:{createdAt:"desc"}});if((approval?.details as {existingModelKey?:string}|null)?.existingModelKey!==g.model3dKey)return fail("DUPLICATE_REQUEST","This generation now has a published model. Review that model before approving a replacement.",409);}
+        if(await tx.vehicle3DSubmission.findFirst({where:{id:{not:id},generationId:s.generationId,deletedAt:null,status:{in:["PROCESSING","READY","SUBMITTED"]},initialApprovedAt:{not:null}},select:{id:true}}))return fail("DUPLICATE_REQUEST","Another reviewed request already has a running or reviewable model for this generation. Review that candidate first.",409);
+      }
       editable(s);
       if (consent !== true) return fail("CONSENT_REQUIRED", "Confirm ownership and processing consent.");
       if (VIEWS.some(v => !s[`${v}PhotoPath`])) return fail("PHOTOS_REQUIRED", "Upload all four guided photos first.");
@@ -103,9 +111,9 @@ export function createSubmissionService(run: Runner = work => prisma.$transactio
         const resumed=await tx.vehicle3DSubmission.update({where:{id},data:{status:"PROCESSING",generationStage:s.rawModelPath?"PREPARING":"GENERATING",generationErrorCode:null,failureReason:null,leaseToken:null,leaseUntil:null,nextPollAt:null,processingStartedAt:new Date()}});
         await audit(tx,uid,"GENERATION_RESUME",id);return submissionShape(resumed);
       }
-      const mode=process.env.VEHICLE3D_MODE==="real"?"meshy":"mock";
+      const mode=generationMode();
       if(mode==="meshy" && !process.env.MESHY_API_KEY)return fail("PROVIDER_KEY_MISSING","Real generation requires a backend Meshy key.",503);
-      if(mode==="meshy" && process.env.MESHY_ALLOW_PAID_GENERATION!=="1")return fail("LIVE_OPT_IN_REQUIRED","Paid generation is disabled. Enable it explicitly for an intentional live test.",409);
+      if(mode==="meshy" && !paidGenerationEnabled())return fail("LIVE_OPT_IN_REQUIRED","Paid generation is disabled on this server.",409);
       const history=Array.isArray(s.generationHistory)?s.generationHistory:[];
       if(s.generationRevision)history.push({revision:s.generationRevision,provider:s.provider,taskId:s.providerTaskId,state:s.providerState,raw:s.rawModelPath,prepared:s.privateModelPath,finishedAt:s.providerFinishedAt?.toISOString()??null});
       const updated=await tx.vehicle3DSubmission.update({where:{id},data:{status:"PROCESSING",generationMode:mode,provider:mode==="mock"?"MOCK":"MESHY",
@@ -143,6 +151,7 @@ export function createSubmissionService(run: Runner = work => prisma.$transactio
     },
     asset: (uid: string, id: string, asset: string, admin = false) => run(async tx => {
       const s = admin ? await tx.vehicle3DSubmission.findFirst({where:{id,deletedAt:null}})??missing() : await owned(tx, uid, id);
+      if(asset==="model"&&!testProviderRuntime()&&(s.generationMode==="mock"||s.provider==="MOCK"))return fail("TEST_FIXTURE_ONLY","Test results are unavailable outside automated tests.",409);
       const key = asset === "model" ? s.privateModelPath : (VIEWS as readonly string[]).includes(asset) ? s[`${asset as PhotoView}PhotoPath`] : null;
       if (!key || !existsSync(privatePath(key))) return missing();
       return { bytes: readFileSync(privatePath(key)), mime: asset === "model" ? "model/gltf-binary" : "image/jpeg" };

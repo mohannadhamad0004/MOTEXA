@@ -1,3 +1,4 @@
+import { errorBody } from "../services/error-codes.js";
 import { Router } from "express";
 import express from "express";
 import type { Prisma } from "../generated/prisma/client.js";
@@ -20,9 +21,9 @@ const shopSide = [requireAuth, requirePartsProvider, requireApprovedProvider, js
 const admin = [requireAuth, requirePartsAdmin];
 
 const send = (res: any, e: unknown, label: string) => {
-  if (e instanceof OrderError) return res.status(e.code).json({ success: false, message: e.message });
+  if (e instanceof OrderError) return res.status(e.code).json(errorBody(e.message));
   console.error(`${label}:`, e);
-  return res.status(500).json({ success: false, message: "Internal server error." });
+  return res.status(500).json(errorBody("Internal server error."));
 };
 const id = (v: unknown) => String(v);
 const firstName = (full: string) => full.trim().split(/\s+/)[0] || full;
@@ -85,8 +86,10 @@ const shopInfo = (o: Row) => ({
   lng: o.shop.baseLng === null ? null : Math.round(o.shop.baseLng * 1000) / 1000,
 });
 const forCustomer = (o: Row, unread = 0) => ({ ...common(o, unread), shop: shopInfo(o), canCancel: customerCanCancel(o.status) });
+// The customer's delivery pin and note are the shop's only while the order is open; afterwards just the area stays.
 const forShop = (o: Row, unread = 0) => ({
   ...common(o, unread),
+  ...(o.fulfilment === "DELIVERY" && FINAL.includes(o.status) ? { delivery: { lat: null, lng: null, area: o.deliveryArea, note: null } } : {}),
   customer: { firstName: firstName(o.customer.fullName) },
   // the shop's exact point, for the owner's own route
   shopPoint: o.shop.baseLat !== null && o.shop.baseLng !== null ? { lat: o.shop.baseLat, lng: o.shop.baseLng } : null,

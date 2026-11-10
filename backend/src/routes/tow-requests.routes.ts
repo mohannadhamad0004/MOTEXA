@@ -1,3 +1,4 @@
+import { errorBody } from "../services/error-codes.js";
 import { DOCUMENTS_EXPIRED_MESSAGE, expiredDocuments, hasExpiredDocument, noExpiredDocument } from "../services/truck-eligibility.js";
 import { Router } from "express";
 import express from "express";
@@ -6,7 +7,7 @@ import { prisma } from "../prisma.js";
 import { readPair } from "../geo.js";
 import { requireAuth, requireCustomer, requireTowProvider } from "../middleware/auth.middleware.js";
 import { notify, requireApprovedProvider } from "../services/provider-onboarding.js";
-import { DispatchError, checkRequestedDriver, livePoint, routeNewRequest, stageOf } from "../services/tow-dispatch.js";
+import { DispatchError, checkRequestedDriver, endTrail, livePoint, routeNewRequest, stageOf } from "../services/tow-dispatch.js";
 import { driverCards, freeDriversNear } from "../services/tow-cards.js";
 import { haversineKm } from "../geo.js";
 
@@ -51,10 +52,10 @@ const PROBLEMS = ["WONT_START", "ACCIDENT", "FLAT_TIRE", "OVERHEATING", "OUT_OF_
 const text = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 const idParam = (v: unknown) => String(v);
 const send = (res: any, e: unknown, label: string) => {
-  if (e instanceof HttpError) return res.status(e.code).json({ success: false, message: e.message, ...e.extra });
-  if (e instanceof DispatchError) return res.status(e.code).json({ success: false, message: e.message });
+  if (e instanceof HttpError) return res.status(e.code).json(errorBody(e.message, e.extra));
+  if (e instanceof DispatchError) return res.status(e.code).json(errorBody(e.message));
   console.error(`${label}:`, e);
-  return res.status(500).json({ success: false, message: "Internal server error." });
+  return res.status(500).json(errorBody("Internal server error."));
 };
 const log = (tx: Prisma.TransactionClient, actorId: string, action: string, targetId: string, details: object = {}) =>
   tx.auditLog.create({ data: { actorId, action, targetId, details } });
@@ -128,7 +129,7 @@ const customerView = (r: Row, cards: Cards) => {
     contactPhone: undefined, // the number the customer typed is not echoed back
     company: { id: r.company.id, name: r.company.companyName, city: r.company.city, verified: r.company.verificationStatus === "APPROVED" },
     truck: truckSnapshot(r),
-    canCancel: ["REQUESTED", "ACCEPTED", "EN_ROUTE"].includes(r.status),
+    canCancel: ["REQUESTED", "ACCEPTED", "EN_ROUTE"].includes(r.status) && !r.loadingAt, // not once the car is being loaded
     // after the driver is on the way, cancelling still works but needs a reason and the company is told
     cancelWarning: r.status === "EN_ROUTE",
     // the open offer: the customer sees how long it waits; a request nobody answered in time says so
@@ -243,10 +244,12 @@ router.post("/requests/tow", ...customerSide, async (req, res) => {
       await log(tx, me.id, "TOW_REQUEST_CREATED", created.id, { companyId: company.id, driverId });
       return created.id;
     });
-    await routeNewRequest(id);
+    await routeNewRequest(id).catch((e) => console.error("Tow request routing failed (request kept, sweeper will time it out):", e)); // the request exists: never answer 500 for it
     const row = await prisma.towRequest.findUniqueOrThrow({ where: { id }, include });
     return res.status(201).json({ success: true, request: (await viewAll([row]))[0] });
   } catch (e) {
+    // the partial unique index (one active request per customer + company) caught a double tap / second device
+    if ((e as { code?: string }).code === "P2002") return send(res, new HttpError(409, "You already have an active request with this company."), "Tow request create error");
     return send(res, e, "Tow request create error");
   }
 });
@@ -288,13 +291,13 @@ router.patch("/requests/tow/:id/cancel", ...customerSide, async (req, res) => {
     await prisma.$transaction(async (tx) => {
       // Atomic on the status we read: a request that moved on in the meantime (e.g. EN_ROUTE) is refused.
       const done = await tx.towRequest.updateMany({
-        where: { id: current.id, customerId: me.id, status: { in: ["REQUESTED", "ACCEPTED", "EN_ROUTE"] } },
+        where: { id: current.id, customerId: me.id, status: { in: ["REQUESTED", "ACCEPTED", "EN_ROUTE"] }, loadingAt: null },
         data: { status: "CANCELLED", cancelledAt: new Date(), cancelledBy: "CUSTOMER", cancelReason: reason },
       });
       if (!done.count) throw new HttpError(409, "This request can no longer be cancelled.");
       const fresh = await tx.towRequest.findUniqueOrThrow({ where: { id: current.id }, select: { assignedTruckId: true } });
       await releaseTruck(tx, fresh.assignedTruckId);
-      await tx.towJobTrail.deleteMany({ where: { requestId: current.id } });
+      await endTrail(tx, current.id, current.driverId);
       await log(tx, me.id, "TOW_REQUEST_CANCELLED", current.id, { by: "CUSTOMER", reason, late });
     });
     const owner = await prisma.towCompanyProfile.findUniqueOrThrow({ where: { id: current.companyId }, select: { userId: true } });
@@ -442,7 +445,7 @@ router.patch("/tow/me/requests/:id/cancel", ...companySide, async (req, res) => 
       });
       if (!done.count) throw new HttpError(409, "Only an accepted or on-the-way request can be cancelled.");
       await releaseTruck(tx, row.assignedTruckId);
-      await tx.towJobTrail.deleteMany({ where: { requestId: row.id } });
+      await endTrail(tx, row.id, row.driverId);
       await log(tx, me.id, "TOW_REQUEST_CANCELLED", row.id, { by: "COMPANY", reason });
     });
     await notify([row.customerId, ...(row.driver && row.driver.userId !== me.id ? [row.driver.userId] : [])], ["Tow request cancelled", "تم إلغاء طلب السحب"], [reason, reason]);

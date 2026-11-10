@@ -1,0 +1,32 @@
+{
+  "key": "bmw-x5-e53",
+  "generationId": "65f8f72b-d63d-4ffa-8a62-47fc8d0bbc56",
+  "A01": {
+    "taxonomy": {
+      "isActive": false,
+      "isPublished": true,
+      "model3dKey": "bmw-x5-e53"
+    },
+    "managementPublished": false,
+    "runtimeIncludesKey": false,
+    "screenText": "\nVehicle catalog\nBrands, models, generations and verified 3D assets.\n3D workspace\nCustomer vehicle requests\nCatalog\n3D models\nSearch brand, model or generation\nAdd brand\nAdd model\nAdd generation\nBMW · Active\nEdit brand\nX5 · Active\nEdit model\nE53 · 1999–2006 · 3D available · Inactive\nEdit generation\nE70 · 2006–2013 · No published 3D\nEdit generation\nF15 · 2013–2018 · No published 3D\nEdit generation\nG05 · 2018–2027 · No published 3D\nEdit generation"
+  },
+  "taxonomyRestore": {
+    "status": 200
+  },
+  "A03": {
+    "hideStatus": 200,
+    "map": {
+      "status": 404,
+      "body": {
+        "success": false,
+        "code": "NO_3D_CAR",
+        "message": "This car model is not in the active catalog."
+      }
+    },
+    "runtimeIncludesKey": false
+  },
+  "publicationRestore": {
+    "status": 200
+  }
+}

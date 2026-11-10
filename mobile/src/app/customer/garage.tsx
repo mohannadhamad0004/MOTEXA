@@ -7,6 +7,7 @@ import MotexaDialog from "../../components/MotexaDialog";
 import { useL } from "../../core/hooks/useL";
 import { useLoad } from "../../core/hooks/useLoad";
 import { submissionApi } from "../../features/vehicle3d/api";
+import {useRuntimeModels} from "../../features/car3d/runtimeModels";
 import { GarageCarLabel } from "../../features/catalog/GarageSheets";
 import type { GarageCar } from "../../features/catalog/catalogService";
 import { activateCar, canAddGarageCar, deleteGarageCar, garageError, openAddGarageCar, openEditGarageCar, refreshGarage, useGarage } from "../../features/catalog/myCar";
@@ -16,6 +17,7 @@ export default function MyGarage() {
   const { garageCars, loaded, loading, busy, error } = useGarage();
   const { t } = useL();
   const privateModels=useLoad(()=>submissionApi.list(),[]);
+  const runtime=useRuntimeModels();
   const { g, row, align } = useGarageTheme();
   const [deleting, setDeleting] = useState<GarageCar | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -34,7 +36,8 @@ export default function MyGarage() {
       {!loaded ? <GText>{t("Loading Garage…", "جارٍ تحميل الكراج…")}</GText> : !garageCars.length && !error ? <Card><GText style={[gType.title, align]}>{t("Your Garage starts here", "كراجك يبدأ هنا")}</GText><GText soft style={[gType.bodySm, align, { marginTop: 8 }]}>{t("Save a car for matching parts and faster requests. You can also keep browsing without one.", "احفظ سيارة للقطع المناسبة والطلبات الأسرع. يمكنك أيضًا متابعة التصفح دون سيارة.")}</GText></Card> : null}
       {[...garageCars].sort((a, b) => Number(b.isActive) - Number(a.isActive)).map(car => <Card key={car.id} style={car.isActive ? { borderWidth: 1, borderColor: g.accent } : undefined}>
         <GarageCarLabel car={car} />
-        <GButton variant="secondary" label={privateModels.data?.some(s=>s.garageCarId===car.id&&s.hasModel)?t("View my 3D car","عرض سيارتي ثلاثية الأبعاد"):t("Create my 3D car", "إنشاء سيارتي ثلاثية الأبعاد")} style={{ marginTop: 12 }} onPress={() => router.push(`/customer/vehicle3d/${car.id}` as Href)} />
+        {runtime.some(m=>m.key===car.generation?.model3dKey)?<GButton variant="secondary" label={t("My car in 3D","سيارتي ثلاثية الأبعاد")} style={{marginTop:12}} onPress={()=>router.push({pathname:"/customer/car3d",params:{carId:car.id}})}/>:<><Note>{t("This managed generation has no published 3D model yet.","لا يوجد نموذج ثلاثي الأبعاد منشور لهذا الجيل بعد.")}</Note><GButton variant="secondary" label={t("Request my car in 3D","طلب سيارتي ثلاثية الأبعاد")} style={{marginTop:12}} onPress={()=>router.push({pathname:"/customer/vehicle-requests/[id]" as Href,params:{id:"new",garageCarId:car.id}} as Href)}/></>}
+        {privateModels.data?.some(s=>s.garageCarId===car.id)?<GButton variant="ghost" label={t("Track private 3D requests","متابعة الطلبات ثلاثية الأبعاد الخاصة")} onPress={()=>router.push(`/customer/vehicle3d/${car.id}` as Href)}/>:null}
         {car.isActive ? <GText style={[gType.caption, align, { marginTop: 10, color: g.accentText, fontWeight: "800" }]}>{t("★ Active car", "★ السيارة النشطة")}</GText> : <GButton variant="secondary" label={t("Set active", "تعيين كنشطة")} disabled={busy || loading || !!error} onPress={() => void change(() => activateCar(car.id))} style={{ marginTop: 12 }} />}
         <View style={[row, { gap: 12, marginTop: 8 }]}>
           <GButton flex variant="ghost" icon="create-outline" label={t("Edit", "تعديل")} disabled={busy || loading || !!error} onPress={() => openEditGarageCar(car.id)} />

@@ -18,6 +18,7 @@ import { VehiclePicker, useVehicleList } from "../catalog/VehiclePicker";
 import { router } from "expo-router";
 import { typesForCategory } from "../accessory3d/api";
 import { Dots, UploadBar } from "../fleet/steps";
+import { normalizeNumberText, strictNumber } from "../../core/constants/numbers";
 
 // The product form shared by the shop (provider) screen and the MOTEXA admin editor. It knows nothing about who is
 // saving: the caller passes onSubmit (provider or admin service) and onDone.
@@ -30,8 +31,8 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
   const { t, row, isArabic, align } = useL();
   const labels = usePartLabels();
   const [f, setF] = useState(initial);
-  const [price, setPrice] = useState(String(initial.price || ""));
-  const [stock, setStock] = useState(String(initial.stock || ""));
+  const [price, setPrice] = useState(String(initial.price ?? ""));
+  const [stock, setStock] = useState(String(initial.stock ?? ""));
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // five short steps: photos, name + category + condition, price + stock, which cars, optional 3D
@@ -73,9 +74,8 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
       if (CATALOG_GROUPS.some((g) => g.categories.some((c) => c.key === f.category && c.children))) return t("Choose a more specific category (for example Bulbs or Headlights under Lighting).", "اختر فئة أدق (مثل المصابيح أو الأضواء الأمامية ضمن الإضاءة).");
     }
     if (s === 2) {
-      const p = parseFloat(price || "0"), n = parseInt(stock || "0", 10);
-      if (!(p >= 0) || Number.isNaN(p)) return t("Enter a valid price.", "أدخل سعرًا صحيحًا.");
-      if (!(n >= 0) || Number.isNaN(n)) return t("Enter a valid stock quantity.", "أدخل كمية صحيحة.");
+      if (strictNumber(price, false, 9_999_999_999.99) === null) return t("Enter a price of 0 or more, with up to two decimal places and no letters.", "أدخل سعرًا من صفر فأكثر، بمنزلتين عشريتين كحد أقصى ودون أحرف.");
+      if (strictNumber(stock, true, 1_000_000) === null) return t("Enter a whole stock quantity from 0 to 1,000,000, without decimals or letters.", "أدخل كمية صحيحة من صفر إلى مليون، دون كسور أو أحرف.");
     }
     return null;
   };
@@ -85,7 +85,7 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
     setErr(null);
     setStep(step + 1);
   };
-  const save = async () => {
+  const save = async (open3D = false) => {
     // at least one car or Universal; every car from the vehicle list with a valid year range (the server checks the same)
     const cars = f.fitments.filter((x) => !isEmptyRow(x));
     for (const s of [1, 2]) {
@@ -104,12 +104,13 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
     try {
       const input: ProductInput = {
         ...f,
-        price: parseFloat(price || "0"),
-        stock: parseInt(stock || "0", 10),
+        price: strictNumber(price)!,
+        stock: strictNumber(stock, true)!,
         fitments: cars,
       };
       await onSubmit(input);
-      onDone();
+      if (open3D && product) router.push(`/provider/parts/accessory-3d/${product.id}`);
+      else onDone();
     } catch (e: any) {
       setErr(e.message);
     } finally {
@@ -224,8 +225,8 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
 
       {step === 2 ? (
         <Card>
-          <Input label={t("Price (₪)", "السعر (₪)")} value={price} keyboardType="decimal-pad" onChangeText={setPrice} />
-          <Input label={t("Stock quantity", "الكمية المتوفرة")} value={stock} keyboardType="number-pad" onChangeText={setStock} />
+          <Input label={t("Price (₪)", "السعر (₪)")} value={price} keyboardType="decimal-pad" onChangeText={v => setPrice(normalizeNumberText(v))} />
+          <Input label={t("Stock quantity", "الكمية المتوفرة")} value={stock} keyboardType="number-pad" onChangeText={v => setStock(normalizeNumberText(v))} />
         </Card>
       ) : null}
 
@@ -255,10 +256,10 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
           ) : null}
           <View style={[row, { gap: 10 }]}>
             <View style={{ flex: 1 }}>
-              <Input label={t("Year from", "من سنة")} value={String(x.yearFrom || "")} keyboardType="number-pad" onChangeText={(v) => setFit(i, { yearFrom: parseInt(v || "0", 10), generationId: undefined })} />
+              <Input label={t("Year from", "من سنة")} value={String(x.yearFrom || "")} keyboardType="number-pad" onChangeText={(v) => setFit(i, { yearFrom: strictNumber(v, true) ?? 0, generationId: undefined })} />
             </View>
             <View style={{ flex: 1 }}>
-              <Input label={t("Year to", "إلى سنة")} value={String(x.yearTo || "")} keyboardType="number-pad" onChangeText={(v) => setFit(i, { yearTo: parseInt(v || "0", 10), generationId: undefined })} />
+              <Input label={t("Year to", "إلى سنة")} value={String(x.yearTo || "")} keyboardType="number-pad" onChangeText={(v) => setFit(i, { yearTo: strictNumber(v, true) ?? 0, generationId: undefined })} />
             </View>
           </View>
           <Input label={t("Engine / trim (optional)", "المحرك / الفئة (اختياري)")} value={x.trim ?? ""} onChangeText={(v) => setFit(i, { trim: v })} />
@@ -283,7 +284,7 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
               ? product ? t("This part can be shown in 3D on customers' cars.", "يمكن عرض هذه القطعة ثلاثية الأبعاد على سيارات العملاء.") : t("Save the part first, then open it to add its 3D model. You can skip this step.", "احفظ القطعة أولًا ثم افتحها لإضافة نموذجها الثلاثي الأبعاد. يمكنك تخطي هذه الخطوة.")
               : t("3D is for body kits, exterior accessories and rims. Nothing to do here: save the part.", "الثلاثي الأبعاد لأطقم الهيكل والإكسسوارات الخارجية والجنوط. لا شيء هنا: احفظ القطعة.")}
           </Text>
-          {product && typesForCategory(f.category).length ? <Button variant="secondary" icon="cube-outline" label={t("Show it in 3D on customers' cars", "اعرضها ثلاثية الأبعاد على سيارات العملاء")} onPress={() => router.push(`/provider/parts/accessory-3d/${product.id}`)} /> : null}
+          {product && typesForCategory(f.category).length ? <Button variant="secondary" icon="cube-outline" disabled={busy} label={t("Save and request 3D", "حفظ وطلب نموذج ثلاثي الأبعاد")} onPress={() => void save(true)} /> : null}
         </Card>
       ) : null}
 
@@ -291,8 +292,8 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
       {err ? <Notice tone="danger" icon="alert-circle-outline">{err}</Notice> : null}
       <UploadBar />
       <View style={{ gap: 8 }}>
-        {step < STEPS.length - 1 ? <Button label={t("Next", "التالي")} onPress={next} /> : <Button label={isNew ? t("Add part", "إضافة القطعة") : t("Save changes", "حفظ التغييرات")} disabled={busy} onPress={save} />}
-        {step === 3 ? <Button variant="ghost" label={isNew ? t("Save without 3D", "حفظ بدون ثلاثي الأبعاد") : t("Save changes", "حفظ التغييرات")} disabled={busy} onPress={save} /> : null}
+        {step < STEPS.length - 1 ? <Button label={t("Next", "التالي")} onPress={next} /> : <Button label={isNew ? t("Add part", "إضافة القطعة") : t("Save changes", "حفظ التغييرات")} disabled={busy} onPress={() => void save()} />}
+        {step === 3 ? <Button variant="ghost" label={isNew ? t("Save without 3D", "حفظ بدون ثلاثي الأبعاد") : t("Save changes", "حفظ التغييرات")} disabled={busy} onPress={() => void save()} /> : null}
         {step > 0 ? <Button variant="ghost" label={t("Back", "رجوع")} onPress={() => { setErr(null); setStep(step - 1); }} /> : null}
       </View>
     </>

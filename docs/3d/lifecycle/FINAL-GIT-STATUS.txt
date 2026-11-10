@@ -1,0 +1,116 @@
+ M backend/prisma/schema.prisma
+ M backend/scripts/accessory-fit-check.mjs
+ M backend/scripts/test-vehicle3d-suite.mjs
+ M backend/scripts/vehicle3d-viewer-check.mjs
+ M backend/src/middleware/auth.middleware.ts
+ M backend/src/prisma.ts
+ M backend/src/routes/accessory3d.routes.ts
+ M backend/src/routes/catalog.routes.ts
+ M backend/src/routes/parts-orders.routes.ts
+ M backend/src/routes/parts.routes.ts
+ M backend/src/routes/tow-drivers.routes.ts
+ M backend/src/routes/tow-job-extras.routes.ts
+ M backend/src/routes/tow-requests.routes.ts
+ M backend/src/routes/tow.routes.ts
+ M backend/src/routes/vehicle3d.routes.ts
+ M backend/src/server.ts
+ M backend/src/services/accessory-autofit.ts
+ M backend/src/services/accessory3d.ts
+ M backend/src/services/garage.ts
+ M backend/src/services/provider-onboarding.ts
+ M backend/src/services/provider-portal.ts
+ M backend/src/services/tow-cards.ts
+ M backend/src/services/tow-dispatch.ts
+ M backend/src/services/vehicle-catalog-requests.ts
+ M backend/src/services/vehicle-taxonomy.ts
+ M backend/src/services/vehicle3d-imports.ts
+ M backend/src/services/vehicle3d-promotion.ts
+ M backend/src/services/vehicle3d-submissions.ts
+ M backend/src/services/vehicle3d-validation.ts
+ M backend/tests/accessory3d.test.ts
+ M backend/tests/autofit.test.ts
+ M backend/tests/bumper-viewer.test.mjs
+ M backend/tests/fit-qa-viewer.test.mjs
+ M backend/tests/managed-vehicle-catalog.test.ts
+ M backend/tests/meshy-generation.test.ts
+ M backend/tests/part-map-viewer.test.mjs
+ M backend/tests/provider-portal.test.ts
+ M backend/tests/sketchfab-lifecycle.test.ts
+ M docs/3d/CREDITS.md
+ M docs/3d/CUSTOMER-3D-WORKFLOW.md
+ M docs/3d/IMPLEMENTATION-REPORT.md
+ M docs/3d/models.json
+ M docs/3d/sketchfab-import/05-published-en-dark.png
+ M docs/3d/sketchfab-import/05-published-en-light.png
+ M docs/3d/sketchfab-import/ui-results.json
+ M docs/agents/STATUS.md
+ M mobile/src/app/customer/car3d.tsx
+ M mobile/src/app/customer/garage.tsx
+ M mobile/src/app/customer/towrequest/new.tsx
+ M mobile/src/app/driver/job/[id].tsx
+ M mobile/src/app/provider/parts/(tabs)/orders.tsx
+ M mobile/src/components/garage/cards.tsx
+ M mobile/src/core/config/api.ts
+ M mobile/src/features/accessory3d/ProviderOverview.tsx
+ M mobile/src/features/accessory3d/api.ts
+ M mobile/src/features/accessory3d/customer.tsx
+ M mobile/src/features/accessory3d/screens.tsx
+ M mobile/src/features/car3d/CarPreview.tsx
+ M mobile/src/features/car3d/models.ts
+ M mobile/src/features/car3d/runtimeModels.ts
+ M mobile/src/features/car3d/sceneHtml.ts
+ M mobile/src/features/department/PartsAdminHome.tsx
+ M mobile/src/features/department/PartsShopsPage.tsx
+ M mobile/src/features/department/TowCompaniesPage.tsx
+ M mobile/src/features/department/screens.tsx
+ M mobile/src/features/department/ui.tsx
+ M mobile/src/features/orders/orderBits.tsx
+ M mobile/src/features/parts/ProductForm.tsx
+ D mobile/src/features/parts/provider/OrdersSoon.tsx
+ M mobile/src/features/provider/portal/MediaPage.tsx
+ M mobile/src/features/provider/portal/types.ts
+ M mobile/src/features/requests/TowRequestForm.tsx
+ M mobile/src/features/shared/locationPolicy.ts
+ M mobile/src/features/vehicle3d/screens.tsx
+ M mobile/src/features/vehicleCatalog/importScreens.tsx
+ M mobile/src/features/vehicleCatalog/screens.tsx
+ M mobile/src/features/vehicleRequests/api.ts
+ M mobile/src/features/vehicleRequests/screens.tsx
+ M mobile/tests/e2e/sketchfab-import.cjs
+ M mobile/tests/location-reliability.test.mjs
+?? backend/prisma/migrations/20261113090000_tow_one_active_request/
+?? backend/prisma/migrations/20261114090000_3d_revision_management/
+?? backend/public/3d/manual-19febfb9-3b4a-4a5f-b2c0-ce33547da350-ad65d3b3205c45de.glb
+?? backend/scripts/3d-lifecycle-reconcile.ts
+?? backend/scripts/test-no-paid-provider.mjs
+?? backend/src/routes/vehicle3d-management.routes.ts
+?? backend/src/services/error-codes.ts
+?? backend/src/services/vehicle3d-management.ts
+?? backend/src/services/vehicle3d-public-assets.ts
+?? backend/src/services/vehicle3d-revisions.ts
+?? backend/tests/e36-rear-clearance.test.mjs
+?? backend/tests/error-codes.test.ts
+?? backend/tests/lifecycle-3d.test.ts
+?? backend/tests/review-fixes.test.ts
+?? docs/3d/SKETCHFAB-IMPORT.md
+?? docs/3d/WORKFLOW-REPAIR.md
+?? docs/3d/lifecycle/
+?? docs/3d/sketchfab-import/FINAL-GIT-STATUS.txt
+?? docs/3d/sketchfab-import/live/runtime/
+?? docs/3d/sketchfab-import/validation-results.json
+?? docs/agents/CODEX-REVIEW.md
+?? graphify-out/
+?? mobile/src/app/dept/3d/
+?? mobile/src/core/session/errorText.ts
+?? mobile/src/core/session/sessionExpiry.ts
+?? mobile/src/features/accessory3d/eligibility.ts
+?? mobile/src/features/accessory3d/management.tsx
+?? mobile/src/features/vehicleCatalog/lifecycleText.ts
+?? mobile/src/features/vehicleCatalog/modelApi.ts
+?? mobile/src/features/vehicleCatalog/modelScreens.tsx
+?? mobile/tests/3d-lifecycle.test.mjs
+?? mobile/tests/dept-contrast.test.mjs
+?? mobile/tests/e2e/3d-lifecycle.cjs
+?? mobile/tests/e2e/static-export.cjs
+?? mobile/tests/error-codes-parity.test.mjs
+?? mobile/tests/stock-visibility.test.mjs

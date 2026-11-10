@@ -1,0 +1,17 @@
+{
+  "at": "2026-11-10T13:56:55.055Z",
+  "before": {
+    "published": true,
+    "revision": 5
+  },
+  "hiddenMap": {
+    "status": 404,
+    "body": {
+      "success": false,
+      "code": "NO_3D_CAR",
+      "message": "This car model is not in the active catalog."
+    }
+  },
+  "customerIncludes": false,
+  "restore": 200
+}

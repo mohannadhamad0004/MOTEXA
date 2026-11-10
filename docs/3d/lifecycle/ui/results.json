@@ -1,0 +1,1193 @@
+{
+  "evidence": "Intercepted UI fixtures at 390px. Retained E36 and wing render in the production viewer. These captures do not prove live generation or fit approval.",
+  "results": [
+    {
+      "file": "01-shop-request-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "01-shop-part-photos-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "01-shop-submit-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "02-shop-status-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "03-admin-requests-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "03-admin-workspace-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "03-admin-request-list-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "04-approved-awaiting-start-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "04-generation-progress-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "05-vehicle-list-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-detail-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-edit-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-save-controls-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-unpublished-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-preview-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "07-accessory-list-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "08-accessory-detail-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "08-accessory-preview-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "08-accessory-unpublished-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "08-accessory-fit-review-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "12-generation-error-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "09-missing-car-request-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "10-existing-generation-request-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "10-existing-generation-status-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "11-view-on-car-action-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "11-customer-viewer-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "11-customer-accessory-off-en-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "01-shop-request-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "01-shop-part-photos-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "01-shop-submit-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "02-shop-status-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "03-admin-requests-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "03-admin-workspace-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "03-admin-request-list-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "04-approved-awaiting-start-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "04-generation-progress-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "05-vehicle-list-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-detail-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-edit-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-save-controls-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-unpublished-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-preview-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "07-accessory-list-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "08-accessory-detail-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "08-accessory-preview-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "08-accessory-unpublished-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "08-accessory-fit-review-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "12-generation-error-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "09-missing-car-request-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "10-existing-generation-request-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "10-existing-generation-status-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "11-view-on-car-action-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "11-customer-viewer-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "11-customer-accessory-off-en-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "English",
+      "fixture": true
+    },
+    {
+      "file": "01-shop-request-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "01-shop-part-photos-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "01-shop-submit-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "02-shop-status-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "03-admin-requests-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "03-admin-workspace-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "03-admin-request-list-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "04-approved-awaiting-start-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "04-generation-progress-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "05-vehicle-list-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-detail-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-edit-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-save-controls-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-unpublished-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-preview-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "07-accessory-list-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "08-accessory-detail-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "08-accessory-preview-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "08-accessory-unpublished-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "08-accessory-fit-review-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "12-generation-error-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "09-missing-car-request-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "10-existing-generation-request-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "10-existing-generation-status-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "11-view-on-car-action-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "11-customer-viewer-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "11-customer-accessory-off-ar-light.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "01-shop-request-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "01-shop-part-photos-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "01-shop-submit-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "02-shop-status-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "03-admin-requests-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "03-admin-workspace-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "03-admin-request-list-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "04-approved-awaiting-start-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "04-generation-progress-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "05-vehicle-list-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-detail-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-edit-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-save-controls-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-unpublished-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "06-vehicle-preview-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "07-accessory-list-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "08-accessory-detail-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "08-accessory-preview-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "08-accessory-unpublished-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "08-accessory-fit-review-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "12-generation-error-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "09-missing-car-request-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "10-existing-generation-request-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "10-existing-generation-status-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "11-view-on-car-action-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "11-customer-viewer-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    },
+    {
+      "file": "11-customer-accessory-off-ar-dark.png",
+      "overflow": {
+        "document": 390,
+        "body": 390
+      },
+      "errors": [],
+      "encoding": "pass",
+      "rtl": "right-aligned Arabic",
+      "fixture": true
+    }
+  ]
+}

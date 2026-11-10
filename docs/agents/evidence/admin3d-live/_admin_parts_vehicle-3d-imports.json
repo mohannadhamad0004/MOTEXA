@@ -1,0 +1,627 @@
+{
+  "status": 200,
+  "body": {
+    "imports": [
+      {
+        "id": "32b36fb3-25fa-4e6f-922d-b153ed3c0ffe",
+        "generationId": "19febfb9-3b4a-4a5f-b2c0-ce33547da350",
+        "status": "PUBLISHED",
+        "progress": 100,
+        "errorCode": null,
+        "failureReason": null,
+        "source": "Sketchfab",
+        "author": "Angelos Gkanias",
+        "license": "CC Attribution",
+        "sourceUrl": "https://sketchfab.com/3d-models/volkswagen-beetle-83276f21bd9c41e196c474350b43efb0",
+        "provenance": {
+          "uid": "83276f21bd9c41e196c474350b43efb0",
+          "title": "Volkswagen beetle",
+          "author": "Angelos Gkanias",
+          "authorUrl": "https://sketchfab.com/gkaniasag",
+          "url": "https://sketchfab.com/3d-models/volkswagen-beetle-83276f21bd9c41e196c474350b43efb0",
+          "license": "CC Attribution",
+          "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+          "licenseClass": "CC BY",
+          "downloadable": true,
+          "inspectedAt": "2026-11-07T18:03:42.100Z",
+          "downloadedAt": "2026-11-07T18:03:51.193Z",
+          "downloadSource": "https://api.sketchfab.com/v3/models/83276f21bd9c41e196c474350b43efb0/download",
+          "sourceSha256": "7a8b8aa9b6adc2b25b8af31c10d75fd4900e29385ee32f719e31e3312a13765a",
+          "originalDownloadedBytes": 36230220,
+          "preparedSha256": "ad65d3b3205c45de56ab9b2ff4b50f66d960737793950d6b67aa4920bad6e1dd",
+          "thumbnail": "https://media.sketchfab.com/models/83276f21bd9c41e196c474350b43efb0/thumbnails/248167a884d54a839118b6e06aa6b457/578306b51d8f4256b9585ce15c5b2fdf.jpeg",
+          "optimization": {
+            "removed": 0,
+            "textures": 44,
+            "warnings": [
+              "Paint segmentation requires review; automatic recoloring is disabled.",
+              "Front direction requires visual confirmation."
+            ],
+            "bytesAfter": 6396020,
+            "bytesBefore": 36230220
+          }
+        },
+        "reviewNotes": "Reviewed all six saved production-viewer views against exact prepared SHA-256: Volkswagen Beetle Type 1 identity, front, upright orientation, wheels and grounding accepted. Original textured finish retained; paint segmentation and semantic part map remain unconfirmed. CC BY 4.0 by Angelos Gkanias, original source and license links retained.",
+        "viewerConfig": {
+          "key": "manual-32b36fb3-25fa-4e6f-922d-b153ed3c0ffe",
+          "rack": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "scale": 1
+          },
+          "wing": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "scale": 1
+          },
+          "credit": {
+            "url": "https://sketchfab.com/3d-models/volkswagen-beetle-83276f21bd9c41e196c474350b43efb0",
+            "title": "Volkswagen beetle",
+            "author": "Angelos Gkanias",
+            "license": "CC Attribution"
+          },
+          "lengthM": 4.5,
+          "rotateY": 0,
+          "generation": "Volkswagen Beetle Type 1",
+          "paintNodes": [],
+          "preRotateX": 0,
+          "groundOffset": 0,
+          "rimsSwappable": false,
+          "paintMaterials": []
+        },
+        "validation": {
+          "bytes": 6396332,
+          "valid": true,
+          "sha256": "ad65d3b3205c45de56ab9b2ff4b50f66d960737793950d6b67aa4920bad6e1dd",
+          "viewer": {
+            "valid": true,
+            "views": 6,
+            "paintTest": {
+              "method": "production_material_comparison",
+              "supported": false,
+              "paintedMeshes": 0,
+              "unchangedMeshes": 17,
+              "protectedChanged": [],
+              "visualSurfaceReviewRequired": true
+            }
+          },
+          "lengthM": 4.5,
+          "partMap": {
+            "sha256": "ad65d3b3205c45de56ab9b2ff4b50f66d960737793950d6b67aa4920bad6e1dd",
+            "proposal": {
+              "WHEELS": {
+                "by": "shape",
+                "ids": [
+                  "m5c0",
+                  "m6c44",
+                  "m6c45",
+                  "m6c46",
+                  "m6c47",
+                  "m6c48",
+                  "m6c49",
+                  "m6c50",
+                  "m6c259",
+                  "m6c260",
+                  "m6c261",
+                  "m6c262",
+                  "m6c263",
+                  "m6c264",
+                  "m6c265",
+                  "m6c266",
+                  "m6c267",
+                  "m6c268",
+                  "m6c269",
+                  "m6c270",
+                  "m6c271",
+                  "m6c272",
+                  "m6c273",
+                  "m6c274",
+                  "m6c275",
+                  "m6c276",
+                  "m6c277",
+                  "m6c278",
+                  "m6c279",
+                  "m6c280",
+                  "m6c281",
+                  "m6c282",
+                  "m6c283",
+                  "m6c284",
+                  "m6c285",
+                  "m6c286",
+                  "m6c287",
+                  "m6c288",
+                  "m6c289",
+                  "m6c290",
+                  "m6c291",
+                  "m6c292",
+                  "m6c293",
+                  "m6c294",
+                  "m6c295",
+                  "m6c296",
+                  "m6c297",
+                  "m6c298",
+                  "m6c299",
+                  "m6c300",
+                  "m6c301",
+                  "m6c302",
+                  "m6c303",
+                  "m6c304",
+                  "m6c305",
+                  "m6c306",
+                  "m6c307",
+                  "m6c308",
+                  "m6c309",
+                  "m6c310",
+                  "m6c311",
+                  "m6c312",
+                  "m5c1",
+                  "m6c57",
+                  "m6c58",
+                  "m6c59",
+                  "m6c60",
+                  "m6c61",
+                  "m6c62",
+                  "m5c3",
+                  "m6c38",
+                  "m6c39",
+                  "m6c40",
+                  "m6c41",
+                  "m6c42",
+                  "m6c43",
+                  "m6c63",
+                  "m6c81",
+                  "m6c100",
+                  "m6c101",
+                  "m6c122",
+                  "m6c212",
+                  "m6c213",
+                  "m6c214",
+                  "m6c215",
+                  "m6c216",
+                  "m6c217",
+                  "m6c218",
+                  "m6c219",
+                  "m6c220",
+                  "m6c221",
+                  "m6c222",
+                  "m6c223",
+                  "m6c224",
+                  "m6c225",
+                  "m6c226",
+                  "m6c227",
+                  "m6c228",
+                  "m6c229",
+                  "m6c230",
+                  "m6c231",
+                  "m6c232",
+                  "m6c233",
+                  "m6c234",
+                  "m6c235",
+                  "m6c236",
+                  "m6c237",
+                  "m6c238",
+                  "m6c239",
+                  "m6c240",
+                  "m6c241",
+                  "m6c242",
+                  "m6c243",
+                  "m6c244",
+                  "m6c245",
+                  "m6c246",
+                  "m6c247",
+                  "m6c248",
+                  "m6c249",
+                  "m6c250",
+                  "m6c251",
+                  "m6c252",
+                  "m6c253",
+                  "m6c254",
+                  "m6c255",
+                  "m6c256",
+                  "m6c257",
+                  "m6c258",
+                  "m5c4",
+                  "m6c51",
+                  "m6c52",
+                  "m6c53",
+                  "m6c54",
+                  "m6c55",
+                  "m6c56"
+                ],
+                "confidence": 0.6
+              },
+              "MIRRORS": {
+                "by": "shape",
+                "ids": [
+                  "m11c42",
+                  "m11c43",
+                  "m11c44",
+                  "m11c47",
+                  "m11c48",
+                  "m11c49"
+                ],
+                "confidence": 0.6
+              },
+              "REAR_BUMPER": {
+                "by": "shape",
+                "ids": [
+                  "m11c40",
+                  "m11c9",
+                  "m11c10"
+                ],
+                "confidence": 0.6
+              },
+              "FRONT_BUMPER": {
+                "by": "shape",
+                "ids": [
+                  "m11c41",
+                  "m11c11",
+                  "m11c12"
+                ],
+                "confidence": 0.6
+              }
+            },
+            "segmentedAt": "2026-11-07T18:04:01.639Z",
+            "pieces": 521
+          },
+          "textures": 44,
+          "warnings": [
+            "Vehicle identity, front direction, upright orientation, wheels, glazing and scenery require visual verification."
+          ],
+          "materials": 15,
+          "triangles": 378179,
+          "animations": 0,
+          "dimensions": [
+            1.737681722089901,
+            1.690027099478272,
+            4.5
+          ],
+          "validatedAt": "2026-11-07T18:04:01.639Z",
+          "accessoryGate": {
+            "text": [],
+            "checks": {
+              "dimsM": [
+                1.738,
+                1.69,
+                4.5
+              ],
+              "wheels": [
+                {
+                  "bottomMm": 3,
+                  "diameterM": 0.72
+                },
+                {
+                  "bottomMm": 2,
+                  "diameterM": 0.72
+                },
+                {
+                  "bottomMm": 0,
+                  "diameterM": 0.72
+                },
+                {
+                  "bottomMm": 0,
+                  "diameterM": 0.72
+                }
+              ],
+              "singlePiece": false,
+              "stockSpoilerSeparate": false
+            },
+            "limited": {},
+            "verdict": "FULL",
+            "problems": [],
+            "warnings": []
+          },
+          "frontDirection": "admin_visual_required",
+          "sourceDimensions": [
+            0.7723029875852083,
+            0.7511231553136558,
+            1.9999999999733185
+          ],
+          "sourceOrientation": {
+            "rotateY": 0,
+            "preRotateX": 0
+          },
+          "uprightOrientation": "admin_visual_required",
+          "uprightProportions": true,
+          "transparentMaterials": 1,
+          "visualVerificationRequired": true
+        },
+        "hasModel": true,
+        "hasRawModel": true,
+        "publishedModel3dKey": "manual-19febfb9-3b4a-4a5f-b2c0-ce33547da350-ad65d3b3205c45de",
+        "existingModel3dKey": "manual-19febfb9-3b4a-4a5f-b2c0-ce33547da350-ad65d3b3205c45de",
+        "make": "Volkswagen",
+        "model": "Beetle",
+        "code": "Type 1",
+        "yearFrom": 1945,
+        "yearTo": 2003,
+        "createdAt": "2026-11-07T18:03:33.039Z",
+        "finishedAt": "2026-11-07T18:04:01.639Z"
+      },
+      {
+        "id": "cd118d39-9fe2-48c1-b87a-67bde05c7f99",
+        "generationId": "205d9e64-5634-47b1-8844-29b1ba197aae",
+        "status": "PUBLISHED",
+        "progress": 100,
+        "errorCode": null,
+        "failureReason": null,
+        "source": "Test-only synthetic fixture",
+        "author": "Test fixture",
+        "license": "Test-only permission",
+        "sourceUrl": null,
+        "provenance": null,
+        "reviewNotes": null,
+        "viewerConfig": {
+          "key": "manual-cd118d39-9fe2-48c1-b87a-67bde05c7f99",
+          "rack": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "scale": 1
+          },
+          "wing": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "scale": 1
+          },
+          "credit": {
+            "url": "",
+            "title": "A8 D4",
+            "author": "Test fixture",
+            "license": "Test-only permission"
+          },
+          "lengthM": 4.5,
+          "rotateY": 0,
+          "generation": "Fixture16f88017 A8 D4",
+          "paintNodes": [],
+          "preRotateX": 0,
+          "groundOffset": 0,
+          "rimsSwappable": false,
+          "paintMaterials": [
+            "FixtureMaterial"
+          ]
+        },
+        "validation": {
+          "bytes": 4968,
+          "valid": true,
+          "sha256": "367a81bd2cfb914f06d272c079fcbb271de823ea4fb6196d99e3cab496505d78",
+          "viewer": {
+            "valid": true,
+            "views": 6
+          },
+          "lengthM": 4.5,
+          "textures": 0,
+          "warnings": [
+            "Vehicle identity, front direction, upright orientation, wheels, glazing and scenery require visual verification."
+          ],
+          "materials": 6,
+          "triangles": 72,
+          "animations": 0,
+          "dimensions": [
+            2,
+            1.4500000476837158,
+            4.5
+          ],
+          "validatedAt": "2026-11-06T12:53:04.022Z",
+          "frontDirection": "admin_visual_required",
+          "sourceDimensions": [
+            2,
+            1.4500000476837158,
+            4.5
+          ],
+          "sourceOrientation": {
+            "rotateY": 0,
+            "preRotateX": 0
+          },
+          "uprightOrientation": "admin_visual_required",
+          "uprightProportions": true,
+          "transparentMaterials": 0,
+          "visualVerificationRequired": true,
+          "partMap": null
+        },
+        "hasModel": true,
+        "hasRawModel": false,
+        "publishedModel3dKey": "manual-205d9e64-5634-47b1-8844-29b1ba197aae-367a81bd2cfb914f",
+        "existingModel3dKey": null,
+        "make": "Fixture16f88017",
+        "model": "A8",
+        "code": "D4",
+        "yearFrom": 2000,
+        "yearTo": 2010,
+        "createdAt": "2026-11-06T12:53:02.456Z",
+        "finishedAt": null
+      },
+      {
+        "id": "b8234e66-dde0-4f45-9032-e71d772eff0e",
+        "generationId": "346bda61-0b58-453d-9f68-9b18e7eb3c5f",
+        "status": "PUBLISHED",
+        "progress": 100,
+        "errorCode": null,
+        "failureReason": null,
+        "source": "Test-only synthetic fixture",
+        "author": "Test fixture",
+        "license": "Test-only permission",
+        "sourceUrl": null,
+        "provenance": null,
+        "reviewNotes": null,
+        "viewerConfig": {
+          "key": "manual-b8234e66-dde0-4f45-9032-e71d772eff0e",
+          "rack": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "scale": 1
+          },
+          "wing": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "scale": 1
+          },
+          "credit": {
+            "url": "",
+            "title": "A8 D4",
+            "author": "Test fixture",
+            "license": "Test-only permission"
+          },
+          "lengthM": 4.5,
+          "rotateY": 0,
+          "generation": "Fixture7ab18db7 A8 D4",
+          "paintNodes": [],
+          "preRotateX": 0,
+          "groundOffset": 0,
+          "rimsSwappable": false,
+          "paintMaterials": [
+            "FixtureMaterial"
+          ]
+        },
+        "validation": {
+          "bytes": 4968,
+          "valid": true,
+          "sha256": "367a81bd2cfb914f06d272c079fcbb271de823ea4fb6196d99e3cab496505d78",
+          "viewer": {
+            "valid": true,
+            "views": 6
+          },
+          "lengthM": 4.5,
+          "textures": 0,
+          "warnings": [
+            "Vehicle identity, front direction, upright orientation, wheels, glazing and scenery require visual verification."
+          ],
+          "materials": 6,
+          "triangles": 72,
+          "animations": 0,
+          "dimensions": [
+            2,
+            1.4500000476837158,
+            4.5
+          ],
+          "validatedAt": "2026-11-06T12:51:22.044Z",
+          "frontDirection": "admin_visual_required",
+          "sourceDimensions": [
+            2,
+            1.4500000476837158,
+            4.5
+          ],
+          "sourceOrientation": {
+            "rotateY": 0,
+            "preRotateX": 0
+          },
+          "uprightOrientation": "admin_visual_required",
+          "uprightProportions": true,
+          "transparentMaterials": 0,
+          "visualVerificationRequired": true,
+          "partMap": null
+        },
+        "hasModel": true,
+        "hasRawModel": false,
+        "publishedModel3dKey": "manual-346bda61-0b58-453d-9f68-9b18e7eb3c5f-367a81bd2cfb914f",
+        "existingModel3dKey": null,
+        "make": "Fixture7ab18db7",
+        "model": "A8",
+        "code": "D4",
+        "yearFrom": 2000,
+        "yearTo": 2010,
+        "createdAt": "2026-11-06T12:51:20.498Z",
+        "finishedAt": null
+      },
+      {
+        "id": "eb81ef62-9f96-4b72-9d02-348bed4a20e7",
+        "generationId": "dfc4397f-79f2-48ac-8423-8a2ffd4c0036",
+        "status": "PUBLISHED",
+        "progress": 100,
+        "errorCode": null,
+        "failureReason": null,
+        "source": "Test-only synthetic fixture",
+        "author": "Test fixture",
+        "license": "Test-only permission",
+        "sourceUrl": null,
+        "provenance": null,
+        "reviewNotes": null,
+        "viewerConfig": {
+          "key": "manual-eb81ef62-9f96-4b72-9d02-348bed4a20e7",
+          "rack": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "scale": 1
+          },
+          "wing": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "scale": 1
+          },
+          "credit": {
+            "url": "",
+            "title": "A8 D4",
+            "author": "Test fixture",
+            "license": "Test-only permission"
+          },
+          "lengthM": 4.5,
+          "rotateY": 0,
+          "generation": "Fixturec1b46f9b A8 D4",
+          "paintNodes": [],
+          "preRotateX": 0,
+          "groundOffset": 0,
+          "rimsSwappable": false,
+          "paintMaterials": [
+            "FixtureMaterial"
+          ]
+        },
+        "validation": {
+          "bytes": 4968,
+          "valid": true,
+          "sha256": "367a81bd2cfb914f06d272c079fcbb271de823ea4fb6196d99e3cab496505d78",
+          "viewer": {
+            "valid": true,
+            "views": 6
+          },
+          "lengthM": 4.5,
+          "textures": 0,
+          "warnings": [
+            "Vehicle identity, front direction, upright orientation, wheels, glazing and scenery require visual verification."
+          ],
+          "materials": 6,
+          "triangles": 72,
+          "animations": 0,
+          "dimensions": [
+            2,
+            1.4500000476837158,
+            4.5
+          ],
+          "validatedAt": "2026-11-06T10:39:49.206Z",
+          "frontDirection": "admin_visual_required",
+          "sourceDimensions": [
+            2,
+            1.4500000476837158,
+            4.5
+          ],
+          "sourceOrientation": {
+            "rotateY": 0,
+            "preRotateX": 0
+          },
+          "uprightOrientation": "admin_visual_required",
+          "uprightProportions": true,
+          "transparentMaterials": 0,
+          "visualVerificationRequired": true,
+          "partMap": null
+        },
+        "hasModel": true,
+        "hasRawModel": false,
+        "publishedModel3dKey": "manual-dfc4397f-79f2-48ac-8423-8a2ffd4c0036-367a81bd2cfb914f",
+        "existingModel3dKey": null,
+        "make": "Fixturec1b46f9b",
+        "model": "A8",
+        "code": "D4",
+        "yearFrom": 2000,
+        "yearTo": 2010,
+        "createdAt": "2026-11-06T10:39:47.410Z",
+        "finishedAt": null
+      }
+    ]
+  }
+}

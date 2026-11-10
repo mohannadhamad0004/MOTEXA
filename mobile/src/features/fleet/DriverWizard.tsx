@@ -8,6 +8,7 @@ import { CompanyDriver, companyDispatch } from "../tow/dispatchService";
 import type { Truck } from "../tow/towService";
 import { useTruckLabels } from "../tow/truckBits";
 import { PhotoField, StepSheet } from "./steps";
+import { normalizeNumberText } from "../../core/constants/numbers";
 
 type Pick = { uri: string; base64: string };
 
@@ -46,7 +47,7 @@ export function DriverWizard({ driver, self, trucks, onClose, onSaved }: { drive
       if (driver) {
         await companyDispatch.updateDriver(driver.id, {
           phone: phone.trim(),
-          truckId,
+          ...(truckId !== (driver.truck?.id ?? null) ? { truckId } : {}),
           ...(licenceNumber.trim() !== (driver.licenceNumber ?? "") ? { licenceNumber: licenceNumber.trim() } : {}),
           ...(licence ? { licencePhoto: { dataBase64: licence.base64, name: "licence.jpg" } } : {}),
           ...(photo ? { photo: { dataBase64: photo.base64, name: "driver.jpg" } } : {}),
@@ -86,7 +87,7 @@ export function DriverWizard({ driver, self, trucks, onClose, onSaved }: { drive
                 <Field label={t("Email (he signs in with it)", "البريد الإلكتروني (يسجّل الدخول به)")} value={email} onChangeText={setEmail} autoCapitalize="none" maxLength={120} />
               </>
             ) : null}
-            <Field label={t("Phone (private, never shown to customers)", "الهاتف (خاص، لا يظهر للزبائن)")} value={phone} onChangeText={setPhone} keyboardType="phone-pad" maxLength={24} />
+            <Field label={t("Phone (private, never shown to customers)", "الهاتف (خاص، لا يظهر للزبائن)")} value={phone} onChangeText={v => setPhone(normalizeNumberText(v))} keyboardType="phone-pad" maxLength={24} />
             {!driver && !isSelf ? <Note icon="mail-outline">{t("We email him a code to set his own password.", "نرسل له رمزًا بالبريد ليعيّن كلمة مروره بنفسه.")}</Note> : null}
           </View>
         ) : s === 1 ? (

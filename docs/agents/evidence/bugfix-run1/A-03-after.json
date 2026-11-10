@@ -1,0 +1,26 @@
+{
+  "hide": 200,
+  "adminMap": {
+    "status": 200,
+    "mapStatus": "proposed",
+    "configKey": "bmw-x5-e53"
+  },
+  "adminAsset": {
+    "status": 200,
+    "bytes": 4414956,
+    "cache": "private, no-store"
+  },
+  "customerAsset": {
+    "status": 403,
+    "bytes": 67,
+    "cache": null
+  },
+  "anonymousAsset": {
+    "status": 401,
+    "bytes": 54,
+    "cache": null
+  },
+  "customerIncludes": false,
+  "ui": [],
+  "restore": 200
+}

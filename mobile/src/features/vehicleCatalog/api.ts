@@ -1,7 +1,7 @@
 import {api} from "../../core/config/api";
 import type {CarModel} from "../car3d/models";
 export type Brand={id:string;name:string;nameAr:string;aliases:string[];isActive:boolean};
-export type Generation={id:string;code:string;nameEn:string;nameAr:string;yearFrom:number;yearTo:number;isActive:boolean;isPublished:boolean;model3dKey:string|null};
+export type Generation={id:string;code:string;nameEn:string;nameAr:string;yearFrom:number;yearTo:number;isActive:boolean;isPublished:boolean;effectiveAvailable:boolean;model3dKey:string|null};
 export type Model={id:string;brandId:string|null;make:string;displayMake:string;makeAr:string;model:string;modelAr:string;yearFrom:number;yearTo:number;isActive:boolean;generations:Generation[]};
 export type Taxonomy={brands:Brand[];vehicles:Model[]};
 export type SketchfabInspection={uid:string;title:string;author:string;authorUrl:string|null;url:string;thumbnail:string|null;license:string;licenseUrl:string|null;licenseClass:string|null;downloadable:boolean;allowed:boolean;refusalCode:string|null;inspectedAt:string;duplicate:{importId:string|null;name:string;model3dKey:string|null;status:string}|null};

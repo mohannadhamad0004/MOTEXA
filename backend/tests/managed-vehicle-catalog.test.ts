@@ -59,7 +59,7 @@ test("managed taxonomy, approved customer generation and reviewed manual import 
   });
   await t.test("customer creates missing-car draft without knowing generation, and owns the pending Garage record",async()=>{
    const r=await call("POST","/catalog/vehicle-requests",{make:prefix,model:"A8",year:2005,notes:"Please verify the production period"});assert.equal(r.status,201);requestId=r.data.request.id;submissionId=r.data.request.submissionId;garageId=r.data.request.garageCarId;
-   assert.equal(r.data.request.requestStatus,"DRAFT");assert.equal((await prisma.customerGarageCar.findUniqueOrThrow({where:{id:garageId}})).generationId,null);
+   assert.equal(r.data.request.requestStatus,"DRAFT");assert.equal((await prisma.customerGarageCar.findUniqueOrThrow({where:{id:garageId}})).generationId,generationId);
   });
   await t.test("ownership, private asset authentication and Parts Admin access are enforced",async()=>{
    assert.equal((await call("GET",`/catalog/vehicle-requests/${requestId}`,undefined,other)).status,404);
@@ -168,7 +168,7 @@ test("managed taxonomy, approved customer generation and reviewed manual import 
   for(const p of readdirSync(publicDir))if(!publicBefore.has(p))unlinkSync(path.join(publicDir,p));
   if(existsSync(PRIVATE_3D_DIR))for(const p of readdirSync(PRIVATE_3D_DIR))if(!storageBefore.has(p))rmSync(path.join(PRIVATE_3D_DIR,p),{recursive:true,force:true}); // also a background segmentation temp folder
   const users=[owner,other,actor];await prisma.vehicleCatalogRequest.deleteMany({where:{submission:{userId:{in:users}}}});await prisma.vehicle3DSubmission.deleteMany({where:{userId:{in:users}}});await prisma.vehicle3DImport.deleteMany({where:{uploadedByUserId:actor}});await prisma.customerGarageCar.deleteMany({where:{userId:{in:users}}});
-  if(modelId){await prisma.vehicleGeneration.deleteMany({where:{vehicleId:modelId}});await prisma.vehicle.deleteMany({where:{id:modelId}});}if(brandId)await prisma.vehicleBrand.deleteMany({where:{id:brandId}});
+  if(modelId){await prisma.vehicle3DRevision.deleteMany({where:{generation:{vehicleId:modelId}}});await prisma.vehicleGeneration.deleteMany({where:{vehicleId:modelId}});await prisma.vehicle.deleteMany({where:{id:modelId}});}if(brandId)await prisma.vehicleBrand.deleteMany({where:{id:brandId}});
   await prisma.auditLog.deleteMany({where:{actorId:{in:users}}});await prisma.adminPermission.deleteMany({where:{adminId:actor}});await prisma.user.deleteMany({where:{id:{in:users}}});await prisma.$disconnect();
  }
 });

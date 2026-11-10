@@ -60,10 +60,10 @@ test("active tracking has a small nonzero movement gate", () => {
   assert.ok(ACTIVE_LOCATION_DISTANCE_METERS > 0 && ACTIVE_LOCATION_DISTANCE_METERS <= 10);
 });
 
-test("ownership errors disable the job while transient failures preserve it", () => {
+test("only a 404 removes the job; an expired session (401) and transient failures keep it", () => {
   const job = { status: "ACCEPTED" };
-  for (const status of [401, 403, 404]) assert.equal(jobAfterLocationError(job, { status }), null);
-  for (const error of [new Error("Network failure"), { status: 500 }, { status: 503 }]) assert.equal(jobAfterLocationError(job, error), job);
+  assert.equal(jobAfterLocationError(job, { status: 404 }), null);
+  for (const error of [{ status: 401 }, { status: 403 }, new Error("Network failure"), { status: 500 }, { status: 503 }]) assert.equal(jobAfterLocationError(job, error), job);
 });
 
 test("a pending one-shot completion is ignored after cleanup, including a new lifetime", async () => {
@@ -78,4 +78,31 @@ test("a pending one-shot completion is ignored after cleanup, including a new li
   await completion;
   assert.equal(writes, 0);
   assert.equal(next.isActive(), true);
+});
+
+import { pingWarning } from "../src/features/shared/locationPolicy.ts";
+import { isSessionExpiry, expiredText } from "../src/core/session/sessionExpiry.ts";
+
+test("location warning appears after 3 failed pings in a row", () => {
+  assert.equal(pingWarning(2), false);
+  assert.equal(pingWarning(3), true);
+  assert.equal(pingWarning(0), false);
+});
+
+test("a 401 with a token is a session expiry; without a token or other codes it is not", () => {
+  assert.equal(isSessionExpiry(401, true), true);
+  assert.equal(isSessionExpiry(401, false), false);
+  assert.equal(isSessionExpiry(403, true), false);
+  assert.match(expiredText("ar"), /انتهت/);
+  assert.match(expiredText(null), /session expired/);
+});
+
+import { ERROR_TEXT, errorTextFor } from "../src/core/session/errorText.ts";
+
+test("server error codes map to English or Arabic text; unknown codes keep the server message", () => {
+  assert.match(errorTextFor("DRIVER_NOT_FREE", "ar", "x"), /[؀-ۿ]/);
+  assert.equal(errorTextFor("DRIVER_NOT_FREE", null, "x"), "This driver is not free right now.");
+  assert.equal(errorTextFor("UNKNOWN_CODE", "ar", "server text"), "server text");
+  assert.equal(errorTextFor(undefined, "ar", "server text"), "server text");
+  for (const [code, [en, ar]] of Object.entries(ERROR_TEXT)) assert.ok(en && ar && /[؀-ۿ]/.test(ar), code);
 });

@@ -1,6 +1,7 @@
 // Shared pieces of the parts-order screens (customer, shop owner, parts admin): labels, tones, the status timeline, the money
 // card, a quantity stepper, the order map and the owner's live location while he delivers.
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { pingWarning } from "../shared/locationPolicy";
 import { View } from "react-native";
 import { Card, GIcon, GText, Tap, Timeline, TimelineStep, Tone } from "../../components/garage";
 import { formatPrice } from "../../core/constants/money";
@@ -177,7 +178,8 @@ export function useShareLocation(key: string, sharing: boolean, send: (p: Point)
   const last = useRef(0);
   const lastPoint = useRef<Point | null>(null);
   const minMs = opts.minMs ?? 9_000, minMeters = opts.minMeters ?? 0;
-  useEffect(() => { last.current = 0; lastPoint.current = null; }, [key, sharing]);
+  const [failures, setFailures] = useState(0);
+  useEffect(() => { last.current = 0; lastPoint.current = null; setFailures(0); }, [key, sharing]);
   // sent at most every `minMs`, and (when minMeters is set) only once the driver moved that far OR 3x the interval passed
   const onFix = useCallback((fix: { point: Point }) => {
     const now = Date.now();
@@ -186,7 +188,7 @@ export function useShareLocation(key: string, sharing: boolean, send: (p: Point)
     if (minMeters && prev && haversineKm(prev, fix.point) * 1000 < minMeters && now - last.current < minMs * 3) return;
     last.current = now;
     lastPoint.current = fix.point;
-    sendRef.current(fix.point).catch(() => undefined);
+    sendRef.current(fix.point).then(() => setFailures(0), () => setFailures((n) => n + 1));
   }, [minMs, minMeters]);
   const feed = useForegroundLocationWatch({
     enabled: sharing,
@@ -200,6 +202,8 @@ export function useShareLocation(key: string, sharing: boolean, send: (p: Point)
     meFresh: feed.fresh,
     /** the GPS reading is rough (worse than 50 m) */
     weak: sharing && !!feed.fix && typeof feed.fix.accuracy === "number" && feed.fix.accuracy > 50,
+    /** 3 pings in a row did not reach the server (cleared by the next one that does) */
+    notReaching: sharing && pingWarning(failures),
     problem: feed.message,
     issue: feed.issue,
     canOpenSettings: feed.canOpenSettings,

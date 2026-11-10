@@ -1,5 +1,5 @@
 import { type Href, router, useLocalSearchParams } from "expo-router";
-import * as ImagePicker from "expo-image-picker";
+import { photoErrorText, pickPhoto } from "../../core/hooks/pickPhoto";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Image, Pressable, TextInput, View } from "react-native";
 import { Card, Chip, GarageHero, GaragePage, GButton, GText, Note } from "../../components/garage";
@@ -87,13 +87,9 @@ function SubmissionBody({ s, admin, reload }: { s: Submission; admin: boolean; r
     finally { setBusy(false); }
   };
   const pick = async (view: ViewName) => {
-    await work(async () => {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], base64: true, quality: .8, allowsEditing: false });
-      if (result.canceled) return;
-      const image = result.assets[0];
-      if (!image?.base64 || (image.fileSize ?? 0) > 5*1024*1024) throw new Error(t("Choose a JPEG or PNG photo under 5 MB.", "اختر صورة JPEG أو PNG أصغر من 5 ميغابايت."));
-      await submissionApi.photo(s.id,view,image.base64);
-    });
+    let photo;
+    try { photo = await pickPhoto(); } catch (e) { setError(photoErrorText(e, t)); return; } // resized + converted to JPEG, size checked
+    if (photo) await work(async () => { await submissionApi.photo(s.id, view, photo.base64); });
   };
   const field = { borderWidth: 1, borderColor: g.line, borderRadius: 12, color: g.ink, padding: 12, minHeight: 48, textAlign: align.textAlign, backgroundColor: g.cardSoft } as const;
   return <View style={{ gap: 14 }}>

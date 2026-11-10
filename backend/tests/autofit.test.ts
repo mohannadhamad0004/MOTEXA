@@ -37,7 +37,7 @@ test("a car's RIMS zone (wheel inset) only changes the car revision seen by rim 
 });
 
 test("computed once; admin correction and reset; customers only get a current fit", async () => {
-  const a = await prisma.productAccessory3D.findFirst({ where: { status: "PUBLISHED", accessoryType: { not: "RIMS" }, fits: { some: { generation: { model3dKey: "bmw-3-series-e36" } } } }, include: { fits: { include: { generation: true } } } });
+  const a = await prisma.productAccessory3D.findFirst({ where: { status: "PUBLISHED", accessoryType: "WING", fits: { some: { generation: { model3dKey: "bmw-3-series-e36" } } } }, include: { fits: { include: { generation: true } } } });
   const g = a?.fits.find(f => f.generation.model3dKey === "bmw-3-series-e36");
   if (!a || !g) return; // no published E36 accessory in this database
   const key = "bmw-3-series-e36", id = { accessoryId_generationId: { accessoryId: a.id, generationId: g.generationId } };
@@ -47,7 +47,7 @@ test("computed once; admin correction and reset; customers only get a current fi
     const first = await saveFit(a, g.generationId, key, fit());
     const second = await saveFit(a, g.generationId, key, { ...fit(), placements: [{ pos: [9, 9, 9], sc: [1, 1, 1], rot: [0, 0, 0], side: 1 }] });
     assert.deepEqual(second.fit, first.fit, "a current fit is never recomputed / replaced");
-    const s = createAutoFitService();
+    const s = createAutoFitService({compute:async()=>({...fit(),info:{qa:{correction:{ok:true}}}})});
     await assert.rejects(s.approve("admin", a.id, g.generationId, { adj: { x: 2, y: 0, z: 0, rx: 0, ry: 0, s: 1 } }), { code: "INVALID_ADJUST" });
     const ok = await s.approve("admin", a.id, g.generationId, { adj: { x: 0, y: 0.01, z: -0.02, rx: 0, ry: 0, s: 1 } });
     assert.ok(ok.approvedAt); assert.deepEqual(ok.adj, { x: 0, y: 0.01, z: -0.02, rx: 0, ry: 0, s: 1 });
@@ -57,7 +57,7 @@ test("computed once; admin correction and reset; customers only get a current fi
     assert.equal((await createAccessory3DService().forProduct(a.productId, null))?.autoFit, null, "no generation, no stored fit");
     // a part that does not fit this car is stored as a failure (computed once) and never served as a fit
     await prisma.accessoryAutoFit.deleteMany({ where: { accessoryId: a.id, generationId: g.generationId } });
-    const failed = { version: fitVersion("FRONT_BUMPER"), type: "FRONT_BUMPER", failed: "this bumper does not fit this car cleanly (fendersArches gap 20.7 mm)" };
+    const failed = { version: fitVersion(a.accessoryType), type: a.accessoryType, failed: "this part does not fit this car cleanly (contact gap 20.7 mm)" };
     assert.ok(validFit(failed)); assert.equal(validFit({ ...failed, failed: "x".repeat(600) }), false);
     await saveFit(a, g.generationId, key, failed);
     assert.equal((await createAccessory3DService().forProduct(a.productId, g.generationId))?.autoFit, null);
@@ -78,7 +78,7 @@ test("after a fit-version bump an approved correction is re-checked: kept when i
   const g = a?.fits.find(f => f.generation.model3dKey === "bmw-3-series-e36");
   if (!a || !g) return; // no published E36 wing in this database
   const key = "bmw-3-series-e36", id = { accessoryId_generationId: { accessoryId: a.id, generationId: g.generationId } }, adj = { x: 0, y: 0.004, z: 0, rx: 0, ry: 0, s: 1 };
-  const saved = await prisma.accessoryAutoFit.findUnique({ where: id }), s = createAutoFitService();
+  const saved = await prisma.accessoryAutoFit.findUnique({ where: id }), s = createAutoFitService({compute:async()=>({...fit(),info:{qa:{correction:{ok:true}}}})});
   const recomputed = (ok: boolean) => ({ ...fit(), info: { qa: { clipMm: 0, gapMm: 1, ok: true, correction: { adj, clipMm: ok ? 0 : 6.5, gapMm: 1, ok } } } });
   const approveThenAge = async () => { await prisma.accessoryAutoFit.deleteMany({ where: { accessoryId: a.id, generationId: g.generationId } }); await saveFit(a, g.generationId, key, fit());
     await s.approve("admin", a.id, g.generationId, { adj }); await prisma.accessoryAutoFit.update({ where: id, data: { fitVersion: fitVersion("WING") - 1 } }); };

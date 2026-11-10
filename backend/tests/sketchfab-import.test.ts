@@ -16,8 +16,8 @@ export function zip(entries:[string,Buffer][],patch:{mode?:number;size?:number;c
  const cd=Buffer.concat(central),end=Buffer.alloc(22);end.writeUInt32LE(0x06054b50);end.writeUInt16LE(entries.length,8);end.writeUInt16LE(entries.length,10);end.writeUInt32LE(cd.length,12);end.writeUInt32LE(offset,16);return Buffer.concat([...locals,cd,end]);
 }
 test("Sketchfab parser accepts model pages and query strings; rejects unsupported URLs",()=>{
- for(const value of [url,url+"?utm_source=fixture#view",`https://www.sketchfab.com/3d-models/${uid}/`])assert.equal(parseSketchfabUrl(value).uid,uid);
- for(const value of ["https://other.example/3d-models/car-"+uid,"https://sketchfab.com/3d-models/no-uid","https://sketchfab.com/users/"+uid,"https://sketchfab.com.evil.test/3d-models/"+uid,`https://x@sketchfab.com/3d-models/${uid}`,`http://sketchfab.com/3d-models/${uid}`,`https://sketchfab.com:8443/3d-models/${uid}`,`https://sketchfab.com/3d-models/${uid}/embed`,null])assert.throws(()=>parseSketchfabUrl(value),{code:"BAD_LINK"});
+ for(const value of [url,url+"/?utm_source=fixture#view",`https://www.sketchfab.com/3d-models/${uid}/`,`https://sketchfab.com/3d-models/mercedes_benz-s600-${uid}`,` https://sketchfab.com/3d-models/${uid.toUpperCase()} `])assert.equal(parseSketchfabUrl(value).uid,uid);
+ for(const value of ["https://other.example/3d-models/car-"+uid,"https://sketchfab.com/3d-models/no-uid","https://sketchfab.com/users/"+uid,"https://sketchfab.com.evil.test/3d-models/"+uid,`https://x@sketchfab.com/3d-models/${uid}`,`http://sketchfab.com/3d-models/${uid}`,`https://sketchfab.com:8443/3d-models/${uid}`,`https://sketchfab.com/3d-models/${uid}/embed`,`https://sketchfab.com/3d-models/x-${uid}e`,`https://sketchfab.com/3d-models/x-${uid.slice(1)}`,null])assert.throws(()=>parseSketchfabUrl(value),{code:"INVALID_SKETCHFAB_URL"});
 });
 test("license gate recognizes exact/versioned CC0, BY, BY-SA; refuses NC/ND, proprietary, unknown and contradictions",()=>{
  for(const slug of ["cc0","by","by-sa","cc-by-4.0","by-sa-3.0"])assert.ok(classifyLicense({slug}));
@@ -38,12 +38,21 @@ test("inspection makes no download request; credentials/signed URLs never enter 
  const m=await client.inspect(url);assert.equal(requests,1);assert.equal(m.allowed,true);assert.doesNotMatch(JSON.stringify(m),/test-secret|signed|download\/|Authorization/);
 });
 test("safe errors and not-found; download URL/size/type restrictions and license recheck",async()=>{
- for(const status of [401,403,404,500]){const client=createSketchfabClient({token:"test",fetcher:(async()=>new Response("private-upstream-body",{status}))as typeof fetch});await assert.rejects(client.inspect(url),{code:status===404?"SKETCHFAB_NOT_FOUND":"SKETCHFAB_API_FAILED"});}
+ for(const status of [401,403,404,429,500]){const client=createSketchfabClient({token:"test",fetcher:(async()=>new Response("private-upstream-body",{status}))as typeof fetch});await assert.rejects(client.inspect(url),{code:status===404?"SKETCHFAB_NOT_FOUND":status===429?"SKETCHFAB_RATE_LIMITED":status===401||status===403?"SKETCHFAB_UNAUTHORIZED":"SKETCHFAB_UNAVAILABLE"});}
  for(const unsafe of ["http://media.sketchfab.com/archives/x","https://127.0.0.1/archives/x","https://evil.s3.amazonaws.com/archives/x","https://sketchfab-prod-media.s3.amazonaws.com/not-archives/x"])assert.throws(()=>allowedDownloadUrl(unsafe),{code:"DOWNLOAD_FAILED"});
- for(const scenario of ["license","size","html","stream"]){let count=0;const client=createSketchfabClient({token:"test",fetcher:(async()=>{count++;if(count===1)return Response.json(model(scenario==="license"?{license:{slug:"by-nc"}}:{}));if(count===2)return Response.json({glb:{url:"https://sketchfab-prod-media.s3.amazonaws.com/archives/x?signature=private",size:scenario==="size"?MAX_SOURCE_BYTES+1:100}});return new Response("<html>upstream error</html>",{headers:scenario==="stream"?{"content-length":String(MAX_SOURCE_BYTES+1),"content-type":"application/octet-stream"}:{"content-type":"text/html"}});})as typeof fetch});
+ for(const scenario of ["license","size","html","stream"]){let count=0;const client=createSketchfabClient({accessToken:"test",fetcher:(async()=>{count++;if(count===1)return Response.json(model(scenario==="license"?{license:{slug:"by-nc"}}:{}));if(count===2)return Response.json({glb:{url:"https://sketchfab-prod-media.s3.amazonaws.com/archives/x?signature=private",size:scenario==="size"?MAX_SOURCE_BYTES+1:100}});return new Response("<html>upstream error</html>",{headers:scenario==="stream"?{"content-length":String(MAX_SOURCE_BYTES+1),"content-type":"application/octet-stream"}:{"content-type":"text/html"}});})as typeof fetch});
   await assert.rejects(client.download(inspectMetadata(model(),uid)),{code:scenario==="license"?"LICENSE_NOT_ALLOWED":scenario==="html"?"DOWNLOAD_FAILED":"DOWNLOAD_TOO_LARGE"});
   if(scenario==="license")assert.equal(count,1);
  }
+});
+test("OAuth metadata/download auth and missing/network/malformed failures are explicit and safe",async()=>{
+ let calls=0;
+ const client=createSketchfabClient({accessToken:"private-oauth-fixture",fetcher:(async(_url,options)=>{calls++;assert.equal((options?.headers as any).Authorization,"Bearer private-oauth-fixture");return Response.json(model());})as typeof fetch});
+ assert.equal((await client.inspect(url)).uid,uid);assert.equal(calls,1);
+ await assert.rejects(createSketchfabClient({token:"",accessToken:"",fetcher:(async()=>{assert.fail("missing credentials must not call provider");})as typeof fetch}).inspect(url),{code:"SKETCHFAB_TOKEN_MISSING"});
+ await assert.rejects(createSketchfabClient({token:"test",fetcher:(async()=>{throw Object.assign(Error("private diagnostic"),{code:"ENOTFOUND"});})as typeof fetch}).inspect(url),{code:"NETWORK_ERROR"});
+ await assert.rejects(createSketchfabClient({token:"test",fetcher:(async()=>new Response("private invalid JSON"))as typeof fetch}).inspect(url),{code:"SKETCHFAB_UNAVAILABLE"});
+ await assert.rejects(createSketchfabClient({token:"personal",accessToken:"",fetcher:(async()=>Response.json(model()))as typeof fetch}).download(inspectMetadata(model(),uid)),{code:"SKETCHFAB_TOKEN_MISSING"});
 });
 test("ZIP refuses traversal, symlinks, corrupt data, ambiguous source, bombs and external glTF resources",async()=>{
  assert.equal(readModelArchive(zip([["textures/one.png",Buffer.from("data")]])).get("textures/one.png")?.toString(),"data");

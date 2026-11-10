@@ -23,7 +23,7 @@ export function InspectionCard({inspection:s}:{inspection:SketchfabInspection}){
   <GText style={align}>{s.title}</GText><GText soft style={align}>{`${t("by","بواسطة")} ${s.author}`}</GText>
   <GText style={align}>{`${t("License","الترخيص")}: ${s.license}`}</GText>
   <GText style={align}>{`${t("Downloadable","متاح للتنزيل")}: ${s.downloadable?t("Yes","نعم"):t("No","لا")}`}</GText>
-  <GText soft style={align}>{`${t("Sketchfab UID","معرّف Sketchfab")}: ${s.uid}`}</GText>
+  <GText soft style={align}>{t("Sketchfab UID","معرّف Sketchfab")}</GText><GText selectable style={{textAlign:"left",writingDirection:"ltr"}}>{s.uid}</GText>
   <WebLink url={s.url} label={t("View on Sketchfab","عرض على Sketchfab")}/>
   <WebLink url={s.authorUrl} label={t("Creator profile","صفحة المنشئ")}/>
   <WebLink url={s.licenseUrl} label={t("Read license","قراءة الترخيص")}/>
@@ -33,21 +33,29 @@ export function InspectionCard({inspection:s}:{inspection:SketchfabInspection}){
  </Card>;
 }
 export function NewSketchfabImport(){
+ const params=useLocalSearchParams<{generationId?:string}>();const assigned=useRef(false);
  const {t,isArabic}=useL();const {row}=useGarageTheme();const taxonomy=useLoad(vehicleCatalog.list,[]);
  const [url,setUrl]=useState(""),[inspection,setInspection]=useState<SketchfabInspection|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null);
  const [brandId,setBrand]=useState(""),[modelId,setModel]=useState(""),[generationId,setGeneration]=useState("");
  const [createKind,setCreateKind]=useState<string|null>(null),[name,setName]=useState(""),[arabicName,setArabicName]=useState(""),[from,setFrom]=useState(""),[to,setTo]=useState("");
+ useEffect(()=>{if(assigned.current||!params.generationId||!taxonomy.data)return;const v=taxonomy.data.vehicles.find(v=>v.generations.some(g=>g.id===params.generationId)),g=v?.generations.find(g=>g.id===params.generationId);if(v&&g){setBrand(v.brandId??"");setModel(v.id);setGeneration(g.id);setFrom(String(g.yearFrom));setTo(String(g.yearTo));assigned.current=true;}},[params.generationId,taxonomy.data]);
  const request=useRef(0);useEffect(()=>()=>{request.current++;},[]);
  const brands=taxonomy.data?.brands.filter(b=>b.isActive)??[],models=taxonomy.data?.vehicles.filter(v=>v.brandId===brandId&&v.isActive)??[];
  const selected=models.find(v=>v.id===modelId),generations=selected?.generations.filter(g=>g.isActive)??[],generation=generations.find(g=>g.id===generationId);
  const work=async(fn:()=>Promise<void>)=>{setError(null);setBusy(true);try{await fn();}catch(e){setError(importError(e,t));}finally{setBusy(false);}};
+ const inspect=async()=>{
+  const mine=++request.current;setInspection(null);setError(null);setBusy(true);
+  try{const current=await vehicleCatalog.inspect(url.trim());if(mine===request.current)setInspection(current);}
+  catch(e){if(mine===request.current)setError(importError(e,t));}
+  finally{if(mine===request.current)setBusy(false);}
+ };
  const chooseGeneration=(id:string)=>{setGeneration(id);const g=generations.find(g=>g.id===id);setFrom(g?String(g.yearFrom):"");setTo(g?String(g.yearTo):"");};
  const startCreate=(kind:string)=>{setCreateKind(kind);setName("");setArabicName("");if(kind==="generations"){setFrom("");setTo("");setGeneration("");}};
  return <GaragePage hero={<GarageHero variant="detail" title={t("Import from Sketchfab","استيراد من Sketchfab")} line={t("Inspect the source, choose a managed generation, then import privately for review.","افحص المصدر واختر جيلًا من الكتالوج، ثم استورد النموذج بشكل خاص للمراجعة.")} backLabel={t("Back","رجوع")} onBack={()=>router.back()}/>}>
   <View style={{gap:14,minWidth:0}}>
-   <Card><Entry url label={t("Sketchfab model URL","رابط النموذج من Sketchfab")} value={url} onChange={value=>{request.current++;setUrl(value);setInspection(null);setError(null);}}/>
+   <Card><Entry url editable={!busy} label={t("Sketchfab model URL","رابط النموذج من Sketchfab")} value={url} onChange={value=>{request.current++;setUrl(value);setInspection(null);setError(null);}}/>
     <GText soft>{t("https://sketchfab.com/3d-models/…","https://sketchfab.com/3d-models/…")}</GText>
-    <GButton label={busy?t("Inspecting…","جارٍ الفحص…"):t("Inspect link","فحص الرابط")} disabled={busy||!url.trim()} onPress={()=>void work(async()=>{const mine=++request.current;const s=await vehicleCatalog.inspect(url.trim());if(mine===request.current)setInspection(s);})}/>
+    <GButton label={busy?t("Inspecting…","جارٍ الفحص…"):t("Inspect link","فحص الرابط")} disabled={busy||!url.trim()} onPress={()=>void inspect()}/>
     <Note>{t("Only downloadable CC0, CC BY and CC BY-SA models are accepted. Downloads and API access run on the backend.","تُقبل النماذج المتاحة للتنزيل بترخيص CC0 أو CC BY أو CC BY-SA فقط. ينفّذ الخادم التنزيل والوصول إلى الواجهة البرمجية.")}</Note>
    </Card>
    {error?<Note tone="danger">{error}</Note>:null}
@@ -108,6 +116,7 @@ export function SketchfabImportReview(){
     </Card>:null}
     {r.status==="READY"||r.status==="PUBLISHED"||r.status==="FAILED"&&r.hasRawModel?<><ImportReview key={`${r.id}-${r.status}-${r.validation?.validatedAt}-${r.existingModel3dKey}`} r={r} work={work} busy={busy}/>
       <Card><GText style={align}>{t("Part-map proposal","اقتراح خريطة القطع")}</GText><GText style={align}>{r.partMapStatus==="CONFIRMED"?t("Confirmed for this exact GLB revision.","مؤكدة لهذه النسخة المحددة من GLB."):r.validation?.partMap?t("Saved for this exact GLB revision. Unresolved parts remain available for admin review.","حُفظ الاقتراح لهذه النسخة من GLB. تبقى القطع غير المحددة متاحة لمراجعة الإدارة."):t("No automatic proposal available.","لا يوجد اقتراح تلقائي.")}</GText>
+       {r.status==="READY"?<GButton label={t("Review part map privately","مراجعة خريطة القطع بشكل خاص")} onPress={()=>router.push(`/dept/accessory-zones?key=${encodeURIComponent(`import-${r.id}`)}` as Href)}/>:null}
        {r.status==="PUBLISHED"?<><Note>{t("Published to the selected managed generation. Matching Garage cars receive it through the runtime catalog.","نُشر النموذج للجيل المحدد في الكتالوج. تستلمه سيارات الكراج المطابقة عبر كتالوج العرض.")}</Note><GText soft style={align}>{r.publishedModel3dKey}</GText><GButton label={t("Confirm part map","تأكيد خريطة القطع")} onPress={()=>router.push(`/dept/accessory-zones?model3dKey=${encodeURIComponent(r.publishedModel3dKey??"")}` as Href)}/></>:null}
       </Card></>:null}
     {r.status==="FAILED"?<GButton label={t("Retry this import","إعادة محاولة هذا الاستيراد")} disabled={busy} onPress={()=>void work(()=>vehicleCatalog.retry(r.id))}/>:null}
