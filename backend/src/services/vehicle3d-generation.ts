@@ -8,9 +8,11 @@ import { prisma } from "../prisma.js";
 import { VIEWS, privatePath, storePrivate, recoverCatalogJournal } from "./vehicle3d-submissions.js";
 import { MAX_MODEL_BYTES, normalizeVehicle, verifyViewer } from "./vehicle3d-validation.js";
 import { cleanPreviewTemp, processNextAccessory3DJob } from "./accessory3d.js";
+import { paidGenerationEnabled, requireFixtureRuntime, testProviderRuntime } from "./generation-runtime.js";
 
 /** A deliberately generic preview for testing the workflow. Never claimed to reconstruct photos. */
 export async function mockVehicleGLB() {
+  requireFixtureRuntime();
   const { Document } = await import("@gltf-transform/core");
   const doc = new Document(), buffer = doc.createBuffer(), scene = doc.createScene();
   const box = (name: string, x: number, y: number, z: number, w: number, h: number, l: number, color: [number, number, number, number]) => {
@@ -63,10 +65,11 @@ export function createVehicle3DProcessor(options: ProcessorOptions = {}) {
     const remove=(key: string|null)=>{if(key){try{unlinkSync(privatePath(key));}catch{}}};
     let newRaw: string|null=null,newPrepared: string|null=null;
     try{
+      if(s.generationMode==="mock"&&!testProviderRuntime())throw new MeshyError("TEST_FIXTURE_ONLY");
       if(!s.initialApprovedAt||!s.initialApprovedByUserId)throw new MeshyError("INITIAL_REVIEW_REQUIRED");
       if(s.processingStartedAt && now().getTime()-s.processingStartedAt.getTime()>3600000)throw new MeshyError("PROVIDER_JOB_TIMEOUT");
       if(s.generationMode!=="mock" && !s.rawModelPath && !s.providerTaskId){
-        if(!s.liveAuthorizedAt || !(options.allowPaid ?? (process.env.MESHY_ALLOW_PAID_GENERATION==="1" && process.env.VEHICLE3D_MODE==="real")))throw new MeshyError("LIVE_OPT_IN_REQUIRED");
+        if(!s.liveAuthorizedAt || !(options.allowPaid ?? paidGenerationEnabled()))throw new MeshyError("LIVE_OPT_IN_REQUIRED");
         const images=VIEWS.map(v=>`data:image/jpeg;base64,${readFileSync(privatePath(s[`${v}PhotoPath`]!)).toString("base64")}`);
         const task=await client.create(images);
         await update({providerTaskId:task,provider:"MESHY",providerState:"PENDING",generationStage:"GENERATING",lastProviderCheckAt:now(),nextPollAt:new Date(now().getTime()+10000),...release},"PROVIDER_TASK_CREATED");return;

@@ -879,6 +879,7 @@ model Vehicle {
 // Years may overlap (Octavia Mk1 / Mk2): then the customer picks. A shop ticking a generation = fits its year range.
 
 model VehicleGeneration {
+  modelRevisions Vehicle3DRevision[]
   isActive Boolean @default(true)
   isPublished Boolean @default(false)
   catalogNormalizedCode String?
@@ -1399,6 +1400,8 @@ enum Accessory3DStatus {
 
 /// One per product. Photos and the generated model stay private (backend/storage/vehicle3d); only a published model is public.
 model ProductAccessory3D {
+  fitmentNotes          String?
+  deactivatedAt         DateTime?
   id                    String            @id @default(uuid())
   productId             String
   product               PartsProduct      @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -1467,6 +1470,24 @@ model ProductAccessory3D {
   @@unique([productId, kitPart])
   @@index([shopId])
   @@index([status, nextPollAt, leaseUntil], map: "ProductAccessory3D_job_due_idx")
+}
+
+/// Shared published asset/config registry. Imports and submissions retain their own private candidate lifecycles.
+/// VehicleGeneration.model3dKey + isPublished select the current revision; metadata files are generated mirrors.
+model Vehicle3DRevision {
+  key                String @id
+  generationId       String
+  generation         VehicleGeneration @relation(fields: [generationId], references: [id], onDelete: Restrict)
+  revision           Int @default(1)
+  sha256             String
+  bytes              Int
+  viewerConfig       Json
+  metadata           Json
+  importId           String?
+  submissionId       String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  @@index([generationId])
 }
 
 /// One shop accessory auto-fitted on one vehicle generation by the viewer (sceneHtml fitAccessory): computed ONCE for this part file

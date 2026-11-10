@@ -9,9 +9,18 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
-import { REPO_ROOT, activeModels } from "./vehicle3d-catalog.js";
-import { PRIVATE_3D_DIR } from "./vehicle3d-private-assets.js";
-import { fail } from "./vehicle3d-validation.js";
+import { REPO_ROOT, activeModels, safeKey } from "./vehicle3d-catalog.js";
+import { PRIVATE_3D_DIR, privatePath } from "./vehicle3d-private-assets.js";
+import { fail, parseCarModel } from "./vehicle3d-validation.js";
+
+/** Admin-only source resolution. Never used by customer catalog or public asset routes. */
+async function reviewSource(key: string) {
+  if (!safeKey(key)) return fail("NO_3D_CAR", "Car model not found.", 404);
+  const revision = await prisma.vehicle3DRevision.findUnique({ where: { key } });
+  const config = parseCarModel(revision?.viewerConfig ?? activeModels().find(m => m.key === key));
+  if (!config || !existsSync(carFile(key))) return fail("NO_3D_CAR", "Car model not found.", 404);
+  return config;
+}
 
 export const PART_LABELS = ["FRONT_BUMPER", "REAR_BUMPER", "SPOILER", "SIDE_SKIRTS", "MIRRORS", "WHEELS", "ROOF_RAILS"] as const;
 export type PartMap = Partial<Record<(typeof PART_LABELS)[number], string[]>>;
@@ -52,7 +61,7 @@ export async function segmentFile(file: string, config: unknown): Promise<{ piec
 }
 /** Segment + auto-label one catalog car. */
 export async function segmentModel(key: string): Promise<{ sha: string; pieces: Piece[]; dims: number[]; proposal: Proposal }> {
-  const m = activeModels().find(x => x.key === key); const sha = modelFileSha(key);
+  const m = await reviewSource(key); const sha = modelFileSha(key);
   if (!m || !sha) return fail("NO_3D_CAR", "This car model is not in the active catalog.", 404);
   const r = await segmentFile(carFile(key), m);
   if (modelFileSha(key) !== sha) return fail("MODEL_CHANGED", "The model file changed while it was being segmented. Try again.", 409);
@@ -132,6 +141,21 @@ const summary = (p: Proposal | PartMap | null) => Object.fromEntries(Object.entr
 const singleBlob = (pieces: Piece[]) => { const t = pieces.reduce((a, p) => a + p.tris, 0); return !t || Math.max(...pieces.map(p => p.tris)) > 0.85 * t; };
 
 export function createPartMapService() {
+  const importId = (key: string) => key.startsWith("import-") ? key.slice(7) : null;
+  const candidate = async (key: string, tx: Prisma.TransactionClient | typeof prisma = prisma) => {
+    const r = await tx.vehicle3DImport.findUnique({ where: { id: importId(key) ?? "" } });
+    if (!r || r.status !== "READY" || r.importStage === "DISCARDED" || !r.privateModelPath || !parseCarModel(r.viewerConfig)) return fail("NO_3D_CAR", "Prepared private import not found.", 404);
+    const validation = r.validation as Record<string, any>;
+    if (!existsSync(privatePath(r.privateModelPath)) || createHash("sha256").update(readFileSync(privatePath(r.privateModelPath))).digest("hex") !== validation?.sha256) return fail("STALE_PART_MAP", "Validate the changed import again.", 409);
+    return { r, validation };
+  };
+  const candidateShape = (key: string, r: Awaited<ReturnType<typeof candidate>>["r"], v: Record<string, any>) => {
+    const s = v.partMap;
+    return { key, name: (r.viewerConfig as any).generation, viewerConfig: r.viewerConfig, privateReview: true,
+      status: !s ? "none" : s.sha256 !== v.sha256 ? "stale" : s.confirmedAt ? "confirmed" : singleBlob(s.pieces) ? "single" : "proposed",
+      modelSha256: s?.sha256 ?? null, pieces: s?.pieces?.length ?? 0, dims: s?.dims ?? null, proposal: s?.proposal ?? null, map: s?.map ?? null,
+      confirmedAt: s?.confirmedAt ?? null, segmentedAt: s?.segmentedAt ?? null, proposalSummary: summary(s?.proposal), mapSummary: summary(s?.map), gate: v.accessoryGate ?? null };
+  };
   const shape = (key: string, r: Awaited<ReturnType<typeof prisma.carPartMap.findUnique>>) => {
     const sha = modelFileSha(key), pieces = (r?.pieces ?? []) as Piece[];
     const status = !r ? "none" : r.modelSha256 !== sha ? "stale" : r.confirmedAt ? "confirmed" : singleBlob(pieces) ? "single" : "proposed";
@@ -142,18 +166,42 @@ export function createPartMapService() {
   return {
     /** Every active car model with its part-map status; models without a current segmentation are segmented in the background. */
     list: async () => {
-      const models = activeModels(), rows = await prisma.carPartMap.findMany({ where: { model3dKey: { in: models.map(m => m.key) } } });
-      return models.map(m => { const r = rows.find(x => x.model3dKey === m.key) ?? null, s = shape(m.key, r);
+      const revisions = await prisma.vehicle3DRevision.findMany();
+      const models = [...new Map([...activeModels(), ...revisions.flatMap(r => { const c = parseCarModel(r.viewerConfig); return c ? [c] : []; })].map(m => [m.key, m])).values()];
+      const rows = await prisma.carPartMap.findMany({ where: { model3dKey: { in: models.map(m => m.key) } } });
+      const imports = await prisma.vehicle3DImport.findMany({ where: { status: "READY", privateModelPath: { not: null }, OR: [{ importStage: null }, { importStage: "READY" }] } });
+      return [...models.map(m => { const r = rows.find(x => x.model3dKey === m.key) ?? null, s = shape(m.key, r);
         if (s.status === "none" || s.status === "stale") void autoSegment(m.key);
-        const { proposal: _p, map: _m, dims: _d, ...rest } = s; return { ...rest, name: m.generation }; });
+        const { proposal: _p, map: _m, dims: _d, ...rest } = s; return { ...rest, name: m.generation }; }),
+        ...imports.map(r => candidateShape(`import-${r.id}`, r, r.validation as Record<string, any>))];
     },
     get: async (key: string) => {
-      if (!activeModels().some(m => m.key === key)) return fail("NO_3D_CAR", "This car model is not in the active catalog.", 404);
-      return shape(key, await prisma.carPartMap.findUnique({ where: { model3dKey: key } }));
+      if (importId(key)) { const { r, validation } = await candidate(key); return candidateShape(key, r, validation); }
+      const viewerConfig = await reviewSource(key);
+      return { ...shape(key, await prisma.carPartMap.findUnique({ where: { model3dKey: key } })), viewerConfig, privateReview: true };
     },
-    segment: async (uid: string, key: string) => { await saveSegmentation(key, uid, true); return shape(key, await prisma.carPartMap.findUnique({ where: { model3dKey: key } })); },
+    asset: async (key: string) => {
+      if (importId(key)) { const { r } = await candidate(key); return readFileSync(privatePath(r.privateModelPath!)); }
+      await reviewSource(key); return readFileSync(carFile(key));
+    },
+    segment: async (uid: string, key: string) => {
+      if (importId(key)) { const { r, validation } = await candidate(key); return candidateShape(key, r, validation); } // validation already segmented this exact candidate
+      await saveSegmentation(key, uid, true); return { ...shape(key, await prisma.carPartMap.findUnique({ where: { model3dKey: key } })), viewerConfig: await reviewSource(key), privateReview: true };
+    },
     /** Confirm the admin's map (null = unconfirm: the car goes back to zones). Only for the file the pieces came from. */
     confirm: async (uid: string, key: string, body: { map?: unknown; modelSha256?: unknown }) => prisma.$transaction(async tx => {
+      if (importId(key)) {
+        const id = importId(key)!;
+        await tx.$queryRaw`SELECT "id" FROM "Vehicle3DImport" WHERE "id"=${id} FOR UPDATE`;
+        const { r, validation } = await candidate(key, tx), s = validation.partMap;
+        if (!s || s.sha256 !== body.modelSha256 || s.sha256 !== validation.sha256) return fail("STALE_PART_MAP", "Reload the current import's part map.", 409);
+        const map = body.map === null ? s.map ?? null : parsePartMap(body.map, new Set((s.pieces as Piece[]).map(p => p.id)));
+        if (body.map !== null && !map) return fail("INVALID_PART_MAP", "Invalid part map.");
+        const updated = { ...validation, partMap: { ...s, map, confirmedAt: body.map === null ? null : new Date().toISOString(), confirmedByUserId: body.map === null ? null : uid } };
+        await tx.vehicle3DImport.update({ where: { id }, data: { validation: updated as Prisma.InputJsonValue } });
+        await tx.auditLog.create({ data: { actorId: uid, action: body.map === null ? "PART_MAP_UNCONFIRMED" : "PART_MAP_CONFIRMED", targetId: id, details: { sha: s.sha256, privateImport: true } } });
+        return candidateShape(key, r, updated);
+      }
       await tx.$queryRaw`SELECT "model3dKey" FROM "CarPartMap" WHERE "model3dKey"=${key} FOR UPDATE`;
       const r = await tx.carPartMap.findUnique({ where: { model3dKey: key } });
       if (!r) return fail("NOT_SEGMENTED", "This car has not been split into parts yet.", 409);

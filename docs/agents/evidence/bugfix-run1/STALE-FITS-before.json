@@ -1,0 +1,1252 @@
+{
+  "fits": [
+    {
+      "id": "3329a3e2-8d10-482a-bcc4-9e60eb17c4c8",
+      "status": "PUBLISHED",
+      "accessoryType": "FRONT_BUMPER",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "7a9aac54-fe4b-4167-a967-373cae968ae1",
+      "name": "BMW E36 M3 front bumper",
+      "generationId": "6e4a77ca-cd14-47fb-b468-99792a911b72",
+      "fitVersion": 4,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "4",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "f85603f5-a24a-42fe-909d-b5952c80e7b0",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "88e09fa0-d8e8-4957-9ef6-0f1fa17b48ac",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "2a4fc8a6-0939-4d0d-b33a-a93a9ffc14f7",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "4acdaf71-fb80-4c2d-a5e6-d699963a819b",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "443cdbd8-de29-4200-ac2b-cc46c781cf78",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "992c618b-76c1-4acf-b9ec-f8b68441f8b2",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "392b0662-67fc-4194-aeeb-ab920eb3f1fb",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "c36706eb-27ea-4b44-8e26-44fed17913a7",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "de451857-e967-454b-81c9-2c7040f8b03d",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "21a1446a-f27b-4213-b4b8-20ff83171942",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "bfc1c9ea-57fa-4f66-be9d-1a1dfc831c88",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "6e4a77ca-cd14-47fb-b468-99792a911b72",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "973e904a-ce24-4b03-984f-61b55ac5adc4",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "3d8ed403-07b9-43bc-9873-1e521fd1d4f6",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "24eb2539-ac8b-48a0-a818-be2b2750eeba",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "65f8f72b-d63d-4ffa-8a62-47fc8d0bbc56",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "634b064d-697b-49eb-ae42-9b2627fa5e36",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "ca070647-6d23-4c8b-8667-4b7331955dda",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "4abc0994-ec68-4dec-b411-8348aad9cadf",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "035eb37e-5c26-443c-9a27-348501dc6427",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "accessoryType": "RIMS",
+      "generationMode": "manual",
+      "provider": "MANUAL",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "name": "Mesh rims 17″ (set of 4)",
+      "generationId": "31ee8deb-4197-4e56-ad6f-f312d6316d64",
+      "fitVersion": 8,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "8",
+      "failed": null
+    },
+    {
+      "id": "e6fefd78-d536-4bc0-820f-2dec96c7f444",
+      "status": "PUBLISHED",
+      "accessoryType": "WING",
+      "generationMode": "meshy",
+      "provider": "MESHY",
+      "productId": "b79d66c1-f153-478f-86e4-5d9a954707ac",
+      "name": "Rear wing for BMW E36",
+      "generationId": "6e4a77ca-cd14-47fb-b468-99792a911b72",
+      "fitVersion": 4,
+      "approvedAt": null,
+      "adj": null,
+      "storedVersion": "4",
+      "failed": null
+    }
+  ],
+  "admin": [
+    {
+      "id": "caeb5d60-6561-49e7-8770-2db3fabe4b4b",
+      "status": "READY_FOR_FINAL_REVIEW"
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED"
+    },
+    {
+      "id": "3329a3e2-8d10-482a-bcc4-9e60eb17c4c8",
+      "status": "PUBLISHED"
+    },
+    {
+      "id": "e6fefd78-d536-4bc0-820f-2dec96c7f444",
+      "status": "PUBLISHED"
+    }
+  ],
+  "customer": [
+    {
+      "id": "3329a3e2-8d10-482a-bcc4-9e60eb17c4c8",
+      "generationId": "6e4a77ca-cd14-47fb-b468-99792a911b72",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "FRONT_BUMPER",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "FRONT_BUMPER",
+                "fitsIds": [
+                  "6e4a77ca-cd14-47fb-b468-99792a911b72"
+                ],
+                "universal": false,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [
+              {
+                "id": "6e4a77ca-cd14-47fb-b468-99792a911b72",
+                "nameEn": "BMW 3 Series E36",
+                "nameAr": "بي إم دبليو الفئة الثالثة E36"
+              }
+            ],
+            "universal": false,
+            "rim": null,
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "f85603f5-a24a-42fe-909d-b5952c80e7b0",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "88e09fa0-d8e8-4957-9ef6-0f1fa17b48ac",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "2a4fc8a6-0939-4d0d-b33a-a93a9ffc14f7",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "4acdaf71-fb80-4c2d-a5e6-d699963a819b",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "443cdbd8-de29-4200-ac2b-cc46c781cf78",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "992c618b-76c1-4acf-b9ec-f8b68441f8b2",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "392b0662-67fc-4194-aeeb-ab920eb3f1fb",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "c36706eb-27ea-4b44-8e26-44fed17913a7",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "de451857-e967-454b-81c9-2c7040f8b03d",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "21a1446a-f27b-4213-b4b8-20ff83171942",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "bfc1c9ea-57fa-4f66-be9d-1a1dfc831c88",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "6e4a77ca-cd14-47fb-b468-99792a911b72",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "973e904a-ce24-4b03-984f-61b55ac5adc4",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "3d8ed403-07b9-43bc-9873-1e521fd1d4f6",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "24eb2539-ac8b-48a0-a818-be2b2750eeba",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "65f8f72b-d63d-4ffa-8a62-47fc8d0bbc56",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "634b064d-697b-49eb-ae42-9b2627fa5e36",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "ca070647-6d23-4c8b-8667-4b7331955dda",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "4abc0994-ec68-4dec-b411-8348aad9cadf",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "035eb37e-5c26-443c-9a27-348501dc6427",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "generationId": "31ee8deb-4197-4e56-ad6f-f312d6316d64",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "RIMS",
+            "model": null,
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "RIMS",
+                "fitsIds": [],
+                "universal": true,
+                "model": null,
+                "autoFit": null,
+                "allowed": false,
+                "reason": "NO_ACCESSORY_3D"
+              }
+            ],
+            "fits": [],
+            "universal": true,
+            "rim": {
+              "inches": 17,
+              "widthIn": 8,
+              "pcd": "5x112",
+              "offsetMm": 35,
+              "finish": "SILVER"
+            },
+            "installed": null
+          }
+        }
+      }
+    },
+    {
+      "id": "e6fefd78-d536-4bc0-820f-2dec96c7f444",
+      "generationId": "6e4a77ca-cd14-47fb-b468-99792a911b72",
+      "response": {
+        "status": 200,
+        "body": {
+          "accessory": {
+            "type": "WING",
+            "model": {
+              "file": "accessories/acc-7e40b463d76777b8.glb",
+              "size": {
+                "widthMm": 1300,
+                "lengthMm": null,
+                "rimInches": null
+              },
+              "finish": null
+            },
+            "autoFit": null,
+            "kit": false,
+            "parts": [
+              {
+                "part": "MAIN",
+                "type": "WING",
+                "fitsIds": [
+                  "6e4a77ca-cd14-47fb-b468-99792a911b72"
+                ],
+                "universal": false,
+                "model": {
+                  "file": "accessories/acc-7e40b463d76777b8.glb",
+                  "size": {
+                    "widthMm": 1300,
+                    "lengthMm": null,
+                    "rimInches": null
+                  },
+                  "finish": null
+                },
+                "autoFit": null,
+                "allowed": false,
+                "reason": "FIT_NOT_READY"
+              }
+            ],
+            "fits": [
+              {
+                "id": "6e4a77ca-cd14-47fb-b468-99792a911b72",
+                "nameEn": "BMW 3 Series E36",
+                "nameAr": "بي إم دبليو الفئة الثالثة E36"
+              }
+            ],
+            "universal": false,
+            "rim": null,
+            "installed": {
+              "photoIds": [
+                "7dd07625-7489-47e6-ba0a-32de97aad714",
+                "e888c2db-e5ec-4ad0-8e28-39c33e739590",
+                "5bda645d-c7bd-4a1b-b8f5-e4dab063e245"
+              ],
+              "spin": false,
+              "generation": {
+                "id": "6e4a77ca-cd14-47fb-b468-99792a911b72",
+                "nameEn": "BMW 3 Series E36",
+                "nameAr": "بي إم دبليو الفئة الثالثة E36"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

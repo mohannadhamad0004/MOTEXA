@@ -1,0 +1,13 @@
+{
+  "api": {
+    "status": 400,
+    "body": {
+      "success": false,
+      "code": "INVALID_SOURCE",
+      "message": "Use an HTTPS source URL."
+    }
+  },
+  "uiMessage": "Upload failed. Choose a valid GLB within the backend size limit and verify provenance fields.",
+  "importCountBefore": 4,
+  "importCountAfter": 4
+}

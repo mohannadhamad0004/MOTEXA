@@ -1,8 +1,9 @@
+import { errorBody } from "../services/error-codes.js";
 import { Router } from "express";
 import express from "express";
 import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
-import { requireAuth, requireCustomer, requireTowAdmin, requireTowProvider } from "../middleware/auth.middleware.js";
+import { requireAuth, requireCustomer, requireTowAdmin, requireTowDriver, requireTowProvider } from "../middleware/auth.middleware.js";
 import { freeDriversNear } from "../services/tow-cards.js";
 import { notify } from "../services/provider-onboarding.js";
 import { requireApprovedProvider } from "../services/provider-onboarding.js";
@@ -19,6 +20,7 @@ import {
   driverPing,
   driverStatus,
   freeDrivers,
+  endTrail,
   livePoint,
   myDriver,
   ratingOf,
@@ -40,14 +42,14 @@ const router = Router();
 const json = express.json({ limit: "16kb" });
 // adding / editing a driver carries his photo and licence photo (base64, up to 5 MB each)
 const withPhotos = express.json({ limit: "14mb" });
-const driverSide = [requireAuth, json];
+const driverSide = [requireAuth, requireTowDriver, json];
 const companySide = [requireAuth, requireTowProvider, requireApprovedProvider, json];
 const companyPhotos = [requireAuth, requireTowProvider, requireApprovedProvider, withPhotos];
 
 const send = (res: any, e: unknown, label: string) => {
-  if (e instanceof DispatchError) return res.status(e.code).json({ success: false, message: e.message });
+  if (e instanceof DispatchError) return res.status(e.code).json(errorBody(e.message));
   console.error(`${label}:`, e);
-  return res.status(500).json({ success: false, message: "Internal server error." });
+  return res.status(500).json(errorBody("Internal server error."));
 };
 const me = (res: any) => (res.locals.authUser as { id: string }).id;
 const id = (v: unknown) => String(v);
@@ -386,7 +388,7 @@ router.post("/admin/tow/jobs/:id/cancel", requireAuth, requireTowAdmin, json, as
       const moved = await tx.towRequest.updateMany({ where: { id: r.id, status: { in: ["REQUESTED", ...WORKING] } }, data: { status: "CANCELLED", cancelledAt: new Date(), cancelledBy: "ADMIN", cancelReason: why } });
       if (!moved.count) throw new DispatchError(409, "Only an open job can be cancelled.");
       await releaseTruck(tx, r.assignedTruckId);
-      await tx.towJobTrail.deleteMany({ where: { requestId: r.id } });
+      await endTrail(tx, r.id, r.driverId);
       await tx.auditLog.create({ data: { actorId: me(res), action: "TOW_REQUEST_CANCELLED", targetId: r.id, details: { by: "ADMIN", reason: why } } });
     });
     await notify([r.customerId, r.company.userId, ...(r.driver ? [r.driver.userId] : [])], ["A tow was cancelled by MOTEXA", "ألغت موتكسا طلب سحب"], [why, why]);

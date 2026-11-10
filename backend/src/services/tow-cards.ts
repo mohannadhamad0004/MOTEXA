@@ -58,7 +58,7 @@ export function restingPoint(d: { truck: { baseLat: number | null; baseLng: numb
   return cityCentre(d.company.city) ?? null;
 }
 
-/** Every FREE driver of an APPROVED company with his card, rounded pin and distance from `from` (km, 1 decimal), nearest first. */
+/** Every FREE driver of an APPROVED company with his card, rounded pin and distance from `from` (whole km), nearest first. */
 export async function freeDriversNear(from: { lat: number; lng: number } | null, companyId?: string) {
   const all = await prisma.towDriver.findMany({
     where: { approval: "APPROVED", offline: false, user: { status: "ACTIVE" }, company: { verificationStatus: "APPROVED", ...(companyId ? { id: companyId } : {}) } },
@@ -67,10 +67,13 @@ export async function freeDriversNear(from: { lat: number; lng: number } | null,
   const free: typeof all = [];
   for (const d of all) if ((await driverStatus(prisma, d)) === "FREE") free.push(d);
   const cards = await driverCards(free.map((d) => d.id));
+  // sorted by the exact distance; only the number shown to the customer is rounded to whole km
   return free
     .map((d) => {
       const p = restingPoint(d);
-      return { ...cards.get(d.id)!, pin: p ? { lat: round3(p.lat)!, lng: round3(p.lng)! } : null, distanceKm: from && p ? Math.round(haversineKm(from, p) * 10) / 10 : null, _companyId: d.companyId };
+      const exact = from && p ? haversineKm(from, p) : null;
+      return { exact, card: { ...cards.get(d.id)!, pin: p ? { lat: round3(p.lat)!, lng: round3(p.lng)! } : null, distanceKm: exact === null ? null : Math.round(exact), _companyId: d.companyId } };
     })
-    .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity) || a.id.localeCompare(b.id));
+    .sort((a, b) => (a.exact ?? Infinity) - (b.exact ?? Infinity) || a.card.id.localeCompare(b.card.id))
+    .map((x) => x.card);
 }

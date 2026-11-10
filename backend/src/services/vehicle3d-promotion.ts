@@ -4,6 +4,7 @@ import type {Prisma} from "../generated/prisma/client.js";
 import {REPO_ROOT,atomicWrite,catalogFiles,readManifest,safeKey,type ModelMetadata} from "./vehicle3d-catalog.js";
 import {fail} from "./vehicle3d-validation.js";
 import {genKey} from "../generations.js";
+import {registerRevision} from "./vehicle3d-revisions.js";
 const storage=path.join(REPO_ROOT,"backend/storage/vehicle3d"),JOURNAL=path.join(storage,"promotion-journal.json");
 /** Caller holds the catalog advisory lock; commit this together with the originating approval. */
 export async function stageCatalogPromotion(tx:Prisma.TransactionClient,input:{generationId:string;entry:ModelMetadata;bytes:Buffer;expectedExistingKey?:unknown;submissionId?:string;importId?:string;actorId?:string}){
@@ -18,6 +19,7 @@ export async function stageCatalogPromotion(tx:Prisma.TransactionClient,input:{g
   const manifestKey=Object.entries(manifest).find(([,m])=>m.file===gen.model3dKey)?.[0]??genKey(gen.vehicle.make,gen.vehicle.model,gen.code);
   if(manifest[manifestKey])e.previousCatalogMetadata=manifest[manifestKey];
   manifest[manifestKey]=e;
+  await registerRevision(tx,gen.id,e,input.bytes,{importId:input.importId,submissionId:input.submissionId});
   const files=catalogFiles(manifest),before=[...files.keys()].map(file=>[file,readFileSync(file,"utf8")]);
   mkdirSync(storage,{recursive:true});
   atomicWrite(JOURNAL,JSON.stringify({submissionId:input.submissionId,importId:input.importId,generationId:gen.id,key:e.file,shared,before}));
@@ -32,7 +34,13 @@ export async function recoverCatalogJournal(tx:Prisma.TransactionClient){
   const sub=saved.submissionId?await tx.vehicle3DSubmission.findUnique({where:{id:saved.submissionId}}):null;
   const gen=saved.generationId?await tx.vehicleGeneration.findUnique({where:{id:saved.generationId}}):null;
   const imported=saved.importId?await tx.vehicle3DImport.findUnique({where:{id:saved.importId}}):null;
-  const committed=saved.importId?imported?.status==="PUBLISHED"&&imported.publishedModel3dKey===saved.key:saved.submissionId?sub?.status==="APPROVED"&&sub.approvedModel3dKey===saved.key:gen?.model3dKey===saved.key;
-  if(!committed){for(const[file,text]of saved.before)atomicWrite(file,text);if(existsSync(saved.shared))unlinkSync(saved.shared);}
+  const committed=saved.auditId?!!await tx.auditLog.findUnique({where:{id:saved.auditId}}):saved.importId?imported?.status==="PUBLISHED"&&imported.publishedModel3dKey===saved.key:saved.submissionId?sub?.status==="APPROVED"&&sub.approvedModel3dKey===saved.key:gen?.model3dKey===saved.key;
+  if(!committed){for(const[file,text]of saved.before)atomicWrite(file,text);if(saved.shared&&existsSync(saved.shared))unlinkSync(saved.shared);}
   unlinkSync(JOURNAL);
+}
+/** Journal metadata-only edits with the same lock/recovery protocol as GLB promotion. The audit row commits with the DB change. */
+export async function stageCatalogMetadata(tx:Prisma.TransactionClient,manifest:Parameters<typeof catalogFiles>[0],auditId:string){
+  const files=catalogFiles(manifest),before=[...files.keys()].map(file=>[file,readFileSync(file,"utf8")]);
+  mkdirSync(storage,{recursive:true});atomicWrite(JOURNAL,JSON.stringify({auditId,before}));
+  for(const[file,text]of files)atomicWrite(file,text);
 }

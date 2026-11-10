@@ -1,7 +1,10 @@
 // Isolated UI fixtures only: all API calls intercepted, no account/DB/provider writes or external downloads.
+/* global __dirname */
 // Reuses a retained production GLB for actual production-renderer preview; never restores retired assets.
 const {chromium}=require('@playwright/test'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const ROOT=path.resolve(__dirname,'../../..'),OUT=path.join(ROOT,'docs/3d/sketchfab-import'),BASE=process.env.WEB||'http://localhost:8085';
+const {serveExport}=require('./static-export.cjs');
+const STATIC=process.env.WEB_DIR?path.resolve(process.env.WEB_DIR):null;
+const ROOT=path.resolve(__dirname,'../../..'),OUT=process.env.MOTEXA_UI_OUT||path.join(ROOT,'docs/3d/sketchfab-import'),BASE=STATIC?'http://motexa-ui.local':process.env.WEB||'http://localhost:8085';
 const manifest=JSON.parse(fs.readFileSync(path.join(ROOT,'docs/3d/models.json'),'utf8')),entry=manifest['bmw-3-series-e36'],config=entry.viewerConfig;
 const glb=fs.readFileSync(path.join(ROOT,'backend/public/3d',entry.file+'.glb'));
 const generation={id:'fixture-generation',code:'E36',nameEn:'3 Series E36',nameAr:'الفئة الثالثة E36',yearFrom:1990,yearTo:2000,isActive:true,isPublished:true,model3dKey:entry.file};
@@ -12,11 +15,11 @@ const fixture={id:'fixture-import',generationId:generation.id,status:'READY',pro
 async function theme(p,ar,dark){
  const applied=await p.evaluate(({ar,dark})=>{let f;for(const el of document.querySelectorAll('*')){const k=Object.keys(el).find(k=>k.startsWith('__reactFiber$'));if(k){f=el[k];break;}}while(f?.return)f=f.return;const stack=[f];let language=false,theme=false;while(stack.length){const n=stack.pop();if(!n)continue;const v=n.memoizedProps?.value;if(v?.setLanguage&&!language){v.setLanguage(ar?'ar':'en');language=true;}if(v?.setMode&&!theme){v.setMode(dark?'dark':'light');theme=true;}if(n.child)stack.push(n.child);if(n.sibling)stack.push(n.sibling);}return{language,theme};},{ar,dark});assert.ok(applied.language&&applied.theme);await p.waitForTimeout(250);
 }
-async function go(p,route){await p.evaluate(r=>{window.history.pushState({},'',r);window.dispatchEvent(new PopStateEvent('popstate'));},route);await p.waitForTimeout(450);}
+async function go(p,route){if(STATIC){await p.goto(BASE+route);await p.waitForFunction(()=>{for(const el of document.querySelectorAll('*'))if(Object.keys(el).some(k=>k.startsWith('__reactFiber$')))return true;return false;});}else await p.evaluate(r=>{window.history.pushState({},'',r);window.dispatchEvent(new PopStateEvent('popstate'));},route);await p.waitForTimeout(650);}
 async function main(){
  fs.mkdirSync(OUT,{recursive:true});const browser=await chromium.launch({channel:'chrome',headless:true}),results=[];
  try{for(const ar of [false,true])for(const dark of [false,true]){
-  const ctx=await browser.newContext({viewport:{width:390,height:844},reducedMotion:'reduce'});let record=structuredClone(fixture),inspected=structuredClone(inspection),writes=[];
+  const ctx=await browser.newContext({viewport:{width:390,height:844},reducedMotion:'reduce',serviceWorkers:'block'});let record=structuredClone(fixture),inspected=structuredClone(inspection),writes=[];
   await ctx.addInitScript(()=>{if(window!==window.top)return;sessionStorage.setItem('motexa_access_token','isolated-ui-fixture');window.__shown=false;window.addEventListener('message',e=>{try{if(JSON.parse(e.data).type==='shown')window.__shown=true;}catch{}});});
   const p=await ctx.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));
   await ctx.route('**/*',async route=>{
@@ -34,13 +37,15 @@ async function main(){
     return route.fulfill({json:body,headers:{'access-control-allow-origin':'*'}});
    }
    if(u.hostname==='cdn.jsdelivr.net'&&u.pathname.includes('/three@0.160.1/')){const suffix=u.pathname.split('/three@0.160.1/')[1];if(suffix&&!suffix.includes('..'))return route.fulfill({body:fs.readFileSync(path.join(ROOT,'.private/three-r160/package',suffix)),contentType:'text/javascript',headers:{'access-control-allow-origin':'*'}});}
-   if(['localhost','127.0.0.1'].includes(u.hostname))return route.continue();return route.abort();
+   if(STATIC&&u.origin===BASE)return serveExport(route,STATIC);
+   if(!STATIC&&['localhost','127.0.0.1'].includes(u.hostname))return route.continue();return route.abort();
   });
   const shot=async(name)=>{
    await theme(p,ar,dark);
    // Dismiss only the existing department layout's development warning; do not alter its owner's code.
    const knownToast=p.locator('div[role="button"]').filter({hasText:/Invalid style property of/}).locator('button').last();
    if(await knownToast.isVisible())await knownToast.click();
+   const text=await p.locator('body').innerText();assert.doesNotMatch(text,/\?{4,}|\uFFFD/,'Broken text encoding');if(ar)assert.match(text,/[\u0600-\u06ff]/);
    const overflow=await p.evaluate(()=>({document:document.documentElement.scrollWidth,body:document.body.scrollWidth}));assert.ok(overflow.document<=390&&overflow.body<=390,JSON.stringify(overflow));assert.deepEqual(errors,[]);
    const file=`${name}-${ar?'ar':'en'}-${dark?'dark':'light'}.png`;await p.screenshot({path:path.join(OUT,file),fullPage:true});results.push({file,overflow,errors:[...errors],fixture:true});console.log('PASS',file);
   };
@@ -55,7 +60,15 @@ async function main(){
   const paint=p.getByRole('button',{name:ar?'تجربة الطلاء الأحمر':'Test red paint',exact:true});await paint.scrollIntoViewIfNeeded();await paint.click();await p.waitForTimeout(600);await p.locator('iframe').scrollIntoViewIfNeeded();await shot('04-review-paint');
   record={...structuredClone(fixture),status:'PUBLISHED',publishedModel3dKey:entry.file};await go(p,'/dept/vehicles/imports/new');await go(p,'/dept/vehicles/imports/fixture-import');await p.getByRole('button',{name:ar?'تأكيد خريطة القطع':'Confirm part map',exact:true}).scrollIntoViewIfNeeded();await shot('05-published');
   inspected={...inspection,license:'CC BY-NC 4.0 (UI fixture)',allowed:false,licenseClass:null,refusalCode:'LICENSE_NOT_ALLOWED'};await go(p,'/dept/vehicles/imports/new');await p.getByRole('textbox',{name:ar?'رابط النموذج من Sketchfab':'Sketchfab model URL'}).fill(entry.url);await p.getByRole('button',{name:ar?'فحص الرابط':'Inspect link',exact:true}).click();const refusal=p.getByText(ar?/لا يمكن استيراد هذا النموذج/:/This model cannot be imported/);await refusal.waitFor();await refusal.scrollIntoViewIfNeeded();await shot('06-error');
-  assert.equal(writes.length,2);await ctx.close();
+  for(const [name,value]of [['07-not-downloadable',{...inspection,allowed:false,downloadable:false,refusalCode:'NOT_DOWNLOADABLE'}],['08-duplicate',{...inspection,duplicate:{importId:'fixture-import',name:'Existing fixture import'}}]]){
+   inspected=value;await go(p,'/dept/vehicles/imports/new');await theme(p,ar,dark);
+   await p.getByRole('textbox',{name:ar?'رابط النموذج من Sketchfab':'Sketchfab model URL'}).fill(entry.url);
+   await p.getByRole('button',{name:ar?'فحص الرابط':'Inspect link',exact:true}).click();
+   await p.getByText(inspection.title,{exact:true}).waitFor();await p.getByText(inspection.title,{exact:true}).scrollIntoViewIfNeeded();
+   assert.equal(await p.getByRole('button',{name:ar?'استيراد للمراجعة الخاصة':'Import for private review',exact:true}).isDisabled(),true);
+   await shot(name);
+  }
+  assert.equal(writes.length,4);await ctx.close();
  }}finally{await browser.close();fs.writeFileSync(path.join(OUT,'ui-results.json'),JSON.stringify({evidence:'Mocked UI states using a retained production model; no live Sketchfab import.',results},null,2)+'\n');}
 }
 main().catch(e=>{console.error(e.stack);process.exitCode=1;});

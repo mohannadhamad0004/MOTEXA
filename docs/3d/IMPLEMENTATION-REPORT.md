@@ -1,5 +1,9 @@
 # 3D cleanup and submission implementation report
 
+The [2026-11-08 workflow repair report](WORKFLOW-REPAIR.md) records the current taxonomy/publication separation, revision and model-management workflows, exact stock-visibility restoration, fresh E36 rear-bumper rejection, automated/browser validation and remaining checks. Its results supersede the older phase summaries below.
+
+The [STEP 3D-FROM-LINK completion report](SKETCHFAB-IMPORT.md) records the 2026-11-07 Sketchfab workflow and actual Volkswagen Beetle publication. The active runtime catalog now contains 22 models; the older 21-model counts below describe their recorded historical phases. Live Garage, attribution, hash-bound part-map and current validation evidence are in that report.
+
 The [managed catalog completion results](#managed-catalog-completion--2026-11-05) supersede the historical phase-2 and initial-phase implementation/test notes below.
 
 Branch: `ui/blueprint`. No commit, push, reset, stash, revert or branch deletion. No graphify-out changes. No Diala-owned auth, choose-role, admin tabs, mechanics, root layout/index or components edited.

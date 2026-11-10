@@ -1,0 +1,54 @@
+{
+  "driverCounts": [
+    {
+      "approval": "APPROVED",
+      "count": "3"
+    }
+  ],
+  "workingJobs": [
+    {
+      "id": "c1a3da96-64b5-4143-b10c-d23ae5091fe0",
+      "status": "EN_ROUTE",
+      "driverId": "465fcc78-0cac-45ba-8e03-17d7b163ee29",
+      "companyId": "99d3c063-bdf1-4137-bbdd-4b7bfdd55804"
+    }
+  ],
+  "accessories": [
+    {
+      "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+      "status": "PUBLISHED",
+      "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+      "providerState": null,
+      "has_model": true,
+      "deactivatedAt": null,
+      "has_preview": false
+    },
+    {
+      "id": "3329a3e2-8d10-482a-bcc4-9e60eb17c4c8",
+      "status": "PUBLISHED",
+      "productId": "7a9aac54-fe4b-4167-a967-373cae968ae1",
+      "providerState": null,
+      "has_model": true,
+      "deactivatedAt": null,
+      "has_preview": false
+    },
+    {
+      "id": "e6fefd78-d536-4bc0-820f-2dec96c7f444",
+      "status": "PUBLISHED",
+      "productId": "b79d66c1-f153-478f-86e4-5d9a954707ac",
+      "providerState": "SUCCEEDED",
+      "has_model": true,
+      "deactivatedAt": null,
+      "has_preview": true
+    },
+    {
+      "id": "caeb5d60-6561-49e7-8770-2db3fabe4b4b",
+      "status": "READY_FOR_FINAL_REVIEW",
+      "productId": "b87fb35c-df63-4a76-9dcd-afd4c20e4e78",
+      "providerState": "SUCCEEDED",
+      "has_model": true,
+      "deactivatedAt": null,
+      "has_preview": true
+    }
+  ]
+}

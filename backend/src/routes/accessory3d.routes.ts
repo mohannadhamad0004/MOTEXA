@@ -45,9 +45,13 @@ export function createAccessory3DRouter(service = createAccessory3DService(), pa
   router.get(a + "/:id/assets/:asset", ...admin, handle(async (req, res) => sendPrivate(res, await service.asset(null, p(req, "id"), String(req.params.asset), true))));
   router.post(a + "/:id/approve", ...admin, handle(async (req, res, uid) => res.json({ accessory: await service.approve(uid, p(req, "id")) })));
   router.post(a + "/:id/reject", ...admin, json, handle(async (req, res, uid) => res.json({ accessory: await service.reject(uid, p(req, "id"), req.body?.notes) })));
-  router.post(a + "/:id/start", ...admin, json, handle(async (req, res, uid) => res.status(202).json({ accessory: await service.start(uid, p(req, "id"), req.body?.confirmPaid) })));
+  router.post(a + "/:id/start", ...admin, json, handle(async (req, res, uid) => res.status(202).json({ accessory: req.body?.retryProcessing === true ? await service.retryProcessing(uid,p(req,"id")) : await service.start(uid, p(req, "id"), req.body?.confirmPaid, req.body?.replaceRevision) })));
   router.post(a + "/:id/preview", ...admin, json, handle(async (req, res, uid) => res.json({ accessory: await service.preview(uid, p(req, "id"), req.body?.generationId) })));
   router.post(a + "/:id/regenerate", ...admin, json, handle(async (req, res, uid) => res.json({ accessory: await service.regenerate(uid, p(req, "id"), req.body?.notes) })));
+  router.post(a + "/:id/refit", ...admin, handle(async(req,res,uid)=>res.json(await autoFits.rerun(uid,p(req,"id")))));
+  router.post(a + "/:id/unpublish", ...admin, handle(async(req,res,uid)=>res.json({accessory:await service.publication(uid,p(req,"id"),false)})));
+  router.post(a + "/:id/reactivate", ...admin, handle(async(req,res,uid)=>res.json({accessory:await service.publication(uid,p(req,"id"),true)})));
+  router.post(a + "/:id/discard-candidate", ...admin, handle(async(req,res,uid)=>res.json(await service.discardCandidate(uid,p(req,"id")))));
   router.post(a + "/:id/publish", ...admin, json, handle(async (req, res, uid) => {
     const accessory = await service.publish(uid, p(req, "id"), req.body ?? {}); void autoFitAccessory(p(req, "id")); // fit once per fitting generation, in the background
     res.json({ accessory });
@@ -58,6 +62,7 @@ export function createAccessory3DRouter(service = createAccessory3DService(), pa
   // part maps: list (+ background segmentation of new / changed files), one car, re-segment now, confirm / unconfirm
   const mapJson = express.json({ limit: "256kb" });
   router.get("/admin/parts/part-maps", ...admin, handle(async (_req, res) => res.json({ models: await partMaps.list() })));
+  router.get("/admin/parts/part-maps/:key/model", ...admin, handle(async (req, res) => sendPrivate(res, { bytes: await partMaps.asset(p(req, "key")), mime: "model/gltf-binary" })));
   router.get("/admin/parts/part-maps/:key", ...admin, handle(async (req, res) => res.json({ partMap: await partMaps.get(p(req, "key")) })));
   router.post("/admin/parts/part-maps/:key/segment", ...admin, handle(async (req, res, uid) => res.json({ partMap: await partMaps.segment(uid, p(req, "key")) })));
   router.put("/admin/parts/part-maps/:key", ...admin, mapJson, handle(async (req, res, uid) => res.json({ partMap: await partMaps.confirm(uid, p(req, "key"), req.body ?? {}) })));
@@ -67,9 +72,14 @@ export function createAccessory3DRouter(service = createAccessory3DService(), pa
   router.put("/admin/parts/auto-fits/:accessoryId/:generationId", ...admin, json, handle(async (req, res, uid) => res.json({ fit: await autoFits.approve(uid, p(req, "accessoryId"), p(req, "generationId"), req.body ?? {}) })));
 
   const c = "/catalog/products/:productId/accessory-3d";
+  router.get(c+"/garage",...customer,handle(async(req,res,uid)=>{
+    const cars=await import("../prisma.js").then(({prisma})=>prisma.customerGarageCar.findMany({where:{userId:uid},select:{id:true,make:true,model:true,year:true,generationId:true,isActive:true}}));
+    const choices=await Promise.all(cars.map(async car=>{const view=await service.forProduct(p(req),car.generationId);return {carId:car.id,make:car.make,model:car.model,year:car.year,generationId:car.generationId,isActive:car.isActive,allowed:!!view?.parts.some(x=>x.allowed),reason:view?.parts.find(x=>!x.allowed)?.reason??"NO_ACCESSORY_3D"};}));
+    res.setHeader("Cache-Control","private, no-store");res.json({cars:choices});
+  }));
   router.get(c, guards.auth, handle(async (req, res) => { res.setHeader("Cache-Control", "no-store"); res.json({ accessory: await service.forProduct(p(req), typeof req.query.generationId === "string" ? req.query.generationId : null) }); }));
   router.get(c + "/adjust", ...customer, handle(async (req, res, uid) => res.json({ adj: await service.getAdjust(uid, p(req), part(req)) })));
-  router.put(c + "/adjust", ...customer, json, handle(async (req, res, uid) => res.json({ adj: await service.putAdjust(uid, p(req), req.body?.adj, part(req)) })));
+  router.put(c + "/adjust", ...customer, json, handle(async () => {throw new Vehicle3DError(403,"FIT_ADMIN_ONLY","Only Parts Admin can change accessory fits.");}));
   router.get("/catalog/accessory-3d/photos/:photoId", guards.auth, handle(async (req, res) => {
     res.setHeader("Cache-Control", "private, max-age=3600"); res.setHeader("X-Content-Type-Options", "nosniff"); res.type("image/jpeg").send(await service.installedPhoto(p(req, "photoId")));
   }));

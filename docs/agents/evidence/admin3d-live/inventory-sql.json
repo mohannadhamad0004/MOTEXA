@@ -1,0 +1,261 @@
+{
+  "drivers": {
+    "error": "42P01"
+  },
+  "driverCounts": [
+    {
+      "approval": "APPROVED",
+      "count": "3"
+    }
+  ],
+  "workingJobs": {
+    "error": "42703"
+  },
+  "accessories": {
+    "error": "42703"
+  },
+  "generations": [
+    {
+      "id": "19febfb9-3b4a-4a5f-b2c0-ce33547da350",
+      "make": "Volkswagen",
+      "model": "Beetle",
+      "code": "Type 1",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "manual-19febfb9-3b4a-4a5f-b2c0-ce33547da350-ad65d3b3205c45de",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "65f8f72b-d63d-4ffa-8a62-47fc8d0bbc56",
+      "make": "BMW",
+      "model": "X5",
+      "code": "E53",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "bmw-x5-e53",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "392b0662-67fc-4194-aeeb-ab920eb3f1fb",
+      "make": "Peugeot",
+      "model": "208",
+      "code": "2nd gen / P21",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "peugeot-208-2nd-gen-p21",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "21a1446a-f27b-4213-b4b8-20ff83171942",
+      "make": "Peugeot",
+      "model": "308",
+      "code": "2nd gen / T9",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "peugeot-308-2nd-gen-t9",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "973e904a-ce24-4b03-984f-61b55ac5adc4",
+      "make": "Audi",
+      "model": "A4",
+      "code": "B5",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "audi-a4-b5",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "c36706eb-27ea-4b44-8e26-44fed17913a7",
+      "make": "Toyota",
+      "model": "Corolla",
+      "code": "E170/E180",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "toyota-corolla-e170-e180",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "3d8ed403-07b9-43bc-9873-1e521fd1d4f6",
+      "make": "Toyota",
+      "model": "Camry",
+      "code": "XV20",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "toyota-camry-xv20",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "24eb2539-ac8b-48a0-a818-be2b2750eeba",
+      "make": "Toyota",
+      "model": "Camry",
+      "code": "XV70",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "toyota-camry-xv70",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "4acdaf71-fb80-4c2d-a5e6-d699963a819b",
+      "make": "Hyundai",
+      "model": "Accent",
+      "code": "LC",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "hyundai-accent-lc",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "ca070647-6d23-4c8b-8667-4b7331955dda",
+      "make": "Mercedes",
+      "model": "Vito",
+      "code": "W447",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "mercedes-vito-w447",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "bfc1c9ea-57fa-4f66-be9d-1a1dfc831c88",
+      "make": "Mercedes",
+      "model": "C-Class",
+      "code": "W203",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "mercedes-c-class-w203",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "f85603f5-a24a-42fe-909d-b5952c80e7b0",
+      "make": "Audi",
+      "model": "Q3",
+      "code": "8U",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "audi-q3-8u",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "de451857-e967-454b-81c9-2c7040f8b03d",
+      "make": "Opel",
+      "model": "Corsa",
+      "code": "B",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "opel-corsa-b",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "4abc0994-ec68-4dec-b411-8348aad9cadf",
+      "make": "Toyota",
+      "model": "Corolla",
+      "code": "E210",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "toyota-corolla-e210",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "035eb37e-5c26-443c-9a27-348501dc6427",
+      "make": "Mercedes",
+      "model": "E-Class",
+      "code": "W212",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "mercedes-e-class-w212",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "88e09fa0-d8e8-4957-9ef6-0f1fa17b48ac",
+      "make": "Toyota",
+      "model": "C-HR",
+      "code": "1st gen",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "toyota-c-hr-1st-gen",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "992c618b-76c1-4acf-b9ec-f8b68441f8b2",
+      "make": "Volkswagen",
+      "model": "Polo",
+      "code": "Mk4 / 9N",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "volkswagen-polo-mk4-9n",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "2a4fc8a6-0939-4d0d-b33a-a93a9ffc14f7",
+      "make": "Volkswagen",
+      "model": "Caddy",
+      "code": "SB / latest",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "volkswagen-caddy-sb-latest",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "31ee8deb-4197-4e56-ad6f-f312d6316d64",
+      "make": "Skoda",
+      "model": "Octavia",
+      "code": "Mk2 / 1Z",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "skoda-octavia-mk2-1z",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "634b064d-697b-49eb-ae42-9b2627fa5e36",
+      "make": "Skoda",
+      "model": "Fabia",
+      "code": "Mk2 / 5J",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "skoda-fabia-mk2-5j",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "6e4a77ca-cd14-47fb-b468-99792a911b72",
+      "make": "BMW",
+      "model": "3 Series",
+      "code": "E36",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "bmw-3-series-e36",
+      "model_active": true,
+      "brand_active": true
+    },
+    {
+      "id": "443cdbd8-de29-4200-ac2b-cc46c781cf78",
+      "make": "Renault",
+      "model": "Fluence",
+      "code": "L38",
+      "isPublished": true,
+      "isActive": true,
+      "model3dKey": "renault-fluence-l38",
+      "model_active": true,
+      "brand_active": true
+    }
+  ]
+}

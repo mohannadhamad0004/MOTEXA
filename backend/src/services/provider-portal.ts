@@ -3,9 +3,9 @@ import { hasPhoto } from "../uploads/providerFiles.js";
 import { noExpiredDocument } from "./truck-eligibility.js";
 import { Vehicle3DError } from "./vehicle3d-validation.js";
 import { createHash } from "node:crypto";
-import { modelWithZones, modelRevision } from "./accessory3d.js";
+import { modelWithZones, accessoryLifecycle } from "./accessory3d.js";
 import { modelFileSha } from "./car-part-map.js";
-import { fitVersion, revisionOf } from "./accessory-autofit.js";
+import { accessoryTargets, fitEligibility } from "./accessory-autofit.js";
 
 export type PortalArea = "tow" | "parts";
 export const activeTow = ["ACCEPTED", "EN_ROUTE", "IN_PROGRESS"] as const;
@@ -45,7 +45,7 @@ export async function providerSummary(uid: string, area: PortalArea) {
     prisma.partsOrder.groupBy({by:["status"],where,_count:true}),
     prisma.partInquiry.groupBy({by:["status"],where,_count:true}),
     prisma.productAccessory3D.groupBy({by:["status"],where,_count:true}),
-    prisma.partsProduct.count({where:{...where,accessory3d:{some:{status:"PUBLISHED",publishedFile:{not:null}}}}}),
+    prisma.partsProduct.count({where:{...where,accessory3d:{some:{status:"PUBLISHED",deactivatedAt:null,publishedFile:{not:null}}}}}),
     prisma.partsProduct.count({where:{...where,OR:[{isUniversal:true},{fitments:{some:{}}}]}}),
     prisma.partsOrder.findMany({where,orderBy:[{updatedAt:"desc"},{id:"desc"}],take:4,select:{id:true,status:true,updatedAt:true,items:{take:1,select:{name:true}}}}),
   ]);
@@ -74,12 +74,14 @@ export async function updateShopProfile(uid:string,body:Record<string,unknown>) 
 export async function shop3dProducts(uid:string,page:number,q:string,submissions=false,productId?:string){
   const shop=await portalOwner(uid,"parts"),where={shopId:shop.id,...(productId?{id:productId}:{}),...(q?{name:{contains:q,mode:"insensitive" as const}}:{}),...(submissions?{accessory3d:{some:{}}}:{})};
   const [total,products]=await Promise.all([prisma.partsProduct.count({where}),prisma.partsProduct.findMany({where,orderBy:[{updatedAt:"desc"},{id:"desc"}],skip:(page-1)*12,take:12,include:{accessory3d:{include:{fits:{include:{generation:{include:{vehicle:true}}}},autoFits:true}}}})]);
-  const keys=[...new Set(products.flatMap(p=>p.accessory3d.flatMap(a=>a.fits.map(f=>f.generation.model3dKey).filter((k):k is string=>!!k))))];
-  const configs=new Map(await Promise.all(keys.map(async key=>{const model=await modelWithZones(key),sha=modelFileSha(key);return [key,{model,sha}] as const;})));
-  return {page,hasMore:page*12<total,total,products:products.map(p=>({id:p.id,name:p.name,category:p.category,updatedAt:p.updatedAt,parts:p.accessory3d.map(a=>({id:a.id,part:a.kitPart,type:a.accessoryType,status:a.status,hasModel:!!a.privateModelPath,published:a.status==="PUBLISHED"&&!!a.publishedFile,validated:!!a.validation,updatedAt:a.updatedAt,reviewNotes:a.reviewNotes,generations:a.fits.map(({generation:g})=>{
-    const config=g.model3dKey?configs.get(g.model3dKey):null,fit=a.autoFits.find(f=>f.generationId===g.id),current=!!fit&&fit.fitVersion===fitVersion(a.accessoryType)&&fit.partRevision===modelRevision(a)&&fit.carRevision===(config?.model&&config.sha?revisionOf(config.sha,config.model,a.accessoryType):null);
-    const data=fit?.fit as {failed?:string}|undefined,parts=(config?.model as {partMap?:Record<string,unknown>}|null)?.partMap as Record<string,unknown>|undefined;
-    const label=a.accessoryType==="WING"?"SPOILER":a.accessoryType==="RIMS"?"WHEELS":a.accessoryType;
-    return {id:g.id,name:`${g.vehicle.make} ${g.nameEn}`,nameAr:`${g.vehicle.makeAr} ${g.nameAr}`,model3dKey:g.model3dKey,has3d:!!config?.model,replacement:parts?.[label]?label:null,fitState:!fit?"NOT_COMPUTED":!current?"STALE":data?.failed?"FAILED":fit.approvedAt?"VERIFIED":"COMPUTED",approvedAt:current?fit?.approvedAt??null:null,autoFit:current&&!data?.failed?{fit:fit!.fit,adj:fit!.adj}:null};
-  })}))}))};
+  const output=[];
+  for(const p of products){const parts=[];for(const a of p.accessory3d){const generations=[];
+    for(const g of await accessoryTargets(a.id)){
+      const fit=a.autoFits.find(f=>f.generationId===g.id),eligibility=await fitEligibility(a.id,g.id,a.privateModelPath),model=g.model3dKey?await modelWithZones(g.model3dKey):null;
+      const label=a.accessoryType==="WING"?"SPOILER":a.accessoryType==="RIMS"?"WHEELS":a.accessoryType;
+      generations.push({id:g.id,name:g.vehicle.make+" "+g.nameEn,nameAr:g.vehicle.makeAr+" "+g.nameAr,model3dKey:g.model3dKey,has3d:g.isPublished&&!!model,replacement:(model as {partMap?:Record<string,unknown>}|null)?.partMap?.[label]?label:null,fitState:eligibility.allowed?fit?.approvedAt?"VERIFIED":"COMPUTED":!fit?"NOT_COMPUTED":eligibility.code==="FIT_FAILED"?"FAILED":"STALE",approvedAt:eligibility.allowed?fit?.approvedAt??null:null,autoFit:eligibility.autoFit});
+    }
+    parts.push({id:a.id,part:a.kitPart,type:a.accessoryType,status:a.status,lifecycleState:accessoryLifecycle(a),hasModel:!!a.privateModelPath,published:a.status==="PUBLISHED"&&!a.deactivatedAt&&!!a.publishedFile,validated:!!a.validation,updatedAt:a.updatedAt,reviewNotes:a.reviewNotes,generations});
+  }output.push({id:p.id,name:p.name,category:p.category,updatedAt:p.updatedAt,parts});}
+  return {page,hasMore:page*12<total,total,products:output};
 }

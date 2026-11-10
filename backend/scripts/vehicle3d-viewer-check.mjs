@@ -56,5 +56,6 @@ try{
  if(errors.length||remoteRequests.length)throw Error('Viewer errors or unexpected remote requests');
  const evidence={...result,views:6,assetSha256:hash(file),configuration:config,forwardedModel:protocol,configurationSha256:createHash('sha256').update(JSON.stringify(config)).digest('hex'),viewerSha256:hash(resolve(ROOT,'mobile/src/features/car3d/sceneHtml.ts')),hookSha256:hash(resolve(ROOT,'mobile/src/features/car3d/useCar3D.ts')),serializerSha256:hash(resolve(ROOT,'mobile/src/features/car3d/modelConfig.ts')),rendererSha256:hash(new URL(import.meta.url)),threeVersion:'0.160.1',screenshots,remoteRequests};
  if(out)writeFileSync(resolve(out,'evidence.json'),JSON.stringify(evidence,null,2)+'\n');
+ await page.close(); // Release the WebGL renderer before closing Chrome's process.
  console.log(JSON.stringify(out?{valid:true,views:6,out,assetSha256:evidence.assetSha256,stats:result}:{valid:true,views:6,paintTest:result.paintTest}));
 }finally{await browser.close();}

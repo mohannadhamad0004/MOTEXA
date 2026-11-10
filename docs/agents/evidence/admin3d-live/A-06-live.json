@@ -1,0 +1,24 @@
+{
+  "key": "bmw-x5-e53",
+  "before": {
+    "groundOffset": 0,
+    "published": true,
+    "partMapStatus": "PROPOSED"
+  },
+  "changed": {
+    "status": 200,
+    "groundOffset": 0.01,
+    "published": true,
+    "partMapStatus": "PROPOSED"
+  },
+  "customer": {
+    "status": 200,
+    "present": true,
+    "groundOffset": 0.01
+  },
+  "restore": {
+    "status": 200,
+    "groundOffset": 0,
+    "published": true
+  }
+}

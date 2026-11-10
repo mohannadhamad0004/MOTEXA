@@ -50,6 +50,7 @@ Keep the complete viewer configuration in `docs/3d/models.json`. Regenerate mobi
 | Audi A4 B5 | [Audi A4 (B5)](https://sketchfab.com/3d-models/audi-a4-b5-b5861ddefcb8478b858b3150aa44cd7f) | MMC Works | CC BY 4.0 |
 | Audi Q3 8U | [2014 Audi Q3](https://sketchfab.com/3d-models/2014-audi-q3-d95e025603c9449997be95048d10af68) | tonielpro520 | CC BY 4.0 |
 | Opel Corsa B | [Opel Corsa B 3door 1998](https://sketchfab.com/3d-models/opel-corsa-b-3door-1998-e79106fd735340a8a295f381ce58e7c8) | Nieve5677 | CC BY 4.0 |
+| Volkswagen Beetle Type 1 | [Volkswagen beetle](https://sketchfab.com/3d-models/volkswagen-beetle-83276f21bd9c41e196c474350b43efb0) | [Angelos Gkanias](https://sketchfab.com/gkaniasag) | [CC Attribution](http://creativecommons.org/licenses/by/4.0/); MOTEXA adaptation: optimized geometry, WebP textures, normalized transforms; optional isolated body paint. Original source and license retained. |
 <!-- /models -->
 
 ## Body-kit parts (test)

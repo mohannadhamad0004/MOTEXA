@@ -1,0 +1,337 @@
+{
+  "date": "2026-11-08",
+  "branch": "ui/blueprint",
+  "backendFull": {
+    "log": ".private/3d-lifecycle/checks/1794128020673-backend.log",
+    "tests": 303,
+    "pass": 234,
+    "fail": 2,
+    "skipped": 67,
+    "cancelled": 0
+  },
+  "wingRendererRecheck": {
+    "log": ".private/3d-lifecycle/checks/wing-recheck.log",
+    "tests": 4,
+    "pass": 4,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "mobile": {
+    "log": ".private/3d-lifecycle/checks/mobile-all-final.log",
+    "tests": 67,
+    "pass": 67,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "typescript": {
+    "backend": "PASS",
+    "mobile": "PASS"
+  },
+  "prismaValidate": "PASS",
+  "visual": {
+    "captures": 144,
+    "width": 390,
+    "combinations": [
+      "en-light",
+      "en-dark",
+      "ar-light",
+      "ar-dark"
+    ],
+    "errors": 0,
+    "overflow": 0,
+    "report": "ui/results.json",
+    "harnessSha256": "dd263022feaac9b9875066ec153705e3b56242d58b098940d62e47416ef67531",
+    "lifecycleCaptures": 108,
+    "sketchfabCaptures": 36,
+    "sketchfabReport": "sketchfab-ui/ui-results.json",
+    "alternatePreservedReport": "ui-validated/results.json",
+    "sketchfabHarnessSha256": "5388650d52419cfd08a750acd9d6170ecf9812151b858c97f5501755cbbf46dd",
+    "staticServerSha256": "0c6c03afa11d71391af84052c02c423513d9aafe511c994a9c02fe0570f0afd7",
+    "browserLocalhostRequired": false,
+    "productionAppChangedForHarness": false,
+    "encoding": "No ???? or replacement characters",
+    "arabicAlignment": "PASS",
+    "urlDirection": "LTR"
+  },
+  "lint": {
+    "newManagementAndViewerModules": "PASS",
+    "broaderExisting3DScreens": {
+      "errors": 20,
+      "warnings": 2,
+      "log": ".private/3d-lifecycle/checks/mobile-lint.json"
+    },
+    "files": 29,
+    "errors": 20,
+    "warnings": 2,
+    "baselineUnchanged": true,
+    "findings": [
+      {
+        "file": "mobile/src/app/customer/car3d.tsx",
+        "line": 45,
+        "column": 18,
+        "severity": 2,
+        "rule": "react-hooks/set-state-in-effect"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/customer.tsx",
+        "line": 20,
+        "column": 22,
+        "severity": 2,
+        "rule": "react-hooks/set-state-in-effect"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/customer.tsx",
+        "line": 30,
+        "column": 3,
+        "severity": 2,
+        "rule": "react-hooks/refs"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/customer.tsx",
+        "line": 31,
+        "column": 42,
+        "severity": 2,
+        "rule": "react-hooks/refs"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/customer.tsx",
+        "line": 37,
+        "column": 84,
+        "severity": 2,
+        "rule": "react-hooks/refs"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/screens.tsx",
+        "line": 109,
+        "column": 28,
+        "severity": 2,
+        "rule": "react-hooks/immutability"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/screens.tsx",
+        "line": 120,
+        "column": 80,
+        "severity": 2,
+        "rule": "react-hooks/set-state-in-effect"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/screens.tsx",
+        "line": 138,
+        "column": 5,
+        "severity": 2,
+        "rule": "react-hooks/set-state-in-effect"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/screens.tsx",
+        "line": 179,
+        "column": 102,
+        "severity": 2,
+        "rule": "react-hooks/set-state-in-effect"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/screens.tsx",
+        "line": 352,
+        "column": 21,
+        "severity": 2,
+        "rule": "react-hooks/set-state-in-effect"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/screens.tsx",
+        "line": 353,
+        "column": 28,
+        "severity": 2,
+        "rule": "react-hooks/set-state-in-effect"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/screens.tsx",
+        "line": 353,
+        "column": 65,
+        "severity": 1,
+        "rule": "react-hooks/exhaustive-deps"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/screens.tsx",
+        "line": 482,
+        "column": 21,
+        "severity": 2,
+        "rule": "react-hooks/set-state-in-effect"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/screens.tsx",
+        "line": 563,
+        "column": 21,
+        "severity": 2,
+        "rule": "react-hooks/set-state-in-effect"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/screens.tsx",
+        "line": 576,
+        "column": 21,
+        "severity": 2,
+        "rule": "react-hooks/set-state-in-effect"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/screens.tsx",
+        "line": 580,
+        "column": 69,
+        "severity": 1,
+        "rule": null
+      },
+      {
+        "file": "mobile/src/features/accessory3d/screens.tsx",
+        "line": 584,
+        "column": 234,
+        "severity": 2,
+        "rule": "react-hooks/preserve-manual-memoization"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/screens.tsx",
+        "line": 663,
+        "column": 5,
+        "severity": 2,
+        "rule": "react-hooks/set-state-in-effect"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/screens.tsx",
+        "line": 676,
+        "column": 21,
+        "severity": 2,
+        "rule": "react-hooks/use-memo"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/screens.tsx",
+        "line": 676,
+        "column": 40,
+        "severity": 2,
+        "rule": "react-hooks/use-memo"
+      },
+      {
+        "file": "mobile/src/features/accessory3d/screens.tsx",
+        "line": 686,
+        "column": 21,
+        "severity": 2,
+        "rule": "react-hooks/set-state-in-effect"
+      },
+      {
+        "file": "mobile/src/features/vehicleCatalog/importScreens.tsx",
+        "line": 41,
+        "column": 234,
+        "severity": 2,
+        "rule": "react-hooks/set-state-in-effect"
+      }
+    ],
+    "log": ".private/3d-lifecycle/checks/mobile-lint-final.json",
+    "testAndHarnessFiles": {
+      "files": 4,
+      "errors": 0,
+      "warnings": 0
+    }
+  },
+  "android": {
+    "result": "PASS",
+    "modules": 2398,
+    "assets": 100,
+    "output": ".private/3d-lifecycle/android-export",
+    "log": ".private/3d-lifecycle/checks/android-export-resume.log",
+    "windowsSandboxWrapper": ".private/3d-lifecycle/export-in-sandbox.cjs",
+    "command": "node ../.private/3d-lifecycle/export-in-sandbox.cjs export --platform android --output-dir ../.private/3d-lifecycle/android-export",
+    "exitCode": 0,
+    "bundle": "_expo/static/js/android/entry-0207bb604066c7a2687d7e073f078e14.hbc"
+  },
+  "catalog": {
+    "retainedActiveModels": 22,
+    "viewerSha256": "6df90e2df79943dd8e472bfd5c0d4cb12141072b9f741a9a9765e6e37b0c7d04",
+    "readOnlyFilesystemAudit": "catalog-audit.json",
+    "currentDatabaseAudit": "UNVERIFIED: PostgreSQL denied by sandbox"
+  },
+  "rearFixture": {
+    "result": "REFUSED",
+    "intrusionMm": 21.6,
+    "contactGapMm": 12.7,
+    "limitMm": 9.2,
+    "evidence": "real-e36-rear-refusal.json"
+  },
+  "gitDiffCheck": "PASS",
+  "liveProviderCalls": 0,
+  "paidGenerations": 0,
+  "physicalAndroidCheck": "NOT RUN",
+  "priorMobile": {
+    "log": ".private/3d-lifecycle/checks/mobile-tests-final.log",
+    "tests": 65,
+    "pass": 65,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "mobileFocused": {
+    "log": ".private/3d-lifecycle/checks/mobile-focused.log",
+    "tests": 9,
+    "pass": 9,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "backendViewer": {
+    "log": ".private/3d-lifecycle/checks/backend-viewer.log",
+    "tests": 47,
+    "pass": 47,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "backendDatabaseIndependent": {
+    "log": ".private/3d-lifecycle/checks/backend-3d-pure.log",
+    "tests": 13,
+    "pass": 13,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "meshyClientContracts": {
+    "log": ".private/3d-lifecycle/checks/backend-meshy-contract-final.log",
+    "tests": 2,
+    "pass": 2,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "backendFreshDatabaseRuns": {
+    "focused": "BLOCKED before test startup: PostgreSQL EACCES on ::1:5432 and 127.0.0.1:5432",
+    "full": "BLOCKED before test startup: PostgreSQL EACCES",
+    "retainedCrossWorkflow": {
+      "tests": 13,
+      "pass": 13,
+      "fail": 0,
+      "freshlyRerun": false,
+      "log": ".private/3d-lifecycle/checks/1794124395941-backend.log"
+    },
+    "fullRetained": {
+      "log": ".private/3d-lifecycle/checks/1794128020673-backend.log",
+      "tests": 303,
+      "pass": 234,
+      "fail": 2,
+      "skipped": 67,
+      "cancelled": 0
+    }
+  },
+  "sandboxResume": {
+    "completedAt": "2026-11-08T15:03:55.678Z",
+    "approvalRequested": false,
+    "escalationRequested": false,
+    "liveProviderCalls": 0,
+    "paidGeneration": false,
+    "physicalExpoGoVerified": false,
+    "context7": "Attempted in sandbox; ENOTFOUND; official Playwright docs used",
+    "scope": [
+      "mobile/tests/e2e/3d-lifecycle.cjs",
+      "mobile/tests/e2e/static-export.cjs",
+      "mobile/tests/e2e/sketchfab-import.cjs",
+      "mobile/tests/stock-visibility.test.mjs",
+      "docs/3d/WORKFLOW-REPAIR.md",
+      "docs/agents/STATUS.md",
+      "docs/3d/lifecycle/"
+    ]
+  }
+}

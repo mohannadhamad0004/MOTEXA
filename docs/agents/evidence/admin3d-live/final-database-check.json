@@ -1,0 +1,64 @@
+{
+  "readOnly": [
+    {
+      "transaction_read_only": "on"
+    }
+  ],
+  "revisionGaps": [
+    {
+      "published": 22,
+      "missing_generation": 0,
+      "missing_key": 0
+    }
+  ],
+  "drivers": [
+    {
+      "approval": "APPROVED",
+      "count": 3
+    }
+  ],
+  "restoredVehicle": [
+    {
+      "isActive": true,
+      "isPublished": true,
+      "ground_offset": "0"
+    }
+  ],
+  "restoredProduct": [
+    {
+      "price": "32.50",
+      "stock": 24
+    }
+  ],
+  "restoredDriver": [
+    {
+      "offline": false
+    }
+  ],
+  "audits": [
+    {
+      "action": "PART_MAP_SEGMENTED",
+      "count": 2
+    },
+    {
+      "action": "PARTS_PRODUCT_EDITED",
+      "count": 2
+    },
+    {
+      "action": "VEHICLE_CATALOG_GENERATION_EDIT",
+      "count": 2
+    },
+    {
+      "action": "VEHICLE3D_CONFIG_EDIT",
+      "count": 2
+    },
+    {
+      "action": "VEHICLE3D_DEACTIVATE",
+      "count": 1
+    },
+    {
+      "action": "VEHICLE3D_REACTIVATE",
+      "count": 1
+    }
+  ]
+}

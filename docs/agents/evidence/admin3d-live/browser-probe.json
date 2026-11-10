@@ -1,0 +1,10 @@
+{
+  "url": "http://127.0.0.1:8081/dept/vehicles",
+  "text": "",
+  "inputs": 0,
+  "events": [
+    {
+      "console": "Invalid style property of \"direction\". Did you mean \"writingDirection\"?"
+    }
+  ]
+}

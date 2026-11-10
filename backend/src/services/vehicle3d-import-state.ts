@@ -7,6 +7,9 @@ import {privatePath} from "./vehicle3d-private-assets.js";
 export const IMPORT_PROGRESS:Record<string,number>={INSPECTED:0,QUEUED:5,DOWNLOADING:15,CONVERTING:30,OPTIMIZING:55,VALIDATING:75,GENERATING_PART_MAP:90,READY:100,PUBLISHED:100};
 export const IMPORT_RUNNING=["QUEUED","DOWNLOADING","CONVERTING","OPTIMIZING","VALIDATING","GENERATING_PART_MAP"];
 export const IMPORT_ERRORS:Record<string,string>={
+ INVALID_SKETCHFAB_URL:"Enter a valid Sketchfab model URL.",SKETCHFAB_TOKEN_MISSING:"Sketchfab credentials are missing from the backend; downloads require an OAuth access token.",
+ SKETCHFAB_UNAUTHORIZED:"Sketchfab rejected the backend credential. Check its type, expiry and download access.",SKETCHFAB_RATE_LIMITED:"Sketchfab is rate limiting requests. Try again later.",SKETCHFAB_UNAVAILABLE:"Sketchfab is temporarily unavailable.",
+ MODEL_NOT_DOWNLOADABLE:"This model is not downloadable through Sketchfab.",DUPLICATE_MODEL:"This Sketchfab model has already been imported.",NETWORK_ERROR:"The backend could not connect to Sketchfab.",FORBIDDEN:"Parts Admin access is required.",
  BAD_LINK:"Enter a valid Sketchfab model URL.",SKETCHFAB_NOT_FOUND:"Unable to read this Sketchfab model.",SKETCHFAB_API_FAILED:"Unable to read this Sketchfab model.",
  NOT_DOWNLOADABLE:"This model is not downloadable through Sketchfab.",LICENSE_NOT_ALLOWED:"This model cannot be imported because its license does not allow the required use.",
  DUPLICATE_IMPORT:"This Sketchfab model has already been imported.",DOWNLOAD_FAILED:"The Sketchfab download failed.",DOWNLOAD_TOO_LARGE:"The Sketchfab download exceeds the source size limit.",

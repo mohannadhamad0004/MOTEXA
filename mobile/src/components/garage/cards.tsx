@@ -75,7 +75,7 @@ export function ProductCard({ p, onPress, car = null, mine = true, onBroken, wid
   // "3D · View on my car" only on a car whose generation has the part; kits also say "Front + rear"
   const m3 = p.model3d, onCar3d = !!m3 && !!car?.generation?.id && (m3.universal || m3.generationIds.includes(car.generation.id));
   const kit = !!m3 && m3.parts.some((x) => x.part === "FRONT") && m3.parts.some((x) => x.part === "REAR");
-  const pills3d = [kit ? t("Front + rear", "أمامي + خلفي") : null, onCar3d ? `3D · ${t("View on my car", "اعرضها على سيارتي")}` : null].filter((x): x is string => !!x);
+  const pills3d = [kit ? t("Front + rear", "أمامي + خلفي") : null, onCar3d ? t("3D model", "نموذج ثلاثي الأبعاد") : null].filter((x): x is string => !!x);
   const old = p.compareAtPrice && p.compareAtPrice > p.price ? p.compareAtPrice : null;
   const stock = { IN: [g.success, t("In stock", "متوفر")], LOW: [g.warning, t("Low stock", "كمية محدودة")], OUT: [g.danger, t("Out of stock", "نفدت الكمية")] }[p.stock];
   const cond = p.condition === "USED" ? t("Used", "مستعمل") : p.condition === "REFURBISHED" ? t("Refurbished", "مجدّد") : t("New", "جديد");

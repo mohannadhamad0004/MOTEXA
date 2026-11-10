@@ -12,15 +12,25 @@ import {createSubmissionService,PRIVATE_3D_DIR,privatePath} from "../src/service
 import {catalogFiles,readManifest,atomicWrite,REPO_ROOT} from "../src/services/vehicle3d-catalog.js";
 import {createVehicle3DRouter} from "../src/routes/vehicle3d.routes.js";
 import {NodeIO} from "@gltf-transform/core";
+import {generationMode,paidGenerationEnabled,requireFixtureRuntime} from "../src/services/generation-runtime.js";
 after(()=>prisma.$disconnect());
 const json=(body:unknown,status=200,headers?:Record<string,string>)=>new Response(JSON.stringify(body),{status,headers:{"content-type":"application/json",...headers}});
+test("normal runtime always selects real providers and refuses test geometry",()=>{
+ const keys=["NODE_ENV","NODE_TEST_CONTEXT","VEHICLE3D_MODE","MESHY_ALLOW_PAID_GENERATION"],before=keys.map(k=>process.env[k]);
+ try{
+  process.env.NODE_ENV="development";process.env.VEHICLE3D_MODE="mock";delete process.env.MESHY_ALLOW_PAID_GENERATION;
+  assert.equal(generationMode(),"meshy");assert.equal(paidGenerationEnabled(),true);assert.throws(requireFixtureRuntime,{code:"TEST_FIXTURE_ONLY"});
+  process.env.NODE_ENV="test";delete process.env.NODE_TEST_CONTEXT;assert.equal(generationMode(),"meshy");assert.throws(requireFixtureRuntime,{code:"TEST_FIXTURE_ONLY"});
+  process.env.NODE_TEST_CONTEXT="child-v8";assert.equal(generationMode(),"mock");assert.equal(paidGenerationEnabled(),false);requireFixtureRuntime();
+ }finally{for(const[k,i]of keys.map((k,i)=>[k,i]as const)){if(before[i]===undefined)delete process.env[k];else process.env[k]=before[i];}}
+});
 test("Meshy client uses four private data URIs, backend bearer auth, and strictly parses the documented contract",async()=>{
   const calls:{url:string;options:RequestInit|undefined}[]=[];
   const fetcher=(async(url,options)=>{calls.push({url:String(url),options});return json({result:"opaque-provider-task"},202);}) as typeof fetch;
   const client=createMeshyClient({key:"test-key-never-log",fetcher,maxBytes:1024});
   assert.equal(await client.create([0,1,2,3].map(i=>`data:image/jpeg;base64,${i}`)),"opaque-provider-task");
   assert.equal(calls.length,1);assert.equal(calls[0]!.url,"https://api.meshy.ai/openapi/v1/multi-image-to-3d");
-  const body=JSON.parse(calls[0]!.options!.body as string);assert.equal(body.image_urls.length,4);assert.equal(body.ai_model,"meshy-7.1");assert.deepEqual(body.target_formats,["glb"]);assert.ok(!JSON.stringify(body).includes("test-key"));
+  const body=JSON.parse(calls[0]!.options!.body as string);assert.equal(body.image_urls.length,4);assert.equal(body.ai_model,"meshy-7.1");assert.equal(body.should_remesh,true);assert.equal(body.texture_resolution,"2k");assert.deepEqual(body.target_formats,["glb"]);assert.ok(!JSON.stringify(body).includes("test-key"));
   assert.equal(parseMeshyTask({id:"id",status:"IN_PROGRESS",progress:37},"id").progress,37);
   assert.equal(parseMeshyTask({id:"id",status:"PENDING"},"id").progress,null);
   assert.throws(()=>parseMeshyTask({id:"other",status:"SUCCEEDED"},"id"),/MALFORMED/);
@@ -35,7 +45,7 @@ test("provider auth, credits, missing task, rate limits, timeouts and malformed 
   await assert.rejects(createMeshyClient({key:"fake",maxBytes:10,fetcher:(async()=>{throw Error("private network URL");})as typeof fetch}).get("id"),(e:any)=>e.code==="PROVIDER_TIMEOUT"&&e.retryable);
   await assert.rejects(createMeshyClient({key:"fake",maxBytes:10,fetcher:(async()=>new Response("not-json"))as typeof fetch}).get("id"),/MALFORMED/);
   const tooLarge=createMeshyClient({key:"fake",maxBytes:4,fetcher:(async()=>new Response(new Uint8Array(8)))as typeof fetch});
-  await assert.rejects(tooLarge.download("https://assets.meshy.ai/model.glb"),/ASSET_TOO_LARGE/);
+  await assert.rejects(tooLarge.download("https://assets.meshy.ai/model.glb"),/DOWNLOAD_TOO_LARGE/);
 });
 async function fixture(work:(f:{uid:string;carId:string;id:string;admin:string;service:ReturnType<typeof createSubmissionService>;due:()=>Promise<void>})=>Promise<void>){
   const before=new Map([...catalogFiles(readManifest()).keys()].map(p=>[p,readFileSync(p,"utf8")]));
@@ -62,7 +72,7 @@ async function fixture(work:(f:{uid:string;carId:string;id:string;admin:string;s
     for(const[p,text]of before)atomicWrite(p,text);
     for(const p of readdirSync(path.join(REPO_ROOT,"backend/public/3d")))if(!publicBefore.has(p))unlinkSync(path.join(REPO_ROOT,"backend/public/3d",p));
     if(existsSync(PRIVATE_3D_DIR))for(const p of readdirSync(PRIVATE_3D_DIR))if(!storageBefore.has(p))rmSync(path.join(PRIVATE_3D_DIR,p),{recursive:true,force:true}); // also a background segmentation temp folder
-    await prisma.vehicle3DSubmission.deleteMany({where:{userId:uid}});await prisma.customerGarageCar.deleteMany({where:{id:carId}});await prisma.vehicleGeneration.deleteMany({where:{id:gid}});await prisma.vehicle.deleteMany({where:{id:vid}});await prisma.vehicleBrand.deleteMany({where:{id:vid}});
+    await prisma.vehicle3DRevision.deleteMany({where:{generationId:gid}});await prisma.vehicle3DSubmission.deleteMany({where:{userId:uid}});await prisma.customerGarageCar.deleteMany({where:{id:carId}});await prisma.vehicleGeneration.deleteMany({where:{id:gid}});await prisma.vehicle.deleteMany({where:{id:vid}});await prisma.vehicleBrand.deleteMany({where:{id:vid}});
     await prisma.auditLog.deleteMany({where:{OR:[{actorId:{in:[uid,admin]}},{targetId:gid}]}});await prisma.adminPermission.deleteMany({where:{adminId:admin}});await prisma.user.deleteMany({where:{id:{in:[uid,admin]}}});
   }
 }

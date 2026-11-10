@@ -18,7 +18,7 @@ const require = createRequire(resolve(ROOT, 'mobile/package.json')); const { chr
 const arg = n => process.argv.find(a => a.startsWith('--' + n + '='))?.slice(n.length + 3);
 const out = resolve(arg('out') ?? ''); if (!arg('out') || !(out + sep).startsWith(resolve(ROOT) + sep)) throw Error('--out must be within the repository');
 const color = arg('color') ?? '#8b9baa'; if (!/^#[0-9a-f]{6}$/i.test(color)) throw Error('Invalid paint color');
-const noPart = ['segment', 'editor', 'rimdiag'].includes(arg('views')), keepMap = arg('views') === 'rimdiag';
+const noPart = ['segment', 'editor', 'rimdiag','fixturepart'].includes(arg('views')), keepMap = ['rimdiag','fixturepart'].includes(arg('views'));
 const carFile = resolve(arg('car')), partFile = noPart ? null : resolve(arg('part'));
 const { parseCarModel, modelForViewer, ACCESSORY_TYPES } = loadTS(resolve(ROOT, 'mobile/src/features/car3d/modelConfig.ts'));
 const rawConfig = JSON.parse(readFileSync(arg('config'), 'utf8')); if (arg('partmap')) rawConfig.partMap = JSON.parse(readFileSync(arg('partmap'), 'utf8'));
@@ -36,14 +36,30 @@ const hook = `window.fitCheck = async function (model, kit, color) {
   window.view = function (dir, target, d) { var t = target ? new THREE.Vector3().fromArray(target) : center; camera.position.copy(t).add(new THREE.Vector3().fromArray(dir).normalize().multiplyScalar(d || dist)); camera.near = (d || dist) / 1000; camera.far = dist * 100; camera.updateProjectionMatrix(); camera.lookAt(t); renderer.render(scene, camera); return { triangles: renderer.info.render.triangles }; };
   window.attach = async function (patch) {
     var k = Object.assign({ file: 'part.glb' }, kit, patch || {});
-    if (!car.acc) { car.acc = await buildAccessory(car, k); car.group.add(car.acc.group); car.accs[car.acc.key] = car.acc; }
+    if (!car.acc) car.acc = await buildAccessory(car, k);
+    if (!car.accs[car.acc.key]) { car.acc.group.visible = true; car.group.add(car.acc.group); car.accs[car.acc.key] = car.acc; }
     state = { kit: k, color: color }; kitApply(state);
     var a = car.acc, zb = a.zone ? a.zone.T : new THREE.Box3().setFromObject(a.group);
     // the joint with the body on the camera (left) side: where a cut or a gap would show
     var gb = new THREE.Box3().setFromObject(a.group); a.info.partBox = gb.min.toArray().concat(gb.max.toArray()).map(function (n) { return Math.round(n * 10000) / 10000; });
     return { info: a.info, autofit: a.fit, edge: [zb.min.x, (zb.min.y + zb.max.y) / 2, a.info.type === 'REAR_BUMPER' ? zb.max.z : zb.min.z] };
   };
-  window.detach = function () { if (car.acc) { car.acc.group.visible = false; if (car.acc.zone) car.acc.zone.hide.forEach(function (o) { o.visible = true; }); (car.acc.shifts || []).forEach(function (x) { x.o.position.copy(x.orig); }); } };
+  window.detach = function () { var a = car.acc; state = { kits: [], color: color }; kitApply(state); if (a) { a.group.visible = false; car.acc = a; } }; // keep the detached part only for off-state measurements
+  window.visibilityCheck = async function () {
+    var k = Object.assign({ file: 'part.glb' }, kit), a = await buildAccessory(car, k);
+    if (!a.zone || !a.zone.hide.length) throw Error('Visibility regression requires stock replacement geometry.');
+    var stock = []; car.root.traverse(function (o) { if (o.isMesh) stock.push(o); });
+    a.zone.hide[0].visible = false;
+    var before = stock.map(function (o) { return o.visible; });
+    function on() { car.acc = a; car.accs[a.key] = a; car.group.add(a.group); state = { kits: [k], color: color }; kitApply(state); }
+    on(); var allHidden = a.zone.hide.every(function (o) { return !o.visible; });
+    state = { kits: [], color: color }; kitApply(state);
+    var restored = stock.every(function (o, i) { return o.visible === before[i]; });
+    a.zone.hide[0].visible = true;
+    var next = stock.map(function (o) { return o.visible; });
+    on(); state = { kits: [], color: color }; kitApply(state);
+    return { ...a.info, stockVisibility: { meshes: stock.length, allHidden: allHidden, restored: restored, recaptured: stock.every(function (o, i) { return o.visible === next[i]; }) } };
+  };
   // painted-body vertices still visible inside what the part hides (box shrunk 2 mm): 0 = no second bumper / stock spoiler shows
   window.zoneCheck = function () { var z = car.acc && car.acc.zone; if (!z) return null; var b = z.box.clone().expandByScalar(-0.002), n = 0;
     car.paintMeshes.concat(z.hide).forEach(function (m) { eachVert(m, function (v) { if (b.containsPoint(v)) n++; }); });
@@ -112,7 +128,16 @@ try {
   mkdirSync(out, { recursive: true }); const shots = [];
   const shot = async (name, dir, target, d) => { await page.evaluate(([a, b, c]) => window.view(a, b, c), [dir, target ?? null, d ?? null]); const p = resolve(out, name + '.png'); await page.screenshot({ path: p }); shots.push({ name, sha256: hash(p) }); };
   let fit;
-  if (arg('views') === 'segment') {
+  if (arg('views') === 'fixturepart') {
+    // Test-only extraction of generic semantic geometry; never used as a production accessory or a generation result.
+    if(!['FRONT_BUMPER','REAR_BUMPER','SPOILER','WHEELS'].includes(kit.type))throw Error('Choose a semantic fixture label.');
+    const meshes=await page.evaluate(label=>{
+      const car=window.__dbg.car();car.group.updateMatrixWorld(true);
+      return (car.parts[label]||[]).map(o=>{const g=o.geometry.clone();g.applyMatrix4(o.matrixWorld);return {positions:Array.from(g.attributes.position.array),normals:g.attributes.normal?Array.from(g.attributes.normal.array):null,indices:Array.from(g.index.array)};});
+    },kit.type);
+    if(!meshes.length)throw Error('No mapped geometry for this fixture.');
+    writeFileSync(resolve(out,'fixture-part.json'),JSON.stringify(meshes));fit={info:{fixtureOnly:true,meshes:meshes.length}};
+  } else if (arg('views') === 'segment') {
     const seg = await page.evaluate(() => window.segmentCar());
     writeFileSync(resolve(out, 'pieces.json'), JSON.stringify(seg) + '\n');
     fit = { info: { pieces: seg.pieces.length, meshes: seg.meshes, ms: seg.ms, dims: seg.dims, proposal: seg.proposal } };
@@ -153,7 +178,8 @@ try {
     fit = await page.evaluate(() => window.attach()); await cut('section-FL-on', 2); await cut('section-RL-on', 0);
   } else if (arg('views') === 'qa') { // FIT-QA: the fit (with its QA), one picture aimed at the part from the side that shows its joins
     fit = await page.evaluate(async () => { try { return await window.attach(); } catch (e) { return { refused: String(e && e.message || e), info: e && e.info || {} }; } });
-    if (fit.refused) { fit.info = { ...fit.info, refused: fit.refused }; writeFileSync(resolve(out, 'fit-evidence.json'), JSON.stringify({ valid: true, car, fit: fit.info }, null, 2)); console.log(JSON.stringify({ valid: true, fit: fit.info, autofit: null, screenshots: [] })); process.exit(0); }
+    if (fit.refused) { fit.info = { ...fit.info, refused: fit.refused }; }
+    else {
     const b = fit.info.partBox, c = [(b[0] + b[3]) / 2, (b[1] + b[4]) / 2, (b[2] + b[5]) / 2], t = kit.type;
     const dir = { RIMS: [-0.8, 0.12, 0.55], WING: [-0.7, 0.45, -1], SPOILER: [-0.7, 0.45, -1], REAR_BUMPER: [-0.6, 0.25, -1], REAR_DIFFUSER: [-0.55, 0.05, -1],
       FRONT_BUMPER: [-0.6, 0.25, 1], FRONT_LIP: [-0.55, 0.05, 1], SIDE_SKIRTS: [-1, 0.12, 0.25], ROOF_RACK: [-0.6, 0.9, 0.5] }[t] ?? [-0.7, 0.35, 1];
@@ -165,11 +191,20 @@ try {
       await page.evaluate(([a, tg]) => window.view(a, tg, 0.7), [dir, pt]); const q = resolve(out, nm + '.jpg'); await page.screenshot({ path: q, type: 'jpeg', quality: 80 }); shots.push({ name: nm, sha256: hash(q) }); }
     for (const [nm, dir2, tg, d] of arg('spots') ? JSON.parse(readFileSync(arg('spots'), 'utf8')) : []) { // --spots=<json [[name, dir, target, dist]]>: extra close-ups
       await page.evaluate(([a, t2, dd]) => window.view(a, t2, dd), [dir2, tg, d]); const q = resolve(out, nm + '.jpg'); await page.screenshot({ path: q, type: 'jpeg', quality: 82 }); shots.push({ name: nm, sha256: hash(q) }); }
+    }
+  } else if (arg('views') === 'refusalcheck') {
+    fit = { info: await page.evaluate(async () => {
+      var before = window.partCheck();
+      try { await window.attach(); return { refused: null, before: before, after: window.partCheck() }; }
+      catch (e) { return { refused: String(e && e.message || e), ...(e.info || {}), before: before, after: window.partCheck(), accessories: Object.keys(window.__dbg.car().accs) }; }
+    }) };
   } else if (arg('views') === 'rimdiag') { // no part, no throw: what wheelParts measured per wheel (rims debugging)
     fit = { info: await page.evaluate(() => { const P = window.rimDiagParts(); return { via: window.rimDiagVia(), wheels: P.map(q => ({ wheel: q.wheel, refusal: q.refusal || null, warnings: q.warnings, pieces: q.pieces.length, tyre: q.tyre.length, rim: q.rim.length, brake: q.brake.length, center: q.center && q.center.toArray().map(n => Math.round(n * 1000)), axis: q.axis && q.axis.toArray().map(n => Math.round(n * 1000) / 1000), ro: q.ro && Math.round(q.ro * 1000), tw: q.tw && Math.round(q.tw * 1000), conf: q.axleConfidence, pcs: q.pieces.map(e => [e.id, e.source.mesh.name.slice(0, 40), (e.obj.material.name || '').slice(0, 20), q.tyre.includes(e) ? 'T' : q.brake.includes(e) ? 'B' : 'R', e.measure && [e.measure.lo, e.measure.hi, e.measure.rmin, e.measure.rmax].map(n => Math.round(n * 1000)).concat([e.measure.arc]), e.obj.geometry.index.count / 3]), names: [...new Set(q.pieces.map(e => e.source.mesh.name + ' / ' + (e.obj.material.name || '')))].slice(0, 12) })) }; }) };
   } else if (arg('views') === 'wheels') { fit = { info: await page.evaluate(() => Object.assign(window.wheelProbe(), { low: window.lowProbe() })) }; // no part: the car's wheel pieces
   } else if (arg('views') === 'fit') { fit = await page.evaluate(() => window.attach()); // numbers only: the auto-fit to store
   } else if (arg('views') === 'profile') { fit = await page.evaluate(() => window.attach()); fit.info = { ...fit.info, profile: await page.evaluate(() => window.profile()) };
+  } else if (arg('views') === 'visibility') {
+    fit = { info: await page.evaluate(() => window.visibilityCheck()) };
   } else if (arg('views') === 'check') { // numbers only: the replaced zone while the part is on, then off again
     fit = await page.evaluate(() => window.attach());
     const state = () => page.evaluate(() => { const z = window.zoneCheck(); return z && { ...z, parts: window.partCheck() }; }); // null: nothing replaced
@@ -192,5 +227,6 @@ try {
   if (errors.length || blocked.length) throw Error('Viewer errors: ' + errors.join('; ') + (blocked.length ? ' remote: ' + blocked.join(',') : ''));
   const evidence = { valid: true, car, fit: fit.info, autofit: fit.autofit ?? null, kit, carSha256: hash(carFile), partSha256: partFile ? hash(partFile) : null, viewerSha256: hash(resolve(ROOT, 'mobile/src/features/car3d/sceneHtml.ts')), screenshots: shots };
   writeFileSync(resolve(out, 'fit-evidence.json'), JSON.stringify(evidence, null, 2) + '\n');
+  await page.close();
   console.log(JSON.stringify({ valid: true, fit: fit.info, autofit: fit.autofit ?? null, screenshots: shots.map(s => s.name) }));
 } finally { await browser.close(); }

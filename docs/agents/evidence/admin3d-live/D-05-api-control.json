@@ -1,0 +1,9 @@
+{
+  "normalizedPath": {
+    "status": 200,
+    "role": "ADMIN"
+  },
+  "duplicatedPath": {
+    "status": 404
+  }
+}

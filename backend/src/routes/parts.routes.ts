@@ -8,6 +8,8 @@ import { requireAuth, requirePartsAdmin, requirePartsProvider } from "../middlew
 import { MIN_PHOTO_BYTES, type ParsedUpload, hasPhoto, filePath, parseUpload, removeStoredFiles, storeFile } from "../uploads/providerFiles.js";
 import { requireApprovedProvider } from "../services/provider-onboarding.js";
 import { checklist, loadApp } from "../services/provider-onboarding.js";
+import { strictNumber } from "../services/numbers.js";
+import { errorBody } from "../services/error-codes.js";
 
 // Parts shops + products. Mounted at /api.
 //  - /api/parts/me/*       PARTS_PROVIDER, always scoped to the caller's own shop.
@@ -24,7 +26,7 @@ type Decision = (typeof DECISIONS)[number];
 
 const text = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 const idParam = (v: unknown) => String(v);
-const bad = (res: any, code: number, message: string) => res.status(code).json({ success: false, message });
+const bad = (res: any, code: number, message: string) => res.status(code).json(errorBody(message));
 const fail = (res: any, label: string, error: unknown) => {
   console.error(`${label}:`, error);
   return res.status(500).json({ success: false, message: "Internal server error." });
@@ -150,13 +152,13 @@ function parseProduct(body: any, full: boolean, allowEmpty = false): { data: Par
     data.description = typeof d === "string" && d.trim() ? d.trim().slice(0, 2000) : null;
   }
   if (has("price")) {
-    const p = body.price;
-    if (typeof p !== "number" || !Number.isFinite(p) || p < 0 || p > 9_999_999_999.99) return { error: "Price must be a valid number of 0 or more." };
-    data.price = Math.round(p * 100) / 100;
+    const p = strictNumber(body.price, false, 9_999_999_999.99);
+    if (p === null) return { error: "Price must be 0 or more, with up to two decimal places and no letters." };
+    data.price = p;
   }
   if (has("stock")) {
-    const s = body.stock;
-    if (!Number.isInteger(s) || s < 0 || s > 1_000_000) return { error: "Stock must be a whole number of 0 or more." };
+    const s = strictNumber(body.stock, true, 1_000_000);
+    if (s === null) return { error: "Stock must be a whole number from 0 to 1,000,000, without decimals or letters." };
     data.stock = s;
   }
   if (has("category")) {
@@ -449,9 +451,12 @@ const editProduct = async (req: any, res: any) => {
     if (fitChanged) changed.push("fitments");
     const uniChanged = uni.value !== undefined && uni.value !== p.isUniversal;
     if (uniChanged) changed.push("isUniversal");
+    if((fitChanged||uniChanged||changed.includes("category"))&&await prisma.productAccessory3D.count({where:{productId:p.id,status:{notIn:["DRAFT","REJECTED"]}}}))return res.status(409).json({success:false,code:"ACCESSORY_LOCKED",message:"Revise the 3D request before changing its category or compatibility. Its photos and fit must be reviewed again."});
     // whenever fitment is sent, the product must end up with a car or Universal
     if ((fit.rows !== undefined || uni.value !== undefined) && !(fit.rows ?? p.fitments).length && !(uni.value ?? p.isUniversal)) return bad(res, 400, NO_FIT_MSG);
     if (!changed.length) return res.json({ success: true, product: shapeProduct(p) });
+    // stock already promised to accepted orders cannot be taken away
+    if (data.stock !== undefined && data.stock < p.reservedStock) return bad(res, 409, `Stock cannot be lower than ${p.reservedStock}: that many are reserved by accepted orders.`);
 
     // Replacing the image changes nothing else (no re-verification, visibility untouched).
     const oldImage = img.image ? p.files.find((f) => f.purpose === "PRODUCT_IMAGE") : undefined;
@@ -502,6 +507,11 @@ router.delete("/parts/me/products/:id", ...approved, async (req, res) => {
     const actor = res.locals.authUser as { id: string };
     const own = await ownProduct(req, res);
     if (!own) return;
+    // an accepted order still has to be prepared / delivered with this product
+    const open = await prisma.partsOrderItem.count({ where: { productId: own.product.id, order: { stockReserved: true } } });
+    if (open) return bad(res, 409, "This product is part of an accepted order. Finish or cancel that order first.");
+    const modelHistory=await prisma.productAccessory3D.count({where:{productId:own.product.id,OR:[{publishedAt:{not:null}},{providerTaskId:{not:null}},{creditsUsed:{gt:0}},{status:"GENERATING"}]}});
+    if(modelHistory)return res.status(409).json({success:false,code:"DELETE_BLOCKED",message:"This product has 3D generation or publication history. Parts Admin can deactivate its 3D model; history must be retained."});
     const keys = own.product.files.map((f) => f.storageKey);
     await prisma.$transaction([
       log(actor.id, "PARTS_PRODUCT_REMOVED", own.product.id, { name: own.product.name, partNumber: own.product.partNumber, files: keys.length }),

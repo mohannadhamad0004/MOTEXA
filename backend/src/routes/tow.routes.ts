@@ -493,6 +493,8 @@ const createTruck = async (req: any, res: any) => {
     return fail(res, "Tow truck create error", e);
   }
 };
+// INTENDED: a company that is still PENDING may add and edit trucks (onboarding collects them before approval). A truck is not offered
+// to customers or dispatch until the company AND the truck are APPROVED, so no approved-provider guard here.
 router.post("/tow/me/trucks", ...provider, createTruck);
 
 const editTruck = async (req: any, res: any) => {

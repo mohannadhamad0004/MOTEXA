@@ -131,7 +131,7 @@ function rimPCA(points) {
 // AUTO-FIT RULES (pure, no three.js: also run by the tests). Fit versions per fitter group: bump only the group whose fitter changed, so only
 // that group's stored fits are recomputed (approved / admin-corrected fits of other groups stay). Both objects are JSON: the server parses them.
 export const FIT_RULES_JS = String.raw`
-var FIT_VERSIONS = {"rims": 8, "wings": 4, "bumpers": 4, "other": 4};
+var FIT_VERSIONS = {"rims": 8, "wings": 4, "bumpers": 5, "other": 4};
 // wings = the add-on fitter (wing, spoiler, roof rack); every type not listed is "other"
 var FIT_GROUPS = {"RIMS": "rims", "WING": "wings", "SPOILER": "wings", "ROOF_RACK": "wings", "FRONT_BUMPER": "bumpers", "REAR_BUMPER": "bumpers"};
 function fitVersion(type) { return FIT_VERSIONS[FIT_GROUPS[type] || "other"]; }
@@ -510,6 +510,7 @@ function bodyIn(car, box) {
 /** Orient a loose part: its longest horizontal axis along 'long' ("x" = across the car, "z" = along it; "axle" = thinnest axis across,
  *  for rims). For end parts the middle sticks out further than the ends, which tells front from back. Then the pivot is moved to the origin. */
 function orientPart(src, long, end, pivotY) {
+  var reverse = long === "x-reverse"; if (reverse) long = "x";
   var orient = new THREE.Group(); orient.add(src);
   var b = exactBox(orient), sz = b.getSize(new THREE.Vector3()), turned = 0, flipped = false;
   if (long === "axle") {
@@ -521,6 +522,7 @@ function orientPart(src, long, end, pivotY) {
     eachVert(orient, function (v) { var dx = Math.abs(v.x - cx) / sz.x; if (dx < 0.1) { cS += v.z; cN++; } else if (dx > 0.4) { eS += v.z; eN++; } });
     if (cN && eN && (cS / cN - eS / eN) * end < 0) { orient.rotation.y += Math.PI; flipped = true; b = exactBox(orient); }
   }
+  if (reverse) { orient.rotation.y += Math.PI; flipped = !flipped; b = exactBox(orient); }
   var py = pivotY === "top" ? b.max.y : pivotY === "mid" ? (b.min.y + b.max.y) / 2 : b.min.y, pz = end > 0 ? b.max.z : end < 0 ? b.min.z : (b.min.z + b.max.z) / 2;
   orient.position.set(-(b.min.x + b.max.x) / 2, -py, -pz);
   var holder = new THREE.Group(); holder.add(orient);
@@ -661,10 +663,10 @@ function bumperGaps(car, zone, node) {
   var step = Math.max(1, Math.floor(seam.length / 500)); seam = seam.filter(function (_, i) { return i % step === 0; });
   // the VISIBLE gap: the new bumper's triangles flattened onto the plane you look at that edge from (front / rear view for the bonnet,
   // boot and light lines, side view for fenders and wheel arches), only within +-20 cm of the seam in depth; a covered seam point = 0 mm
-  var tris = worldTris(node), G = 0.03, views = {}, cp = new THREE.Vector3(), regions = {}, worst = [];
+  var tris = worldTris(node), G = 0.03, views = {}, cp = new THREE.Vector3(), edgeLine = new THREE.Line3(), regions = {}, worst = [];
   var view = function (ax) { // ax = the axis you look along; 2D grid of the flattened triangles (with their depth range)
     if (views[ax]) return views[ax];
-    var u = ax === "z" ? "x" : "z", cells = new Map(), flat = tris.map(function (t) { var f = t.clone(); [f.a, f.b, f.c].forEach(function (v) { v[ax] = 0; }); return f; });
+    var u = ax === "z" ? "x" : "z", cells = new Map(), flat = tris.map(function (t) { var f = t.clone(); [f.a, f.b, f.c].forEach(function (v) { v[ax] = 0; }); f.line = f.getArea() < 1e-12; return f; });
     tris.forEach(function (t, i) { var lo = Math.min(t.a[u], t.b[u], t.c[u]), hi = Math.max(t.a[u], t.b[u], t.c[u]), ylo = Math.min(t.a.y, t.b.y, t.c.y), yhi = Math.max(t.a.y, t.b.y, t.c.y);
       flat[i].d = [Math.min(t.a[ax], t.b[ax], t.c[ax]), Math.max(t.a[ax], t.b[ax], t.c[ax])];
       for (var a2 = Math.floor(lo / G); a2 <= Math.floor(hi / G); a2++) for (var c2 = Math.floor(ylo / G); c2 <= Math.floor(yhi / G); c2++) {
@@ -677,7 +679,9 @@ function bumperGaps(car, zone, node) {
     var gu = Math.floor(s.p[V.u] / G), gy = Math.floor(s.p.y / G), best = Infinity, seen = new Set();
     for (var a2 = -2; a2 <= 2; a2++) for (var c2 = -2; c2 <= 2; c2++) (V.cells.get((gu + a2) + "," + (gy + c2)) || []).forEach(function (i) {
       if (seen.has(i)) return; seen.add(i); var f = V.flat[i]; if (f.d[1] < s.p[ax] - 0.2 || f.d[0] > s.p[ax] + 0.2) return;
-      f.closestPointToPoint(q, cp); best = Math.min(best, cp.distanceTo(q)); });
+      // A triangle viewed edge-on becomes a line. Triangle.closestPointToPoint can return NaN for it; measure the projected edges explicitly.
+      if (f.line) { [[f.a,f.b],[f.b,f.c],[f.c,f.a]].forEach(function (e) { edgeLine.set(e[0],e[1]).closestPointToPoint(q,true,cp); var d=cp.distanceTo(q); if(isFinite(d))best=Math.min(best,d); }); }
+      else { f.closestPointToPoint(q, cp); var d=cp.distanceTo(q); if(isFinite(d))best=Math.min(best,d); } });
     var mmv = best === Infinity ? 60 : Math.min(best * 1000, 60); (regions[region] = regions[region] || []).push(mmv); // > 6 cm counts as 60 mm
     if (mmv > BUMPER_MAX_GAP_MM) worst.push({ region: region, mm: Math.round(mmv), at: s.p.toArray().map(round3), by: s.by.name });
   });
@@ -702,20 +706,28 @@ function fitBumper(car, src, type, zone, info, force, raw) { // raw (evidence on
   var front = type === "FRONT_BUMPER", end = KIT[type].end;
   if (!zone || zone.how !== "part map") throw new Error("no confirmed " + (front ? "front" : "rear") + " bumper in this car's part map: 3D preview not available for this car");
   var covered = raw ? [] : coveredStock(car, zone); info.hidesWithStock = covered; // hidden with the stock bumper (buildAccessory: hideMore)
-  var T = zone.T, ts = T.getSize(new THREE.Vector3()), o = orientPart(src(), "x", end, "top"), node = o.node;
-  var u = ts.x / o.size.x, sy = clamp(ts.y / (o.size.y * u), 0.95, 1.05), sz = clamp(ts.z / (o.size.z * u), 0.95, 1.05);
-  node.scale.set(u, u * sy, u * sz); node.position.set((T.min.x + T.max.x) / 2, T.max.y, end > 0 ? T.max.z : T.min.z);
-  var B = exactBox(node), deeper = Math.max(0, front ? T.min.z - B.min.z : B.max.z - T.max.z) * 1000;
+  var T = zone.T, ts = T.getSize(new THREE.Vector3());
+  // A multi-mesh bumper's inner trim can reverse a vertex-density orientation guess. Choose from both headings by real seam geometry.
+  var candidates = ["x", "x-reverse"].map(function (long) {
+    var o = orientPart(src(), long, end, "top"), node = o.node, u = ts.x / o.size.x;
+    var sy = clamp(ts.y / (o.size.y * u), 0.95, 1.05), sz = clamp(ts.z / (o.size.z * u), 0.95, 1.05);
+    node.scale.set(u, u * sy, u * sz); node.position.set((T.min.x + T.max.x) / 2, T.max.y, end > 0 ? T.max.z : T.min.z);
+    var B = exactBox(node), deeper = Math.max(0, front ? T.min.z - B.min.z : B.max.z - T.max.z) * 1000, gaps = bumperGaps(car, zone, node);
+    var score = Math.max.apply(null, [deeper].concat(Object.keys(gaps).filter(function (k) { return gaps[k] && gaps[k].n >= 5; }).map(function (k) { return isFinite(gaps[k].p90) ? gaps[k].p90 : 1000; })));
+    return { o: o, node: node, sy: sy, sz: sz, deeper: deeper, gaps: gaps, score: score, long: long };
+  });
+  var best = candidates[1].score + 0.01 < candidates[0].score ? candidates[1] : candidates[0];
+  var o = best.o, node = best.node, sy = best.sy, sz = best.sz, deeper = best.deeper;
   info.zone = { how: zone.how, size: ts.toArray().map(round3), hidden: zone.hide.length };
   info.stretch = [1, round3(sy), round3(sz)]; info.deeperThanStockMm = Math.round(deeper);
-  info.gapsMm = bumperGaps(car, zone, node); info.worstSeamPoints = info.gapsMm.worst;
+  info.gapsMm = best.gaps; info.worstSeamPoints = info.gapsMm.worst;
   var bad = Object.keys(info.gapsMm).filter(function (r) { return info.gapsMm[r].n >= 5 && info.gapsMm[r].p90 > BUMPER_MAX_GAP_MM; });
   if (bad.length || deeper > BUMPER_MAX_DEEPER_MM) {
     var why = bad.map(function (r) { return r + " gap " + info.gapsMm[r].p90 + " mm"; }); if (deeper > BUMPER_MAX_DEEPER_MM) why.push("reaches " + Math.round(deeper) + " mm into the body");
     var msg = "this bumper does not fit this car cleanly (" + why.join(", ") + ")";
     if (force) info.wouldFail = msg; else { var e = new Error(msg); e.info = info; throw e; } // force: evidence renders only
   }
-  return { o: o, placements: [{ pos: node.position.toArray().map(r4), sc: node.scale.toArray().map(r4), rot: [0, 0, 0], side: 1 }], orient: ["x", end, "top"], shadows: [], hideMore: covered };
+  return { o: o, placements: [{ pos: node.position.toArray().map(r4), sc: node.scale.toArray().map(r4), rot: [0, 0, 0], side: 1 }], orient: [best.long, end, "top"], shadows: [], hideMore: covered };
 }
 // ---- RIMS: one rim part used x4, placed automatically on every car (no per-car settings) ----
 // rimPieces(car): the four wheels. A seed only LOCATES each wheel (confirmed part map WHEELS, else the stored automatic proposal, else
@@ -1404,9 +1416,12 @@ function kitList(s) {
   return l.filter(function (k) { return k && typeof k.type === "string" && KIT[k.type] && typeof k.file === "string"; });
 }
 function kitApply(s) {
+  car.stockVisibility = car.stockVisibility || new WeakMap();
+  car.stockHidden = car.stockHidden || new Set();
+  var hidden = new Set();
   var ks = kitList(s), want = {}; ks.forEach(function (k) { want[k.type + "|" + k.file] = k; });
   Object.keys(car.accs).forEach(function (key) { if (want[key]) return; var a = car.accs[key];
-    car.group.remove(a.group); if (a.zone) a.zone.hide.forEach(function (o) { o.visible = true; }); (a.shifts || []).forEach(function (x) { x.o.position.copy(x.orig); }); delete car.accs[key]; if (car.acc === a) car.acc = null; });
+    car.group.remove(a.group); (a.shifts || []).forEach(function (x) { x.o.position.copy(x.orig); }); delete car.accs[key]; if (car.acc === a) car.acc = null; });
   ks.forEach(function (k) {
     var key = k.type + "|" + k.file, a = car.accs[key];
     if (!a) {
@@ -1417,7 +1432,7 @@ function kitApply(s) {
         function (e) { delete c.accP[key]; c.accFail[key] = true; post({ type: "fitError", kitType: k.type, message: String(e && e.message || e), info: e && e.info || null }); });
       return;
     }
-    if (a.zone) a.zone.hide.forEach(function (o) { o.visible = false; });
+    if (a.zone) a.zone.hide.forEach(function (o) { hidden.add(o); });
     (a.shifts || []).forEach(function (x) { x.o.position.copy(x.orig).add(x.d); }); // rims: the wheel inset moves the kept stock tyres
     var j = addAdj(addAdj({ x: 0, y: 0, z: 0, rx: 0, ry: 0, s: 1 }, k.baseAdj), k.adj);
     a.place.forEach(function (p) { var n = p.o.node, b = p.base; n.position.set(b.pos[0] + j.x * p.side, b.pos[1] + j.y, b.pos[2] + j.z); n.rotation.set(b.rot[0] + j.rx, b.rot[1] + j.ry * p.side, b.rot[2]); n.scale.fromArray(b.sc).multiplyScalar(j.s); });
@@ -1432,6 +1447,11 @@ function kitApply(s) {
       a.mats.forEach(function (e) { e.o.material = e.main ? a.paint : e.orig; });
     } else a.mats.forEach(function (e) { e.o.material = e.orig; });
   });
+  // Capture on the first hide and restore after the last replacement releases the object.
+  // A later ON cycle must capture its current visibility again, including an already hidden stock piece.
+  car.stockHidden.forEach(function (o) { if (!hidden.has(o)) { o.visible = car.stockVisibility.get(o); car.stockVisibility.delete(o); } });
+  hidden.forEach(function (o) { if (!car.stockVisibility.has(o)) car.stockVisibility.set(o, o.visible); o.visible = false; });
+  car.stockHidden = hidden;
 }
 // ---- zone preview (Parts Admin): red = the car's own part that will be hidden, green = where the accessory goes ----
 var RED = new THREE.MeshBasicMaterial({ color: 0xe53935, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, toneMapped: false });

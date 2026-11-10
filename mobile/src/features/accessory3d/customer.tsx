@@ -6,11 +6,11 @@ import { Image, PanResponder, ScrollView, View } from "react-native";
 import { Badge, GButton, GText, Note, Section } from "../../components/garage";
 import { useL } from "../../core/hooks/useL";
 import { useLoad } from "../../core/hooks/useLoad";
-import { carName } from "../catalog/catalogBits";
 import type { Car } from "../catalog/myCar";
-import { useCatalogModel } from "../car3d/runtimeModels";
 import { gType, useGarageTheme } from "../../theme/garage";
-import { bumperLabel, customerAccessoryApi, isBumper, RIM_FINISH_LABELS, type CustomerPart, type RimSpecs } from "./api";
+import { customerAccessoryApi, RIM_FINISH_LABELS, type CustomerPart, type RimSpecs } from "./api";
+import {threeDReason} from "../vehicleCatalog/lifecycleText";
+import {selectPreviewCar} from "./eligibility";
 
 /** All photos as data URIs (authenticated, memory only); null while loading. */
 function usePhotos(ids: string[]) {
@@ -47,29 +47,32 @@ function Spin({ uris, label }: { uris: (string | null)[]; label: string }) {
 
 export function ProductAccessory3D({ productId, car, onPreview }: { productId: string; car: Car | null; onPreview?:()=>void }) {
   const { t, isArabic } = useL(); const { g, row, align } = useGarageTheme();
-  const state = useLoad(() => customerAccessoryApi.get(productId), [productId]);
-  const carModel = useCatalogModel(car);
+  const state = useLoad(() => customerAccessoryApi.get(productId,car?.generation?.id), [productId,car?.generation?.id],6000);
+  const choices=useLoad(()=>onPreview?Promise.resolve([]):customerAccessoryApi.garage(productId),[productId,!!onPreview],6000);
+  const [selected,setSelected]=useState<string|null>(null);
+  const chosen=selectPreviewCar(choices.data??[],selected);
   const a = state.data;
   const installed = a?.installed ?? null;
   const uris = usePhotos(installed?.photoIds ?? []);
   if (!a) return null;
   const genId = car?.generation?.id ?? null;
   // a "Universal by size" rim fits any car (its wheels are measured in 3D); everything else fits its chosen generations
-  const fits = !!genId && (!!a.universal || a.fits.some(f => f.id === genId));
   const parts: CustomerPart[] = a.parts ?? [{ part: "MAIN", type: a.type, fitsIds: a.fits.map(f => f.id), universal: a.universal, model: a.model, autoFit: null }];
-  const fitting = parts.filter(x => !!x.model && !!genId && (!!x.universal || x.fitsIds.includes(genId)));
   // bumpers / body kits replace the car's own bumper: only where its confirmed part map has that bumper
-  const viewable = fitting.some(x => !isBumper(x.type) || !!carModel?.partMap?.[bumperLabel(x.type)]);
+  const viewable = chosen?.allowed===true;
   const onYourCar = !!installed?.generation && installed.generation.id === genId;
   const badge = installed?.generation ? (onYourCar ? t("Shown on your car model", "معروضة على طراز سيارتك") : `${t("Shown on", "معروضة على")} ${isArabic ? installed.generation.nameAr : installed.generation.nameEn}`) : null;
   return <>
     {onPreview && parts.some(x=>x.model) ? <GButton label={t("Preview published 3D", "معاينة النموذج المنشور")} onPress={onPreview}/> : null}
     {parts.length > 1 ? <View style={[row, { marginTop: 12 }]}><Badge label={`3D · ${t("Front + rear", "أمامي + خلفي")}`} tone="neutral" /></View> : null}
-    {parts.some(x => x.model) && car ? (fits && carModel && !viewable && fitting.length
-      ? <View style={{ marginTop: 12 }}><Note icon="cube-outline">{t("3D preview not available for this car.", "المعاينة ثلاثية الأبعاد غير متاحة لهذه السيارة.")}</Note></View>
-      : fits && carModel && viewable
-      ? <GButton style={{ marginTop: 12 }} icon="cube-outline" label={t("View on my car", "اعرضها على سيارتي")} onPress={() => router.push({ pathname: "/customer/car3d", params: { product: productId } })} />
-      : !fits ? <View style={{ marginTop: 12 }}><Note icon="alert-circle-outline" tone="warning">{t(`This part doesn't fit your ${carName(car)}`, `هذه القطعة لا تناسب ${carName(car)}`)}</Note></View> : null) : null}
+    {!onPreview?<View style={{gap:10,marginTop:12}}>
+      {choices.data&&choices.data.length>1?choices.data.filter(c=>c.allowed).map(c=><GButton key={c.carId} variant="secondary" label={`${chosen?.carId===c.carId?"✓ ":""}${c.make} ${c.model} ${c.year}`} onPress={()=>setSelected(c.carId)}/>):null}
+      {viewable&&parts.some(x=>x.model)?<GButton icon="cube-outline" label={t("View on my car","اعرضها على سيارتي")} onPress={()=>router.push({pathname:"/customer/car3d",params:{product:productId,carId:chosen!.carId}})}/>:<>
+        <Note>{threeDReason(!parts.some(x=>x.model)?"NO_ACCESSORY_3D":chosen?.reason??"NO_COMPATIBLE_GARAGE_CAR",t)}</Note>
+        {chosen?.reason==="NO_VEHICLE_3D"?<GButton variant="secondary" label={t("Request my car in 3D","طلب سيارتي ثلاثية الأبعاد")} onPress={()=>router.push({pathname:"/customer/vehicle-requests/[id]",params:{id:"new",garageCarId:chosen.carId}} as never)}/>:!chosen?<GButton variant="secondary" label={t("Open Garage","فتح الكراج")} onPress={()=>router.push("/customer/garage" as never)}/>:null}
+      </>}
+      {choices.error?<Note tone="danger">{t("Could not check your Garage. Refresh to retry.","تعذّر فحص كراجك. حدّث لإعادة المحاولة.")}</Note>:null}
+    </View>:null}
     {a.rim ? <RimSpecsCard rim={a.rim} universal={!!a.universal} /> : null}
     {installed && installed.photoIds.length ? <Section title={t("Installed look", "شكلها بعد التركيب")}>
       {badge ? <View style={[row, { marginBottom: 8 }]}><Badge label={badge} tone={onYourCar ? "success" : "neutral"} /></View> : null}

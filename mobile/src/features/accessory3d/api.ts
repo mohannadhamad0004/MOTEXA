@@ -3,6 +3,8 @@ import { api } from "../../core/config/api";
 import { authenticatedBase64 } from "../vehicle3d/api";
 import type { AccessoryType, AccessoryZone, PartLabel, PartMap } from "../car3d/modelConfig";
 import type { FitAdjust } from "../car3d/car3d";
+import type { AccessoryReview } from "./reviewState";
+import type { CarModel } from "../car3d/models";
 
 /** MAIN = a single-part product; FRONT / REAR = a body kit's bumpers (one product, two 3D parts). */
 export type KitPart = "MAIN" | "FRONT" | "REAR";
@@ -21,24 +23,26 @@ export type Size = { widthMm: number | null; heightMm: number | null; depthMm: n
 export const PREVIEW_VIEWS = ["front-three-quarter", "front", "left-side", "rear-three-quarter", "rear", "top-three-quarter"] as const;
 export type Preview = { generationId: string; generationName: string; model3dKey: string; modelRevision: string; views: Record<string, string>; fit: Record<string, unknown> | null } | null;
 export type Accessory = {
+  lifecycleState?:string;fitmentNotes?:string|null;deactivatedAt?:string|null;
   id: string; productId: string; kitPart: KitPart; accessoryType: AccessoryType; status: AccessoryStatus; revision: number; creditsUsed: number; size: Size; rim: RimSpecs | null;
   fitsGenerationIds: string[]; installedGenerationId: string | null; installed360: boolean; installedApproved: boolean;
   partPhotos: { id: string }[]; installedPhotos: { id: string }[]; reviewNotes: string | null; submittedAt: string | null;
-  generationMode: string | null; provider: string | null; providerState: string | null; providerProgress: number | null; generationStage: string;
-  generationErrorCode: string | null; failureReason: string | null; hasModel: boolean; validation: Record<string, unknown> | null;
+  generationMode: string | null; provider: string | null; providerTaskId?: string | null; providerState: string | null; providerProgress: number | null; generationStage: string;
+  generationErrorCode: string | null; failureReason: string | null; hasModel: boolean; validation: Record<string, unknown> | null; processing?: Record<string,unknown>|null;
   preview: Preview; modelRevision: string; mock: boolean; published: boolean; updatedAt: string;
   /** a provider task already exists and only a free step failed: Start resumes it (no new charge) */
   resumable: boolean;
 };
 export type AdminAccessory = Accessory & {
+  review: AccessoryReview;
   product: { name: string; brand: string; partNumber: string; category: string | null; shop: { id: string; shopName: string } } | null;
-  creditsThisMonth: number; monthlyCredits: number; mode: "real" | "mock"; paidEnabled: boolean;
-  fits: { id: string; name: string; nameAr: string; years: [number, number]; has3d: boolean }[];
+  creditsThisMonth: number; monthlyCredits: number; mode: "real" | "mock"; paidEnabled: boolean; estimatedProviderCredits?: number;
+  fits: { id: string; name: string; nameAr: string; years: [number, number]; has3d: boolean;fit?:{allowed:boolean;code:string|null;autoFit:{fit:unknown;adj:FitAdjust|null}|null} }[];
 };
 export type ListedAccessory = Accessory & { productName: string; productBrand: string; shopName: string; shopId: string; productImageId: string | null; firstPartPhotoId: string | null; cars: { id: string; name: string; nameAr: string }[] };
 /** One published (or not yet published: model null) 3D part of a product, for the customer. */
 /** universal = a "Universal by size" rim: shown on any car with a 3D model. */
-export type CustomerPart = { part: KitPart; type: AccessoryType; fitsIds: string[]; universal?: boolean; model: { file: string; size: { widthMm: number | null; lengthMm: number | null; rimInches: number | null }; finish?: RimFinish | null } | null; autoFit: { fit: unknown; adj: FitAdjust | null } | null };
+export type CustomerPart = { part: KitPart; type: AccessoryType; fitsIds: string[]; universal?: boolean; model: { file: string; size: { widthMm: number | null; lengthMm: number | null; rimInches: number | null }; finish?: RimFinish | null } | null; autoFit: { fit: unknown; adj: FitAdjust | null } | null;allowed?:boolean;reason?:string|null };
 export type CustomerAccessory = {
   /** a body kit: parts = its front and / or rear bumper */
   kit?: boolean; parts?: CustomerPart[];
@@ -53,6 +57,7 @@ export type CustomerAccessory = {
 } | null;
 /** One accessory x generation on a car model, for the Parts Admin's auto-fit review. fit = null while it is being computed. */
 export type AutoFitRow = { accessoryId: string; productId: string; productName: string; type: AccessoryType; status: AccessoryStatus; file: string | null;
+  hasModel: boolean; modelRevision: string | null;
   size: { widthMm: number | null; lengthMm: number | null; rimInches: number | null }; generation: { id: string; name: string }; finish?: RimFinish | null;
   fit: { fit: { info?: Record<string, unknown>; failed?: string } & Record<string, unknown>; adj: FitAdjust | null; approvedAt: string | null } | null; computing: boolean; kitPart?: KitPart };
 export type { ZoneBox } from "../car3d/modelConfig";
@@ -64,7 +69,7 @@ type GateProblem = { code: "LENGTH" | "WIDTH" | "HEIGHT" | "SHAPE" | "WHEEL_SIZE
 export type ModelGate = { verdict: "FULL" | "LIMITED" | "REJECTED"; problems: GateProblem[]; warnings?: GateProblem[];
   limited: Partial<Record<AccessoryType, "NOT_SEPARATE" | "WHEELS_NOT_FOUND" | "NEEDS_WHEELS" | "SINGLE_PIECE">>; text: string[] };
 export type PartMapListItem = { key: string; name: string; status: PartMapStatus; pieces: number; confirmedAt: string | null; proposalSummary: PartMapSummary; mapSummary: PartMapSummary; gate: ModelGate | null };
-export type PartMapDetail = PartMapListItem & { modelSha256: string | null; proposal: Partial<Record<PartLabel, { ids: string[]; confidence: number; by: string }>> | null; map: PartMap | null };
+export type PartMapDetail = PartMapListItem & { viewerConfig?: CarModel; privateReview?: boolean; modelSha256: string | null; proposal: Partial<Record<PartLabel, { ids: string[]; confidence: number; by: string }>> | null; map: PartMap | null };
 export type ZoneModel = { key: string; name: string; fileZones: Partial<Record<AccessoryType, AccessoryZone>>; zones: Partial<Record<AccessoryType, AccessoryZone>> };
 /** Add-ons that hide the car's own part while on (mirrors backend REPLACES_STOCK). */
 export const REPLACES_STOCK: AccessoryType[] = ["WING", "SPOILER", "ROOF_RACK", "MIRROR_COVERS", "RIMS"];
@@ -101,21 +106,24 @@ const adm = "/admin/parts/accessory-3d";
 export const adminAccessoryApi = {
   list: async () => (await api<{ accessories: ListedAccessory[] }>("GET", adm)).accessories,
   get: async (id: string) => (await api<{ accessory: AdminAccessory }>("GET", `${adm}/${id}`)).accessory,
-  act: (id: string, action: "approve" | "reject" | "start" | "preview" | "regenerate" | "publish", body: Record<string, unknown> = {}) => api("POST", `${adm}/${id}/${action}`, body),
+  act: (id: string, action: "approve" | "reject" | "start" | "preview" | "regenerate" | "publish"|"refit"|"unpublish"|"reactivate"|"discard-candidate", body: Record<string, unknown> = {}) => api("POST", `${adm}/${id}/${action}`, body),
   asset: (id: string, asset: string) => authenticatedBase64(`${adm}/${id}/assets/${asset}`),
   setCredits: (shopId: string, monthlyCredits: number) => api("PUT", `/admin/parts/shops/${shopId}/accessory-3d-credits`, { monthlyCredits }),
   zones: async () => (await api<{ models: ZoneModel[] }>("GET", "/admin/parts/accessory-zones")).models,
   setZone: (key: string, type: AccessoryType, zone: AccessoryZone | null) => api("PUT", `/admin/parts/accessory-zones/${key}/${type}`, { zone }),
   partMaps: async () => (await api<{ models: PartMapListItem[] }>("GET", "/admin/parts/part-maps")).models,
+  partMapAsset: (key: string) => authenticatedBase64(`/admin/parts/part-maps/${encodeURIComponent(key)}/model`),
   partMap: async (key: string) => (await api<{ partMap: PartMapDetail }>("GET", `/admin/parts/part-maps/${key}`)).partMap,
   /** map null = unconfirm (the car goes back to the zone cut) */
   confirmPartMap: async (key: string, modelSha256: string, map: PartMap | null) => (await api<{ partMap: PartMapDetail }>("PUT", `/admin/parts/part-maps/${key}`, { modelSha256, map })).partMap,
   autoFits: async (model3dKey: string) => (await api<{ fits: AutoFitRow[] }>("GET", `/admin/parts/auto-fits?model3dKey=${encodeURIComponent(model3dKey)}`)).fits,
   /** approve the fit with a correction (null = the pure auto-fit: "Reset to auto-fit") */
   approveFit: (accessoryId: string, generationId: string, adj: FitAdjust | null) => api("PUT", `/admin/parts/auto-fits/${accessoryId}/${generationId}`, { adj }),
+  needsCorrection: (accessoryId: string, generationId: string) => api("PUT", `/admin/parts/auto-fits/${accessoryId}/${generationId}`, { needsCorrection: true }),
   segment: async (key: string) => (await api<{ partMap: PartMapDetail }>("POST", `/admin/parts/part-maps/${key}/segment`)).partMap,
 };
 export const customerAccessoryApi = {
+  garage:async(productId:string)=>(await api<{cars:{carId:string;make:string;model:string;year:number;generationId:string|null;isActive:boolean;allowed:boolean;reason:string|null}[]}>("GET",`/catalog/products/${productId}/accessory-3d/garage`)).cars,
   get: async (productId: string, generationId?: string | null) => (await api<{ accessory: CustomerAccessory }>("GET", `/catalog/products/${productId}/accessory-3d${generationId ? `?generationId=${encodeURIComponent(generationId)}` : ""}`)).accessory,
   photo: (photoId: string) => authenticatedBase64(`/catalog/accessory-3d/photos/${photoId}`),
 };

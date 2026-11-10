@@ -1,0 +1,17 @@
+{
+  "driverId": "4ea4734e-20ce-432a-beed-2169c2831adf",
+  "requestChanges": {
+    "status": 400,
+    "body": {
+      "success": false,
+      "message": "decision must be APPROVE, REJECT or SUSPEND."
+    }
+  },
+  "adminEdit": {
+    "status": 403,
+    "body": {
+      "success": false,
+      "message": "Tow company access required."
+    }
+  }
+}

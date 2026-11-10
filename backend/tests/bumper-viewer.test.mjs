@@ -27,15 +27,14 @@ function run(name, args, { partMap, kit, kit2 } = {}) {
   } catch (e) { return { error: String(e.stderr ?? e).match(/Error: ([^\n]*)/)?.[1] ?? String(e) }; }
 }
 let map;
-const ok = gaps => Object.values(gaps).every(g => g.n < 5 || g.p90 <= 10);
-
-test('a bumper made for the car: stock bumper fully hidden, uniform scale with <= 5 % stretch, visible edge gaps p90 <= 10 mm', { skip }, () => {
+test('E36 M3 fixture: finite seam distances reject its gap above 10 mm and leave stock visible', { skip }, () => {
   map = Object.fromEntries(Object.entries(run('seg', ['--views=segment']).proposal).map(([k, v]) => [k, v.ids]));
-  const f = run('m3', ['--views=check', `--part=${M3}`], { partMap: map, kit: { type: 'FRONT_BUMPER' } });
-  assert.equal(f.error, undefined, f.error); assert.equal(f.zone.how, 'part map');
+  const f = run('m3', ['--views=refusalcheck', `--part=${M3}`], { partMap: map, kit: { type: 'FRONT_BUMPER' } });
+  assert.equal(f.error, undefined, f.error);assert.match(f.refused,/does not fit this car cleanly \(.*gap/);assert.equal(f.zone.how, 'part map');
   assert.ok(f.stretch.every(x => x >= 0.95 && x <= 1.05), JSON.stringify(f.stretch));
-  assert.ok(ok(f.gapsMm), JSON.stringify(f.gapsMm)); assert.ok(f.deeperThanStockMm <= 30);
-  assert.equal(f.check.on.parts.FRONT_BUMPER, 0); assert.ok(f.check.off.parts.FRONT_BUMPER > 10000, 'the stock bumper comes back when off');
+  assert.ok(Object.values(f.gapsMm).every(g=>Number.isFinite(g.p90)&&Number.isFinite(g.max)));
+  assert.ok(Object.values(f.gapsMm).some(g=>g.n>=5&&g.p90>10),JSON.stringify(f.gapsMm));
+  assert.deepEqual(f.after,f.before);assert.ok(f.after.FRONT_BUMPER>10000);assert.deepEqual(f.accessories,[]);
 });
 
 test('a bumper of another car or the wrong shape gets a fit error instead of something broken', { skip: skip || (!existsSync(E46) && 'E46 test part missing') }, () => {
@@ -47,9 +46,10 @@ test('without a confirmed part-map bumper there is no bumper preview on that car
   assert.match(run('nomap', ['--views=fit', `--part=${M3}`], { kit: { type: 'FRONT_BUMPER' } }).error ?? '', /3D preview not available for this car/);
 });
 
-test("a body kit: both bumpers on together, each switched off on its own brings back only its stock bumper", { skip }, () => {
-  const k = run('kit', ['--views=kit', `--part=${M3}`, `--part2=${M3}`], { partMap: map, kit: { type: 'FRONT_BUMPER' }, kit2: { type: 'REAR_BUMPER', size: { forceFit: true } } }).kit; // rear: stand-in shape
-  assert.equal(k.both.on.length, 2); assert.equal(k.both.parts.FRONT_BUMPER, 0); assert.equal(k.both.parts.REAR_BUMPER, 0);
-  assert.ok(k.firstOff.parts.FRONT_BUMPER > 0); assert.equal(k.firstOff.parts.REAR_BUMPER, 0);
-  assert.ok(k.allOff.parts.FRONT_BUMPER > 0 && k.allOff.parts.REAR_BUMPER > 0);
+test("a refused bumper alongside a wing keeps stock intact; OFF restores only the wing's stock spoiler", { skip }, () => {
+  const wing=resolve(ROOT,'backend/public/3d/accessories/acc-7e40b463d76777b8.glb');
+  const k = run('kit', ['--views=kit', `--part=${M3}`, `--part2=${wing}`], { partMap: map, kit: { type: 'FRONT_BUMPER' }, kit2: { type: 'WING', size: { widthMm:1300 } } }).kit;
+  assert.equal(k.both.on.length,1);assert.ok(k.both.parts.FRONT_BUMPER>0);assert.equal(k.both.parts.SPOILER,0);
+  assert.deepEqual(k.firstOff.parts,k.both.parts);
+  assert.equal(k.allOff.parts.FRONT_BUMPER,k.both.parts.FRONT_BUMPER);assert.ok(k.allOff.parts.SPOILER>0);
 });

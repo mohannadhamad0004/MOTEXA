@@ -34,62 +34,52 @@ import { LoadingState } from "../../components/LoadingState";
 import { Text, VisualProvider, useReducedMotion } from "../../components/MotexaVisual";
 import { EditorialTitle, SectionCaption } from "../../components/PremiumUI";
 import { useLanguage } from "../../i18n/LanguageContext";
+import { garageDark, garageLight } from "../../theme/garage";
 import { useDepartment } from "./DepartmentContext";
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
-/** The super admin palette, in one place. */
+/** The department palette: the shared theme tokens (src/theme/garage.ts), so dark/light and contrast come from one place. */
 export function useDT() {
   const { dark } = useAppearance();
   const { isArabic: ar } = useLanguage();
+  const g = dark ? garageDark : garageLight;
+  const chip = (tone: Tone): ChipColors => {
+    const c = tone === "ok" ? g.success : tone === "bad" ? g.danger : tone === "amber" ? g.warning : tone === "bronze" ? g.accentText : g.soft;
+    return tone === "neutral" ? { fg: g.soft, bg: g.cardSoft, border: g.line } : { fg: c, bg: c + "26", border: c + "66" };
+  };
   return {
     dark,
     ar,
     t: (en: string, arabic: string) => (ar ? arabic : en),
-    ink: dark ? "#FFF1DF" : "#432D1E",
-    muted: dark ? "#DCC7A8" : "#6B4E34",
-    surface: dark ? "#3F2F24" : "#FFFCF6",
-    border: dark ? "#7A5B40" : "#DDC39E",
+    ink: g.ink,
+    muted: g.soft,
+    surface: g.card,
+    border: g.line,
     /** solid bronze for primary actions and active states, and the ink that sits on it */
-    fill: dark ? "#D9A066" : "#8E5A2B",
-    fillInk: dark ? "#2A1A0E" : "#FFF8EE",
-    soft: dark ? "#60432E" : "#F3D8B7",
-    accent: dark ? "#F1C68F" : "#80522F",
-    paper: dark ? "#30231B" : "#FFF9EF",
-    warn: dark ? "#E8C07E" : "#9A6A1F",
-    ok: dark ? "#9ED3A6" : "#2F7A45",
-    bad: dark ? "#F1B8A0" : "#A24930",
+    fill: g.accent,
+    fillInk: g.onAccent,
+    soft: g.tint,
+    accent: g.accentText,
+    paper: g.cardSoft,
+    warn: g.warning,
+    ok: g.success,
+    bad: g.danger,
     row: (ar ? "row-reverse" : "row") as "row" | "row-reverse",
     align: (ar ? "right" : "left") as "right" | "left",
-    chip: (tone: Tone) => CHIP[dark ? "dark" : "light"][tone],
+    chip,
   };
 }
 
 export type Tone = "neutral" | "bronze" | "amber" | "ok" | "bad";
 type ChipColors = { fg: string; bg: string; border: string };
-const CHIP: Record<"dark" | "light", Record<Tone, ChipColors>> = {
-  dark: {
-    neutral: { fg: "#E3D3BC", bg: "#4A3A2E", border: "#6A5442" },
-    bronze: { fg: "#F5C990", bg: "#5E4026", border: "#8E6438" },
-    amber: { fg: "#F7D26E", bg: "#5A4513", border: "#8C6D1E" },
-    ok: { fg: "#B2E3BA", bg: "#27452F", border: "#3E7049" },
-    bad: { fg: "#FAB9AA", bg: "#5E2B23", border: "#92463A" },
-  },
-  light: {
-    neutral: { fg: "#5A4533", bg: "#EFE3D2", border: "#D8C3A5" },
-    bronze: { fg: "#7A4818", bg: "#F6DFC2", border: "#E0B98A" },
-    amber: { fg: "#734E00", bg: "#FBE9B5", border: "#E6CB74" },
-    ok: { fg: "#215A33", bg: "#D5EBD7", border: "#9CCBA3" },
-    bad: { fg: "#8A2B1B", bg: "#F8D6CD", border: "#E3A99C" },
-  },
-};
 
 /** Brand + department switcher + language/theme switch, as in the super admin top bar. */
 function TopBar({ back }: { back?: boolean }) {
   const insets = useSafeAreaInsets();
   const d = useDT();
   return (
-    <View style={[s.topbar, { paddingTop: insets.top + 7, backgroundColor: d.dark ? "#291F19" : "#FBF1E2" }]}>
+    <View style={[s.topbar, { paddingTop: insets.top + 7, backgroundColor: d.paper }]}>
       {back ? (
         <InteractiveButton accessibilityRole="button" accessibilityLabel={d.t("Back", "رجوع")} onPress={() => router.back()} style={s.back}>
           <Ionicons name={d.ar ? "arrow-forward" : "arrow-back"} size={22} color={d.ink} />
@@ -107,7 +97,7 @@ function Switcher() {
   const d = useDT();
   if (available.length < 2) return null;
   return (
-    <View style={{ flexDirection: d.row, gap: 8, paddingHorizontal: 16, paddingBottom: 10, backgroundColor: d.dark ? "#291F19" : "#FBF1E2" }}>
+    <View style={{ flexDirection: d.row, gap: 8, paddingHorizontal: 16, paddingBottom: 10, backgroundColor: d.paper }}>
       {available.map((dep) => {
         const on = dep.key === active.key;
         return (
@@ -117,10 +107,10 @@ function Switcher() {
             accessibilityState={{ selected: on }}
             accessibilityLabel={d.t(dep.en, dep.ar)}
             onPress={() => setActive(dep.key)}
-            style={{ flex: 1, minWidth: 0, minHeight: 40, borderRadius: 20, flexDirection: d.row, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 8, borderWidth: 1, borderColor: on ? "#E0A36F" : d.border, backgroundColor: on ? "#E0A36F" : "transparent" }}
+            style={{ flex: 1, minWidth: 0, minHeight: 40, borderRadius: 20, flexDirection: d.row, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 8, borderWidth: 1, borderColor: on ? d.fill : d.border, backgroundColor: on ? d.fill : "transparent" }}
           >
-            <Ionicons name={dep.icon} size={16} color={on ? "#332218" : d.muted} />
-            <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 12, fontWeight: "600", color: on ? "#332218" : d.ink }}>{d.t(dep.en, dep.ar)}</Text>
+            <Ionicons name={dep.icon} size={16} color={on ? d.fillInk : d.muted} />
+            <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 12, fontWeight: "600", color: on ? d.fillInk : d.ink }}>{d.t(dep.en, dep.ar)}</Text>
           </InteractiveButton>
         );
       })}
@@ -186,12 +176,12 @@ export function DeptPage({
           <TopBar back={back} />
           <Switcher />
           {hero}
-          <LinearGradient colors={d.dark ? ["#30231B", "#33271E", "#39281D"] : ["#FFF9EF", "#FBF0E0", "#F3DFC4"]} style={{ flexGrow: 1, paddingTop: hero ? 19 : 12, paddingHorizontal: 18, minHeight: Math.max(360, winH - 150) }}>
+          <LinearGradient colors={[d.paper, d.surface, d.soft]} style={{ flexGrow: 1, paddingTop: hero ? 19 : 12, paddingHorizontal: 18, minHeight: Math.max(360, winH - 150) }}>
             {children}
           </LinearGradient>
         </ScrollView>
         {footer ? (
-          <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12), backgroundColor: d.dark ? "#241C16" : "#FBF1E2", borderTopWidth: 1, borderTopColor: d.border }}>
+          <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12), backgroundColor: d.surface, borderTopWidth: 1, borderTopColor: d.border }}>
             <View style={{ width: "100%", maxWidth: 680, alignSelf: "center" }}>{footer}</View>
           </View>
         ) : null}
@@ -419,7 +409,7 @@ export function ReasonBox({ title, confirmLabel, busy, onCancel, onConfirm }: { 
           if (empty && v.trim()) setEmpty(false);
         }}
         placeholderTextColor={d.muted}
-        style={{ minHeight: 84, borderRadius: 16, borderWidth: 1, borderColor: empty ? d.bad : d.border, color: d.ink, padding: 12, textAlignVertical: "top", textAlign: d.align, backgroundColor: d.dark ? "#2C2119" : "#FFFDF8" }}
+        style={{ minHeight: 84, borderRadius: 16, borderWidth: 1, borderColor: empty ? d.bad : d.border, color: d.ink, padding: 12, textAlignVertical: "top", textAlign: d.align, backgroundColor: d.paper }}
       />
       {empty ? <Text style={{ color: d.bad, fontSize: 12, textAlign: d.align }}>{d.t("A reason is required.", "السبب مطلوب.")}</Text> : null}
       <DButton label={confirmLabel} variant="danger" disabled={busy} onPress={() => (ref.current.trim() ? onConfirm(ref.current.trim()) : setEmpty(true))} />
@@ -464,8 +454,8 @@ export function DeptTabBar({ state, descriptors, navigation }: any) {
   const insets = useSafeAreaInsets();
   const d = useDT();
   return (
-    <View style={{ paddingHorizontal: 14, paddingTop: 4, paddingBottom: Math.max(insets.bottom, 6), backgroundColor: d.dark ? "#241D18" : "#F3DFC4" }}>
-      <View style={{ flexDirection: d.row, alignItems: "center", padding: 5, gap: 3, borderRadius: 38, backgroundColor: d.dark ? "#35291F" : "#FFFAF1", elevation: 5, shadowColor: "#4F2D17", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.12, shadowRadius: 14 }}>
+    <View style={{ paddingHorizontal: 14, paddingTop: 4, paddingBottom: Math.max(insets.bottom, 6), backgroundColor: d.paper }}>
+      <View style={{ flexDirection: d.row, alignItems: "center", padding: 5, gap: 3, borderRadius: 38, backgroundColor: d.surface, elevation: 5, shadowColor: "#4F2D17", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.12, shadowRadius: 14 }}>
         {state.routes.map((route: any, index: number) => {
           const options = descriptors[route.key].options;
           const selected = state.index === index;
@@ -475,7 +465,7 @@ export function DeptTabBar({ state, descriptors, navigation }: any) {
               key={route.key}
               selected={selected}
               label={label}
-              icon={options.tabBarIcon?.({ focused: selected, color: selected ? (d.dark ? "#352216" : "#462E1C") : d.muted, size: 22 })}
+              icon={options.tabBarIcon?.({ focused: selected, color: selected ? d.fillInk : d.muted, size: 22 })}
               badge={options.tabBarBadge}
               onPress={() => {
                 const e = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
@@ -506,7 +496,7 @@ function Tab({ selected, label, icon, badge, onPress }: { selected: boolean; lab
         accessibilityLabel={badge ? `${label} (${badge})` : label}
         accessibilityState={{ selected }}
         onPress={onPress}
-        style={{ height: 52, borderRadius: 26, flexDirection: d.row, alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: selected ? (d.dark ? "#E0B67F" : "#704A2B") : "transparent" }}
+        style={{ height: 52, borderRadius: 26, flexDirection: d.row, alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: selected ? (d.fill) : "transparent" }}
       >
         <View>
           {icon}
@@ -516,7 +506,7 @@ function Tab({ selected, label, icon, badge, onPress }: { selected: boolean; lab
             </View>
           ) : null}
         </View>
-        {selected ? <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: "700", color: d.dark ? "#352216" : "#FFF9F0", flexShrink: 1 }}>{label}</Text> : null}
+        {selected ? <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: "700", color: d.fillInk, flexShrink: 1 }}>{label}</Text> : null}
       </InteractiveButton>
     </Animated.View>
   );
@@ -544,7 +534,7 @@ export function Sheet({ visible, title, onClose, children }: { visible: boolean;
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "#000000AA" }}>
         <Pressable accessibilityRole="button" accessibilityLabel={d.t("Close", "إغلاق")} style={{ flex: 1 }} onPress={onClose} />
-        <View style={{ maxHeight: "88%", borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: d.dark ? "#2D221A" : "#FFFCF6", borderTopWidth: 1, borderColor: d.border, paddingBottom: Math.max(insets.bottom, 14) }}>
+        <View style={{ maxHeight: "88%", borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: d.surface, borderTopWidth: 1, borderColor: d.border, paddingBottom: Math.max(insets.bottom, 14) }}>
           <View style={{ alignItems: "center", paddingTop: 10 }}>
             <View style={{ width: 44, height: 5, borderRadius: 3, backgroundColor: d.border }} />
           </View>

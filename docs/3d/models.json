@@ -6769,5 +6769,84 @@
     "inApp": false,
     "finalStatus": "REMOVED",
     "cleanupReason": "Existing provenance/quality hold retained; not promoted. Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation."
+  },
+  "volkswagen-beetle-type-1": {
+    "key": "manual-19febfb9-3b4a-4a5f-b2c0-ce33547da350-ad65d3b3205c45de",
+    "file": "manual-19febfb9-3b4a-4a5f-b2c0-ce33547da350-ad65d3b3205c45de",
+    "make": "Volkswagen",
+    "model": "Beetle",
+    "code": "Type 1",
+    "url": "https://sketchfab.com/3d-models/volkswagen-beetle-83276f21bd9c41e196c474350b43efb0",
+    "title": "Volkswagen beetle",
+    "author": "Angelos Gkanias",
+    "license": "CC Attribution",
+    "inApp": true,
+    "finalStatus": "PASS_VARIANT",
+    "source": "Sketchfab",
+    "viewerConfig": {
+      "key": "manual-19febfb9-3b4a-4a5f-b2c0-ce33547da350-ad65d3b3205c45de",
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "url": "https://sketchfab.com/3d-models/volkswagen-beetle-83276f21bd9c41e196c474350b43efb0",
+        "title": "Volkswagen beetle",
+        "author": "Angelos Gkanias",
+        "license": "CC Attribution"
+      },
+      "lengthM": 4.5,
+      "rotateY": 0,
+      "generation": "Volkswagen Beetle Type 1",
+      "paintNodes": [],
+      "preRotateX": 0,
+      "groundOffset": 0,
+      "rimsSwappable": false,
+      "paintMaterials": []
+    },
+    "sourceUid": "83276f21bd9c41e196c474350b43efb0",
+    "authorUrl": "https://sketchfab.com/gkaniasag",
+    "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+    "sourceMetadata": {
+      "uid": "83276f21bd9c41e196c474350b43efb0",
+      "url": "https://sketchfab.com/3d-models/volkswagen-beetle-83276f21bd9c41e196c474350b43efb0",
+      "title": "Volkswagen beetle",
+      "author": "Angelos Gkanias",
+      "format": "glb",
+      "allowed": true,
+      "license": "CC Attribution",
+      "authorUrl": "https://sketchfab.com/gkaniasag",
+      "thumbnail": "https://media.sketchfab.com/models/83276f21bd9c41e196c474350b43efb0/thumbnails/248167a884d54a839118b6e06aa6b457/578306b51d8f4256b9585ce15c5b2fdf.jpeg",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "inspectedAt": "2026-11-07T18:03:42.100Z",
+      "refusalCode": null,
+      "downloadable": true,
+      "downloadedAt": "2026-11-07T18:03:51.193Z",
+      "licenseClass": "CC BY",
+      "optimization": {
+        "removed": 0,
+        "textures": 44,
+        "warnings": [
+          "Paint segmentation requires review; automatic recoloring is disabled.",
+          "Front direction requires visual confirmation."
+        ],
+        "bytesAfter": 6396020,
+        "bytesBefore": 36230220
+      },
+      "sourceSha256": "7a8b8aa9b6adc2b25b8af31c10d75fd4900e29385ee32f719e31e3312a13765a",
+      "downloadSource": "https://api.sketchfab.com/v3/models/83276f21bd9c41e196c474350b43efb0/download",
+      "pendingRawPath": null,
+      "pendingPreparedPath": null,
+      "originalDownloadedBytes": 36230220
+    },
+    "preparedSha256": "ad65d3b3205c45de56ab9b2ff4b50f66d960737793950d6b67aa4920bad6e1dd"
   }
 }

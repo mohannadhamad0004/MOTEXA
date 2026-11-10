@@ -12,7 +12,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Chip, EmptyState, GButton, GText, IconButton, Note } from "../../components/garage";
 import { useL } from "../../core/hooks/useL";
 import { carName } from "../../features/catalog/catalogBits";
-import { openMyCarPicker, openEditGarageCar, useMyCar, refreshGarage } from "../../features/catalog/myCar";
+import { openMyCarPicker, openEditGarageCar, useGarage, refreshGarage } from "../../features/catalog/myCar";
+import {threeDReason} from "../../features/vehicleCatalog/lifecycleText";
+import {canPreviewPart} from "../../features/accessory3d/eligibility";
 import { Car3DView } from "../../features/car3d/Car3DView";
 import { ComingSoon } from "../../features/car3d/CarPreview";
 import { DEFAULT_COLOR, NO_ADJUST } from "../../features/car3d/car3d";
@@ -26,35 +28,41 @@ export default function MyCar3D() {
   const { g, row, align } = useGarageTheme();
   const { t } = useL();
   const insets = useSafeAreaInsets();
-  const { product } = useLocalSearchParams<{ product?: string }>();
-  const { car, loaded } = useMyCar();
+  const { product,carId } = useLocalSearchParams<{ product?: string;carId?:string }>();
+  const { activeCar,garageCars,loaded } = useGarage();
+  const savedCar=carId?garageCars.find(c=>c.id===carId):null;
+  const car=carId?(savedCar?{...savedCar,year:String(savedCar.year),trim:""}:null):activeCar;
   useFocusEffect(useCallback(()=>{void refreshGarage();void refreshRuntimeModels();},[]));
   const model = useCatalogModel(car);
   const [acc, setAcc] = useState<CustomerAccessory>(null);
   // a body kit shows its front and rear bumper together; each one is switched on / off on its own
   const [off, setOff] = useState<Partial<Record<KitPart, boolean>>>({}), [paint, setPaint] = useState(false);
   const [fitErrors, setFitErrors] = useState<Record<string, string>>({});
+  const [accessoryError,setAccessoryError]=useState(false),[poll,setPoll]=useState(0);
+  useEffect(()=>{const timer=setInterval(()=>setPoll(v=>v+1),6000);return()=>clearInterval(timer);},[]);
   const genId = car?.generation?.id ?? null;
-  const parts: CustomerPart[] = useMemo(() => acc ? acc.parts ?? [{ part: "MAIN", type: acc.type, fitsIds: acc.fits.map(f => f.id), model: acc.model, autoFit: acc.autoFit ?? null }] : [], [acc]);
+  const [loadedFor,setLoadedFor]=useState("");
+  useEffect(()=>{setOff({});setFitErrors({});setPaint(false);},[product,genId]);
+  const parts: CustomerPart[] = useMemo(() => acc&&loadedFor===`${product}|${genId}` ? acc.parts ?? [{ part: "MAIN", type: acc.type, fitsIds: acc.fits.map(f => f.id), model: acc.model, autoFit: acc.autoFit ?? null }] : [], [acc,loadedFor,product,genId]);
   useEffect(() => {
     let live = true;
     void Promise.resolve().then(async()=>{
       if(!live)return;
-      setFitErrors({});
+      setAccessoryError(false);
       if(!product){setAcc(null);return;}
-      try{const result=await customerAccessoryApi.get(product,genId);if(live)setAcc(result);}
-      catch{if(live)setAcc(null);}
+      try{const result=await customerAccessoryApi.get(product,genId);if(live){setAcc(result);setLoadedFor(`${product}|${genId}`);}}
+      catch{if(live){setAcc(null);setAccessoryError(true);}}
     });
     return () => { live = false; };
-  }, [product, genId]);
+  }, [product, genId,poll]);
   const fitting = parts.filter(x => !!x.model && !!genId && (!!x.universal || x.fitsIds.includes(genId))); // universal = a "Universal by size" rim
   // bumpers replace the car's own bumper: only on cars whose confirmed part map has it
-  const shown = fitting.filter(x => !isBumper(x.type) || !!model?.partMap?.[bumperLabel(x.type)]);
+  const shown = fitting.filter(x => canPreviewPart(x)&&(!isBumper(x.type) || !!model?.partMap?.[bumperLabel(x.type)]));
   const noPreview = fitting.length > 0 && !shown.length;
   const fits = shown.length > 0;
   const shownParts=shown.map(x=>x.part).join();
   const kits: Kit[] = useMemo(() => shown.filter(x => !off[x.part]).map(x => ({ type: x.type, file: x.model!.file, size: x.model!.size, paintMatch: paint && x.type !== "RIMS", finish: x.model!.finish ?? null, adj: NO_ADJUST,
-    fit: x.autoFit?.fit, baseAdj: x.autoFit?.adj ?? null })), [shownParts, off, paint, acc]); // eslint-disable-line react-hooks/exhaustive-deps
+    fit: x.autoFit?.fit, baseAdj: x.autoFit?.adj ?? null })), [shownParts, off, paint, acc,model]); // eslint-disable-line react-hooks/exhaustive-deps
   const back = () => (router.canGoBack() ? router.back() : router.navigate("/customer/profile"));
   const label = (x: { type: CustomerPart["type"] }) => t(...ACCESSORY_TYPE_LABELS[x.type]);
   const paintable = kits.some(k => k.type !== "RIMS"), rim = shown.find(x => x.type === "RIMS");
@@ -84,6 +92,7 @@ export default function MyCar3D() {
           <GText soft style={[gType.tiny, { textAlign: "center", marginTop: 4 }]}>{t("Drag to turn · pinch to zoom · double-tap to reset", "اسحب للتدوير · قرّب بإصبعين · انقر مرتين للإعادة")}</GText>
           {!model.paintMaterials.length && !model.bakedPaint ? <GText soft style={[gType.caption, { textAlign: "center", marginHorizontal: 20 }]}>{t("This model keeps its original finish; your selected paint is not applied.", "يحتفظ هذا النموذج بلونه الأصلي؛ لا يُطبّق عليه لون الطلاء المحدد.")}</GText> : null}
           <ScrollView style={{ flexGrow: 0, maxHeight: "50%" }} contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: insets.bottom + 12, gap: 12 }}>
+            {product&&!fits?<Note tone="warning">{accessoryError?t("Could not load this accessory. Refresh and try again.","تعذّر تحميل هذه القطعة. حدّث وحاول مجددًا."):threeDReason(fitting.find(x=>!x.allowed)?.reason??"NO_ACCESSORY_3D",t)}</Note>:null}
             {acc && parts.some(x => x.model) && !fitting.length ? <Note tone="warning">{t(`This part doesn't fit your ${carName(car)}`, `هذه القطعة لا تناسب ${carName(car)}`)}</Note> : null}
             {noPreview ? <Note>{t("3D preview not available for this car.", "المعاينة ثلاثية الأبعاد غير متاحة لهذه السيارة.")}</Note> : null}
             {shown.filter(x => !off[x.part] && fitErrors[x.type]).map(x => <Note key={x.part} tone="danger">{`${label(x)}: ${t("it could not be placed cleanly on this car model.", "تعذّر وضعها بدقة على طراز هذه السيارة.")}`}</Note>)}

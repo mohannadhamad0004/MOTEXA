@@ -8,11 +8,16 @@ import { useLoad } from "../../../core/hooks/useLoad";
 import { useSessionUser,asActor } from "../../../core/session/session";
 import { apiUrl,privateImageSource } from "../../../core/config/api";
 import { localFileToBase64 } from "../../../core/constants/files";
+import { PhotoError, photoErrorText, pickPhoto } from "../../../core/hooks/pickPhoto";
+import { File as FsFile } from "expo-file-system";
 import { towFleetService } from "../../tow/towService";
 import { portalApi,portalBase } from "./api";
 import type { ProviderArea,ProviderMedia } from "./types";
 import { Async,Panel,Button,Pill,Text,EmptyState,useDT,go } from "./ui";
 
+const VIDEO_MAX=20*1024*1024;
+/** Reliable size: the picker's fileSize, else the file's own size on disk (Android content uris often omit fileSize). null = unknown. */
+async function videoBytes(a:{uri:string;fileSize?:number|null}):Promise<number|null>{if(a.fileSize)return a.fileSize;try{const n=new FsFile(a.uri).size;return n>0?n:null;}catch{return null;}}
 export function ProviderVideo({uri,headers}:{uri:string;headers?:Record<string,string>}){const d=useDT(),focused=useIsFocused(),player=useVideoPlayer({uri,headers},p=>{p.muted=true;});useEffect(()=>{if(!focused)player.pause();},[focused,player]);return <View style={{borderRadius:16,overflow:"hidden",backgroundColor:d.surface}}><VideoView player={player} nativeControls contentFit="contain" style={{width:"100%",height:190}}/></View>;}
 function MediaAsset({media,area}:{media:ProviderMedia;area:ProviderArea}){const [source,setSource]=useState<{uri:string;headers?:Record<string,string>}|null>(null);useEffect(()=>{let live=true;privateImageSource(`${portalBase(area)}/media/${media.id}/asset`).then(s=>{if(live)setSource(s);});return()=>{live=false;};},[area,media.id]);return source?(media.mimeType.startsWith("video/")?<ProviderVideo {...source}/>:<Image source={source} style={{width:"100%",height:190,borderRadius:16}}/>):null;}
 export function PublicMedia({media}:{media:ProviderMedia[]}){const d=useDT();return <>{media.map(m=><Panel key={m.id} title={m.slot==="VIDEO"?d.t("Truck / service video","فيديو الشاحنة / الخدمة"):m.slot==="PROFILE"?d.t("Profile photo","صورة الملف"):m.slot==="COVER"?d.t("Cover image","صورة الغلاف"):d.t("Business photos","صور النشاط")}>
@@ -23,7 +28,13 @@ export default function MediaPage({area}:{area:ProviderArea}){
  const fleet=useLoad(()=>area==="tow"?towFleetService.getMyFleet(asActor(u)):Promise.resolve(null),[u.id,area]);
  const [truckId,setTruck]=useState(""),[slot,setSlot]=useState("GALLERY"),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null),[remove,setRemove]=useState<string|null>(null);
  const work=async(fn:()=>Promise<unknown>)=>{setBusy(true);setError(null);try{await fn();await state.reload();}catch(e){setError((e as Error).message);}finally{setBusy(false);}};
- const pick=async(replaceId?:string,old?:ProviderMedia)=>{try{const video=(old?.slot??slot)==="VIDEO",r=await ImagePicker.launchImageLibraryAsync({mediaTypes:video?["videos"]:["images"],quality:.85,allowsEditing:false});if(r.canceled)return;const a=r.assets[0];if(!a)return;if((a.fileSize??0)>(video?20:5)*1024*1024)throw new Error(d.t("File too large. Photos: 5 MB. MP4 video: 20 MB.","الملف كبير. الصور: ٥ ميغابايت. فيديو MP4: ٢٠ ميغابايت."));await work(async()=>portalApi.upload(area,{slot:old?.slot??slot,truckId:(old?.truckId??truckId)||undefined,replaceId,dataBase64:await localFileToBase64(a.uri)}));}catch(e){setError((e as Error).message);}};
+ const send=(replaceId:string|undefined,old:ProviderMedia|undefined,dataBase64:string)=>work(async()=>portalApi.upload(area,{slot:old?.slot??slot,truckId:(old?.truckId??truckId)||undefined,replaceId,dataBase64}));
+ const pick=async(replaceId?:string,old?:ProviderMedia)=>{try{const video=(old?.slot??slot)==="VIDEO";
+  if(!video){const photo=await pickPhoto();if(!photo)return;await send(replaceId,old,photo.base64);return;} // photos: resized, JPEG, size checked
+  const r=await ImagePicker.launchImageLibraryAsync({mediaTypes:["videos"],allowsEditing:false});if(r.canceled)return;const a=r.assets[0];if(!a)return;
+  const size=await videoBytes(a);if(size===null)throw new Error(d.t("We could not read the size of that video. Choose another one.","تعذّر قراءة حجم الفيديو. اختر فيديو آخر."));
+  if(size>VIDEO_MAX)throw new Error(d.t("Video too large. MP4 video: 20 MB.","الفيديو كبير. فيديو MP4: ٢٠ ميغابايت."));
+  await send(replaceId,old,await localFileToBase64(a.uri));}catch(e){setError(e instanceof PhotoError?photoErrorText(e,d.t):(e as Error).message);}};
  return <ProviderLayout area={area} title={d.t("Media","الوسائط")} subtitle={d.t("Public presentation assets","وسائط العرض للعملاء")} onRefresh={state.reload}>
   <Panel title={d.t("Upload media","رفع وسائط")}><Text style={{color:d.muted,textAlign:d.align,lineHeight:21}}>{d.t("These assets appear in the customer profile. Verification documents remain private. Use JPEG/PNG/WebP up to 5 MB or H.264 MP4 up to 20 MB.","تظهر هذه الوسائط في ملف العميل. تبقى مستندات التحقق خاصة. صور JPEG/PNG/WebP حتى ٥ ميغابايت أو فيديو H.264 MP4 حتى ٢٠ ميغابايت.")}</Text>
    <View style={{flexDirection:d.row,flexWrap:"wrap",gap:6,marginVertical:10}}>{[["PROFILE","Profile photo","صورة الملف"],["COVER","Cover","الغلاف"],["GALLERY","Business photos","صور النشاط"],...(area==="tow"?[["VIDEO","Truck video","فيديو الشاحنة"]]:[])].map(([key,en,ar])=><Button key={key} size="sm" variant={slot===key?"primary":"ghost"} label={d.t(en,ar)} onPress={()=>setSlot(key)}/>)}</View>

@@ -1,0 +1,175 @@
+{
+  "statuses": [
+    {
+      "status": "READY_FOR_FINAL_REVIEW",
+      "count": 1
+    },
+    {
+      "status": "PUBLISHED",
+      "count": 3
+    }
+  ],
+  "B01": {
+    "candidateId": "caeb5d60-6561-49e7-8770-2db3fabe4b4b",
+    "previewAttempt": {
+      "status": 400,
+      "body": {
+        "success": false,
+        "code": "FIT_FAILED",
+        "message": "no confirmed rear bumper in this car's part map: 3D preview not available for this car"
+      }
+    },
+    "currentPreview": null
+  },
+  "B03": {
+    "published": [
+      {
+        "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+        "status": 200,
+        "targets": [
+          {
+            "generationId": "4acdaf71-fb80-4c2d-a5e6-d699963a819b",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "19febfb9-3b4a-4a5f-b2c0-ce33547da350",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "bfc1c9ea-57fa-4f66-be9d-1a1dfc831c88",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "2a4fc8a6-0939-4d0d-b33a-a93a9ffc14f7",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "31ee8deb-4197-4e56-ad6f-f312d6316d64",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "634b064d-697b-49eb-ae42-9b2627fa5e36",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "035eb37e-5c26-443c-9a27-348501dc6427",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "ca070647-6d23-4c8b-8667-4b7331955dda",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "392b0662-67fc-4194-aeeb-ab920eb3f1fb",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "21a1446a-f27b-4213-b4b8-20ff83171942",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "24eb2539-ac8b-48a0-a818-be2b2750eeba",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "3d8ed403-07b9-43bc-9873-1e521fd1d4f6",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "65f8f72b-d63d-4ffa-8a62-47fc8d0bbc56",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "88e09fa0-d8e8-4957-9ef6-0f1fa17b48ac",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "973e904a-ce24-4b03-984f-61b55ac5adc4",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "f85603f5-a24a-42fe-909d-b5952c80e7b0",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "de451857-e967-454b-81c9-2c7040f8b03d",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "4abc0994-ec68-4dec-b411-8348aad9cadf",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "c36706eb-27ea-4b44-8e26-44fed17913a7",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "992c618b-76c1-4acf-b9ec-f8b68441f8b2",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "6e4a77ca-cd14-47fb-b468-99792a911b72",
+            "fitState": "NOT_RUN",
+            "current": false
+          },
+          {
+            "generationId": "443cdbd8-de29-4200-ac2b-cc46c781cf78",
+            "fitState": "NOT_RUN",
+            "current": false
+          }
+        ],
+        "deactivatedAt": null
+      },
+      {
+        "id": "3329a3e2-8d10-482a-bcc4-9e60eb17c4c8",
+        "status": 200,
+        "targets": [
+          {
+            "generationId": "6e4a77ca-cd14-47fb-b468-99792a911b72",
+            "fitState": "NOT_RUN",
+            "current": false
+          }
+        ],
+        "deactivatedAt": null
+      },
+      {
+        "id": "e6fefd78-d536-4bc0-820f-2dec96c7f444",
+        "status": 200,
+        "targets": [
+          {
+            "generationId": "6e4a77ca-cd14-47fb-b468-99792a911b72",
+            "fitState": "NOT_RUN",
+            "current": false
+          }
+        ],
+        "deactivatedAt": null
+      }
+    ],
+    "transitionAttempted": false,
+    "reason": "All current fits are stale or missing; unpublishing could leave these records unable to reactivate."
+  },
+  "C01": {
+    "editableRows": [],
+    "photoMutationAttempted": false
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "startedAt": "2026-11-09T19:16:56.505Z",
+  "lifetimeSeconds": 900,
+  "beforeStatus": 200,
+  "expiresAt": "2026-11-09T19:31:55.000Z",
+  "checkedAt": "2026-11-09T19:31:56.522Z",
+  "after": {
+    "status": 401,
+    "body": {
+      "success": false,
+      "message": "Invalid or expired token."
+    }
+  },
+  "me": {
+    "status": 401,
+    "body": {
+      "success": false,
+      "message": "Invalid or expired token."
+    }
+  }
+}

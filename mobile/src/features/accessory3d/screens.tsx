@@ -2,7 +2,7 @@ import { ProviderLayout } from "../../components/layout/ProviderLayout";
 // Feature 2 screens: the shop's "Submit for 3D" form, the Parts Admin review (/dept/accessory3d) and the zone editor
 // (/dept/accessory-zones). Photos, generated models and previews are private: loaded with the session token into memory only.
 import { type Href, router, useLocalSearchParams } from "expo-router";
-import * as ImagePicker from "expo-image-picker";
+import { photoErrorText, pickPhoto } from "../../core/hooks/pickPhoto";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Image, Pressable, ScrollView, TextInput, View } from "react-native";
 import { Card, Chip, GarageHero, GaragePage, GButton, GText, Note, Section, StatusChip } from "../../components/garage";
@@ -13,12 +13,16 @@ import { gType, useGarageTheme } from "../../theme/garage";
 import { PART_LABELS, type AccessoryType, type AccessoryZone, type PartLabel, type PartMap } from "../car3d/modelConfig";
 import { Car3DView } from "../car3d/Car3DView";
 import { refreshRuntimeModels, useCatalogModelKey } from "../car3d/runtimeModels";
+import { normalizeNumberText } from "../../core/constants/numbers";
 import { ACCESSORY_TYPE_LABELS, KIT_PART_TYPE, PREVIEW_VIEWS, REPLACES_STOCK, STATUS_LABELS, adminAccessoryApi, isBumper, shopAccessoryApi, sizeField, typesForCategory, type KitPart,
   type Accessory, type AccessoryStatus, type AutoFitRow, type PartMapDetail, type Preview, type ZoneBox, RIM_FINISHES, RIM_FINISH_LABELS, type RimFinish } from "./api";
 import { NO_ADJUST, type FitAdjust } from "../car3d/car3d";
 import { GateSummary } from "./gate";
 import { DeptPage, Section as DeptSection, useDT } from "../department/ui";
 import { ThreeDRequests, useThreeDCount } from "../department/ThreeDRequests";
+import {threeDError} from "../vehicleCatalog/lifecycleText";
+import {accessoryProcessingLabel} from "./processing";
+import {AccessoryFinalReview} from "./FinalReview";
 
 const tone = (s: AccessoryStatus) => s === "PUBLISHED" ? "success" : s === "REJECTED" ? "danger" : s === "DRAFT" ? "neutral" : s === "READY_FOR_FINAL_REVIEW" ? "accent" : "warning";
 const VIEW_LABELS: Record<string, [string, string]> = { front: ["Front", "الأمام"], "front-three-quarter": ["Front 3/4", "أمام ٣/٤"], "left-side": ["Side", "الجانب"],
@@ -32,7 +36,7 @@ function useWork() {
   const work = async (fn: () => Promise<unknown>, after?: () => Promise<unknown>) => {
     setBusy(true); setError(null);
     try { await fn(); await after?.(); }
-    catch (e) { setError((e as Error).message || t("Request failed. Try again.", "تعذّر إكمال الطلب. حاول مجددًا.")); }
+    catch (e) { setError(threeDError(e,t)); }
     finally { setBusy(false); }
   };
   return { busy, error, work };
@@ -82,25 +86,26 @@ function PhotoStrip({ photos, load, onRemove }: { photos: { id: string }[]; load
     </View>)}
   </View>;
 }
-async function pickPhoto(t: (en: string, ar: string) => string) {
-  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], base64: true, quality: .8, allowsEditing: false });
-  if (result.canceled) return null;
-  const image = result.assets[0];
-  if (!image?.base64 || (image.fileSize ?? 0) > 5 * 1024 * 1024) throw new Error(t("Choose a JPEG or PNG photo under 5 MB.", "اختر صورة JPEG أو PNG أصغر من 5 ميغابايت."));
-  return image.base64;
+/** Resized + converted to JPEG by the shared picker; failures say which step failed, in the current language. */
+async function pickJpeg(t: (en: string, ar: string) => string) {
+  try { return (await pickPhoto())?.base64 ?? null; } catch (e) { throw new Error(photoErrorText(e, t)); }
 }
 function StatusCard({ a, admin }: { a: Accessory; admin?: boolean }) {
   const { t } = useL(); const { align } = useGarageTheme();
+  const processing=accessoryProcessingLabel(a);
+  const label=processing?t(...processing):a.lifecycleState==="FAILED"?t("Generation failed","تعذّر الإنشاء"):a.deactivatedAt?t("Unpublished","غير منشور"):a.lifecycleState==="GENERATION_QUEUED"?t("Generation queued","الإنشاء في قائمة الانتظار"):t(...STATUS_LABELS[a.status]);
   return <Card>
     <View style={{ alignItems: "flex-start", gap: 8 }}>
-      <StatusChip tone={tone(a.status)} label={t(...STATUS_LABELS[a.status])} icon="cube-outline" />
+      <StatusChip tone={tone(a.status)} label={label} icon="cube-outline" />
       <GText style={[gType.title, align]}>{t(...ACCESSORY_TYPE_LABELS[a.accessoryType])}</GText>
     </View>
-    {a.status === "GENERATING" ? <GText style={[align, { marginTop: 8 }]}>{`${a.generationStage}${a.providerProgress !== null ? ` · ${a.providerProgress}%` : ""}`}</GText> : null}
+    {a.status === "GENERATING"&&!processing ? <GText style={[align, { marginTop: 8 }]}>{`${a.generationStage}${a.providerProgress !== null ? ` · ${a.providerProgress}%` : ""}`}</GText> : null}
     {a.mock ? <View style={{ marginTop: 10 }}><Note>{t("Mock mode: a plain stand-in shape that tests the workflow. It is not your part and can never be published.", "الوضع التجريبي: شكل بديل بسيط لاختبار الخطوات، وليس قطعتك، ولا يمكن نشره أبدًا.")}</Note></View> : null}
     {a.reviewNotes ? <View style={{ marginTop: 10 }}><Note tone={a.status === "REJECTED" ? "danger" : "accent"}>{a.reviewNotes}</Note></View> : null}
-    {a.failureReason ? <View style={{ marginTop: 10 }}><Note tone="warning">{a.failureReason}</Note></View> : null}
+    {a.failureReason ? <View style={{ marginTop: 10 }}><Note tone="warning">{a.generationErrorCode?threeDError({code:a.generationErrorCode,message:a.failureReason},t):t(a.failureReason,"تتطلب النتيجة مراجعة الإدارة. راجع حالة التركيب.")}</Note></View> : null}
     {admin && a.generationErrorCode ? <GText soft selectable style={[gType.caption, align, { marginTop: 6 }]}>{a.generationErrorCode}</GText> : null}
+    {a.providerState==="SUCCEEDED"&&a.failureReason?<GText selectable style={{textAlign:"left",writingDirection:"ltr",marginTop:8}}>{a.failureReason}</GText>:null}
+    {admin&&a.processing?<GText soft selectable style={[gType.caption,align,{marginTop:8}]}>{`${t("Source bytes","بايتات المصدر")}: ${a.processing.rawBytes??"—"} · ${t("Optimized bytes","البايتات بعد التحسين")}: ${a.processing.optimizedBytes??"—"} · ${t("Final limit","الحد النهائي")}: ${a.processing.finalLimitBytes??"—"}`}</GText>:null}
   </Card>;
 }
 
@@ -128,6 +133,7 @@ export function ShopAccessory3DScreen() {
   const canKit = typesForCategory(state.data?.category).includes("FRONT_BUMPER") && !parts.some(x => x.part === "MAIN");
   const [form, setForm] = useState<{ type: AccessoryType | null; fits: string[]; size: Record<string, string>; installedGen: string | null; spin: boolean;
     rim: { widthIn: string; pcd: string; offsetMm: string; finish: RimFinish | null } } | null>(null);
+  const [fitmentNotes,setFitmentNotes]=useState("");
   const [search, setSearch] = useState(""), [consent, setConsent] = useState(false);
   // submit checks: every missing / invalid item is listed at once, each one scrolls to its field (highlighted while it is wrong)
   type Spot = "type" | "fits" | "size" | "installedGen" | "partPhotos" | "installedPhotos" | "consent";
@@ -136,6 +142,7 @@ export function ShopAccessory3DScreen() {
   const [tried, setTried] = useState(false), [serverIssues, setServerIssues] = useState<Issue[] | null>(null);
   useEffect(() => { // the form starts from the saved accessory (once per revision of it)
     if (!state.data) return;
+    setFitmentNotes(a?.fitmentNotes??"");
     const s = a?.size;
     const r = a?.rim;
     setForm({ type: a?.accessoryType ?? types[0] ?? null, fits: a?.fitsGenerationIds ?? [], installedGen: a?.installedGenerationId ?? null, spin: a?.installed360 ?? false,
@@ -147,7 +154,7 @@ export function ShopAccessory3DScreen() {
   const name = (id: string) => { const g = gens.find(x => x.id === id); return g ? (isArabic ? g.ar : g.en) : "…"; };
   const q = search.trim().toLowerCase();
   const matches = q.length >= 2 ? gens.filter(g => !form?.fits.includes(g.id) && g.id !== form?.installedGen && (g.en.toLowerCase().includes(q) || g.ar.includes(search.trim()))).slice(0, 12) : [];
-  const saveBody = () => ({ accessoryType: form!.type, fitsGenerationIds: form!.fits, installedGenerationId: form!.installedGen, installed360: form!.spin,
+  const saveBody = () => ({ fitmentNotes,accessoryType: form!.type, fitsGenerationIds: form!.fits, installedGenerationId: form!.installedGen, installed360: form!.spin,
     ...Object.fromEntries(Object.entries(form!.size).map(([k, v]) => [k, v.trim() === "" ? null : Number(v)])),
     ...(form!.type === "RIMS" ? { rimWidthIn: form!.rim.widthIn.trim() || null, rimPcd: form!.rim.pcd.trim() || null, rimOffsetMm: form!.rim.offsetMm.trim() || null, rimFinish: form!.rim.finish } : {}) });
   const save = () => form && work(() => shopAccessoryApi.save(productId, saveBody(), part), state.reload);
@@ -168,7 +175,7 @@ export function ShopAccessory3DScreen() {
       }
     }, state.reload);
   };
-  const add = (kind: "PART" | "INSTALLED") => work(async () => { const b = await pickPhoto(t); if (b) await shopAccessoryApi.photo(productId, kind, b, part); }, state.reload);
+  const add = (kind: "PART" | "INSTALLED") => work(async () => { const b = await pickJpeg(t); if (b) await shopAccessoryApi.photo(productId, kind, b, part); }, state.reload);
   const bumper = !!form?.type && isBumper(form.type);
   // rims on a Universal product = "Universal by size": no generation list, fitted on any car's wheels
   const rims = form?.type === "RIMS", bySize = rims && !!state.data?.isUniversal;
@@ -266,11 +273,11 @@ export function ShopAccessory3DScreen() {
           <GText soft style={[gType.caption, align, { marginBottom: 8 }]}>{t("Used to scale the part on the customer's car. The first field is required.", "يُستخدم لضبط مقاس القطعة على سيارة العميل. الحقل الأول مطلوب.")}{form.type && state.data.sizeRanges?.[form.type] ? ` ${t(`Expected: ${state.data.sizeRanges[form.type]!.min}–${state.data.sizeRanges[form.type]!.max} mm.`, `المتوقع: ${state.data.sizeRanges[form.type]!.min}–${state.data.sizeRanges[form.type]!.max} مم.`)}` : ""}</GText>
           <View style={[row, { flexWrap: "wrap", gap: 10 }]}>
             {[need, ...(need === "rimInches" ? [] : (["widthMm", "heightMm", "depthMm", "lengthMm"] as const).filter(k => k !== need))].map(k =>
-              <Field key={k} numeric editable={editable} label={t(...sizeLabel[k]!) + (k === need ? " *" : "")} value={form.size[k] ?? ""} onChange={v => setForm({ ...form, size: { ...form.size, [k]: v.replace(/[^0-9.]/g, "") } })} />)}
+              <Field key={k} numeric editable={editable} label={t(...sizeLabel[k]!) + (k === need ? " *" : "")} value={form.size[k] ?? ""} onChange={v => setForm({ ...form, size: { ...form.size, [k]: normalizeNumberText(v) } })} />)}
             {rims ? <>
-              <Field numeric editable={editable} label={t("Rim width (inches, e.g. 8)", "عرض الجنط (إنش، مثال 8)")} value={form.rim.widthIn} onChange={v => setForm({ ...form, rim: { ...form.rim, widthIn: v.replace(/[^0-9.]/g, "") } })} />
-              <Field editable={editable} label={t("Bolt pattern / PCD (e.g. 5x120)", "توزيع البراغي / PCD (مثال 5x120)")} value={form.rim.pcd} onChange={v => setForm({ ...form, rim: { ...form.rim, pcd: v.replace(/[^0-9xX×.]/g, "") } })} />
-              <Field editable={editable} label={t("Offset ET (mm, e.g. 35)", "الإزاحة ET (مم، مثال 35)")} value={form.rim.offsetMm} onChange={v => setForm({ ...form, rim: { ...form.rim, offsetMm: v.replace(/[^0-9-]/g, "") } })} />
+              <Field numeric editable={editable} label={t("Rim width (inches, e.g. 8)", "عرض الجنط (إنش، مثال 8)")} value={form.rim.widthIn} onChange={v => setForm({ ...form, rim: { ...form.rim, widthIn: normalizeNumberText(v) } })} />
+              <Field editable={editable} label={t("Bolt pattern / PCD (e.g. 5x120)", "توزيع البراغي / PCD (مثال 5x120)")} value={form.rim.pcd} onChange={v => setForm({ ...form, rim: { ...form.rim, pcd: normalizeNumberText(v) } })} />
+              <Field editable={editable} label={t("Offset ET (mm, e.g. 35)", "الإزاحة ET (مم، مثال 35)")} value={form.rim.offsetMm} onChange={v => setForm({ ...form, rim: { ...form.rim, offsetMm: normalizeNumberText(v) } })} />
             </> : null}
           </View>
           {rims ? <>
@@ -304,6 +311,7 @@ export function ShopAccessory3DScreen() {
             {editable && a.installedPhotos.length < 24 ? <GButton style={{ marginTop: 10 }} variant="secondary" icon="add" label={t("Add installed photo", "إضافة صورة تركيب")} disabled={busy} onPress={() => void add("INSTALLED")} /> : null}
           </Section></SpotView>
           {editable ? <Card style={{ marginTop: 14 }}>
+            <Field label={t("Fitment notes (optional)","ملاحظات التركيب (اختيارية)")} value={fitmentNotes} onChange={setFitmentNotes}/>
             <SpotView id="consent" spots={spots} on={bad("consent")}><Check checked={consent} disabled={busy} onPress={() => setConsent(v => !v)} label={t("I own these photos. MOTEXA may create a 3D model of this part (with Meshy) and show it and the installed photos to customers.", "أملك هذه الصور. يجوز لموتكسا إنشاء نموذج ثلاثي الأبعاد لهذه القطعة (عبر Meshy) وعرضه وعرض صور التركيب للعملاء.")} /></SpotView>
             {tried && shown.length ? <View style={{ gap: 6, marginVertical: 8 }}>
               <Note tone="danger" icon="alert-circle-outline">{t(`${shown.length} ${shown.length === 1 ? "thing needs" : "things need"} fixing before you can submit. Tap one to go to it:`, `${shown.length} ${shown.length === 1 ? "أمر يحتاج" : "أمور تحتاج"} إلى تصحيح قبل الإرسال. اضغط على أحدها للانتقال إليه:`)}</Note>
@@ -341,9 +349,9 @@ export function AdminAccessory3DDetail() {
   const { id } = useLocalSearchParams<{ id: string }>(); const { t, isArabic } = useL(); const { row, align } = useGarageTheme();
   const item = useLoad(() => adminAccessoryApi.get(id), [id], 6000);
   const { busy, error, work } = useWork();
-  const [notes, setNotes] = useState(""), [paid, setPaid] = useState(false), [verified, setVerified] = useState(false), [cap, setCap] = useState("");
+  const [notes, setNotes] = useState(""), [paid, setPaid] = useState(false), [cap, setCap] = useState("");
+  const [replacement, setReplacement] = useState(false), [replacementPaid, setReplacementPaid] = useState(false);
   const a = item.data;
-  useEffect(() => { setVerified(false); }, [a?.modelRevision, a?.preview?.generationId]);
   useEffect(() => { if (a) setCap(String(a.monthlyCredits)); }, [a?.monthlyCredits]);
   const act = (action: Parameters<typeof adminAccessoryApi.act>[1], body?: Record<string, unknown>) => work(() => adminAccessoryApi.act(id, action, body), item.reload);
   const load = (asset: string) => () => adminAccessoryApi.asset(id, asset);
@@ -352,6 +360,30 @@ export function AdminAccessory3DDetail() {
     onRefresh={() => void item.reload()} refreshing={item.loading && !!item.data}>
     {!a ? (item.error ? <Note tone="danger">{item.error}</Note> : <GText>{t("Loading…", "جارٍ التحميل…")}</GText>) : <View style={{ gap: 14 }}>
       <StatusCard a={a} admin />
+      {a.hasModel||a.providerState==="SUCCEEDED"||a.status==="READY_FOR_FINAL_REVIEW"||a.status==="PUBLISHED"?<AccessoryFinalReview a={a} busy={busy} act={act}>{a.preview?<PreviewGrid preview={a.preview} load={load}/>:null}</AccessoryFinalReview>:null}
+      {a.provider==="MESHY"&&a.providerTaskId?<Card><GText>{t("Meshy task","مهمة Meshy")}</GText><GText selectable style={{writingDirection:"ltr",textAlign:"left"}}>{a.providerTaskId}</GText></Card>:null}
+      {a.status === "READY_FOR_FINAL_REVIEW" && a.provider === "MESHY" && a.providerState === "SUCCEEDED" ? <Card>
+        <GButton variant="secondary" label={t("Generate a new 3D (costs Meshy credits)", "إنشاء نموذج ثلاثي الأبعاد جديد (يستهلك رصيد Meshy)")} disabled={busy} onPress={() => { setReplacement(true); setReplacementPaid(false); }} />
+        {replacement ? <View style={{ gap: 10, marginTop: 12 }}>
+          <Note tone="warning">{t(`This creates a new Meshy task and costs approximately ${a.estimatedProviderCredits ?? 30} credits. The existing task and result remain in history.`, `سيُنشئ هذا مهمة Meshy جديدة بتكلفة تقديرية ${a.estimatedProviderCredits ?? 30} رصيدًا. تبقى المهمة والنتيجة الحاليتان في السجل.`)}</Note>
+          <Check checked={replacementPaid} disabled={busy} onPress={() => setReplacementPaid(v => !v)} label={t("I confirm the cost of a new generation", "أؤكد تكلفة إنشاء نموذج جديد")} />
+          <GButton label={t("Confirm and start paid generation", "تأكيد وبدء الإنشاء المدفوع")} disabled={busy || !replacementPaid || !a.paidEnabled || left === 0} onPress={() => void act("start", { confirmPaid: true, replaceRevision: a.revision })} />
+          <GButton variant="secondary" label={t("Cancel", "إلغاء")} onPress={() => { setReplacement(false); setReplacementPaid(false); }} />
+        </View> : null}
+      </Card> : null}
+      {a.status === "APPROVED_FOR_GENERATION" && a.resumable ? <Card>
+        <Note>{t("Resume the saved Meshy task. No new task or charge is created.", "استأنف مهمة Meshy المحفوظة دون إنشاء مهمة أو تكلفة جديدة.")}</Note>
+        <GButton icon="refresh" label={t("Resume the same task (no new charge)", "استئناف المهمة نفسها (دون تكلفة جديدة)")} disabled={busy} onPress={() => void act("start", {})} />
+      </Card> : a.status === "APPROVED_FOR_GENERATION" && a.providerState !== "SUCCEEDED" ? <Card>
+        <GText style={[gType.label, align]}>{t("Generate with Meshy", "إنشاء عبر Meshy")}</GText>
+        <GText soft style={align}>{`${t("Shop generations this month", "إنشاءات المتجر هذا الشهر")}: ${a.creditsThisMonth} / ${a.monthlyCredits}`}</GText>
+        {!a.paidEnabled?<Note tone="warning">{t("Meshy generation is unavailable. Check the backend key and generation setting.", "إنشاء Meshy غير متاح. تحقق من مفتاح الخادم وإعداد الإنشاء.")}</Note>:null}
+        {a.mode==="real"?<Check checked={paid} disabled={busy} onPress={()=>setPaid(v=>!v)} label={a.estimatedProviderCredits?t(`I confirm one paid Meshy generation, estimated ${a.estimatedProviderCredits} Meshy credits.`,`أؤكد إنشاءً واحدًا مدفوعًا بتكلفة تقديرية ${a.estimatedProviderCredits} من رصيد Meshy.`):t("I confirm one paid Meshy generation.","أؤكد إنشاءً واحدًا مدفوعًا عبر Meshy.")}/>:null}
+        <GButton icon="cube-outline" label={t("Start 3D Generation", "بدء إنشاء النموذج")+(a.estimatedProviderCredits?` · ${a.estimatedProviderCredits} ${t("Meshy credits","من رصيد Meshy")}`:"")} disabled={busy||a.generationErrorCode==="PROVIDER_REQUEST_UNCONFIRMED"||(a.mode==="real"&&(!paid||!a.paidEnabled||left===0))} onPress={()=>void act("start",{confirmPaid:paid})}/>
+      </Card>:null}
+      {a.fitmentNotes?<Note>{a.fitmentNotes}</Note>:null}
+      {a.status==="PUBLISHED"?<GButton variant={a.deactivatedAt?"secondary":"danger"} label={a.deactivatedAt?t("Reactivate model","إعادة نشر النموذج"):t("Unpublish model","إلغاء نشر النموذج")} disabled={busy} onPress={()=>void act(a.deactivatedAt?"reactivate":"unpublish")}/>:null}
+      {a.hasModel&&a.status!=="PUBLISHED"&&a.status!=="GENERATING"?<GButton variant="danger" label={t("Discard private candidate (retain task history)","حذف النموذج الخاص مع حفظ تاريخ المهمة")} disabled={busy} onPress={()=>void act("discard-candidate")}/>:null}
       <Card>
         <GText style={[gType.label, align]}>{t("Real size", "المقاس الحقيقي")}</GText>
         {Object.entries(a.size).filter(([, v]) => v !== null).map(([k, v]) => <GText key={k} soft style={align}>{`${t(...sizeLabel[k]!)}: ${v}`}</GText>)}
@@ -366,29 +398,6 @@ export function AdminAccessory3DDetail() {
         <GButton style={{ marginTop: 10 }} label={t("Approve for 3D generation", "الموافقة على إنشاء النموذج")} disabled={busy} onPress={() => void act("approve")} />
       </Card> : null}
 
-      {a.status === "APPROVED_FOR_GENERATION" && a.resumable ? <Card>
-        <Note>{t("The paid Meshy task already finished; only the download / preparation failed. Resuming reuses the same task: no new charge.", "اكتملت مهمة Meshy المدفوعة؛ فشل التنزيل أو التجهيز فقط. الاستئناف يستخدم المهمة نفسها دون تكلفة جديدة.")}</Note>
-        <GButton style={{ marginTop: 8 }} icon="refresh" label={t("Resume the same task (no new charge)", "استئناف المهمة نفسها (دون تكلفة جديدة)")} disabled={busy} onPress={() => void act("start", {})} />
-      </Card> : a.status === "APPROVED_FOR_GENERATION" ? <Card>
-        <GText style={[gType.label, align]}>{a.mode === "real" ? t("Real generation (Meshy, paid)", "إنشاء حقيقي (Meshy، مدفوع)") : t("Mock mode (free, never publishable)", "الوضع التجريبي (مجاني، لا يُنشر)")}</GText>
-        <GText soft style={align}>{`${t("This shop this month", "هذا المتجر هذا الشهر")}: ${a.creditsThisMonth} / ${a.monthlyCredits}`}</GText>
-        {a.mode === "real" && !a.paidEnabled ? <Note tone="warning">{t("Paid generation is switched off on the server (MESHY_ALLOW_PAID_GENERATION / key).", "الإنشاء المدفوع متوقف على الخادم (MESHY_ALLOW_PAID_GENERATION / المفتاح).")}</Note> : null}
-        {a.mode === "real" ? <Check checked={paid} disabled={busy} onPress={() => setPaid(v => !v)} label={t(`I confirm this starts ONE paid Meshy generation (${left} left for this shop this month).`, `أؤكد أن هذا يبدأ إنشاءً واحدًا مدفوعًا عبر Meshy (متبقٍ ${left} لهذا المتجر هذا الشهر).`)} /> : null}
-        <GButton style={{ marginTop: 8 }} icon="cube-outline" label={t("Start 3D generation", "بدء إنشاء النموذج")} disabled={busy || (a.mode === "real" && (!paid || !a.paidEnabled || left === 0))} onPress={() => void act("start", { confirmPaid: paid })} />
-      </Card> : null}
-
-      {a.status === "READY_FOR_FINAL_REVIEW" ? <Card>
-        {a.validation ? <GText soft style={align}>{`${t("Technical check passed", "اجتاز الفحص التقني")} · ${a.validation.triangles} ${t("triangles", "مثلث")} · ${((Number(a.validation.bytes) || 0) / 1048576).toFixed(2)} MB`}</GText> : null}
-        {a.preview ? <View style={{ marginTop: 10 }}><PreviewGrid preview={a.preview} load={load} /></View> : <Note tone="warning">{t("No preview yet. Render it on a fitting car that has a 3D model.", "لا توجد معاينة بعد. اعرضها على سيارة مناسبة لها نموذج ثلاثي الأبعاد.")}</Note>}
-        <GText style={[gType.label, align, { marginTop: 12 }]}>{t("Preview on", "المعاينة على")}</GText>
-        <View style={[row, { flexWrap: "wrap", gap: 8, marginTop: 6 }]}>{a.fits.filter(f => f.has3d).map(f => <Chip key={f.id} label={isArabic ? f.nameAr : f.name} on={a.preview?.generationId === f.id} onPress={() => void act("preview", { generationId: f.id })} />)}</View>
-        {a.fits.every(f => !f.has3d) ? <Note tone="warning">{t("None of the fitting generations has a 3D car: it cannot be previewed or published.", "لا يوجد نموذج ثلاثي الأبعاد لأي من الأجيال المناسبة: لا يمكن المعاينة أو النشر.")}</Note> : null}
-        <Check checked={verified} disabled={busy || !a.preview} onPress={() => setVerified(v => !v)} label={t("I checked all six views: it is this part, the right way round, the right size, sitting in the right place, no holes or floating pieces.", "تحققت من المناظر الستة: إنها هذه القطعة، بالاتجاه الصحيح، بالمقاس الصحيح، في مكانها، دون فتحات أو قطع عائمة.")} />
-        <GButton icon="checkmark-circle-outline" label={t("Publish", "نشر")} disabled={busy || !verified || a.mock} onPress={() => void act("publish", { visuallyVerified: true, modelRevision: a.modelRevision })} />
-        {a.mock ? <GText soft style={[gType.caption, align, { marginTop: 6 }]}>{t("Mock results cannot be published.", "لا يمكن نشر النتائج التجريبية.")}</GText> : null}
-        <GButton style={{ marginTop: 10 }} variant="secondary" label={t("Regenerate (back to photos approved)", "إعادة الإنشاء (العودة لاعتماد الصور)")} disabled={busy} onPress={() => void act("regenerate", { notes })} />
-      </Card> : null}
-
       {["PENDING_REVIEW", "APPROVED_FOR_GENERATION", "READY_FOR_FINAL_REVIEW"].includes(a.status) ? <Card>
         <Field label={t("Notes to the shop", "ملاحظات للمتجر")} value={notes} onChange={setNotes} />
         <GButton style={{ marginTop: 10 }} variant="danger" label={t("Reject (shop must change it)", "رفض (على المتجر التعديل)")} disabled={busy || !notes.trim()} onPress={() => void act("reject", { notes })} />
@@ -396,7 +405,7 @@ export function AdminAccessory3DDetail() {
 
       {a.product ? <Card>
         <View style={[row, { gap: 10, alignItems: "flex-end", flexWrap: "wrap" }]}>
-          <Field numeric label={t("Paid 3D generations per month for this shop", "إنشاءات مدفوعة شهريًا لهذا المتجر")} value={cap} onChange={v => setCap(v.replace(/[^0-9]/g, ""))} />
+          <Field numeric label={t("Paid 3D generations per month for this shop", "إنشاءات مدفوعة شهريًا لهذا المتجر")} value={cap} onChange={v => setCap(normalizeNumberText(v))} />
           <GButton variant="secondary" label={t("Save", "حفظ")} disabled={busy || cap === ""} onPress={() => void work(() => adminAccessoryApi.setCredits(a.product!.shop.id, Number(cap)), item.reload)} />
         </View>
       </Card> : null}
@@ -425,7 +434,7 @@ const toBox = (f: string[]): ZoneBox | null => {
 const BOX_LABELS: [string, string][] = [["x from", "x من"], ["x to", "x إلى"], ["y from (ground)", "y من (الأرض)"], ["y to", "y إلى"], ["z from (0 = rear)", "z من (0 = الخلف)"], ["z to (1 = front)", "z إلى (1 = الأمام)"]];
 function BoxFields({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const { t } = useL(); const { row } = useGarageTheme();
-  return <View style={[row, { flexWrap: "wrap", gap: 10, marginTop: 8 }]}>{BOX_LABELS.map((l, i) => <Field key={i} numeric label={t(...l)} value={value[i] ?? ""} onChange={v => onChange(value.map((x, j) => j === i ? v.replace(/[^0-9.-]/g, "") : x))} />)}</View>;
+  return <View style={[row, { flexWrap: "wrap", gap: 10, marginTop: 8 }]}>{BOX_LABELS.map((l, i) => <Field key={i} numeric label={t(...l)} value={value[i] ?? ""} onChange={v => onChange(value.map((x, j) => j === i ? normalizeNumberText(v) : x))} />)}</View>;
 }
 function Swatch({ color, label }: { color: string; label: string }) {
   const { row, align } = useGarageTheme();
@@ -434,7 +443,8 @@ function Swatch({ color, label }: { color: string; label: string }) {
 type Mode = "parts" | "zones" | "fits";
 /** /dept/accessory-zones: the part map per car model (default), the zone cut as the fallback for unconfirmed / one-piece models. */
 export function AdminAccessoryZones() {
-  const [mode, setMode] = useState<Mode>("parts");
+  const params=useLocalSearchParams<{mode?:string}>();
+  const [mode, setMode] = useState<Mode>(params.mode==="fits"?"fits":params.mode==="zones"?"zones":"parts");
   return mode === "parts" ? <PartMapEditor mode={mode} setMode={setMode} /> : mode === "fits" ? <AutoFitEditor mode={mode} setMode={setMode} /> : <ZoneEditor mode={mode} setMode={setMode} />;
 }
 function ModeSwitch({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }) {
@@ -463,10 +473,11 @@ function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
   const { t } = useL(); const { g, row, align } = useGarageTheme();
   const list = useLoad(() => adminAccessoryApi.partMaps(), []);
   const { busy, error, work } = useWork();
-  const {model3dKey:requestedKey}=useLocalSearchParams<{model3dKey?:string}>();
-  const [key, setKey] = useState<string | null>(requestedKey??null), [label, setLabel] = useState<PartLabel>("SPOILER");
+  const {model3dKey, key:routeKey,label:requestedLabel,requestId}=useLocalSearchParams<{model3dKey?:string;key?:string;label?:string;requestId?:string}>();const requestedKey=model3dKey??routeKey;
+  const [key, setKey] = useState<string | null>(requestedKey??null), [label, setLabel] = useState<PartLabel>(PART_LABELS.includes(requestedLabel as PartLabel)?requestedLabel as PartLabel:"SPOILER");
   const [detail, setDetail] = useState<PartMapDetail | null>(null), [draft, setDraft] = useState<PartMap>({}), [pieces, setPieces] = useState<number | null>(null);
-  const car = useCatalogModelKey(key);
+  const car = detail?.viewerConfig ?? null;
+  const assetLoader = useMemo(() => key ? () => adminAccessoryApi.partMapAsset(key) : undefined, [key]);
   useEffect(() => { setDetail(null); setPieces(null); if (key) void work(async () => { const d = await adminAccessoryApi.partMap(key); setDetail(d); setDraft(fromProposal(d)); }); }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   // a tap: the piece joins the chosen label (and leaves any other), or leaves it when it was already there
   const pick = (id: string) => setDraft(d => {
@@ -485,6 +496,7 @@ function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
     onRefresh={() => void list.reload()} refreshing={list.loading && !!list.data}>
     <View style={{ gap: 14 }}>
       <ModeSwitch mode={mode} setMode={setMode} />
+      {requestId?<GButton variant="secondary" label={t("Return to 3D request","العودة إلى طلب النموذج")} onPress={()=>router.replace(`/dept/accessory3d/${encodeURIComponent(requestId)}` as Href)}/>:null}
       {list.error ? <Note tone="danger">{list.error}</Note> : null}
       {list.data ? <GText soft style={[gType.caption, align]}>{`${t("Confirmed", "مؤكدة")}: ${confirmed} / ${list.data.length} · ${t("To confirm", "بانتظار التأكيد")}: ${list.data.length - confirmed}`}</GText> : null}
       <View style={[row, { flexWrap: "wrap", gap: 8 }]}>{(list.data ?? []).map(m => <Chip key={m.key} label={m.name} on={key === m.key} icon={m.status === "confirmed" ? "checkmark-circle" : undefined} onPress={() => setKey(m.key)} />)}</View>
@@ -497,7 +509,7 @@ function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
             return <Chip key={L} label={`${t(...PART_LABEL_NAMES[L])} · ${draft[L]?.length ?? 0}${p ? ` (${Math.round(p.confidence * 100)}%)` : ""}`} on={label === L} onPress={() => setLabel(L)} />;
           })}</View>
           <View style={{ marginTop: 12, gap: 8 }}>
-            {car ? <Car3DView model={car} color="#c3c7cc" bg={g.cardSoft} partEdit={partEdit} onPick={pick} onPieces={setPieces} interactive style={{ height: 320, borderRadius: 16 }} />
+            {car ? <Car3DView model={car} assetLoader={assetLoader} color="#c3c7cc" bg={g.cardSoft} partEdit={partEdit} onPick={pick} onPieces={setPieces} interactive style={{ height: 320, borderRadius: 16 }} />
               : <Note>{t("This car's 3D model is not in the app catalog yet.", "نموذج هذه السيارة غير موجود في كتالوج التطبيق بعد.")}</Note>}
             <Swatch color={PART_LABEL_COLORS[label]} label={`${t(...PART_LABEL_NAMES[label])}: ${t("tap a piece to add or remove it", "اضغط على قطعة لإضافتها أو إزالتها")} · ${t("used by the", "يستخدمها")} ${t(...USED_BY[label])}`} />
             <GText soft style={[gType.caption, align]}>{`${t("Other labels are dimmed, grey = not mapped", "التسميات الأخرى باهتة، الرمادي = غير محدد")} · ${pieces ?? detail.pieces} ${t("pieces", "قطعة")}`}</GText>
@@ -506,13 +518,13 @@ function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
           </View>
           <View style={[row, { gap: 10, marginTop: 12, flexWrap: "wrap" }]}>
             <GButton flex label={t("Confirm part map", "تأكيد خريطة القطع")} disabled={busy || !detail.modelSha256 || (detail.status === "confirmed" && !changed)}
-              onPress={() => void work(async () => { setDetail(await adminAccessoryApi.confirmPartMap(detail.key, detail.modelSha256!, draft)); }, list.reload)} />
+              onPress={() => void work(async () => { setDetail({ ...detail, ...await adminAccessoryApi.confirmPartMap(detail.key, detail.modelSha256!, draft) }); }, list.reload)} />
             <GButton flex variant="secondary" label={t("Clear this label", "مسح هذه التسمية")} disabled={busy || !draft[label]?.length} onPress={() => setDraft(d => { const n = { ...d }; delete n[label]; return n; })} />
           </View>
           <View style={{ gap: 8, marginTop: 8 }}>
             <GButton variant="secondary" label={t("Back to the proposal", "العودة إلى الاقتراح")} disabled={busy} onPress={() => setDraft(Object.fromEntries(Object.entries(detail.proposal ?? {}).map(([k, v]) => [k, v!.ids])))} />
             {detail.status === "confirmed" ? <GButton variant="secondary" label={t("Unconfirm (use zones)", "إلغاء التأكيد (استخدام المناطق)")} disabled={busy}
-              onPress={() => void work(async () => { setDetail(await adminAccessoryApi.confirmPartMap(detail.key, detail.modelSha256!, null)); }, list.reload)} /> : null}
+              onPress={() => void work(async () => { setDetail({ ...detail, ...await adminAccessoryApi.confirmPartMap(detail.key, detail.modelSha256!, null) }); }, list.reload)} /> : null}
           </View>
         </> : null}
         <View style={{ marginTop: 8 }}><GButton variant="secondary" label={t("Split into parts again", "التقسيم إلى قطع من جديد")} disabled={busy}
@@ -542,11 +554,14 @@ function AutoFitEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
   const { t } = useL(); const { g, row, align } = useGarageTheme();
   const models = useLoad(() => adminAccessoryApi.partMaps(), []);
   const { busy, error, work } = useWork();
-  const [key, setKey] = useState<string | null>(null), [sel, setSel] = useState<string | null>(null), [adj, setAdj] = useState<FitAdjust>(NO_ADJUST);
+  const params=useLocalSearchParams<{key?:string;accessoryId?:string;generationId?:string;requestId?:string}>();
+  const [key, setKey] = useState<string | null>(params.key??null), [sel, setSel] = useState<string | null>(params.accessoryId&&params.generationId?`${params.accessoryId}|${params.generationId}`:null), [adj, setAdj] = useState<FitAdjust>(NO_ADJUST);
+  const [viewerFitError,setViewerFitError]=useState<string|null>(null), [fitReviewed,setFitReviewed]=useState(false);
   const fits = useLoad(() => key ? adminAccessoryApi.autoFits(key) : Promise.resolve([]), [key]);
   const car = useCatalogModelKey(key);
   const rowKey = (r: AutoFitRow) => `${r.accessoryId}|${r.generation.id}`;
   const r = (fits.data ?? []).find(x => rowKey(x) === sel) ?? null;
+  useEffect(()=>{setViewerFitError(null);setFitReviewed(false);},[sel,r?.modelRevision,r?.fit?.approvedAt,adj]);
   useEffect(() => { setAdj(r?.fit?.adj ?? NO_ADJUST); }, [sel, r?.fit?.approvedAt]); // eslint-disable-line react-hooks/exhaustive-deps
   // fits are computed in the background: look again while any is still computing
   useEffect(() => { if (!(fits.data ?? []).some(x => x.computing)) return; const id = setTimeout(() => void fits.reload(), 6000); return () => clearTimeout(id); }, [fits.data]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -568,21 +583,22 @@ function AutoFitEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
     const zone = v.front || v.rear ? { ...rest, wheelInsetMm: v } : Object.keys(rest).length ? rest : null;
     await adminAccessoryApi.setZone(key!, "RIMS", zone);
   }, async () => { setInset(null); await Promise.all([fits.reload(), refreshRuntimeModels()]); });
-  const kit = useMemo(() => r?.file && r.fit && !r.fit.fit.failed ? { type: r.type, file: r.file, size: r.size, finish: r.finish ?? null, paintMatch: false, adj: NO_ADJUST, fit: draft ? undefined : r.fit.fit, baseAdj: adj } : null, [r, adj, draft]);
+  const kit = useMemo(() => r?.hasModel && r.fit && !r.fit.fit.failed ? { type: r.type, file: r.file??`private-accessory-${r.accessoryId}-${r.modelRevision}.glb`, assetLoader:r.file?undefined:()=>adminAccessoryApi.asset(r.accessoryId,"model"), size: r.size, finish: r.finish ?? null, paintMatch: false, adj: NO_ADJUST, fit: draft ? undefined : r.fit.fit, baseAdj: adj } : null, [r, adj, draft]);
   const gaps = (info.feetGapMm ?? info.topGapMm ?? []).map(x => x === null ? "—" : `${x} mm`).join(" / ");
   return <GaragePage hero={<GarageHero variant="detail" backLabel={t("Back", "رجوع")} onBack={() => router.back()} title={t("Accessory fits", "تركيب الإكسسوارات")} line={t("Each accessory is fitted to each car once, from the car's real shape. Check it, correct it if needed, approve.", "تُركّب كل قطعة على كل سيارة مرة واحدة، من شكل السيارة الحقيقي. افحصها وصحّحها إن لزم ثم اعتمدها.")} />}
     onRefresh={() => { void models.reload(); void fits.reload(); }} refreshing={(models.loading && !!models.data) || (fits.loading && !!fits.data)}>
     <View style={{ gap: 14 }}>
       <ModeSwitch mode={mode} setMode={setMode} />
+      {params.requestId?<GButton variant="secondary" label={t("Return to 3D request","العودة إلى طلب النموذج")} onPress={()=>router.replace(`/dept/accessory3d/${encodeURIComponent(params.requestId!)}` as Href)}/>:null}
       {models.error ? <Note tone="danger">{models.error}</Note> : null}
       <View style={[row, { flexWrap: "wrap", gap: 8 }]}>{(models.data ?? []).map(m => <Chip key={m.key} label={m.name} on={key === m.key} onPress={() => { setKey(m.key); setSel(null); }} />)}</View>
       {key ? <Card>
         {fits.error ? <Note tone="danger">{fits.error}</Note> : null}
-        {fits.data && !fits.data.length ? <Note>{t("No published accessory fits this car model yet.", "لا توجد إكسسوارات منشورة تناسب هذا الطراز بعد.")}</Note> : null}
+        {fits.data && !fits.data.length ? <Note>{t("No generated accessory is available for this vehicle.", "لا توجد قطعة مُنشأة متاحة لهذه السيارة.")}</Note> : null}
         <View style={[row, { flexWrap: "wrap", gap: 8 }]}>{(fits.data ?? []).map(x => <Chip key={rowKey(x)} label={`${x.productName} · ${t(...ACCESSORY_TYPE_LABELS[x.type])}`} on={sel === rowKey(x)}
           icon={x.fit?.approvedAt ? "checkmark-circle" : undefined} onPress={() => setSel(rowKey(x))} />)}</View>
         {r ? <View style={{ marginTop: 12, gap: 8 }}>
-          <StatusChip label={r.computing ? t("Computing the fit…", "جارٍ حساب التركيب…") : failed ? t("Does not fit this car", "لا تناسب هذه السيارة") : r.fit?.approvedAt ? t("Approved", "معتمد") : t("Auto-fit, not reviewed yet", "تركيب تلقائي، لم يُراجع بعد")} tone={failed ? "danger" : r.fit?.approvedAt ? "success" : "warning"} />
+          <StatusChip label={r.computing ? t("Computing the fit…", "جارٍ حساب التركيب…") : failed ? t("Does not fit this car", "لا تناسب هذه السيارة") : r.fit?.approvedAt ? t("Approved", "معتمد") : r.fit?.fit.needsCorrection?t("Needs correction","يحتاج إلى تصحيح"):r.fit?t("Auto-fit, not reviewed yet", "تركيب تلقائي، لم يُراجع بعد"):t("Fit not run","لم يُنفّذ التركيب")} tone={failed ? "danger" : r.fit?.approvedAt ? "success" : "warning"} />
           {failed ? <Note tone="danger">{`${t("Customers with this car get \"3D preview not available\" for this part. Reason", "يرى العملاء الذين يملكون هذه السيارة «المعاينة غير متاحة» لهذه القطعة. السبب")}: ${failed}`}</Note> : null}
           <GText soft style={[gType.caption, align]}>{r.generation.name}</GText>
           {r.fit && !failed ? <GText style={[gType.bodySm, align]}>{[
@@ -592,8 +608,9 @@ function AutoFitEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
             gaps ? `${t("gap at each foot", "الفراغ عند كل قدم")}: ${gaps}` : null,
             info.pitchDeg !== undefined ? `${t("tilt", "الميل")} ${info.pitchDeg}°` : null,
           ].filter(Boolean).join(" · ")}</GText> : null}
-          {kit && previewCar ? <Car3DView model={previewCar} color="#8b9baa" bg={g.cardSoft} kit={kit} interactive style={{ height: 300, borderRadius: 16 }} />
-            : r.fit && !r.file ? <Note>{t("Not published yet: check it in the six-view preview of its review.", "غير منشورة بعد: افحصها في معاينة المراجعة بست زوايا.")}</Note> : null}
+          {kit && previewCar ? <Car3DView model={previewCar} color="#8b9baa" bg={g.cardSoft} kit={kit} onFitError={message=>setViewerFitError(message)} interactive style={{ height: 300, borderRadius: 16 }} /> : null}
+          {viewerFitError?<Note tone="danger">{viewerFitError}</Note>:null}
+          <GButton variant="secondary" label={t("Rerun automatic fit","إعادة تشغيل التركيب التلقائي")} disabled={busy||r.computing} onPress={()=>void work(()=>adminAccessoryApi.act(r.accessoryId,"refit"),fits.reload)}/>
           {r.type === "RIMS" && r.fit && !failed ? <View style={{ gap: 6, paddingVertical: 4 }}>
             <GText style={[gType.label, { fontWeight: "800" }, align]}>{t("Wheel position (automatic)", "موضع العجلات (تلقائي)")}</GText>
             <GText soft style={[gType.tiny, align]}>{t("Each wheel moves along its own axle so the tyre sits just inside the fender (at most 40 mm, never into the brakes or the car). Tyre face vs fender:", "تتحرك كل عجلة على محورها ليستقر الإطار داخل الرفرف مباشرة (40 مم كحد أقصى، دون ملامسة الفرامل أو السيارة). وجه الإطار مقابل الرفرف:")}</GText>
@@ -619,8 +636,10 @@ function AutoFitEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
               <GText soft style={[gType.tiny, { width: 48, textAlign: "center", writingDirection: "ltr" }]}>{adj[f].toFixed(3)}</GText>
               <GButton variant="secondary" label="+" onPress={() => setAdj(a => ({ ...a, [f]: fitBound(f, a[f] + step, lim) }))} />
             </View>)}
-            <GButton label={t("Approve this fit", "اعتماد هذا التركيب")} disabled={busy} onPress={() => void work(() => adminAccessoryApi.approveFit(r.accessoryId, r.generation.id, JSON.stringify(adj) === JSON.stringify(NO_ADJUST) ? null : adj), fits.reload)} />
-            <GButton variant="secondary" label={t("Reset to auto-fit", "العودة إلى التركيب التلقائي")} disabled={busy} onPress={() => { setAdj(NO_ADJUST); void work(() => adminAccessoryApi.approveFit(r.accessoryId, r.generation.id, null), fits.reload); }} />
+            <Check checked={fitReviewed} disabled={busy||!!viewerFitError||!kit||!previewCar} onPress={()=>setFitReviewed(v=>!v)} label={t("I reviewed the generated part on this vehicle.","راجعت القطعة المُنشأة على هذه السيارة.")}/>
+            <GButton label={t("Approve fit", "اعتماد التركيب")} disabled={busy||r.computing||!fitReviewed||!!viewerFitError||!kit||!previewCar} onPress={() => void work(async()=>{await adminAccessoryApi.approveFit(r.accessoryId, r.generation.id, JSON.stringify(adj) === JSON.stringify(NO_ADJUST) ? null : adj);await adminAccessoryApi.act(r.accessoryId,"preview",{generationId:r.generation.id});}, fits.reload)} />
+            <GButton variant="secondary" label={t("Needs correction","يحتاج إلى تصحيح")} disabled={busy} onPress={()=>void work(()=>adminAccessoryApi.needsCorrection(r.accessoryId,r.generation.id),fits.reload)}/>
+            <GButton variant="secondary" label={t("Reset to auto-fit", "العودة إلى التركيب التلقائي")} disabled={busy} onPress={() => setAdj(NO_ADJUST)} />
           </View> : null}
         </View> : null}
       </Card> : <Note>{t("Choose a car model.", "اختر طراز سيارة.")}</Note>}
@@ -635,7 +654,8 @@ function ZoneEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void 
 
   const list = useLoad(() => adminAccessoryApi.zones(), []);
   const { busy, error, work } = useWork();
-  const [key, setKey] = useState<string | null>(null), [type, setType] = useState<AccessoryType>("FRONT_BUMPER");
+  const params=useLocalSearchParams<{key?:string}>();
+  const [key, setKey] = useState<string | null>(params.key??null), [type, setType] = useState<AccessoryType>("FRONT_BUMPER");
   const [fit, setFit] = useState<string[]>([]), [fitOn, setFitOn] = useState(false), [rep, setRep] = useState<string[]>([]), [repOn, setRepOn] = useState(false);
   const [zoneInfo, setZoneInfo] = useState<{ hidden: number; how: string | null; note: string | null } | null>(null);
   const model = list.data?.find(m => m.key === key) ?? null;

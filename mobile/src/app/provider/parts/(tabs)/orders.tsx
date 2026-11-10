@@ -1,4 +1,4 @@
-import OrdersSoon from "../../../../features/parts/provider/OrdersSoon";
+import Orders from "../../../../features/parts/provider/OrdersPage";
 import { inTabs } from "../../../../features/providerhub/inTabs";
 
-export default inTabs(OrdersSoon as never);
+export default inTabs(Orders as never);

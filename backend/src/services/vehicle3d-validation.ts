@@ -6,10 +6,11 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
+import { PROVIDER_DOWNLOAD_MAX_BYTES } from "./meshy-client.js";
 
 export const MAX_MODEL_BYTES = Math.min(20, Math.max(1, Number(process.env.VEHICLE3D_MAX_MB) || 8)) * 1024 * 1024;
 export class Vehicle3DError extends Error {
-  constructor(public status: number, public code: string, message: string, public issues?: { code: string; field: string; message: string }[]) { super(message); }
+  constructor(public status: number, public code: string, message: string, public issues?: { code: string; field: string; message: string }[], public diagnostics?: Record<string, unknown>) { super(message); }
 }
 export const fail = (code: string, message: string, status = 400): never => { throw new Vehicle3DError(status, code, message); };
 export const digest = (bytes: Buffer | Uint8Array) => createHash("sha256").update(bytes).digest("hex");
@@ -123,20 +124,39 @@ export async function normalizeVehicle(bytes: Buffer, lengthM: number, options: 
 
 /** A loose accessory part (shop photos -> provider, Feature 2): the same safety limits, then centred on x/z and standing on y = 0,
  *  names / extras / copyright stripped. No scaling or orientation guess here: the viewer fits it to the car (real size from the product). */
-export async function normalizeAccessory(bytes: Buffer) {
-  const { doc, io, scene, triangles } = await readSafeGLB(bytes, 300_000);
+export async function normalizeAccessory(bytes: Buffer, stage?: (stage: "OPTIMIZING" | "VALIDATING", diagnostics: Record<string,unknown>) => Promise<unknown>) {
+  const safe = await readSafeGLB(bytes, 300_000, { maxBytes: PROVIDER_DOWNLOAD_MAX_BYTES, textureSize: 8192, pixels: 128_000_000 });
+  const { io, scene } = safe;
+  let doc = safe.doc;
+  const rawTextures = doc.getRoot().listTextures(), largestTexture = rawTextures.map(t=>t.getSize()).filter((s):s is [number,number]=>!!s).sort((a,b)=>b[0]*b[1]-a[0]*a[1])[0]??null;
+  const processing = { rawBytes: bytes.length, rawMeshes: doc.getRoot().listMeshes().length, rawMaterials: doc.getRoot().listMaterials().length,
+    rawTextures: rawTextures.length, largestTexture, providerDownloadLimitBytes: PROVIDER_DOWNLOAD_MAX_BYTES, finalLimitBytes: MAX_MODEL_BYTES };
   const b = getBounds(scene), size = b.max.map((v, i) => v - b.min[i]!);
   if (![...b.min, ...b.max, ...size].every(Number.isFinite) || size.some(v => v < 0.00001 || v > 1e7)) return fail("INVALID_GLB", "Invalid or extreme model bounds.");
-  const wrapper = doc.createNode("MOTEXA_accessory");
-  for (const child of scene.listChildren()) { scene.removeChild(child); wrapper.addChild(child); }
-  scene.addChild(wrapper);
-  wrapper.setTranslation([-(b.min[0]! + b.max[0]!) / 2, -b.min[1]!, -(b.min[2]! + b.max[2]!) / 2]);
-  const asset = doc.getRoot().getAsset() as Record<string, unknown>;
-  delete asset.extras; delete asset.copyright;
-  const output = stripGLBMetadata(Buffer.from(await io.writeBinary(doc)));
-  if (output.length > MAX_MODEL_BYTES) return fail("INVALID_GLB", "Prepared part exceeds the configured size limit.");
+  const {dedup,prune,weld,textureCompress,meshopt}=await import("@gltf-transform/functions");
+  await MeshoptEncoder.ready;
+  await stage?.("OPTIMIZING",processing);
+  let output: Buffer = Buffer.alloc(0), textureSize = 2048;
+  for (const target of [2048,1024]) {
+    textureSize=target;
+    if(target!==2048)doc=await io.readBinary(bytes); // Retry from the source, avoiding cumulative resampling/quantization.
+    const currentScene=doc.getRoot().listScenes()[0]!, wrapper=doc.createNode("MOTEXA_accessory");
+    for(const child of currentScene.listChildren()){currentScene.removeChild(child);wrapper.addChild(child);}currentScene.addChild(wrapper);
+    wrapper.setTranslation([-(b.min[0]!+b.max[0]!)/2,-b.min[1]!,-(b.min[2]!+b.max[2]!)/2]);
+    const asset=doc.getRoot().getAsset() as Record<string,unknown>;delete asset.extras;delete asset.copyright;
+    try{await doc.transform(prune(),dedup(),weld(),textureCompress({encoder:sharp,targetFormat:"webp",resize:[target,target],lossless:true}),meshopt({encoder:MeshoptEncoder,level:"medium"}),prune());}
+    catch(error){const reason=error instanceof Error?error.message.replace(/https?:\/\/\S+/g,"[URL omitted]").slice(0,240):"Geometry/texture encoder failed";throw new Vehicle3DError(422,"PREPARATION_FAILED",`Local model optimization failed: ${reason}`,undefined,{...processing,qualityGate:"REJECTED_OPTIMIZATION"});}
+    output=stripGLBMetadata(Buffer.from(await io.writeBinary(doc)));
+    if(output.length<=MAX_MODEL_BYTES)break;
+  }
+  const diagnostics={...processing,optimizedBytes:output.length,compressionRatio:Number((output.length/bytes.length).toFixed(6)),textureSize,geometrySimplified:false};
+  if (output.length > MAX_MODEL_BYTES) throw new Vehicle3DError(422,"PROVIDER_ASSET_TOO_LARGE",`Optimized model is ${output.length} bytes; final runtime limit is ${MAX_MODEL_BYTES} bytes. Geometry was preserved.`,undefined,{...diagnostics,qualityGate:"REJECTED_SIZE"});
+  await stage?.("VALIDATING",diagnostics);
+  const checked=await readSafeGLB(output,300_000);
+  doc=checked.doc;
   const materials = doc.getRoot().listMaterials();
-  return { bytes: output, report: { valid: true, sha256: digest(output), triangles: Math.floor(triangles), bytes: output.length, dimensions: size,
+  return { bytes: output, report: { valid: true, sha256: digest(output), triangles: Math.floor(checked.triangles), bytes: output.length, dimensions: size,
+    processing:{...diagnostics,qualityGate:"PASS"},
     textures: doc.getRoot().listTextures().length, materials: materials.length, transparentMaterials: materials.filter(m => m.getAlphaMode() !== "OPAQUE").length,
     warnings: ["Part identity, shape, orientation and its fit on a matching car require visual verification in the six-view preview."], visualVerificationRequired: true } };
 }

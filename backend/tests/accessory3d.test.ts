@@ -7,6 +7,7 @@ import { existsSync, readdirSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
 import { prisma } from "../src/prisma.js";
+import {saveFit,fitVersion,autoFitAccessory,createAutoFitService} from "../src/services/accessory-autofit.js";
 import { activeModels } from "../src/services/vehicle3d-catalog.js";
 import { createMeshyClient } from "../src/services/meshy-client.js";
 import { PRIVATE_3D_DIR } from "../src/services/vehicle3d-private-assets.js";
@@ -14,7 +15,7 @@ import { PUBLIC_ACCESSORY_DIR, createAccessory3DProcessor, createAccessory3DServ
 after(() => prisma.$disconnect());
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 const jpg = (c: string) => sharp({ create: { width: 48, height: 48, channels: 3, background: c } }).jpeg().toBuffer().then(b => b.toString("base64"));
-const stubRender = async (a: { privateModelPath: string | null }, generationId: string) => ({ generationId, generationName: "Test", model3dKey: "test", modelRevision: modelRevision(a), views: {}, fit: null, renderedAt: new Date().toISOString() });
+const stubRender = async (a: any, generationId: string) => { const g=await prisma.vehicleGeneration.findUniqueOrThrow({where:{id:generationId}});const fit={version:fitVersion(a.accessoryType),type:a.accessoryType,orient:["fixture",0,"bottom"],placements:[{pos:[0,1,0],sc:[1,1,1],rot:[0,0,0],side:1}],shadows:[]};const saved=await saveFit(a,generationId,g.model3dKey!,fit);return {generationId,generationName:"Synthetic fixture",fitSnapshot:{carRevision:saved.carRevision,partRevision:saved.partRevision,fitVersion:saved.fitVersion,updatedAt:saved.updatedAt.toISOString()},model3dKey:g.model3dKey!,modelRevision:modelRevision(a),views:{},fit,renderedAt:new Date().toISOString()}; };
 
 async function fixture(work: (f: { owner: string; admin: string; shopId: string; productId: string; gid: string; service: ReturnType<typeof createAccessory3DService>; due: (id: string) => Promise<void> }) => Promise<void>, category = "BODY") {
   const owner = randomUUID(), admin = randomUUID(), vid = randomUUID(), gid = randomUUID(), shopId = randomUUID(), productId = randomUUID();
@@ -28,13 +29,15 @@ async function fixture(work: (f: { owner: string; admin: string; shopId: string;
     await prisma.vehicleBrand.create({ data: { id: vid, name: vid, nameAr: vid, normalizedName: vid } });
     await prisma.vehicle.create({ data: { brandId: vid, id: vid, make: vid, model: "Test", makeAr: "Test", modelAr: "Test", makeNormalized: vid, modelNormalized: "test", yearFrom: 2000, yearTo: 2030 } });
     // shown with an existing 3D car so the worker renders a preview (stubbed) on it
-    await prisma.vehicleGeneration.create({ data: { id: gid, vehicleId: vid, code: "T", nameEn: "T", nameAr: "T", yearFrom: 2000, yearTo: 2030, model3dKey: activeModels()[0]!.key, isPublished: true } });
+    await prisma.vehicleGeneration.create({ data: { id: gid, vehicleId: vid, code: "T", nameEn: "T", nameAr: "T", yearFrom: 2000, yearTo: 2030, model3dKey: "bmw-3-series-e36", isPublished: true } });
     await work({ owner, admin, shopId, productId, gid, service: createAccessory3DService(), due: async id => { await prisma.productAccessory3D.update({ where: { id }, data: { nextPollAt: new Date(0) } }); } });
   } finally {
+    const acc = await prisma.productAccessory3D.findMany({ where: { productId }, select: { id: true } });
+    // A resumed candidate schedules its real local fitter. Let this fixture's jobs finish before removing their files.
+    await Promise.all(acc.map(a=>autoFitAccessory(a.id)));
     for (const [k, v] of Object.entries({ VEHICLE3D_MODE: old.mode, MESHY_ALLOW_PAID_GENERATION: old.allow, MESHY_API_KEY: old.key })) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
     if (existsSync(PRIVATE_3D_DIR)) for (const p of readdirSync(PRIVATE_3D_DIR)) if (!privBefore.has(p)) unlinkSync(path.join(PRIVATE_3D_DIR, p));
     if (existsSync(PUBLIC_ACCESSORY_DIR)) for (const p of readdirSync(PUBLIC_ACCESSORY_DIR)) if (!pubBefore.has(p)) unlinkSync(path.join(PUBLIC_ACCESSORY_DIR, p));
-    const acc = await prisma.productAccessory3D.findMany({ where: { productId }, select: { id: true } });
     await prisma.auditLog.deleteMany({ where: { OR: [{ actorId: { in: [owner, admin] } }, { targetId: { in: [shopId, ...acc.map(a => a.id)] } }] } });
     await prisma.partsProduct.deleteMany({ where: { id: productId } }); await prisma.partsShopProfile.deleteMany({ where: { id: shopId } });
     await prisma.vehicleGeneration.deleteMany({ where: { id: gid } }); await prisma.vehicle.deleteMany({ where: { id: vid } }); await prisma.vehicleBrand.deleteMany({ where: { id: vid } });
@@ -148,6 +151,14 @@ test("mock generation reaches final review, shows the installed look only after 
   const ready = await f.service.adminGet(id); assert.equal(ready.status, "READY_FOR_FINAL_REVIEW", ready.failureReason ?? ""); assert.ok(ready.hasModel);
   await assert.rejects(f.service.publish(f.admin, id, { visuallyVerified: true, modelRevision: ready.modelRevision }), (e: any) => e.code === "MOCK_NOT_PUBLISHABLE");
   assert.equal((await f.service.forProduct(f.productId))!.model, null);
+  const context=process.env.NODE_TEST_CONTEXT;
+  try{
+    delete process.env.NODE_TEST_CONTEXT;
+    const retired=await f.service.adminGet(id);
+    assert.equal(retired.status,"APPROVED_FOR_GENERATION");assert.equal(retired.hasModel,false);assert.equal(retired.providerTaskId,null);assert.equal(retired.creditsUsed,0);assert.equal(retired.mode,"real");
+    const stored=await prisma.productAccessory3D.findUniqueOrThrow({where:{id}});
+    assert.equal(stored.privateModelPath,null);assert.equal(stored.preview,null);assert.ok((stored.generationHistory as any[]).some(x=>x.reason==="TEST_RESULT_RETIRED"&&x.prepared));
+  }finally{if(context!==undefined)process.env.NODE_TEST_CONTEXT=context;}
 }));
 
 test("real generation: explicit paid opt-in, one provider POST, restart-safe polling, monthly cap, exact-revision publish", () => fixture(async f => {
@@ -167,11 +178,40 @@ test("real generation: explicit paid opt-in, one provider POST, restart-safe pol
   await createAccessory3DProcessor({ client, allowPaid: true, render: stubRender as never })(id); assert.equal(creates, 1);
   for (let i = 0; i < 2; i++) { await f.due(id); await createAccessory3DProcessor({ client, allowPaid: true, render: stubRender as never })(id); } // a new processor = a restart
   const ready = await f.service.adminGet(id); assert.equal(ready.status, "READY_FOR_FINAL_REVIEW", ready.failureReason ?? ""); assert.equal(creates, 1);
-  assert.ok(!JSON.stringify(ready).includes(task)); assert.ok(!JSON.stringify(ready).includes("sig"));
+  const carKey="bmw-3-series-e36", map=await prisma.carPartMap.findUniqueOrThrow({where:{model3dKey:carKey}});
+  try{
+    await prisma.carPartMap.update({where:{model3dKey:carKey},data:{confirmedAt:null}});
+    const missing=await f.service.adminGet(id);assert.equal(missing.review.targets[0]!.partMap,"MISSING");assert.equal(missing.review.publication.canPublish,false);
+    assert.ok(missing.review.publication.blockers.some(b=>b.code==="PART_MAP_STALE"));
+    await assert.rejects(f.service.publish(f.admin,id,{visuallyVerified:true,modelRevision:ready.modelRevision}),{code:"PART_MAP_STALE"});
+    await prisma.carPartMap.update({where:{model3dKey:carKey},data:{confirmedAt:map.confirmedAt,modelSha256:"0".repeat(64)}});
+    assert.equal((await f.service.adminGet(id)).review.targets[0]!.partMap,"STALE");
+  }finally{await prisma.carPartMap.update({where:{model3dKey:carKey},data:{confirmedAt:map.confirmedAt,modelSha256:map.modelSha256}});}
+  const fitKey={accessoryId_generationId:{accessoryId:id,generationId:f.gid}}, savedFit=await prisma.accessoryAutoFit.delete({where:fitKey});
+  try{const notRun=await f.service.adminGet(id);assert.equal(notRun.review.targets[0]!.fit.state,"NOT_RUN");assert.equal(notRun.review.publication.canPublish,false);await assert.rejects(f.service.publish(f.admin,id,{visuallyVerified:true,modelRevision:ready.modelRevision}),{code:"FIT_NOT_READY"});}
+  finally{await prisma.accessoryAutoFit.create({data:{...savedFit,fit:savedFit.fit as any,adj:savedFit.adj??undefined}});}
+  assert.equal(ready.providerTaskId,task); assert.ok(!JSON.stringify(ready).includes("sig"));
   await assert.rejects(f.service.publish(f.admin, id, { visuallyVerified: false, modelRevision: ready.modelRevision }), (e: any) => e.code === "VISUAL_REVIEW_REQUIRED");
   await assert.rejects(f.service.publish(f.admin, id, { visuallyVerified: true, modelRevision: "stale" }), (e: any) => e.code === "STALE_VISUAL_REVIEW");
+  const candidate=await prisma.productAccessory3D.findUniqueOrThrow({where:{id}});
+  await prisma.productAccessory3D.update({where:{id},data:{validation:{valid:false}}});
+  await assert.rejects(f.service.publish(f.admin,id,{visuallyVerified:true,modelRevision:ready.modelRevision}),{code:"VALIDATION_REJECTED"});
+  await prisma.productAccessory3D.update({where:{id},data:{validation:candidate.validation as any,privateModelPath:randomUUID()+".glb"}});
+  await assert.rejects(f.service.publish(f.admin,id,{visuallyVerified:true,modelRevision:ready.modelRevision}),{code:"MODEL_REQUIRED"});
+  await prisma.productAccessory3D.update({where:{id},data:{privateModelPath:candidate.privateModelPath}});
+  assert.equal((await f.service.adminGet(id)).review.targets[0]!.fit.state,"PASSED");
+  await assert.rejects(f.service.publish(f.admin,id,{visuallyVerified:true,modelRevision:ready.modelRevision}),{code:"FIT_REVIEW_REQUIRED"});
+  const fits=createAutoFitService();
+  await fits.approve(f.admin,id,f.gid,{needsCorrection:true});
+  assert.equal((await f.service.adminGet(id)).review.targets[0]!.fit.state,"NEEDS_CORRECTION");
+  await fits.approve(f.admin,id,f.gid,{adj:null});
+  assert.equal((await f.service.adminGet(id)).review.publication.canPublish,false,"fit approval makes the old final preview stale");
+  await prisma.productAccessory3D.update({where:{id},data:{preview:await stubRender(candidate,f.gid) as any}});
+  assert.equal((await f.service.adminGet(id)).review.publication.canPublish,true);
   const pub = await f.service.publish(f.admin, id, { visuallyVerified: true, modelRevision: ready.modelRevision });
   assert.equal(pub.status, "PUBLISHED"); const live = (await f.service.forProduct(f.productId))!.model!;
+  assert.equal((await f.service.adminGet(id)).review.publication.state,"PUBLISHED");
+  assert.equal((await f.service.get(f.owner,f.productId)).accessory?.status,"PUBLISHED");
   assert.match(live.file, /^accessories\/acc-[a-f0-9]{16}\.glb$/); assert.ok(existsSync(path.join(PUBLIC_ACCESSORY_DIR, live.file.slice(12))));
   // the cap: a second paid start this month is refused
   await f.service.revise(f.owner, f.productId); await f.service.submit(f.owner, f.productId, true); await f.service.approve(f.admin, id);
@@ -188,6 +228,7 @@ test("an unconfirmed paid request fails closed and is never re-sent", () => fixt
   let creates = 0; const client = createMeshyClient({ key: "fake", maxBytes: 1024, fetcher: (async () => { creates++; return json({ result: "x" }, 202); }) as typeof fetch });
   await createAccessory3DProcessor({ client, allowPaid: true })(id);
   const a = await f.service.adminGet(id); assert.equal(creates, 0); assert.equal(a.status, "APPROVED_FOR_GENERATION"); assert.equal(a.generationErrorCode, "PROVIDER_REQUEST_UNCONFIRMED");
+  await assert.rejects(f.service.start(f.admin,id,true),{code:"PROVIDER_REQUEST_UNCONFIRMED"});
 }));
 
 test("tuned zones are validated, merged into the runtime catalog and reset; customer adjust is bounded", () => fixture(async f => {
@@ -218,20 +259,33 @@ test("tuned zones are validated, merged into the runtime catalog and reset; cust
 test("a finished paid task that failed only on download is resumed from the same task: no second POST, no extra credit", () => fixture(async f => {
   await submitted(f); const id = (await f.service.get(f.owner, f.productId)).accessory!.id; await f.service.approve(f.admin, id);
   process.env.VEHICLE3D_MODE = "real"; process.env.MESHY_ALLOW_PAID_GENERATION = "1"; process.env.MESHY_API_KEY = "fake";
-  let creates = 0, big = true; const glb = await mockAccessoryGLB("WING");
+  let creates = 0, downloads = 0, big = true; const glb = await mockAccessoryGLB("WING");
   const client = createMeshyClient({ key: "fake", maxBytes: 8 * 1048576, fetcher: (async (url, o) => {
     if (o?.method === "POST") { creates++; return json({ result: "task-1" }, 202); }
-    if (String(url).startsWith("https://assets.meshy.ai/")) return new Response(big ? new Uint8Array(9 * 1048576) : glb);
+    if (String(url).startsWith("https://assets.meshy.ai/")) { downloads++; return new Response(big ? new Uint8Array(9 * 1048576) : glb); }
     return json({ id: "task-1", status: "SUCCEEDED", progress: 100, model_urls: { glb: "https://assets.meshy.ai/w.glb" } });
   }) as typeof fetch });
   await f.service.start(f.admin, id, true);
+  await prisma.productAccessory3D.update({where:{id},data:{creditsUsed:30}});
   const run = async () => { await f.due(id); await createAccessory3DProcessor({ client, allowPaid: true, render: stubRender as never })(id); };
   await run(); await run();
-  let a = await f.service.adminGet(id); assert.equal(a.generationErrorCode, "PROVIDER_ASSET_TOO_LARGE"); assert.equal(a.resumable, true);
+  let a = await f.service.adminGet(id); assert.equal(a.generationErrorCode, "PROVIDER_DOWNLOAD_TOO_LARGE"); assert.equal(a.resumable, true);
+  // Existing requests rejected by the old runtime-size download gate remain resumable too.
+  await prisma.productAccessory3D.update({where:{id},data:{generationErrorCode:"PROVIDER_ASSET_TOO_LARGE"}});
   big = false; delete process.env.MESHY_ALLOW_PAID_GENERATION; process.env.VEHICLE3D_MODE = "mock"; // resume needs no paid switch
-  const resumed = await f.service.start(f.admin, id, false); assert.equal(resumed.status, "GENERATING"); assert.equal(resumed.creditsUsed, 1); assert.equal(resumed.revision, 1);
+  const [resumed,duplicate] = await Promise.all([f.service.start(f.admin,id,false),f.service.start(f.admin,id,false)]); assert.equal(resumed.status, "GENERATING"); assert.equal(resumed.generationStage,"DOWNLOADING");assert.equal(resumed.creditsUsed, 30); assert.equal(resumed.revision, 1);assert.equal(duplicate.revision,1);
   await run(); a = await f.service.adminGet(id);
   assert.equal(a.status, "READY_FOR_FINAL_REVIEW", a.failureReason ?? ""); assert.equal(creates, 1); assert.equal(a.creditsThisMonth, 1);
+  const downloaded=downloads;
+  await prisma.productAccessory3D.update({where:{id},data:{status:"APPROVED_FOR_GENERATION",generationErrorCode:"PREPARATION_FAILED",privateModelPath:null}});
+  await f.service.start(f.admin,id,false);await run();a=await f.service.adminGet(id);
+  assert.equal(a.status,"READY_FOR_FINAL_REVIEW");assert.equal(a.creditsUsed,30);assert.equal(a.providerTaskId,"task-1");assert.equal(downloads,downloaded,"safe persisted source is reused without another download");assert.equal(creates,1);
+  await prisma.productAccessory3D.update({where:{id},data:{validation:{valid:false}}});
+  assert.equal((await f.service.adminGet(id)).review.canRetryProcessing,true);
+  await Promise.all([f.service.retryProcessing(f.admin,id),f.service.retryProcessing(f.admin,id)]);await run();
+  a=await f.service.adminGet(id);assert.equal(a.review.model.validation,"PASSED");assert.equal(a.providerTaskId,"task-1");assert.equal(a.creditsUsed,30);assert.equal(a.revision,1);assert.equal(downloads,downloaded);assert.equal(creates,1);
+  await prisma.productAccessory3D.update({where:{id},data:{status:"APPROVED_FOR_GENERATION",privateModelPath:null,generationErrorCode:"UNKNOWN_LOCAL_FAILURE"}});
+  await assert.rejects(f.service.start(f.admin,id,true),{code:"PROVIDER_TASK_ALREADY_SUCCEEDED"});assert.equal(creates,1);
 }));
 
 test("body kits: front + rear bumper as two parts of one product; bumpers are car-specific; customer adjust per part", () => fixture(async f => {

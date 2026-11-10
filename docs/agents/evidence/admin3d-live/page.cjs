@@ -1,0 +1,5 @@
+const {mobile,login,save,path}=require('./common.cjs');
+(async()=>{
+const [role,route,name]=process.argv.slice(2),s=await login(role),b=await mobile('@playwright/test').chromium.launch({channel:'chrome',headless:true});
+try{const p=await b.newPage({viewport:{width:390,height:844}}),events=[];await p.addInitScript(t=>sessionStorage.setItem('motexa_access_token',t),s.token);p.on('response',r=>{if(r.url().includes('/api/'))events.push({path:new URL(r.url()).pathname,status:r.status()})});await p.goto('http://127.0.0.1:8085'+route,{timeout:60000});await p.waitForTimeout(6000);const out={url:p.url(),text:await p.locator('body').innerText(),inputs:await p.locator('input,textarea').evaluateAll(xs=>xs.map(x=>({value:x.value,label:x.getAttribute('aria-label'),placeholder:x.getAttribute('placeholder'),inputmode:x.getAttribute('inputmode')}))),events};save(name,out);await p.screenshot({path:path.join(__dirname,name+'.png'),fullPage:true});console.log(JSON.stringify(out));}finally{await b.close()}
+})().catch(e=>{console.error(e.message);process.exitCode=1});

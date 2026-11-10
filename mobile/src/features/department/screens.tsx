@@ -54,7 +54,7 @@ function DeptHomeDefault() {
         </Text>
       ) : null}
       <Section title={d.t("Shortcuts", "اختصارات")} />
-      <View style={{ padding: 11, borderRadius: 28, borderWidth: 1, borderColor: d.dark ? "#61472F" : "#EBD6B9", backgroundColor: d.dark ? "#32241B" : "#F7EBD9" }}>
+      <View style={{ padding: 11, borderRadius: 28, borderWidth: 1, borderColor: d.border, backgroundColor: d.soft }}>
         {active.shortcuts.map((sc) => (
           <MenuCard
             key={sc.id}
@@ -171,7 +171,7 @@ function DeptDirectoryDefault() {
   return (
     <DeptPage onRefresh={() => void state.reload()} refreshing={state.loading && !!state.data}>
       <Section title={d.t(cfg.titleEn, cfg.titleAr)} caption={d.t(active.en, active.ar)} />
-      <View style={{ flexDirection: d.row, alignItems: "center", gap: 10, borderRadius: 17, borderWidth: 1, borderColor: d.border, backgroundColor: d.dark ? "#3A2E24" : "#FFF8ED", paddingHorizontal: 14, marginBottom: 12 }}>
+      <View style={{ flexDirection: d.row, alignItems: "center", gap: 10, borderRadius: 17, borderWidth: 1, borderColor: d.border, backgroundColor: d.paper, paddingHorizontal: 14, marginBottom: 12 }}>
         <Ionicons name="search-outline" size={20} color={d.muted} />
         <TextInput
           value={q}
@@ -190,9 +190,9 @@ function DeptDirectoryDefault() {
               accessibilityRole="button"
               accessibilityState={{ selected: filter === f.k }}
               onPress={() => setFilter(f.k)}
-              style={{ paddingHorizontal: 14, minHeight: 38, borderRadius: 19, borderWidth: 1, alignItems: "center", justifyContent: "center", borderColor: filter === f.k ? "#E0A36F" : d.border, backgroundColor: filter === f.k ? "#E0A36F" : "transparent" }}
+              style={{ paddingHorizontal: 14, minHeight: 38, borderRadius: 19, borderWidth: 1, alignItems: "center", justifyContent: "center", borderColor: filter === f.k ? d.fill : d.border, backgroundColor: filter === f.k ? d.fill : "transparent" }}
             >
-              <Text style={{ color: filter === f.k ? "#332218" : d.ink, fontSize: 13, fontWeight: "600" }}>{d.t(f.en, f.ar)}</Text>
+              <Text style={{ color: filter === f.k ? d.fillInk : d.ink, fontSize: 13, fontWeight: "600" }}>{d.t(f.en, f.ar)}</Text>
             </InteractiveButton>
           ))}
         </View>
