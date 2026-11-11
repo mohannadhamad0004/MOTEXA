@@ -554,7 +554,10 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
       if(enabled&&!existsSync(path.join(PUBLIC_ACCESSORY_DIR,a.publishedFile+".glb")))return fail("PUBLICATION_BLOCKED","The published model file is missing.",409);
       if(enabled){const fits=await Promise.all((await accessoryTargets(id,tx)).map(g=>fitEligibility(id,g.id,a.privateModelPath,tx)));if(!fits.some(f=>f.allowed))return fail("FIT_REVIEW_REQUIRED","No current allowed fit exists. Rerun and review the fits.",409);}
       const row=await tx.productAccessory3D.update({where:{id},data:{deactivatedAt:enabled?null:new Date()},include});
-      await audit(tx,uid,enabled?"REACTIVATE":"UNPUBLISH",id);return accessoryShape(row);
+      await audit(tx,uid,enabled?"REACTIVATE":"UNPUBLISH",id);
+      const nm=await productName(tx,a.productId);
+      await tellShop(tx,a.shopId,enabled?["Your 3D part is live again","قطعتك ثلاثية الأبعاد منشورة من جديد"]:["Your 3D part was unpublished","تم إيقاف نشر قطعتك ثلاثية الأبعاد"],enabled?[`${nm}: customers can see it on their car again.`,`${nm}: يمكن للزبائن رؤيتها على سياراتهم مجددًا.`]:[`${nm}: customers no longer see it in 3D. Contact MOTEXA if you have questions.`,`${nm}: لم يعد الزبائن يرونها بالأبعاد الثلاثية. تواصل مع موتكسا لأي استفسار.`]);
+      return accessoryShape(row);
     }),
     discardCandidate:async(uid:string,id:string)=>{
       const a=await run(async tx=>{const a=await admin(tx,id,true);
@@ -600,7 +603,7 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
       const parts = [];
       for (const r of rows) {
         if (r.status === "PUBLISHED" && !isMockAccessory(r)) await refreshPublishedAccessory(r.id);
-        const live = !isMockAccessory(r) && r.generationMode === "meshy" && r.provider === "MESHY" && r.providerState === "SUCCEEDED" && !!r.providerTaskId && r.status === "PUBLISHED" && !r.deactivatedAt && !!r.publishedFile && existsSync(path.join(PUBLIC_ACCESSORY_DIR,r.publishedFile+".glb")), fitsHere = !!generationId && (bySize || r.fits.some(f => f.generationId === generationId));
+        const live = !isMockAccessory(r) && !!r.visualVerifiedAt && r.status === "PUBLISHED" && !r.deactivatedAt && !!r.publishedFile && existsSync(path.join(PUBLIC_ACCESSORY_DIR,r.publishedFile+".glb")), fitsHere = !!generationId && (bySize || r.fits.some(f => f.generationId === generationId));
         const eligibility=live&&fitsHere?await fitEligibility(r.id,generationId!,r.privateModelPath,tx):{allowed:false,code:!live?"NO_ACCESSORY_3D":"NO_COMPATIBLE_GARAGE_CAR",autoFit:null};
         parts.push({ part: r.kitPart, type: r.accessoryType, fitsIds: r.fits.map(f => f.generationId), universal: bySize,
           model: live ? { file: `accessories/${r.publishedFile}.glb`, size: { widthMm: r.widthMm, lengthMm: r.lengthMm, rimInches: r.rimInches }, finish: r.rimFinish } : null,

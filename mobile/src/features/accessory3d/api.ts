@@ -21,7 +21,7 @@ export const RIM_FINISH_LABELS: Record<RimFinish, [string, string]> = { SILVER: 
 export type RimSpecs = { inches: number | null; widthIn: number | null; pcd: string | null; offsetMm: number | null; finish: RimFinish | null };
 export type Size = { widthMm: number | null; heightMm: number | null; depthMm: number | null; lengthMm: number | null; rimInches: number | null };
 export const PREVIEW_VIEWS = ["front-three-quarter", "front", "left-side", "rear-three-quarter", "rear", "top-three-quarter"] as const;
-export type Preview = { generationId: string; generationName: string; model3dKey: string; modelRevision: string; views: Record<string, string>; fit: Record<string, unknown> | null } | null;
+export type Preview = { generationId: string; generationName: string; model3dKey: string; modelRevision: string; renderedAt?: string; fitSnapshot?: { fitVersion: number; updatedAt: string }; views: Record<string, string>; fit: Record<string, unknown> | null } | null;
 export type Accessory = {
   lifecycleState?:string;fitmentNotes?:string|null;deactivatedAt?:string|null;
   id: string; productId: string; kitPart: KitPart; accessoryType: AccessoryType; status: AccessoryStatus; revision: number; creditsUsed: number; size: Size; rim: RimSpecs | null;

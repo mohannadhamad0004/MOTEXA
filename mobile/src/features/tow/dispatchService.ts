@@ -116,7 +116,8 @@ export const customerAfter = {
 
 export const adminDrivers = {
   list: (status?: DriverApproval) => api<{ drivers: AdminDriver[] }>("GET", `/admin/tow/drivers${status ? `?status=${status}` : ""}`).then((r) => r.drivers),
-  review: (id: string, decision: "APPROVE" | "REJECT" | "SUSPEND", reason?: string) => api("POST", `/admin/tow/drivers/${id}/review`, { decision, reason }),
+  review: (id: string, decision: "APPROVE" | "REJECT" | "REQUEST_CHANGES" | "SUSPEND", reason?: string) => api("POST", `/admin/tow/drivers/${id}/review`, { decision, reason }),
+  update: (id: string, body: { name?: string; phone?: string; licenceNumber?: string }) => api("PATCH", `/admin/tow/drivers/${id}`, body),
 };
 
 export type AdminJobRow = TowJob & { cancelledBy: string | null; distanceMeters: number | null; openReports: number };

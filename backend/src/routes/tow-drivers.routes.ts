@@ -26,7 +26,7 @@ import {
   ratingOf,
   resendInvite,
   releaseTruck,
-  reviewDriver,
+  reviewDriver, adminUpdateDriver,
   setOffline,
   stageOf,
   updateDriver,
@@ -317,6 +317,14 @@ router.get("/admin/tow/drivers", requireAuth, requireTowAdmin, async (req, res) 
     });
   } catch (e) {
     return send(res, e, "Admin drivers error");
+  }
+});
+router.patch("/admin/tow/drivers/:id", requireAuth, requireTowAdmin, json, async (req, res) => {
+  try {
+    await adminUpdateDriver(me(res), id(req.params.id), req.body);
+    return res.json({ success: true });
+  } catch (e) {
+    return send(res, e, "Admin driver update error");
   }
 });
 router.post("/admin/tow/drivers/:id/review", requireAuth, requireTowAdmin, json, async (req, res) => {
