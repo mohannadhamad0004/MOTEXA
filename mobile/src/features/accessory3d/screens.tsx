@@ -67,11 +67,13 @@ export function PrivateImage({ load, label, height = 150, width = "100%" }: { lo
 }
 function PreviewGrid({ preview, load }: { preview: NonNullable<Preview>; load: (view: string) => () => Promise<string> }) {
   const { t } = useL(); const { row, align } = useGarageTheme();
+  // a new fit or render changes the key, so mounted images reload instead of showing the old six views
+  const imgKey = `${preview.modelRevision}-${preview.generationId}-${preview.fitSnapshot?.fitVersion ?? 0}-${preview.fitSnapshot?.updatedAt ?? preview.renderedAt ?? ""}`;
   return <View style={{ gap: 8 }}>
     <GText soft style={[gType.caption, align]}>{`${t("Shown on", "معروضة على")} ${preview.generationName}`}</GText>
     <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
-      {PREVIEW_VIEWS.map(v => <View key={`${preview.modelRevision}-${preview.generationId}-${v}`} style={{ width: "48%", gap: 4 }}>
-        <PrivateImage load={load(`preview-${v}`)} label={`${preview.modelRevision}-${preview.generationId}-${v}`} height={120} />
+      {PREVIEW_VIEWS.map(v => <View key={`${imgKey}-${v}`} style={{ width: "48%", gap: 4 }}>
+        <PrivateImage load={load(`preview-${v}`)} label={`${imgKey}-${v}`} height={120} />
         <GText soft style={[gType.tiny, align]}>{t(...VIEW_LABELS[v]!)}</GText>
       </View>)}
     </View>
@@ -140,6 +142,8 @@ export function ShopAccessory3DScreen() {
   type Issue = { field: Spot; msg: string };
   const scrollRef = useRef<ScrollView>(null), spots = useRef<Record<string, View | null>>({});
   const [tried, setTried] = useState(false), [serverIssues, setServerIssues] = useState<Issue[] | null>(null);
+  // saved details only: adding / removing a photo bumps updatedAt but must not wipe what the shop is typing
+  const detailsSig = JSON.stringify([a?.status, a?.accessoryType, a?.fitsGenerationIds, a?.size, a?.rim, a?.installedGenerationId, a?.installed360, a?.fitmentNotes]);
   useEffect(() => { // the form starts from the saved accessory (once per revision of it)
     if (!state.data) return;
     setFitmentNotes(a?.fitmentNotes??"");
@@ -149,7 +153,7 @@ export function ShopAccessory3DScreen() {
       rim: { widthIn: r?.widthIn != null ? String(r.widthIn) : "", pcd: r?.pcd ?? "", offsetMm: r?.offsetMm != null ? String(r.offsetMm) : "", finish: r?.finish ?? null },
       size: Object.fromEntries((["widthMm", "heightMm", "depthMm", "lengthMm", "rimInches"] as const).map(k => [k, s?.[k] != null ? String(s[k]) : ""])) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!state.data, a?.updatedAt, part]);
+  }, [!!state.data, detailsSig, part]);
   const gens = useMemo(() => (vehicles.list ?? []).flatMap(v => (v.generations ?? []).map(g => ({ id: g.id, en: `${v.make} ${g.nameEn}`, ar: `${v.makeAr} ${g.nameAr}`, years: `${g.yearFrom}–${g.yearTo}` }))), [vehicles.list]);
   const name = (id: string) => { const g = gens.find(x => x.id === id); return g ? (isArabic ? g.ar : g.en) : "…"; };
   const q = search.trim().toLowerCase();

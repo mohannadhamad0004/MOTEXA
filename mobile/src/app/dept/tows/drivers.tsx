@@ -27,13 +27,29 @@ export default function DriverReview() {
   const { row, align } = useGarageTheme();
   const [filter, setFilter] = useState<DriverApproval>("PENDING");
   const state = useLoad(() => adminDrivers.list(filter), [filter]);
-  const [ask, setAsk] = useState<{ d: AdminDriver; decision: "REJECT" | "SUSPEND" } | null>(null);
+  const [ask, setAsk] = useState<{ d: AdminDriver; decision: "REJECT" | "SUSPEND" | "REQUEST_CHANGES" } | null>(null);
+  const [edit, setEdit] = useState<{ d: AdminDriver; name: string; phone: string; licence: string } | null>(null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const label: Record<DriverApproval, string> = { PENDING: t("Pending", "قيد المراجعة"), APPROVED: t("Approved", "معتمد"), REJECTED: t("Rejected", "مرفوض"), SUSPENDED: t("Suspended", "موقوف") };
   const tone: Record<DriverApproval, Tone> = { PENDING: "warning", APPROVED: "success", REJECTED: "danger", SUSPENDED: "danger" };
-  const decide = async (d: AdminDriver, decision: "APPROVE" | "REJECT" | "SUSPEND", why?: string) => {
+  const save = async () => {
+    if (!edit) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const { d } = edit;
+      await adminDrivers.update(d.id, { ...(edit.name.trim() !== d.name ? { name: edit.name.trim() } : {}), ...(edit.phone.trim() !== d.phone ? { phone: edit.phone.trim() } : {}), ...(edit.licence.trim() !== (d.licenceNumber ?? "") ? { licenceNumber: edit.licence.trim() } : {}) });
+      setEdit(null);
+      state.reload();
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const decide = async (d: AdminDriver, decision: "APPROVE" | "REJECT" | "SUSPEND" | "REQUEST_CHANGES", why?: string) => {
     setBusy(true);
     setErr(null);
     try {
@@ -67,19 +83,31 @@ export default function DriverReview() {
             <ListRow icon="business-outline" title={d.company.name} sub={`${d.email} · ${d.phone}`} />
             <ListRow divider icon="card-outline" title={t("Licence number", "رقم الرخصة")} sub={d.licenceNumber ?? "-"} />
             {d.licenceUri ? <View style={{ marginVertical: 8 }}><Licence path={d.licenceUri} /></View> : <Note tone="warning" icon="alert-circle-outline">{t("No licence photo.", "لا توجد صورة رخصة.")}</Note>}
-            {d.approvalReason ? <Note icon="information-circle-outline">{d.approvalReason}</Note> : null}
-            {ask?.d.id === d.id ? (
+            {d.approvalReason ? <Note icon="information-circle-outline">{d.approval === "PENDING" ? `${t("Changes requested", "طُلب تعديل")}: ${d.approvalReason}` : d.approvalReason}</Note> : null}
+            {edit?.d.id === d.id ? (
+              <View>
+                <Field label={t("Name", "الاسم")} value={edit.name} onChangeText={(v) => setEdit({ ...edit, name: v })} maxLength={80} />
+                <Field label={t("Phone", "الهاتف")} value={edit.phone} onChangeText={(v) => setEdit({ ...edit, phone: v })} keyboardType="phone-pad" maxLength={24} />
+                <Field label={t("Licence number", "رقم الرخصة")} value={edit.licence} onChangeText={(v) => setEdit({ ...edit, licence: v })} maxLength={40} />
+                <View style={[row, { gap: 10 }]}>
+                  <GButton flex variant="secondary" label={t("Cancel", "إلغاء")} onPress={() => setEdit(null)} />
+                  <GButton flex label={t("Save", "حفظ")} disabled={busy || edit.name.trim().length < 2} busy={busy} onPress={() => void save()} />
+                </View>
+              </View>
+            ) : ask?.d.id === d.id ? (
               <View>
                 <Field label={t("Reason (the company and the driver see it)", "السبب (تراه الشركة والسائق)")} value={reason} onChangeText={setReason} multiline maxLength={300} />
                 <View style={[row, { gap: 10 }]}>
                   <GButton flex variant="secondary" label={t("Back", "رجوع")} onPress={() => setAsk(null)} />
-                  <GButton flex variant="danger" label={ask.decision === "REJECT" ? t("Reject", "رفض") : t("Suspend", "إيقاف")} disabled={!reason.trim() || busy} busy={busy} onPress={() => void decide(d, ask.decision, reason.trim())} />
+                  <GButton flex variant={ask.decision === "REQUEST_CHANGES" ? "primary" : "danger"} label={ask.decision === "REJECT" ? t("Reject", "رفض") : ask.decision === "REQUEST_CHANGES" ? t("Request changes", "طلب تعديل") : t("Suspend", "إيقاف")} disabled={!reason.trim() || busy} busy={busy} onPress={() => void decide(d, ask.decision, reason.trim())} />
                 </View>
               </View>
             ) : (
               <View style={[row, { gap: 10, marginTop: 8 }]}>
                 {d.approval !== "APPROVED" ? <GButton flex icon="checkmark" label={t("Approve", "اعتماد")} disabled={busy || !d.licenceUri} onPress={() => void decide(d, "APPROVE")} /> : null}
+                {d.approval === "PENDING" ? <GButton flex variant="secondary" label={t("Request changes", "طلب تعديل")} onPress={() => setAsk({ d, decision: "REQUEST_CHANGES" })} /> : null}
                 {d.approval === "PENDING" ? <GButton flex variant="secondary" label={t("Reject", "رفض")} onPress={() => setAsk({ d, decision: "REJECT" })} /> : null}
+                <GButton flex variant="ghost" label={t("Edit", "تعديل")} onPress={() => setEdit({ d, name: d.name, phone: d.phone, licence: d.licenceNumber ?? "" })} />
                 {d.approval === "APPROVED" ? <GButton flex variant="danger" label={t("Suspend", "إيقاف")} onPress={() => setAsk({ d, decision: "SUSPEND" })} /> : null}
               </View>
             )}

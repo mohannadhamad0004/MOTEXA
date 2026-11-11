@@ -203,7 +203,10 @@ export async function updateDriver(ownerUserId: string, driverId: string, b: any
     const out = await prisma.$transaction(async (tx) => {
       if (b?.photo) old = old.concat(await putDriverFile(tx, ownerUserId, d.id, "DRIVER_PHOTO", b.photo, stored));
       if (b?.licencePhoto) old = old.concat(await putDriverFile(tx, ownerUserId, d.id, "DRIVER_LICENCE", b.licencePhoto, stored));
-      return tx.towDriver.update({ where: { id: d.id }, data });
+      const row = await tx.towDriver.update({ where: { id: d.id }, data });
+      const changed = [...Object.keys(data), ...(b?.photo ? ["photo"] : []), ...(b?.licencePhoto ? ["licencePhoto"] : [])];
+      await tx.auditLog.create({ data: { actorId: ownerUserId, action: "TOW_DRIVER_UPDATED", targetId: d.id, details: { changed } } }); // field names only: no phone / licence values in the log
+      return row;
     });
     await Promise.all(old.map((k) => removeStoredFile(k)));
     return out;
@@ -213,22 +216,54 @@ export async function updateDriver(ownerUserId: string, driverId: string, b: any
   }
 }
 
+/** Tow admin: correct a driver's name, phone or licence number. Validated and audited (field names only); the company is told. */
+export async function adminUpdateDriver(adminId: string, driverId: string, b: any) {
+  const d = await prisma.towDriver.findUnique({ where: { id: driverId }, include: { company: { select: { userId: true } } } });
+  if (!d) throw new DispatchError(404, "Driver not found.");
+  const data: Prisma.TowDriverUncheckedUpdateInput = {};
+  let fullName: string | undefined;
+  if (b?.name !== undefined) {
+    if (typeof b.name !== "string" || b.name.trim().length < 2 || b.name.trim().length > 80) throw new DispatchError(400, "The name must be 2–80 characters.");
+    fullName = b.name.trim();
+  }
+  if (b?.phone !== undefined) {
+    if (!phoneOk(b.phone)) throw new DispatchError(400, "A valid phone number is required.");
+    data.phone = b.phone.trim();
+  }
+  if (b?.licenceNumber !== undefined) {
+    if (!licenceOk(b.licenceNumber)) throw new DispatchError(400, "The licence number is required (4–40 characters).");
+    data.licenceNumber = b.licenceNumber.trim();
+  }
+  const changed = [...(fullName !== undefined ? ["name"] : []), ...Object.keys(data)];
+  if (!changed.length) throw new DispatchError(400, "Nothing to change.");
+  await prisma.$transaction(async (tx) => {
+    if (fullName !== undefined) await tx.user.update({ where: { id: d.userId }, data: { fullName } });
+    if (Object.keys(data).length) await tx.towDriver.update({ where: { id: d.id }, data });
+    await tx.auditLog.create({ data: { actorId: adminId, action: "TOW_DRIVER_ADMIN_UPDATED", targetId: d.id, details: { changed } } });
+  });
+  await notify([d.company.userId, d.userId], B("Driver details corrected", "تم تصحيح بيانات السائق"), B("MOTEXA corrected this driver's details.", "صحّحت موتكسا بيانات السائق."));
+}
+
 /** Tow admin: approve / reject (reason) a driver's licence, or suspend him. Audited; the company and the driver are told. */
 export async function reviewDriver(adminId: string, driverId: string, decision: unknown, reason: unknown) {
-  const to = decision === "APPROVE" ? "APPROVED" : decision === "REJECT" ? "REJECTED" : decision === "SUSPEND" ? "SUSPENDED" : null;
-  if (!to) throw new DispatchError(400, "decision must be APPROVE, REJECT or SUSPEND.");
+  // REQUEST_CHANGES keeps the driver PENDING with the reason set; the company's licence edit clears it and resubmits.
+  const changes = decision === "REQUEST_CHANGES";
+  const to = decision === "APPROVE" ? "APPROVED" : decision === "REJECT" ? "REJECTED" : decision === "SUSPEND" ? "SUSPENDED" : changes ? "PENDING" : null;
+  if (!to) throw new DispatchError(400, "decision must be APPROVE, REJECT, REQUEST_CHANGES or SUSPEND.");
   const why = typeof reason === "string" && reason.trim() ? reason.trim().slice(0, 300) : null;
   if (to !== "APPROVED" && !why) throw new DispatchError(400, "A reason is required.");
   const d = await prisma.towDriver.findUnique({ where: { id: driverId }, include: { company: { select: { userId: true } } } });
   if (!d) throw new DispatchError(404, "Driver not found.");
+  if (changes && d.approval !== "PENDING") throw new DispatchError(409, "Changes can only be requested while the licence is pending review.");
   if (to === "APPROVED" && !(await prisma.providerFile.count({ where: { towDriverId: d.id, purpose: "DRIVER_LICENCE" } }))) throw new DispatchError(409, "This driver has no licence photo.");
   await prisma.$transaction(async (tx) => {
     await tx.towDriver.update({ where: { id: d.id }, data: { approval: to, approvalReason: to === "APPROVED" ? null : why, reviewedById: adminId, reviewedAt: new Date(), ...(to === "SUSPENDED" ? { offline: true } : {}) } });
-    await tx.auditLog.create({ data: { actorId: adminId, action: `TOW_DRIVER_${to}`, targetId: d.id, details: { reason: why } } });
+    await tx.auditLog.create({ data: { actorId: adminId, action: changes ? "TOW_DRIVER_CHANGES_REQUESTED" : `TOW_DRIVER_${to}`, targetId: d.id, details: { reason: why } } });
   });
   const T: Record<string, [[string, string], [string, string]]> = {
     APPROVED: [B("Driver approved", "تمت الموافقة على السائق"), B("The driver's licence was approved.", "تمت الموافقة على رخصة السائق.")],
     REJECTED: [B("Driver licence rejected", "تم رفض رخصة السائق"), B(why ?? "", why ?? "")],
+    PENDING: [B("Driver changes requested", "طُلب تعديل بيانات السائق"), B(why ?? "", why ?? "")],
     SUSPENDED: [B("Driver suspended", "تم إيقاف السائق"), B(why ?? "", why ?? "")],
   };
   await notify([d.company.userId, d.userId], ...T[to]);

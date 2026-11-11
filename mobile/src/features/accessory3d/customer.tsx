@@ -15,13 +15,14 @@ import {selectPreviewCar} from "./eligibility";
 /** All photos as data URIs (authenticated, memory only); null while loading. */
 function usePhotos(ids: string[]) {
   const [uris, setUris] = useState<(string | null)[]>(() => ids.map(() => null));
+  const [failed, setFailed] = useState(false), [tick, setTick] = useState(0);
   const key = ids.join(",");
   useEffect(() => {
-    let live = true; setUris(ids.map(() => null));
-    ids.forEach((id, i) => void customerAccessoryApi.photo(id).then(b => live && setUris(u => u.map((x, j) => j === i ? `data:image/jpeg;base64,${b}` : x)), () => {}));
+    let live = true; setUris(ids.map(() => null)); setFailed(false);
+    ids.forEach((id, i) => void customerAccessoryApi.photo(id).then(b => live && setUris(u => u.map((x, j) => j === i ? `data:image/jpeg;base64,${b}` : x)), () => { if (live) setFailed(true); }));
     return () => { live = false; };
-  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
-  return uris;
+  }, [key, tick]); // eslint-disable-line react-hooks/exhaustive-deps
+  return { uris, failed, retry: () => setTick(n => n + 1) };
 }
 /** Drag sideways to walk around the car: the photos are in order around it, one full drag across the width = one turn. */
 function Spin({ uris, label }: { uris: (string | null)[]; label: string }) {
@@ -53,8 +54,11 @@ export function ProductAccessory3D({ productId, car, onPreview }: { productId: s
   const chosen=selectPreviewCar(choices.data??[],selected);
   const a = state.data;
   const installed = a?.installed ?? null;
-  const uris = usePhotos(installed?.photoIds ?? []);
-  if (!a) return null;
+  const { uris, failed: photosFailed, retry: retryPhotos } = usePhotos(installed?.photoIds ?? []);
+  if (!a) return state.error ? <View style={{ gap: 10, marginTop: 12 }}>
+    <Note tone="danger">{t("Couldn't check 3D availability.", "تعذّر التحقق من توفر النموذج ثلاثي الأبعاد.")}</Note>
+    <GButton variant="secondary" label={t("Retry", "إعادة المحاولة")} onPress={() => void state.reload()} />
+  </View> : null;
   const genId = car?.generation?.id ?? null;
   // a "Universal by size" rim fits any car (its wheels are measured in 3D); everything else fits its chosen generations
   const parts: CustomerPart[] = a.parts ?? [{ part: "MAIN", type: a.type, fitsIds: a.fits.map(f => f.id), universal: a.universal, model: a.model, autoFit: null }];
@@ -82,6 +86,10 @@ export function ProductAccessory3D({ productId, car, onPreview }: { productId: s
             {u ? <Image accessibilityLabel={`${t("Installed look", "شكلها بعد التركيب")} ${i + 1}`} source={{ uri: u }} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : <GText soft style={gType.tiny}>{t("Loading…", "جارٍ التحميل…")}</GText>}
           </View>)}
         </ScrollView>}
+      {photosFailed && uris.some(u => !u) ? <View style={{ gap: 8, marginTop: 8 }}>
+        <Note tone="danger">{t("Couldn't load the installed-look photos.", "تعذّر تحميل صور شكلها بعد التركيب.")}</Note>
+        <GButton variant="secondary" label={t("Retry", "إعادة المحاولة")} onPress={retryPhotos} />
+      </View> : null}
       <GText soft style={[gType.tiny, align, { marginTop: 6 }]}>{t("Photos from the shop, checked by MOTEXA.", "صور من المتجر، راجعتها موتكسا.")}</GText>
     </Section> : null}
   </>;

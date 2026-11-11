@@ -98,7 +98,7 @@ export default function CompanyDrivers() {
   };
   const tone: Record<string, Tone> = { FREE: "success", BUSY: "accent", OFFLINE: "neutral", NO_TRUCK: "warning", UNAPPROVED: "warning" };
   const label: Record<string, string> = { FREE: t("Free", "متاح"), BUSY: t("Busy", "مشغول"), OFFLINE: t("Offline", "غير متصل"), NO_TRUCK: t("No truck ready", "لا شاحنة جاهزة"), UNAPPROVED: t("Licence not approved", "الرخصة غير معتمدة") };
-  const approvalText = (d: CompanyDriver) => d.approval === "PENDING" ? t("Waiting for the licence review by MOTEXA.", "بانتظار مراجعة رخصة السائق من موتكسا.") : d.approval === "REJECTED" ? `${t("Licence rejected", "تم رفض الرخصة")}${d.approvalReason ? `: ${d.approvalReason}` : ""}` : d.approval === "SUSPENDED" ? `${t("Suspended by MOTEXA", "أوقفه موتكسا")}${d.approvalReason ? `: ${d.approvalReason}` : ""}` : null;
+  const approvalText = (d: CompanyDriver) => d.approval === "PENDING" ? (d.approvalReason ? `${t("MOTEXA asked for changes", "طلبت موتكسا تعديلات")}: ${d.approvalReason}. ${t("Edit the driver's licence to resubmit.", "عدّل رخصة السائق لإعادة الإرسال.")}` : t("Waiting for the licence review by MOTEXA.", "بانتظار مراجعة رخصة السائق من موتكسا.")) : d.approval === "REJECTED" ? `${t("Licence rejected", "تم رفض الرخصة")}${d.approvalReason ? `: ${d.approvalReason}` : ""}` : d.approval === "SUSPENDED" ? `${t("Suspended by MOTEXA", "أوقفه موتكسا")}${d.approvalReason ? `: ${d.approvalReason}` : ""}` : null;
   const ownerDrives = !!list?.some((d) => d.isOwner);
 
   return (

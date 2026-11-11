@@ -54,7 +54,7 @@ export function FleetTab() {
   const chip = (s: DriverStatus): { tone: Tone; label: string } =>
     s === "FREE" ? { tone: "success", label: t("Free", "متاح") } : s === "BUSY" ? { tone: "accent", label: t("Busy", "مشغول") } : { tone: "neutral", label: t("Offline", "غير متصل") };
   const reason = (d: CompanyDriver) =>
-    d.status === "UNAPPROVED" ? (d.approval === "PENDING" ? t("Waiting for MOTEXA to review the licence.", "بانتظار مراجعة موتكسا للرخصة.") : `${d.approval === "REJECTED" ? t("Licence rejected", "تم رفض الرخصة") : t("Suspended", "موقوف")}${d.approvalReason ? `: ${d.approvalReason}` : ""}`) : d.status === "NO_TRUCK" ? t("No truck ready to work.", "لا توجد شاحنة جاهزة للعمل.") : null;
+    d.status === "UNAPPROVED" ? (d.approval === "PENDING" ? (d.approvalReason ? `${t("MOTEXA asked for changes", "طلبت موتكسا تعديلات")}: ${d.approvalReason}. ${t("Edit the driver's licence to resubmit.", "عدّل رخصة السائق لإعادة الإرسال.")}` : t("Waiting for MOTEXA to review the licence.", "بانتظار مراجعة موتكسا للرخصة.")) : `${d.approval === "REJECTED" ? t("Licence rejected", "تم رفض الرخصة") : t("Suspended", "موقوف")}${d.approvalReason ? `: ${d.approvalReason}` : ""}`) : d.status === "NO_TRUCK" ? t("No truck ready to work.", "لا توجد شاحنة جاهزة للعمل.") : null;
   const truckChip = (x: Truck): { tone: Tone; label: string } =>
     x.verification !== "APPROVED" ? { tone: "warning", label: x.verification === "PENDING" ? t("Awaiting approval", "بانتظار الاعتماد") : t("Rejected", "مرفوضة") } : x.operational === "AVAILABLE" ? chip("FREE") : x.operational === "BUSY" ? chip("BUSY") : chip("OFFLINE");
   const ownerDrives = !!drivers?.some((d) => d.isOwner);
