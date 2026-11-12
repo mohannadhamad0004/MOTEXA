@@ -14,12 +14,11 @@ export function createVehicleModelRouter(service = createVehicleModelService()) 
   };
   router.get(base, h(async uid => ({ models: await service.list(uid) })));
   router.get(base+"/:key/model",async(req,res)=>{try{const model=await service.get(res.locals.authUser.id,String(req.params.key));if(model.bytes===null){res.status(404).end();return;}res.setHeader("Cache-Control","private, no-store");res.setHeader("X-Content-Type-Options","nosniff");res.type("model/gltf-binary").send(readFileSync(publicModelPath(model.key)));}catch{res.status(404).end();}});
-  router.get(base + "/:key/revisions", h(async (uid,key) => service.revisions(uid,key)));
-  router.post(base + "/:key/restore", h(async (uid,key,body) => ({ model: await service.restore(uid,key,body) })));
+  router.get(base + "/:key/delete-impact", h(async (uid,key) => ({ impact: await service.deleteImpact(uid,key) })));
   router.get(base + "/:key", h(async (uid,key) => ({ model: await service.get(uid,key) })));
   router.patch(base + "/:key/config", h(async (uid,key,body) => ({ model: await service.configure(uid,key,body) })));
   router.post(base + "/:key/publication", h(async (uid,key,body) => ({ model: await service.publication(uid,key,body) })));
-  router.delete(base + "/:key", h((uid,key) => service.remove(uid,key)));
+  router.delete(base + "/:key", h((uid,key,body) => service.deleteModel(uid,key,body)));
   return router;
 }
 export default createVehicleModelRouter();

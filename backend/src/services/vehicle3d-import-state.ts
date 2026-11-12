@@ -1,4 +1,5 @@
-import {readManifest} from "./vehicle3d-catalog.js";
+import {readManifest,REPO_ROOT} from "./vehicle3d-catalog.js";
+import path from "node:path";
 import type {Prisma} from "../generated/prisma/client.js";
 import {parseSketchfabUrl} from "./sketchfab-client.js";
 import {existsSync} from "node:fs";
@@ -34,14 +35,12 @@ export function importShape(r:any){
    createdAt:r.createdAt,finishedAt:r.finishedAt??null};
 }
 const uidFor=(url:unknown)=>{try{return parseSketchfabUrl(url).uid;}catch{return null;}};
-/** Include legacy imports and every manifest version (including intentionally removed sources). */
+/** A Sketchfab source is a duplicate only while a model made from it exists (catalog file or a non-discarded import). */
 export async function existingSketchfab(tx:Prisma.TransactionClient,uid:string,excludeId?:string){
  const rows=await tx.vehicle3DImport.findMany({where:excludeId?{id:{not:excludeId}}:{},include:importInclude});
- const r=rows.find(r=>r.sourceUid===uid||uidFor(r.sourceUrl)===uid);
+ const r=rows.find(r=>r.importStage!=="DISCARDED"&&(r.sourceUid===uid||uidFor(r.sourceUrl)===uid));
  if(r)return {importId:r.id,generationId:r.generationId,name:`${r.generation.vehicle.make} ${r.generation.vehicle.model} ${r.generation.code}`,model3dKey:r.publishedModel3dKey,status:r.importStage??r.status};
- for(const current of Object.values(readManifest())){
-   let e:any=current;
-   while(e){if(uidFor(e.url)===uid)return {importId:null,generationId:null,name:`${e.make} ${e.model} ${e.code}`,model3dKey:e.file,status:e.finalStatus??"CATALOG"};e=e.previousCatalogMetadata;}
- }
+ for(const e of Object.values(readManifest()))
+   if(uidFor(e.url)===uid&&existsSync(path.join(REPO_ROOT,"backend/public/3d",e.file+".glb")))return {importId:null,generationId:null,name:`${e.make} ${e.model} ${e.code}`,model3dKey:e.file,status:"CATALOG"};
  return null;
 }

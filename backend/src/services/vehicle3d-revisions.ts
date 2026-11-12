@@ -9,13 +9,20 @@ import { parseCarModel } from "./vehicle3d-validation.js";
 
 export const publicModelPath = (key: string) => path.join(REPO_ROOT, "backend/public/3d", key + ".glb");
 export const assetHash = (key: string) => createHash("sha256").update(readFileSync(publicModelPath(key))).digest("hex");
+/** A 3D model either exists or is deleted: the manifest holds exactly the existing models (no older versions). */
 export function manifestVersions(): ModelMetadata[] {
-  const rows: ModelMetadata[] = [];
-  for (const value of Object.values(readManifest())) {
-    let e: ModelMetadata | undefined = value;
-    while (e) { rows.push(e); e = e.previousCatalogMetadata as ModelMetadata | undefined; }
-  }
-  return rows;
+  return Object.values(readManifest());
+}
+/** Permanently delete a car model's rows: revision, part map, zones, its accessory auto-fits and the import that produced it.
+ *  Returns the private files to delete once the transaction has committed (the public GLB is the caller's). */
+export async function purgeModel(tx: Prisma.TransactionClient, key: string): Promise<(string | null)[]> {
+  const imports = await tx.vehicle3DImport.findMany({ where: { publishedModel3dKey: key }, select: { id: true, rawModelPath: true, privateModelPath: true } });
+  await tx.accessoryAutoFit.deleteMany({ where: { model3dKey: key } });
+  await tx.accessoryFitZone.deleteMany({ where: { model3dKey: key } });
+  await tx.carPartMap.deleteMany({ where: { model3dKey: key } });
+  await tx.vehicle3DRevision.deleteMany({ where: { key } });
+  await tx.vehicle3DImport.deleteMany({ where: { id: { in: imports.map(i => i.id) } } });
+  return imports.flatMap(i => [i.rawModelPath, i.privateModelPath]);
 }
 export async function registerRevision(tx: Prisma.TransactionClient, generationId: string, entry: ModelMetadata, bytes: Buffer, origin: { importId?: string; submissionId?: string } = {}) {
   const data = { generationId, sha256: createHash("sha256").update(bytes).digest("hex"), bytes: bytes.length,

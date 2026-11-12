@@ -5,9 +5,12 @@ import { Prisma } from "../generated/prisma/client.js";
 import { catalogLock, requirePartsActor } from "./vehicle-taxonomy.js";
 import { readManifest, safeKey, type Manifest, type ModelMetadata } from "./vehicle3d-catalog.js";
 import { fail, parseCarModel } from "./vehicle3d-validation.js";
-import { assetBytes, assetHash, publicModelPath, registerExistingRevisions, effectiveVehicleModels } from "./vehicle3d-revisions.js";
+import { assetBytes, assetHash, publicModelPath, registerExistingRevisions, effectiveVehicleModels, purgeModel } from "./vehicle3d-revisions.js";
+import { removePrivate } from "./vehicle3d-private-assets.js";
 import { recoverCatalogJournal, stageCatalogMetadata } from "./vehicle3d-promotion.js";
-import { accessoryGate, modelFileSha, saveSegmentation } from "./car-part-map.js";
+import { accessoryGate, modelFileSha, saveSegmentation, partLimit, LIMIT_TYPES } from "./car-part-map.js";
+import { REPO_ROOT } from "./vehicle3d-catalog.js";
+import path from "node:path";
 import { refitPublishedAccessories } from "./accessory-autofit.js";
 
 type Tx = Prisma.TransactionClient;
@@ -42,6 +45,18 @@ export function createVehicleModelService() {
     const accessoryFitment = await tx.productAccessory3DFit.count({ where: { generationId } });
     return { currentGeneration: g.model3dKey === key ? 1 : 0, garage, legacyCars, partsFitment, accessoryFitment, autoFits, partMaps, zones, submissions, imports, requests, towHistory, serviceHistory, promotions, catalogReferences };
   };
+  /** Counts shown before a permanent delete. Shop fitment choices stay (the car still exists); only the 3D side goes. */
+  const impactOf = async (tx: Tx, r: Awaited<ReturnType<typeof load>>) => {
+    const g = r.generation, key = r.key;
+    const [garageCars, accessoryFits, shopAccessories, partMaps, zones, imports] = await Promise.all([
+      tx.customerGarageCar.count({ where: { generationId: g.id } }),
+      tx.accessoryAutoFit.count({ where: { model3dKey: key } }),
+      tx.productAccessory3DFit.count({ where: { generationId: g.id } }),
+      tx.carPartMap.count({ where: { model3dKey: key } }), tx.accessoryFitZone.count({ where: { model3dKey: key } }),
+      tx.vehicle3DImport.count({ where: { publishedModel3dKey: key } }),
+    ]);
+    return { current: g.model3dKey === key, published: g.isPublished && g.model3dKey === key, garageCars, accessoryFits, shopAccessories, partMaps, zones, imports };
+  };
   const detail = async (tx: Tx, key: string) => {
     const r = await load(tx, key), g = r.generation, metadata = r.metadata as unknown as ModelMetadata;
     const map = await tx.carPartMap.findUnique({ where: { model3dKey: key } });
@@ -57,6 +72,7 @@ export function createVehicleModelService() {
       validation: sourceImport?.validation ?? {sha256:r.sha256,bytes:r.bytes,source:"RETAINED_CATALOG"}, qualityGate: (sourceImport?.validation as { accessoryGate?: unknown } | null)?.accessoryGate ?? (map&&map.modelSha256===modelFileSha(key)?accessoryGate(map.pieces as never,map.dims as number[],map.proposal as never):null),
       partMapStatus: !map ? "MISSING" : map.modelSha256 !== modelFileSha(key) ? "STALE" : map.confirmedAt ? "CONFIRMED" : "PROPOSED",
       paintSupport: !!parseCarModel(r.viewerConfig)?.paintMaterials.length || !!parseCarModel(r.viewerConfig)?.paintNodes.length || !!parseCarModel(r.viewerConfig)?.bakedPaint,
+      limits: Object.fromEntries(LIMIT_TYPES.flatMap(t => { const why = partLimit(map, key, t); return why ? [[t, why]] : []; })),
       createdAt: r.createdAt, updatedAt: r.updatedAt, references, canDelete: Object.values(references).every(n => n === 0), importId: r.importId, submissionId: r.submissionId };
   };
   const mutate = async (uid: string, key: string, expectedRevision: unknown, action: string, work: (tx: Tx, r: Awaited<ReturnType<typeof load>>, manifest: Manifest) => Promise<void>) => {
@@ -90,32 +106,6 @@ export function createVehicleModelService() {
       return Promise.all(rows.map(r => detail(tx, r.key)));
     }),
     get: (uid: string, key: string) => run(uid, tx => detail(tx, key)),
-    /** Every retained revision of this car's generation, newest first. The current one is what customers get; the rest are restorable. */
-    revisions: (uid: string, key: string) => run(uid, async tx => {
-      const r = await load(tx, key);
-      const rows = await tx.vehicle3DRevision.findMany({ where: { generationId: r.generationId }, orderBy: { createdAt: "desc" } });
-      return { revisions: rows.map(x => { const m = x.metadata as unknown as ModelMetadata, bytes = assetBytes(x.key);
-        return { key: x.key, revision: x.revision, createdAt: x.createdAt, current: r.generation.model3dKey === x.key, bytes, sha256: x.sha256, source: x.importId ? "IMPORT" : x.submissionId ? "MESHY" : "LEGACY_CATALOG",
-          title: m.title ?? null, author: m.author ?? null, license: m.license ?? null, restorable: r.generation.model3dKey !== x.key && bytes !== null && assetHash(x.key) === x.sha256 && (x.metadata as Record<string, unknown>).geometryReviewRequired !== true }; }) };
-    }),
-    /** Make a retained revision the car's current model (confirmed in the UI). The swap is journaled like a publication; the replaced model stays in the history. */
-    restore: async (uid: string, key: string, body: { revision?: unknown }) => {
-      const out = await mutate(uid, key, body.revision, "RESTORE", async (tx, r, manifest) => {
-        const g = r.generation;
-        if (g.model3dKey === key) return fail("MODEL_CURRENT", "This version is already the current model.", 409);
-        if (!g.isActive || !g.vehicle.isActive || !g.vehicle.brand?.isActive) return fail("INACTIVE", "Activate the brand, model and generation first.", 409);
-        if (!existsSync(publicModelPath(key)) || assetHash(key) !== r.sha256) return fail("PUBLICATION_BLOCKED", "This version's file is missing or changed, so it cannot be restored.", 409);
-        const old = r.metadata as unknown as ModelMetadata;
-        if ((old as unknown as Record<string, unknown>).geometryReviewRequired === true || !parseCarModel(r.viewerConfig)) return fail("PUBLICATION_BLOCKED", "This version was never approved, so it cannot be restored.", 409);
-        const manifestKey = Object.entries(manifest).find(([, m]) => m.file === g.model3dKey)?.[0];
-        if (!manifestKey) return fail("PUBLICATION_BLOCKED", "Catalog metadata is missing.", 409);
-        manifest[manifestKey] = { ...old, inApp: true, previousCatalogMetadata: manifest[manifestKey] } as ModelMetadata;
-        await tx.vehicleGeneration.update({ where: { id: g.id }, data: { isPublished: true, model3dKey: key, modelSourceUrl: old.url || null, modelLicense: old.license } });
-        await tx.auditLog.create({ data: { actorId: uid, action: "VEHICLE3D_CATALOG_RESTORE", targetId: g.id, details: { model3dKey: key, previousModel3dKey: g.model3dKey } } });
-      });
-      void refitPublishedAccessories();
-      return out;
-    },
     configure: async (uid: string, key: string, body: { revision?: unknown; config?: unknown }) => {
       const patch = body.config;
       if (!patch || typeof patch !== "object" || Array.isArray(patch) || Object.keys(patch).some(k => !configFields.includes(k))) return fail("CONFIG_INVALID", "Unsupported viewer setting.");
@@ -155,15 +145,29 @@ export function createVehicleModelService() {
         }
       });
     },
-    remove: async (uid: string, key: string) => {
-      await run(uid, async tx => {
-        await catalogLock(tx); const r = await load(tx, key), references = await usage(tx, key, r.generationId);
-        if (Object.values(references).some(n => n > 0)) return fail("MODEL_REFERENCED", `Hard deletion refused: ${Object.entries(references).filter(([,n]) => n).map(([k,n]) => `${k} (${n})`).join(", ")}. Deactivate instead.`, 409);
-        await tx.vehicle3DRevision.delete({ where: { key } });
-        await tx.auditLog.create({ data: { actorId: uid, action: "VEHICLE3D_UNUSED_ASSET_DELETED", targetId: key } });
-      });
-      if (existsSync(publicModelPath(key))) unlinkSync(publicModelPath(key));
-      return { success: true };
+    /** What deleting this model affects (shown before the admin confirms). */
+    deleteImpact: (uid: string, key: string) => run(uid, async tx => impactOf(tx, await load(tx, key))),
+    /** Permanently delete a car's 3D model: GLB file, revision, part map, zones, its accessory auto-fits, its import; audited. Works even when in use. */
+    deleteModel: async (uid: string, key: string, body: { confirm?: unknown }) => {
+      if (body.confirm !== true) return fail("CONFIRM_REQUIRED", "Confirm the permanent deletion.", 400);
+      let privateFiles: (string | null)[] = [];
+      try {
+        const impact = await run(uid, async tx => {
+          await catalogLock(tx); await recoverCatalogJournal(tx);
+          const r = await load(tx, key), impact = await impactOf(tx, r), g = r.generation;
+          if (g.model3dKey === key) await tx.vehicleGeneration.update({ where: { id: g.id }, data: { model3dKey: null, isPublished: false, modelSourceUrl: null, modelLicense: null } });
+          privateFiles = await purgeModel(tx, key);
+          const manifest = readManifest(); for (const [k, e] of Object.entries(manifest)) if (e.file === key) delete manifest[k];
+          const auditId = randomUUID();
+          await tx.auditLog.create({ data: { id: auditId, actorId: uid, action: "VEHICLE3D_MODEL_DELETED", targetId: key, details: { generationId: g.id, car: `${g.vehicle.make} ${g.vehicle.model} ${g.code}`, ...impact } as Prisma.InputJsonValue } });
+          await stageCatalogMetadata(tx, manifest, auditId);
+          return impact;
+        });
+        if (existsSync(publicModelPath(key))) unlinkSync(publicModelPath(key));
+        for (const k of privateFiles) removePrivate(k);
+        void refitPublishedAccessories();
+        return { success: true, impact };
+      } finally { await prisma.$transaction(async tx => { await catalogLock(tx); await recoverCatalogJournal(tx); }); }
     },
   };
 }

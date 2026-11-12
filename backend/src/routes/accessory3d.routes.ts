@@ -3,6 +3,7 @@
 //   Admin     /admin/parts/accessory-3d[...], /admin/parts/accessory-zones[...], /admin/parts/part-maps[...], /admin/parts/auto-fits[...], /admin/parts/shops/:id/accessory-3d-credits
 //   Customer  /catalog/products/:productId/accessory-3d[...], /catalog/accessory-3d/photos/:photoId
 import express, { Router, type Request, type Response } from "express";
+import { unsupportedCars } from "../services/car-part-map.js";
 import { requireAuth, requireCustomer, requirePartsAdmin, requirePartsProvider } from "../middleware/auth.middleware.js";
 import { requireApprovedProvider } from "../services/provider-onboarding.js";
 import { createAccessory3DService, parseKitPart } from "../services/accessory3d.js";
@@ -80,6 +81,7 @@ export function createAccessory3DRouter(service = createAccessory3DService(), pa
   router.get(c, guards.auth, handle(async (req, res) => { res.setHeader("Cache-Control", "no-store"); res.json({ accessory: await service.forProduct(p(req), typeof req.query.generationId === "string" ? req.query.generationId : null) }); }));
   router.get(c + "/adjust", ...customer, handle(async (req, res, uid) => res.json({ adj: await service.getAdjust(uid, p(req), part(req)) })));
   router.put(c + "/adjust", ...customer, json, handle(async () => {throw new Vehicle3DError(403,"FIT_ADMIN_ONLY","Only Parts Admin can change accessory fits.");}));
+  router.get("/catalog/accessory-3d/support", guards.auth, handle(async (req, res) => res.json({ unsupported: await unsupportedCars(String(req.query.type ?? "")) })));
   router.get("/catalog/accessory-3d/photos/:photoId", guards.auth, handle(async (req, res) => {
     res.setHeader("Cache-Control", "private, max-age=3600"); res.setHeader("X-Content-Type-Options", "nosniff"); res.type("image/jpeg").send(await service.installedPhoto(p(req, "photoId")));
   }));

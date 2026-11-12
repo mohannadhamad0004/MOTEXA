@@ -28,14 +28,14 @@ export function InspectionCard({inspection:s}:{inspection:SketchfabInspection}){
   <WebLink url={s.authorUrl} label={t("Creator profile","صفحة المنشئ")}/>
   <WebLink url={s.licenseUrl} label={t("Read license","قراءة الترخيص")}/>
   {!s.allowed?<Note tone="danger">{t(...(IMPORT_ERROR_LABELS[s.refusalCode??"LICENSE_NOT_ALLOWED"]??IMPORT_ERROR_LABELS.LICENSE_NOT_ALLOWED))}</Note>:null}
-  {s.duplicate?<><Note tone="warning">{`${t(...IMPORT_ERROR_LABELS.DUPLICATE_IMPORT)} ${s.duplicate.name}`}</Note>{s.duplicate.importId?<GButton variant="secondary" label={t("Open existing import","فتح الاستيراد الموجود")} onPress={()=>router.push(`/dept/vehicles/imports/${s.duplicate!.importId}` as Href)}/>:null}</>:null}
+  {s.duplicate?<><Note tone="warning">{`${t(...IMPORT_ERROR_LABELS.DUPLICATE_IMPORT)} ${s.duplicate.name}`}</Note>{s.duplicate.importId?<GButton variant="secondary" label={t("Open existing import","فتح الاستيراد الموجود")} onPress={()=>router.push(`/dept/vehicles/imports/${s.duplicate!.importId}` as Href)}/>:s.duplicate.model3dKey?<GButton variant="secondary" label={t("Open this 3D model","فتح هذا النموذج")} onPress={()=>router.push(`/dept/3d/vehicles/${s.duplicate!.model3dKey}` as Href)}/>:null}</>:null}
   {s.allowed&&!s.duplicate?<Note>{t("License accepted. No model has been downloaded yet.","الترخيص مقبول. لم يُنزّل النموذج بعد.")}</Note>:null}
  </Card>;
 }
 export function NewSketchfabImport(){
- const params=useLocalSearchParams<{generationId?:string}>();const assigned=useRef(false);
+ const params=useLocalSearchParams<{generationId?:string;url?:string}>();const assigned=useRef(false);
  const {t,isArabic}=useL();const {row}=useGarageTheme();const taxonomy=useLoad(vehicleCatalog.list,[]);
- const [url,setUrl]=useState(""),[inspection,setInspection]=useState<SketchfabInspection|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null);
+ const [url,setUrl]=useState(params.url??""),[inspection,setInspection]=useState<SketchfabInspection|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null);
  const [brandId,setBrand]=useState(""),[modelId,setModel]=useState(""),[generationId,setGeneration]=useState("");
  const [createKind,setCreateKind]=useState<string|null>(null),[name,setName]=useState(""),[arabicName,setArabicName]=useState(""),[from,setFrom]=useState(""),[to,setTo]=useState("");
  useEffect(()=>{if(assigned.current||!params.generationId||!taxonomy.data)return;const v=taxonomy.data.vehicles.find(v=>v.generations.some(g=>g.id===params.generationId)),g=v?.generations.find(g=>g.id===params.generationId);if(v&&g){setBrand(v.brandId??"");setModel(v.id);setGeneration(g.id);setFrom(String(g.yearFrom));setTo(String(g.yearTo));assigned.current=true;}},[params.generationId,taxonomy.data]);
@@ -114,7 +114,7 @@ export function SketchfabImportReview(){
       {r.validation?.bytes?<GText style={align}>{`${t("Prepared GLB","ملف GLB المجهّز")}: ${(Number(r.validation.bytes)/1048576).toFixed(2)} MiB`}</GText>:null}
       {s.optimization?.warnings.map(w=><Note key={w}>{t(w,w.includes("Paint")?"يتطلب تحديد أسطح الطلاء مراجعة؛ التلوين التلقائي معطّل.":w.includes("Front")?"يتطلب اتجاه المقدمة تأكيدًا بصريًا.":"لم تُحذف المقصورة لأن أسماء العناصر غير واضحة.")}</Note>)}
     </Card>:null}
-    {r.status==="READY"||r.status==="PUBLISHED"||r.status==="FAILED"&&r.hasRawModel?<><ImportReview key={`${r.id}-${r.status}-${r.validation?.validatedAt}-${r.existingModel3dKey}`} r={r} work={work} busy={busy}/>
+    {r.status==="READY"||r.status==="PUBLISHED"||r.status==="FAILED"&&r.hasRawModel||!r.provenance&&r.status!=="DISCARDED"?<><ImportReview key={`${r.id}-${r.status}-${r.validation?.validatedAt}-${r.existingModel3dKey}`} r={r} work={work} busy={busy}/>
       <Card><GText style={align}>{t("Part-map proposal","اقتراح خريطة القطع")}</GText><GText style={align}>{r.partMapStatus==="CONFIRMED"?t("Confirmed for this exact GLB revision.","مؤكدة لهذه النسخة المحددة من GLB."):r.validation?.partMap?t("Saved for this exact GLB revision. Unresolved parts remain available for admin review.","حُفظ الاقتراح لهذه النسخة من GLB. تبقى القطع غير المحددة متاحة لمراجعة الإدارة."):t("No automatic proposal available.","لا يوجد اقتراح تلقائي.")}</GText>
        {r.status==="READY"?<GButton label={t("Review part map privately","مراجعة خريطة القطع بشكل خاص")} onPress={()=>router.push(`/dept/accessory-zones?key=${encodeURIComponent(`import-${r.id}`)}` as Href)}/>:null}
        {r.status==="PUBLISHED"?<><Note>{t("Published to the selected managed generation. Matching Garage cars receive it through the runtime catalog.","نُشر النموذج للجيل المحدد في الكتالوج. تستلمه سيارات الكراج المطابقة عبر كتالوج العرض.")}</Note><GText soft style={align}>{r.publishedModel3dKey}</GText><GButton label={t("Confirm part map","تأكيد خريطة القطع")} onPress={()=>router.push(`/dept/accessory-zones?model3dKey=${encodeURIComponent(r.publishedModel3dKey??"")}` as Href)}/></>:null}

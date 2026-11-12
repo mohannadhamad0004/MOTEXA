@@ -23,6 +23,7 @@ import { ThreeDRequests, useThreeDCount } from "../department/ThreeDRequests";
 import {threeDError} from "../vehicleCatalog/lifecycleText";
 import {accessoryProcessingLabel} from "./processing";
 import {AccessoryFinalReview} from "./FinalReview";
+import { SupportWarning } from "./support";
 
 const tone = (s: AccessoryStatus) => s === "PUBLISHED" ? "success" : s === "REJECTED" ? "danger" : s === "DRAFT" ? "neutral" : s === "READY_FOR_FINAL_REVIEW" ? "accent" : "warning";
 const VIEW_LABELS: Record<string, [string, string]> = { front: ["Front", "الأمام"], "front-three-quarter": ["Front 3/4", "أمام ٣/٤"], "left-side": ["Side", "الجانب"],
@@ -265,6 +266,7 @@ export function ShopAccessory3DScreen() {
             : t("Choose the exact generations, or tick Universal on the product to sell these rims Universal by size.", "اختر الأجيال بدقة، أو فعّل «عام» في المنتج لبيع هذه الجنوط عامة حسب المقاس.")}</Note> : null}
           {bySize ? null : <>
           <View style={[row, { flexWrap: "wrap", gap: 8 }]}>{form.fits.map(id => <Chip key={id} label={`${name(id)}  ✕`} on onPress={() => editable && setForm({ ...form, fits: form.fits.filter(x => x !== id), installedGen: form.installedGen === id ? null : form.installedGen })} />)}</View>
+          <SupportWarning type={form.type} generationIds={form.fits} name={name} />
           {editable ? <View style={{ marginTop: 10, gap: 8 }}>
             <Field label={t("Search a car generation", "ابحث عن جيل السيارة")} value={search} onChange={setSearch} placeholder={t("e.g. E36, Corolla", "مثال: E36، كورولا")} />
             {vehicles.error ? <Note tone="danger">{vehicles.error}</Note> : null}
@@ -393,6 +395,7 @@ export function AdminAccessory3DDetail() {
         {Object.entries(a.size).filter(([, v]) => v !== null).map(([k, v]) => <GText key={k} soft style={align}>{`${t(...sizeLabel[k]!)}: ${v}`}</GText>)}
         <GText style={[gType.label, align, { marginTop: 10 }]}>{t("Fits", "تناسب")}</GText>
         {a.fits.map(f => <GText key={f.id} soft style={align}>{`${isArabic ? f.nameAr : f.name} (${f.years[0]}–${f.years[1]})${f.id === a.installedGenerationId ? ` · ${t("in the installed photos", "في صور التركيب")}` : ""}${f.has3d ? " · 3D" : ""}`}</GText>)}
+        <SupportWarning type={a.accessoryType} generationIds={a.fits.map(f => f.id)} name={id => { const f = a.fits.find(x => x.id === id); return f ? (isArabic ? f.nameAr : f.name) : id; }} />
       </Card>
       <Section title={t("Loose part photos (sent to the 3D provider)", "صور القطعة (تُرسل لمزود النموذج)")}><PhotoStrip photos={a.partPhotos} load={load} /></Section>
       <Section title={`${t("Installed photos", "صور التركيب")}${a.installed360 ? " · 360°" : ""}`}><PhotoStrip photos={a.installedPhotos} load={load} /></Section>
