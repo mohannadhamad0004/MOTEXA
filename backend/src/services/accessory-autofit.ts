@@ -199,7 +199,7 @@ export function createAutoFitService(options:{compute?:typeof computeFit}={}) {
   return {
     /** Published and private review candidates on this car, with stored fits. Explicit rerun owns fit computation. */
     list: async (key: string) => {
-      const rows = await prisma.productAccessory3D.findMany({ where: { ...(!testProviderRuntime()?{generationMode:"meshy",provider:"MESHY"}:{}), status: { in: ["PUBLISHED", "READY_FOR_FINAL_REVIEW"] }, OR: [{ fits: { some: { generation: { model3dKey: key, isPublished: true } } } }, { accessoryType: "RIMS", product: { isUniversal: true } }] },
+      const rows = await prisma.productAccessory3D.findMany({ where: { ...(!testProviderRuntime()?{NOT:[{generationMode:"mock"},{provider:"MOCK"}]}:{}), status: { in: ["PUBLISHED", "READY_FOR_FINAL_REVIEW"] }, OR: [{ fits: { some: { generation: { model3dKey: key, isPublished: true } } } }, { accessoryType: "RIMS", product: { isUniversal: true } }] },
         include: { product: { select: { name: true, isUniversal: true } }, fits: { where: { generation: { model3dKey: key } }, include: { generation: { include: { vehicle: true } } } }, autoFits: true } });
       const out = [];
       for (const a of rows) for (const f of await fittedOn(a, key)) {

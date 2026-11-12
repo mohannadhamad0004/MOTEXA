@@ -32,11 +32,13 @@ export type Car3DProps = {
   onZone?: (info: { hidden: number; how: string | null; note: string | null }) => void;
   /** Parts Admin part-map editor: the car in pieces coloured by label (the chosen label bright); a tap reports the piece id */
   /** boxPts set = box mode: a tap reports a point on the car (onBoxPoint); with 4 points the pieces inside are reported (onBoxIds) */
-  partEdit?: { label: PartLabel; labels: PartMap; boxPts?: number[][] | null } | null;
+  partEdit?: { label: PartLabel; labels: PartMap; boxPts?: number[][] | null; boxTurn?: boolean } | null;
   onPick?: (pieceId: string) => void;
   onPieces?: (count: number) => void;
   onBoxPoint?: (p: number[]) => void;
   onBoxIds?: (ids: string[]) => void;
+  /** a Box-mode tap that did not land on the car */
+  onBoxMiss?: () => void;
   /** drag / pinch / double-tap; off = a preview that only auto-rotates */
   interactive?: boolean;
   bg: string;
@@ -56,8 +58,8 @@ export function useCar3D(p: Car3DProps, send: (m: object) => void) {
   useEffect(() => { onFitError.current = p.onFitError; }, [p.onFitError]);
   const onZone = useRef(p.onZone);
   useEffect(() => { onZone.current = p.onZone; }, [p.onZone]);
-  const onPick = useRef(p.onPick), onPieces = useRef(p.onPieces), onBoxPoint = useRef(p.onBoxPoint), onBoxIds = useRef(p.onBoxIds);
-  useEffect(() => { onPick.current = p.onPick; onPieces.current = p.onPieces; onBoxPoint.current = p.onBoxPoint; onBoxIds.current = p.onBoxIds; }, [p.onPick, p.onPieces, p.onBoxPoint, p.onBoxIds]);
+  const onPick = useRef(p.onPick), onPieces = useRef(p.onPieces), onBoxPoint = useRef(p.onBoxPoint), onBoxIds = useRef(p.onBoxIds), onBoxMiss = useRef(p.onBoxMiss);
+  useEffect(() => { onPick.current = p.onPick; onPieces.current = p.onPieces; onBoxPoint.current = p.onBoxPoint; onBoxIds.current = p.onBoxIds; onBoxMiss.current = p.onBoxMiss; }, [p.onPick, p.onPieces, p.onBoxPoint, p.onBoxIds, p.onBoxMiss]);
   const state = useMemo(
     () => ({
       file: modelFile(m),
@@ -101,6 +103,7 @@ export function useCar3D(p: Car3DProps, send: (m: object) => void) {
     else if (x.type === "pick" && typeof x.id === "string" && /^m\d{1,5}c\d{1,6}$/.test(x.id)) onPick.current?.(x.id);
     else if (x.type === "pieces" && typeof x.count === "number") onPieces.current?.(x.count);
     else if (x.type === "boxPt" && Array.isArray(x.p) && x.p.length === 3 && x.p.every(n => typeof n === "number" && Number.isFinite(n))) onBoxPoint.current?.(x.p as number[]);
+    else if (x.type === "boxMiss") onBoxMiss.current?.();
     else if (x.type === "boxIds" && Array.isArray(x.ids) && x.ids.length <= 20000) onBoxIds.current?.(x.ids.filter((id): id is string => typeof id === "string" && /^m\d{1,5}c\d{1,6}$/.test(id)));
     else if (x.type === "fitError") onFitError.current?.(typeof x.message === "string" ? x.message.slice(0, 300) : "fit", typeof x.kitType === "string" ? x.kitType as AccessoryType : null);
     else if (x.type === "error") setError(typeof x.message === "string" ? x.message : "error");

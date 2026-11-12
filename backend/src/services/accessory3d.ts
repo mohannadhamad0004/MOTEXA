@@ -106,7 +106,7 @@ async function accessoryReview(a: Full, tx: Tx) {
   const bytes = a.privateModelPath && existsSync(privatePath(a.privateModelPath)) ? readFileSync(privatePath(a.privateModelPath)) : null;
   const validation = a.validation as {valid?: boolean; sha256?: string; processing?: {qualityGate?: string; optimizedBytes?: number}} | null;
   const processing = validation?.processing ?? (a.sourceMetadata as {processing?: {qualityGate?: string; optimizedBytes?: number}} | null)?.processing;
-  const real = !isMockAccessory(a) && a.generationMode === "meshy" && a.provider === "MESHY" && a.providerState === "SUCCEEDED" && !!a.providerTaskId;
+  const real = isRealSource(a);
   const validated = !!bytes && validation?.valid === true && validation.sha256 === digest(bytes);
   const validationReason = validated ? null : !bytes ? "The generated GLB file is missing." : validation?.valid === true ? "Validation is stale: the current GLB no longer matches its validated hash." : a.failureReason || "Model validation has not passed for the current GLB.";
   const optimized = !!bytes && processing?.qualityGate === "PASS" && processing.optimizedBytes === bytes.length;
@@ -127,7 +127,7 @@ async function accessoryReview(a: Full, tx: Tx) {
   const blockers: {code: string; message: string; generationId?: string}[] = [];
   const block = (code: string, message: string, generationId?: string)=>blockers.push({code,message,...(generationId?{generationId}:{})});
   if (a.status !== "READY_FOR_FINAL_REVIEW") block("REVIEW_CONFLICT","A private generated candidate awaiting final review is required.");
-  if (!real) block("MOCK_NOT_PUBLISHABLE","A real successful Meshy candidate is required.");
+  if (!real) block("MOCK_NOT_PUBLISHABLE","A real candidate is required: a successful Meshy generation or a manually imported model.");
   if (!bytes) block("MODEL_REQUIRED","The generated GLB file is missing.");
   if (!validated) block("VALIDATION_REJECTED",validationReason!);
   if (!optimized) block("OPTIMIZATION_REQUIRED","Optimization has not completed for the current GLB. Retry processing the same task.");
@@ -143,7 +143,39 @@ async function accessoryReview(a: Full, tx: Tx) {
   const published = a.status === "PUBLISHED" && !a.deactivatedAt && !!a.publishedFile && existsSync(path.join(PUBLIC_ACCESSORY_DIR,a.publishedFile+".glb"));
   return {model: {generated: real, exists: !!bytes, optimized, validation: validated ? "PASSED" : a.validation || a.generationErrorCode ? "FAILED" : "NOT_RUN", reason: validationReason},
     targets, publication: {state: published ? "PUBLISHED" : a.deactivatedAt ? "UNPUBLISHED" : blockers.length ? "PRIVATE_CANDIDATE" : "READY_FOR_FINAL_REVIEW", file: published ? `accessories/${a.publishedFile}.glb` : null, canPublish: !blockers.length, blockers},
-    canRetryProcessing: real && ["APPROVED_FOR_GENERATION","READY_FOR_FINAL_REVIEW"].includes(a.status) && (!validated || !optimized)};
+    canRetryProcessing: real && a.provider !== "MANUAL" && ["APPROVED_FOR_GENERATION","READY_FOR_FINAL_REVIEW"].includes(a.status) && (!validated || !optimized),
+    canValidateManual: a.provider === "MANUAL" && a.generationMode === "manual" && !!bytes && (!validated || !optimized)};
+}
+/** A manually imported GLB (provider MANUAL) gets the same local optimisation + validation as a Meshy result (normalizeAccessory). The
+ *  imported file is kept as the raw source and every run starts from it; the optimised file becomes the model and, when published, the
+ *  public file (content-addressed). The replaced optimised / public file is deleted (no kept old versions). Fits are recomputed. */
+export async function prepareManualAccessory(id: string, uid: string | null) {
+  const a = await prisma.productAccessory3D.findUnique({ where: { id } });
+  if (!a) return fail("NOT_FOUND", "Accessory not found.", 404);
+  if (a.provider !== "MANUAL" || a.generationMode !== "manual") return fail("NOT_MANUAL", "Only a manually imported model is validated here; a generated model uses Retry processing.", 409);
+  const source = [a.rawModelPath, a.privateModelPath].find((p): p is string => !!p && existsSync(privatePath(p)));
+  if (!source) return fail("MODEL_REQUIRED", "The imported model file is missing.", 409);
+  const normalized = await normalizeAccessory(readFileSync(privatePath(source))); // throws Vehicle3DError with the reason (size, geometry)
+  const prepared = storePrivate(normalized.bytes, "glb");
+  const file = a.publishedFile ? `acc-${normalized.report.sha256.slice(0, 16)}` : null;
+  try {
+    if (file) { mkdirSync(PUBLIC_ACCESSORY_DIR, { recursive: true }); const target = path.join(PUBLIC_ACCESSORY_DIR, `${file}.glb`); if (!existsSync(target)) copyFileSync(privatePath(prepared), target); }
+    await prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT "id" FROM "ProductAccessory3D" WHERE "id"=${id} FOR UPDATE`;
+      const now = await tx.productAccessory3D.findUnique({ where: { id } });
+      if (!now || now.privateModelPath !== a.privateModelPath || now.rawModelPath !== a.rawModelPath) return fail("REVIEW_CONFLICT", "The model changed during validation. Reload and run it again.", 409);
+      if (file && await tx.productAccessory3D.findFirst({ where: { publishedFile: file, id: { not: id } } })) return fail("DUPLICATE_PROMOTION", "This exact model is already published for another product.", 409);
+      await tx.productAccessory3D.update({ where: { id }, data: { rawModelPath: source, privateModelPath: prepared, publishedFile: file,
+        validation: { ...normalized.report, validatedAt: new Date().toISOString() } as Prisma.InputJsonValue,
+        sourceMetadata: { ...(a.sourceMetadata as object ?? {}), processing: normalized.report.processing } as Prisma.InputJsonValue, generationErrorCode: null, failureReason: null } });
+      await audit(tx, uid, "MANUAL_VALIDATED", id, { bytes: normalized.report.bytes, rawBytes: normalized.report.processing.rawBytes, file });
+    });
+  } catch (e) { removePrivate(prepared); throw e; }
+  if (a.privateModelPath && a.privateModelPath !== source && a.privateModelPath !== prepared) removePrivate(a.privateModelPath); // the old optimised model
+  if (a.publishedFile && a.publishedFile !== file && !await prisma.productAccessory3D.findFirst({ where: { publishedFile: a.publishedFile } }))
+    rmSync(path.join(PUBLIC_ACCESSORY_DIR, `${a.publishedFile}.glb`), { force: true });
+  void autoFitAccessory(id);
+  return { bytes: normalized.report.bytes, rawBytes: normalized.report.processing.rawBytes, file };
 }
 export function accessoryShape(a: Full) {
   const photos = (kind: string) => a.photos.filter(p => p.kind === kind).map(p => ({ id: p.id }));
@@ -235,6 +267,9 @@ export async function renderPreview(a: Full, generationId: string, tx: Tx | type
 }
 const previewKeys = (p: unknown) => Object.values(((p ?? {}) as { views?: Record<string, string> }).views ?? {});
 
+/** A real model source: a successful Meshy generation, or a manually imported GLB (provider MANUAL, no provider task). Never a mock. */
+export const isRealSource = (a: Pick<ProductAccessory3D, "generationMode" | "provider" | "sourceMetadata" | "providerState" | "providerTaskId">) =>
+  !isMockAccessory(a) && ((a.generationMode === "meshy" && a.provider === "MESHY" && a.providerState === "SUCCEEDED" && !!a.providerTaskId) || (a.generationMode === "manual" && a.provider === "MANUAL"));
 export const isMockAccessory = (a: Pick<ProductAccessory3D, "generationMode" | "provider" | "sourceMetadata">) =>
   a.generationMode === "mock" || a.provider === "MOCK" || (a.sourceMetadata as { mock?: boolean } | null)?.mock === true || (a.sourceMetadata as { generatedBy?: string } | null)?.generatedBy === "MOCK";
 /** Preserve the old files and task history, but remove a test result from the active development candidate. */
@@ -519,7 +554,7 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
     publish: async (uid: string, id: string, input: { visuallyVerified?: unknown; modelRevision?: unknown; notes?: unknown }) => run(async tx => {
       const a = await admin(tx, id, true);
       if (a.status !== "READY_FOR_FINAL_REVIEW" || !a.privateModelPath) return fail("REVIEW_CONFLICT", "Only a generated accessory awaiting final review can be published.", 409);
-      if (a.generationMode !== "meshy" || a.provider !== "MESHY" || a.providerState !== "SUCCEEDED" || !a.providerTaskId) return fail("MOCK_NOT_PUBLISHABLE", "Mock results can never be published. Run a real generation.", 409);
+      if (!isRealSource(a)) return fail("MOCK_NOT_PUBLISHABLE", "Mock results can never be published. Run a real generation or import a real model.", 409);
       if (!existsSync(privatePath(a.privateModelPath))) return fail("MODEL_REQUIRED", "The generated model file is missing.", 409);
       const validation = a.validation as { valid?: boolean; sha256?: string } | null;
       if (validation?.valid !== true || validation.sha256 !== digest(readFileSync(privatePath(a.privateModelPath)))) return fail("VALIDATION_REJECTED", "Validate the current generated model before publishing.", 409);

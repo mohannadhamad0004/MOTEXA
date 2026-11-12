@@ -9,7 +9,7 @@ import { ROOT, loadTS } from '../scripts/vehicle-audit-lib.mjs';
 
 const { CAR_MODELS } = loadTS(resolve(ROOT, 'mobile/src/features/car3d/models.ts'));
 const TMP = resolve(ROOT, 'backend/.private/fit-qa-test'), LIP = resolve(ROOT, '3d-source/qa-standins/front-lip.glb');
-const BUMPER = resolve(ROOT, 'backend/public/3d/accessories/acc-bf0a205cb346f907.glb'), RIM = resolve(ROOT, 'backend/public/3d/accessories/acc-512a47b76cd1b556.glb');
+const BUMPER = resolve(ROOT, '3d-source/accessory-photos/test/free_bmw_e36_m3_front_bumper.glb'), RIM = resolve(ROOT, '3d-source/rims/bbs-rs16/rim.glb');
 const skip = [LIP, BUMPER, RIM, resolve(ROOT, '.private/three-r160/package')].some(f => !existsSync(f)) ? 'stand-ins, demo parts or local Three.js missing' : false;
 const E36_MAP = resolve(ROOT, 'docs/3d/rims-general/bmw-3-series-e36/config.json'); // the E36 with its confirmed part map (bumpers need it)
 test.after(() => rmSync(TMP, { recursive: true, force: true }));
@@ -35,21 +35,18 @@ test('an admin correction is checked too: the lip pushed 50 mm back into the car
 });
 
 const E36 = () => existsSync(E36_MAP) ? JSON.parse(readJson(E36_MAP)) : null;
-test('raw E36 bumper fixture is refused at the seam gate before clearance QA', { skip }, () => {
+test('E36 bumper: the bonnet-line seam (above 10 mm) is inside its 25 mm limit, so the seam gate no longer refuses it', { skip }, () => {
   const r = run('bumper-raw', 'bmw-3-series-e36', BUMPER, { type: 'FRONT_BUMPER', size: { qaRaw: true } }, E36());
-  assert.match(r.fit.refused ?? '', /does not fit this car cleanly \(.*gap/);
+  assert.doesNotMatch(r.fit.refused ?? '', /does not fit this car cleanly \(.*gap/);
   assert.ok(Object.values(r.fit.gapsMm).every(g=>Number.isFinite(g.p90)&&Number.isFinite(g.max)));
-  assert.ok(Object.values(r.fit.gapsMm).some(g=>g.n>=5&&g.p90>10));
-  assert.equal(r.autofit, null, 'no fit to store or show');
+  const line = r.fit.gapsMm.bonnetBootLine; assert.ok(line && line.p90 > 10 && line.p90 <= 25, JSON.stringify(r.fit.gapsMm));
 });
 
-test('corrected E36 bumper fixture still fails finite seam measurements; no fit is stored for replay', { skip }, () => {
+test('E36 bumper with the covered stock pieces hidden: shown (FIT-QA GOOD) and stored for replay', { skip }, () => {
   const r = run('bumper', 'bmw-3-series-e36', BUMPER, { type: 'FRONT_BUMPER' }, E36());
-  assert.match(r.fit.refused??'',/does not fit this car cleanly \(.*gap/);
-  assert.ok(Object.values(r.fit.gapsMm).every(g=>Number.isFinite(g.p90)&&Number.isFinite(g.max)));
-  assert.ok(Object.values(r.fit.gapsMm).some(g=>g.n>=5&&g.p90>10));
+  assert.equal(r.fit.refused, undefined, r.fit.refused); assert.equal(r.fit.qa.ok, true, JSON.stringify(r.fit.qa));
   assert.ok(r.fit.hidesWithStock.includes('E36_coupe_washers_BMWE36_black_0'), JSON.stringify(r.fit.hidesWithStock));
-  assert.equal(r.autofit,null,'Refused geometry is never stored or offered as a replayable fit.');
+  assert.ok(r.autofit, 'a fit to store and replay');
 });
 
 test('rims: measured (never moved by the QA), with a soft ring at each rim lip and an arch shadow per wheel', { skip }, () => {
