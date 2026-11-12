@@ -45,16 +45,7 @@ export function catalogFiles(manifest: Manifest): Map<string, string> {
   const cell = (s: string) => s.replace(/[|\r\n<>]/g, " ").replace(/\[/g, "(").replace(/\]/g, ")");
   const link = (s: string) => /^https:\/\/[^\s()]+$/.test(s) ? s : "";
   const creditEntries: ModelMetadata[] = [];
-  for (const entry of list) {
-    creditEntries.push(entry);
-    // Immutable prior versions remain downloadable after explicit replacement; retain their attribution too.
-    let previous = entry.previousCatalogMetadata as ModelMetadata | undefined;
-    while (previous) {
-      if (previous.inApp !== false && safeKey(previous.file) && existsSync(path.join(REPO_ROOT,"backend/public/3d",`${previous.file}.glb`)))
-        creditEntries.push({ ...previous, title: `${previous.title} (previous approved version)` });
-      previous = previous.previousCatalogMetadata as ModelMetadata | undefined;
-    }
-  }
+  for (const entry of list) creditEntries.push(entry);
   const rows = creditEntries.map(e => {
     const licenseUrl=typeof e.licenseUrl==="string"&&/^https?:\/\/creativecommons\.org\/(licenses|publicdomain)\/[a-z0-9/.-]+$/.test(e.licenseUrl)?e.licenseUrl:null;
     const author=e.sourceUid&&e.authorUrl&&link(e.authorUrl)?`[${cell(e.author)}](${link(e.authorUrl)})`:cell(e.author);

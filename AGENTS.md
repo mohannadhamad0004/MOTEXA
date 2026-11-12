@@ -34,6 +34,14 @@ Currency: ILS, shown as "₪ 120.00". Languages: English + Arabic (full RTL). Ci
 8. Proposal first for anything non-trivial: read, propose (files, plan), STOP and wait for "approved".
 9. Finish with: mobile `npx tsc --noEmit` = 0, backend `npx tsc --noEmit` = 0, `npx prisma validate` when schema changed, plus `git status --short`.
 
+## 4a. 3D data rules
+- A 3D model either EXISTS (published, or hidden by the Parts Admin while it is being fixed) or is DELETED. There is no "removed", "archived", "retired" or kept-old-version state anywhere: not in `docs/3d/models.json`, not in the DB, not in files, not in the UI.
+- The Parts Admin is authorised to add, edit, replace and delete 3D models.
+- Delete is permanent: the GLB file and its rows (revision, part map, zones, accessory auto-fits for that car, the import that produced it) go, even when in use. The app first shows what is affected, requires confirmation and writes an audit row (`VEHICLE3D_MODEL_DELETED`).
+- Replace: customers keep the current model until the admin approves the new one; on approval the old model's file and rows are deleted (no revision history, no restore).
+- Hide/Show stays: hidden = the model exists but customers don't get it.
+- The Sketchfab duplicate check only looks at models and imports that exist.
+
 ## 5. Running locally (Windows, PowerShell)
 - Backend: `cd backend; npm run dev` → health `http://<LAN-IP>:5000/api/health`
 - Mobile: `cd mobile; npx expo start -c --offline` → scan with Expo Go. `mobile/.env`: `EXPO_PUBLIC_API_URL=http://<LAN-IP>:5000/api` (the laptop IP changes; check `ipconfig`).

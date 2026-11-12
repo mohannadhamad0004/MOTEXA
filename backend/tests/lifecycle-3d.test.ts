@@ -43,6 +43,7 @@ test("A/B/C/E/F: authoritative 3D lifecycle, real fitting, publication, manageme
  const e36Before={model3dKey:e36.model3dKey,isPublished:e36.isPublished,modelSourceUrl:e36.modelSourceUrl,modelLicense:e36.modelLicense};
  const revisionBefore=await prisma.vehicle3DRevision.findUniqueOrThrow({where:{key:e36.model3dKey!}});
  const mapBefore=await prisma.carPartMap.findUniqueOrThrow({where:{model3dKey:e36.model3dKey!}});
+ const e36Glb=readFileSync(publicModelPath(e36.model3dKey!));
  const dir=path.join(REPO_ROOT,".private/3d-lifecycle",`fixture-${randomUUID()}`);mkdirSync(dir,{recursive:true});
  let productId="",accessoryId="",knownGenerationId="",createdVehicleId="",createdBrandId="";
  let target=e36;
@@ -158,22 +159,25 @@ test("A/B/C/E/F: authoritative 3D lifecycle, real fitting, publication, manageme
    const hash=assetHash(key),m=await models.get(admin,key),edited=await models.configure(admin,key,{revision:m.revision,config:{paintNodes:m.viewerConfig&&[]}});assert.equal(edited.revision,m.revision+1);assert.equal(assetHash(key),hash);
    await assert.rejects(models.configure(admin,key,{revision:m.revision,config:{lengthM:4.5}}),{code:"CATALOG_REVISION_STALE"});
    const off=await models.publication(admin,key,{revision:edited.revision,published:false});assert.equal(await isPublic3DAsset(key+".glb"),false);assert.ok(!(await publishedVehicleModels()).some(m=>m.key===key));
-   await models.publication(admin,key,{revision:off.revision,published:true});assert.equal(await isPublic3DAsset(key+".glb"),true);await assert.rejects(models.remove(admin,key),{code:"MODEL_REFERENCED"});
+   await models.publication(admin,key,{revision:off.revision,published:true});assert.equal(await isPublic3DAsset(key+".glb"),true);const impact=await models.deleteImpact(admin,key);assert.equal(impact.current,true);assert.ok(impact.partMaps>=1);await assert.rejects(models.deleteModel(admin,key,{}),{code:"CONFIRM_REQUIRED"});
    const io=new NodeIO(),doc=await io.readBinary(await mockVehicleGLB());for(const n of [...doc.getRoot().listNodes(),...doc.getRoot().listMeshes(),...doc.getRoot().listMaterials()])n.setName("Fixture");const bytes=Buffer.from(await io.writeBinary(doc)),imports=createImportService();
    const candidate=await imports.upload(admin,{generationId:e36.id,dataBase64:bytes.toString("base64"),source:"Isolated replacement test fixture",author:"Fixture",license:"Test fixture only",lengthM:4.5});importIds.push(candidate.id);
    assert.equal((await prisma.vehicleGeneration.findUniqueOrThrow({where:{id:e36.id}})).model3dKey,key);const ready=await imports.validate(admin,candidate.id,{});assert.equal(assetHash(key),hash);
-   const promoted=await imports.publish(admin,candidate.id,{visuallyVerified:true,validationVersion:(ready.validation as any).validatedAt,replaceExistingKey:key});ownedKeys.push(promoted.publishedModel3dKey!);assert.notEqual(promoted.publishedModel3dKey,key);assert.equal(assetHash(key),hash);
-   // history + restore: the replaced model stays in the history and can be made current again; the replacement stays too
-   const rev=(await models.revisions(admin,key)).revisions;assert.equal(rev.filter(r=>r.current).length,1);assert.equal(rev.find(r=>r.current)!.key,promoted.publishedModel3dKey);assert.equal(rev.find(r=>r.key===key)!.restorable,true);
-   const restored=await models.restore(admin,key,{revision:(await models.get(admin,key)).revision});
-   assert.equal((await prisma.vehicleGeneration.findUniqueOrThrow({where:{id:e36.id}})).model3dKey,key);assert.equal(restored.published,true);assert.equal(assetHash(key),hash);assert.ok(existsSync(publicModelPath(promoted.publishedModel3dKey!)));
-   await assert.rejects(models.restore(admin,key,{revision:restored.revision}),{code:"MODEL_CURRENT"});
-   assert.ok((await models.revisions(admin,key)).revisions.some(r=>r.key===promoted.publishedModel3dKey&&r.restorable));
+   const promoted=await imports.publish(admin,candidate.id,{visuallyVerified:true,validationVersion:(ready.validation as any).validatedAt,replaceExistingKey:key});ownedKeys.push(promoted.publishedModel3dKey!);assert.notEqual(promoted.publishedModel3dKey,key);
+   // replace = the old model is deleted (file + rows); the new one is the only model of this car
+   assert.equal(existsSync(publicModelPath(key)),false);assert.equal(await prisma.vehicle3DRevision.count({where:{key}}),0);assert.equal(await prisma.carPartMap.count({where:{model3dKey:key}}),0);
+   assert.equal((await prisma.vehicleGeneration.findUniqueOrThrow({where:{id:e36.id}})).model3dKey,promoted.publishedModel3dKey);assert.equal(Object.values(readManifest()).some(e=>e.file===key),false);
+   // delete = permanent and audited, even while published
+   const newKey=promoted.publishedModel3dKey!;const deleted=await models.deleteModel(admin,newKey,{confirm:true}) as {impact:{published:boolean}};assert.equal(deleted.impact.published,true);
+   assert.equal(existsSync(publicModelPath(newKey)),false);assert.equal(await prisma.vehicle3DRevision.count({where:{key:newKey}}),0);assert.equal((await prisma.vehicleGeneration.findUniqueOrThrow({where:{id:e36.id}})).model3dKey,null);
+   assert.ok(await prisma.auditLog.findFirst({where:{action:"VEHICLE3D_MODEL_DELETED",targetId:newKey}}));assert.ok(!(await publishedVehicleModels()).some(m=>m.key===newKey||m.key===key));
   });
  }finally{
   await new Promise<void>(r=>server.close(()=>r()));
   for(const [f,text]of before)atomicWrite(f,text);
-  await prisma.vehicleGeneration.update({where:{id:e36.id},data:e36Before});await prisma.vehicle3DRevision.update({where:{key:e36.model3dKey!},data:{revision:revisionBefore.revision,viewerConfig:revisionBefore.viewerConfig as object,metadata:revisionBefore.metadata as object}});
+  if(!existsSync(publicModelPath(e36.model3dKey!)))writeFileSync(publicModelPath(e36.model3dKey!),e36Glb);
+  await prisma.vehicleGeneration.update({where:{id:e36.id},data:e36Before});if(!await prisma.vehicle3DRevision.findUnique({where:{key:e36.model3dKey!}}))await prisma.vehicle3DRevision.create({data:revisionBefore as never});await prisma.vehicle3DRevision.update({where:{key:e36.model3dKey!},data:{revision:revisionBefore.revision,viewerConfig:revisionBefore.viewerConfig as object,metadata:revisionBefore.metadata as object}});
+  if(!await prisma.carPartMap.findUnique({where:{model3dKey:e36.model3dKey!}}))await prisma.carPartMap.create({data:mapBefore as never});
   await prisma.carPartMap.update({where:{model3dKey:e36.model3dKey!},data:{map:mapBefore.map as object,confirmedAt:mapBefore.confirmedAt,confirmedByUserId:mapBefore.confirmedByUserId}});
   const parts=await prisma.productAccessory3D.findMany({where:{shopId:{in:(await prisma.partsShopProfile.findMany({where:{userId:{in:[shop,otherShop]}},select:{id:true}})).map(s=>s.id)}},include:{photos:true}});
   for(const a of parts){for(const key of [a.privateModelPath,a.rawModelPath,...a.photos.map(p=>p.path),...Object.values(((a.preview??{})as any).views??{})])if(typeof key==="string")removePrivate(key);if(a.publishedFile){const file=path.join(REPO_ROOT,"backend/public/3d/accessories",a.publishedFile+".glb");if(existsSync(file))unlinkSync(file);}}

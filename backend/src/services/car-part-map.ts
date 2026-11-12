@@ -109,6 +109,21 @@ export function accessoryGate(pieces: Piece[], dims: number[], proposal: Proposa
   return { verdict: problems.length ? "REJECTED" : Object.keys(limited).length ? "LIMITED" : "FULL", problems, warnings, limited, text,
     checks: { dimsM: dims, wheels, stockSpoilerSeparate: !!p.SPOILER?.ids?.length, singlePiece: blob } };
 }
+/** Can this car's CURRENT 3D model show a replacement part of this type? A confirmed map decides bumpers (the same rule as fitEligibility);
+ *  otherwise the automatic proposal's gate. Returns the reason it can't (e.g. NOT_SEPARATE), or null = supported / not known yet (no current map). */
+export function partLimit(map: { modelSha256: string; confirmedAt: Date | null; map: unknown; pieces: unknown; dims: unknown; proposal: unknown } | null, key: string, type: string): string | null {
+  if (!map || map.modelSha256 !== modelFileSha(key)) return null;
+  if (map.confirmedAt && (type === "FRONT_BUMPER" || type === "REAR_BUMPER")) return (map.map as Record<string, unknown> | null)?.[type] ? null : "NOT_SEPARATE";
+  return accessoryGate(map.pieces as never, map.dims as number[], map.proposal as never).limited[type as GateType] ?? null;
+}
+export const LIMIT_TYPES = ["FRONT_BUMPER", "REAR_BUMPER", "MIRROR_COVERS", "RIMS", "SIDE_SKIRTS"] as const;
+/** Every published car that cannot show a replacement of this type, with the reason. */
+export async function unsupportedCars(type: string) {
+  if (!(LIMIT_TYPES as readonly string[]).includes(type)) return [];
+  const gens = await prisma.vehicleGeneration.findMany({ where: { isPublished: true, model3dKey: { not: null } }, select: { id: true, model3dKey: true } });
+  const maps = await prisma.carPartMap.findMany({ where: { model3dKey: { in: gens.map(g => g.model3dKey!) } } });
+  return gens.flatMap(g => { const reason = partLimit(maps.find(m => m.model3dKey === g.model3dKey) ?? null, g.model3dKey!, type); return reason ? [{ generationId: g.id, model3dKey: g.model3dKey!, reason }] : []; });
+}
 /** Store a fresh segmentation. Same file = nothing to do; a new file drops the old (now meaningless) map, audited. */
 export async function saveSegmentation(key: string, actorId: string | null = null, force = false) {
   const row = await prisma.carPartMap.findUnique({ where: { model3dKey: key }, select: { modelSha256: true, map: true, confirmedAt: true } });

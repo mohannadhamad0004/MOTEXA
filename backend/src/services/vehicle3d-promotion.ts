@@ -4,7 +4,8 @@ import type {Prisma} from "../generated/prisma/client.js";
 import {REPO_ROOT,atomicWrite,catalogFiles,readManifest,safeKey,type ModelMetadata} from "./vehicle3d-catalog.js";
 import {fail} from "./vehicle3d-validation.js";
 import {genKey} from "../generations.js";
-import {registerRevision} from "./vehicle3d-revisions.js";
+import {registerRevision,purgeModel,publicModelPath} from "./vehicle3d-revisions.js";
+import {removePrivate} from "./vehicle3d-private-assets.js";
 const storage=path.join(REPO_ROOT,"backend/storage/vehicle3d"),JOURNAL=path.join(storage,"promotion-journal.json");
 /** Caller holds the catalog advisory lock; commit this together with the originating approval. */
 export async function stageCatalogPromotion(tx:Prisma.TransactionClient,input:{generationId:string;entry:ModelMetadata;bytes:Buffer;expectedExistingKey?:unknown;submissionId?:string;importId?:string;actorId?:string}){
@@ -17,12 +18,15 @@ export async function stageCatalogPromotion(tx:Prisma.TransactionClient,input:{g
   const shared=path.join(REPO_ROOT,"backend/public/3d",e.file+".glb"),manifest=readManifest();
   if(existsSync(shared)||Object.values(manifest).some(m=>m.file===e.file))return fail("DUPLICATE_PROMOTION","This model is already published.",409);
   const manifestKey=Object.entries(manifest).find(([,m])=>m.file===gen.model3dKey)?.[0]??genKey(gen.vehicle.make,gen.vehicle.model,gen.code);
-  if(manifest[manifestKey])e.previousCatalogMetadata=manifest[manifestKey];
+  // Replace = the old model is deleted (rows here, its files once this commits). Customers keep it until this transaction commits.
+  const oldKey=gen.model3dKey&&gen.model3dKey!==e.file?gen.model3dKey:null;
+  const oldPrivate=oldKey?await purgeModel(tx,oldKey):[];
+  delete e.previousCatalogMetadata;
   manifest[manifestKey]=e;
   await registerRevision(tx,gen.id,e,input.bytes,{importId:input.importId,submissionId:input.submissionId});
   const files=catalogFiles(manifest),before=[...files.keys()].map(file=>[file,readFileSync(file,"utf8")]);
   mkdirSync(storage,{recursive:true});
-  atomicWrite(JOURNAL,JSON.stringify({submissionId:input.submissionId,importId:input.importId,generationId:gen.id,key:e.file,shared,before}));
+  atomicWrite(JOURNAL,JSON.stringify({submissionId:input.submissionId,importId:input.importId,generationId:gen.id,key:e.file,shared,before,oldShared:oldKey?publicModelPath(oldKey):null,oldPrivate}));
   writeFileSync(shared,input.bytes,{flag:"wx"});
   for(const[file,text]of files)atomicWrite(file,text);
   await tx.vehicleGeneration.update({where:{id:gen.id},data:{isPublished:true,model3dKey:e.file,modelSourceUrl:e.url||null,modelLicense:e.license}});
@@ -36,6 +40,7 @@ export async function recoverCatalogJournal(tx:Prisma.TransactionClient){
   const imported=saved.importId?await tx.vehicle3DImport.findUnique({where:{id:saved.importId}}):null;
   const committed=saved.auditId?!!await tx.auditLog.findUnique({where:{id:saved.auditId}}):saved.importId?imported?.status==="PUBLISHED"&&imported.publishedModel3dKey===saved.key:saved.submissionId?sub?.status==="APPROVED"&&sub.approvedModel3dKey===saved.key:gen?.model3dKey===saved.key;
   if(!committed){for(const[file,text]of saved.before)atomicWrite(file,text);if(saved.shared&&existsSync(saved.shared))unlinkSync(saved.shared);}
+  else{if(saved.oldShared&&existsSync(saved.oldShared))unlinkSync(saved.oldShared);for(const k of saved.oldPrivate??[])removePrivate(k);}
   unlinkSync(JOURNAL);
 }
 /** Journal metadata-only edits with the same lock/recovery protocol as GLB promotion. The audit row commits with the DB change. */

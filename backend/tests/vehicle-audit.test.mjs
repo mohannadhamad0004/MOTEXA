@@ -18,14 +18,11 @@ test('invalid/empty bounds cannot become valid measurements', () => {
 test('duplicate mappings retain every generation and ignore absent values', () => {
   assert.deepEqual(duplicates([{key:'a',file:'x'},{key:'b',file:'x'},{key:'c',file:null}], 'file'),[{value:'x',keys:['a','b']}]);
 });
-test('repository inventory includes held models and never assumes visual PASS', () => {
+test('repository inventory lists only models that exist and never assumes visual PASS', () => {
   const {entries} = inventory();
-  assert.ok(entries.some(e=>e.manifest?.inApp === false));
   assert.ok(entries.every(e=>e.status === 'UNCERTAIN'));
-  assert.equal(entries.find(e=>e.key==='toyota-corolla-e100').configuration,null);
-  assert.equal(entries.find(e=>e.key==='toyota-corolla-e100').manifest.finalStatus,'REMOVED');
-  assert.equal(entries.find(e=>e.key==='bmw-3-series-e46').configuration,null);
-  assert.ok(entries.find(e=>e.key==='bmw-3-series-e46').manifest.viewerConfig.keepBox);
+  assert.ok(!entries.some(e=>e.manifest?.finalStatus === 'REMOVED' || e.manifest?.finalStatus === 'REJECT'));
+  for (const k of ['toyota-corolla-e100','bmw-3-series-e46']) assert.ok(!entries.find(e=>e.key===k)?.manifest, k); // deleted models leave no catalog entry
 });
 test('inspection uses world transforms, preserves hierarchy, and records a content hash', async () => {
   mkdirSync(resolve(AUDIT,'test-fixtures'),{recursive:true});
