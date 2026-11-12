@@ -28,6 +28,7 @@ export function createVehicleCatalogRouter(imports=createImportService()){
  for(const [action,fn] of [["start-generation",requests.start],["final-review",requests.finalReview],["regenerate",requests.regenerate]] as const)router.post(a+"/:id/"+action,requirePartsAdmin,json,h(async(q,r,u)=>r.json({result:await fn(u,String(q.params.id))})));
  router.get(v,requirePartsAdmin,h(async(_q,r,u)=>r.json(await tax.list(u))));
  router.get(v+"/suggestions",requirePartsAdmin,h(async(q,r,u)=>r.json(await tax.suggestions(u,String(q.query.make??""),String(q.query.model??""),Number(q.query.year)))));
+ router.get(v+"/generations/:id/usage",requirePartsAdmin,h(async(q,r,u)=>r.json(await tax.generationUsage(u,String(q.params.id)))));
  for(const [kind,fn]of [["brands",tax.brand],["models",tax.model],["generations",tax.generation]]as const){
   router.post(v+"/"+kind,requirePartsAdmin,json,h(async(q,r,u)=>r.status(201).json({record:await fn(u,null,q.body)})));
   router.patch(v+"/"+kind+"/:id",requirePartsAdmin,json,h(async(q,r,u)=>r.json({record:await fn(u,String(q.params.id),q.body)})));

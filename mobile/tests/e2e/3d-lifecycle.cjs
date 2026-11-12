@@ -107,8 +107,8 @@ try{for(const ar of (process.env.UI_LANG?[process.env.UI_LANG==='ar']:[false,tru
   await go(p,'/dept/3d/vehicles');await shot('05-vehicle-list');await go(p,'/dept/3d/vehicles/'+entry.file);await shot('06-vehicle-detail');await shot('06-vehicle-edit',p.getByText(ar?'إعدادات العارض':'Viewer configuration',{exact:true}));
   await shot('06-vehicle-save-controls',p.getByRole('button',{name:ar?'التحقق وحفظ الإعدادات':'Validate and save configuration',exact:true}));
   await action(ar?'التحقق وحفظ الإعدادات':'Validate and save configuration','/config');
-  await action(ar?'تعطيل / إلغاء النشر':'Deactivate / unpublish','/publication');await shot('06-vehicle-unpublished');
-  await action(ar?'إعادة نشر النموذج المعتمد':'Reactivate reviewed model','/publication');
+  await action(ar?'إخفاء عن العملاء':'Hide from customers','/publication');await shot('06-vehicle-unpublished');
+  await action(ar?'إظهار للعملاء':'Show to customers','/publication');
   await p.evaluate(()=>window.__shown=false);await p.getByRole('button',{name:ar?'معاينة النموذج':'Preview model',exact:true}).click();await p.waitForFunction(()=>window.__shown,null,{timeout:60000});await shot('06-vehicle-preview');
   a={...a,status:'READY_FOR_FINAL_REVIEW',lifecycleState:'READY_FOR_FINAL_REVIEW',providerState:'SUCCEEDED',providerProgress:100,generationStage:'READY',hasModel:true,validation:{valid:true,triangles:1000,bytes:100000}};await go(p,'/dept/3d/accessories');await shot('07-accessory-list');await go(p,'/dept/accessory3d/fixture-accessory');await shot('08-accessory-detail');
   a.review.targets[0].fit.state='NOT_RUN';await go(p,'/dept/accessory3d/fixture-accessory');await theme(p,ar,dark);await action(ar?'تشغيل التركيب التلقائي':'Run automatic fit','/refit');

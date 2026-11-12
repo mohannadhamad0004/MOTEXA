@@ -11,6 +11,7 @@ import {stageCatalogPromotion,recoverCatalogJournal} from "./vehicle3d-promotion
 import {REPO_ROOT,type ViewerConfig} from "./vehicle3d-catalog.js";
 import {field,requirePartsActor,catalogLock} from "./vehicle-taxonomy.js";
 import {accessoryGate,autoSegment,segmentFile} from "./car-part-map.js";
+import {refitPublishedAccessories} from "./accessory-autofit.js";
 import {importInclude,importShape,IMPORT_RUNNING} from "./vehicle3d-import-state.js";
 import {linkImportActions} from "./vehicle3d-link-imports.js";
 import {FINAL_MODEL_BYTES} from "./vehicle3d-preparation.js";
@@ -79,7 +80,7 @@ export function createImportService(client=createSketchfabClient()){
     const seg=(r.validation as any).partMap;
     if(seg?.sha256===(r.validation as any).sha256)await tx.carPartMap.create({data:{model3dKey:key,modelSha256:seg.sha256,pieces:seg.pieces,dims:seg.dims,proposal:seg.proposal,segmentedAt:new Date(seg.segmentedAt),map:seg.map??undefined,confirmedAt:seg.confirmedAt?new Date(seg.confirmedAt):null,confirmedByUserId:seg.confirmedByUserId??null}});
     const saved=await tx.vehicle3DImport.update({where:{id},data:{status:"PUBLISHED",importStage:r.sourceProvider==="SKETCHFAB"?"PUBLISHED":null,publishedModel3dKey:key,visuallyVerifiedAt:new Date(),reviewNotes:typeof input.notes==="string"?input.notes.slice(0,2000):null},include});return shape(saved);
-   },{timeout:90000});published=out.publishedModel3dKey;return out;}finally{await prisma.$transaction(async tx=>{await catalogLock(tx);await recoverCatalogJournal(tx);});if(published)void autoSegment(published);}
+   },{timeout:90000});published=out.publishedModel3dKey;return out;}finally{await prisma.$transaction(async tx=>{await catalogLock(tx);await recoverCatalogJournal(tx);});if(published){void autoSegment(published);void refitPublishedAccessories();}}
   }
  };
 }

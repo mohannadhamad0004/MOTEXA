@@ -164,6 +164,11 @@ export async function refreshPublishedAccessory(accessoryId: string) {
     if (!fit || !await currentFit(fit, a.privateModelPath)) { void autoFitAccessory(accessoryId); return; }
   }
 }
+/** After a car's model was replaced or restored: schedule recomputation of every published accessory whose stored fit is now stale. New fits wait unapproved in "Accessory fits". */
+export async function refitPublishedAccessories() {
+  const rows = await prisma.productAccessory3D.findMany({ where: { status: "PUBLISHED" }, select: { id: true } });
+  for (const a of rows) void refreshPublishedAccessory(a.id).catch(() => undefined);
+}
 /** Background: fit this accessory on every generation it fits that has a published 3D car (missing or stale fits only). */
 export function autoFitAccessory(accessoryId: string) {
   if (!running.has(accessoryId)) running.set(accessoryId, (async () => {
