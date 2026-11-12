@@ -3930,7 +3930,6 @@
       "key": "renault-fluence-l38",
       "generation": "Renault Fluence L38",
       "lengthM": 4.5,
-      "preRotateX": -1.5707963267948966,
       "rotateY": 0,
       "groundOffset": 0,
       "paintNodes": [],
@@ -3955,10 +3954,12 @@
         "author": "Nieve5677",
         "url": "https://sketchfab.com/3d-models/renault-fluence-473adbb15922457bb9fa247bc89c4cb9",
         "license": "CC BY 4.0"
-      }
+      },
+      "preRotateX": -1.5707963267948966
     },
     "finalStatus": "PASS_AFTER_FIX",
-    "cleanupReason": "Upright, assembled, grounded, front heading and framing verified improved in front-three-quarter, left-side and rear-three-quarter comparisons."
+    "cleanupReason": "Upright, assembled, grounded, front heading and framing verified improved in front-three-quarter, left-side and rear-three-quarter comparisons.",
+    "geometryReviewRequired": false
   },
   "renault-kangoo-2nd-gen-x61": {
     "key": "renault-kangoo-2nd-gen-x61",

@@ -101,10 +101,13 @@ export async function saveFit(a: Acc, generationId: string, key: string, fit: un
   const old = await prisma.accessoryAutoFit.findUnique({ where: { accessoryId_generationId: { accessoryId: a.id, generationId } } });
   if (old && old.carRevision === data.carRevision && old.partRevision === data.partRevision && old.fitVersion === version) return old;
   const f = fit as { failed?: string; info?: { qa?: { correction?: { ok: boolean; clipMm: number; gapMm: number } } } };
-  const check = old?.approvedAt && old.adj ? (f.failed ? { ok: false, reason: f.failed } : f.info?.qa?.correction ?? null) : null;
+  // An approval only carries over when the car and the part are byte-for-byte the same (only the fitter version changed) and the
+  // recomputed fit still passes. A new car model/config or part file always goes back to the Parts Admin for approval.
+  const sameGeometry = !!old && old.carRevision === data.carRevision && old.partRevision === data.partRevision;
+  const check = old?.approvedAt && old.adj ? (f.failed ? { ok: false, reason: f.failed } : !sameGeometry ? { ok: false, reason: "car or part changed" } : f.info?.qa?.correction ?? null) : null;
   if (old?.approvedAt && old.adj && check?.ok) // still passes on the recomputed fit: stays approved as it was
     return prisma.accessoryAutoFit.update({ where: { accessoryId_generationId: { accessoryId: a.id, generationId } }, data });
-  if (old?.approvedAt && !old.adj && !f.failed && (fit as { info?: { qa?: { ok?: boolean } } }).info?.qa?.ok === true)
+  if (old?.approvedAt && !old.adj && sameGeometry && !f.failed && (fit as { info?: { qa?: { ok?: boolean } } }).info?.qa?.ok === true)
     return prisma.accessoryAutoFit.update({ where: { accessoryId_generationId: { accessoryId: a.id, generationId } }, data });
   if (old?.approvedAt && old.adj) {
     const previousCorrection = { adj: old.adj, approvedAt: old.approvedAt.toISOString(), approvedByUserId: old.approvedByUserId, result: "fails", ...(check ?? { reason: "not checked" }) };
@@ -250,6 +253,7 @@ export function createAutoFitService(options:{compute?:typeof computeFit}={}) {
         const fit=await(options.compute??computeFit)(a.accessoryType,{widthMm:a.widthMm,lengthMm:a.lengthMm,rimInches:a.rimInches},a.privateModelPath,g.model3dKey,correction);
         // Explicit rerun makes the previous review stale; it never carries a correction to unverified geometry.
         await prisma.accessoryAutoFit.updateMany({where:{accessoryId,generationId:g.id},data:{fitVersion:-1}});await saveFit(a,g.id,g.model3dKey,fit);
+        await prisma.accessoryAutoFit.updateMany({where:{accessoryId,generationId:g.id},data:{approvedAt:null,approvedByUserId:null}}); // the admin reviews every explicit rerun again (a kept correction stays as the suggestion)
       }
       await prisma.auditLog.create({data:{actorId:uid,action:"ACCESSORY3D_REFIT",targetId:accessoryId}});
       })();running.set(accessoryId,job);
