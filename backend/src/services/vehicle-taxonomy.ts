@@ -62,9 +62,16 @@ export function createTaxonomyService(){
    const duplicate=(await tx.vehicleGeneration.findMany({where:{vehicleId}})).find(g=>g.id!==id&&catalogNorm(g.code)===n);if(duplicate)return fail("DUPLICATE_GENERATION",`Existing generation: ${duplicate.code}.`,409);
    const yearFrom=yearField(input.yearFrom??old?.yearFrom),yearTo=yearField(input.yearTo??old?.yearTo);if(yearFrom>yearTo)return fail("INVALID_YEAR_RANGE","Start year must not exceed end year.");
    if(old&&await tx.customerGarageCar.count({where:{generationId:id!,OR:[{year:{lt:yearFrom}},{year:{gt:yearTo}}]}}))return fail("GENERATION_HISTORY","The production period must include saved Garage years.",409);
-   const data={vehicleId,code,catalogNormalizedCode:n,yearFrom,yearTo,nameEn:field(input.nameEn??old?.nameEn??`${v.model} ${code}`,"display name"),nameAr:field(input.nameAr??old?.nameAr??`${v.modelAr} ${code}`,"Arabic display name"),isActive:input.isActive===undefined?old?.isActive??true:bool(input.isActive)};
+   const data={vehicleId,code,catalogNormalizedCode:n,yearFrom,yearTo,nameEn:field(input.nameEn??old?.nameEn??`${v.model} ${code}`,"display name"),nameAr:field(input.nameAr??old?.nameAr??`${v.modelAr} ${code}`,"Arabic display name"),isActive:input.isActive===undefined?old?.isActive??true:bool(input.isActive),bodyType:input.bodyType===undefined?old?.bodyType??null:input.bodyType===null||input.bodyType===""?null:BODY_TYPES.includes(input.bodyType)?input.bodyType:fail("INVALID_BODY_TYPE","Choose sedan, hatchback, suv, van or pickup.")};
    const row=id?await tx.vehicleGeneration.update({where:{id},data}):await tx.vehicleGeneration.create({data});
    await tx.vehicle.update({where:{id:vehicleId},data:{yearFrom:Math.min(v.yearFrom,yearFrom),yearTo:Math.max(v.yearTo,yearTo)}});await audit(tx,uid,id?"GENERATION_EDIT":"GENERATION_CREATE",row.id);return row;
+  }),
+  /** Why a generation cannot be deleted: counts by what uses it. canDelete mirrors the guard in remove(). */
+  generationUsage:(uid:string,id:string)=>run(uid,async tx=>{
+   const g=await tx.vehicleGeneration.findUnique({where:{id},include:{vehicle:true}});if(!g)return fail("NOT_FOUND","Generation not found.",404);
+   const [garage,legacy,fitment,accessoryFits,autoFits,submissions,imports]=await Promise.all([tx.customerGarageCar.count({where:{generationId:id}}),tx.customerCar.count({where:{generationId:id}}),tx.partsFitment.count({where:{generationId:id}}),tx.productAccessory3DFit.count({where:{generationId:id}}),tx.accessoryAutoFit.count({where:{generationId:id}}),tx.vehicle3DSubmission.count({where:{generationId:id}}),tx.vehicle3DImport.count({where:{generationId:id}})]);
+   const usage={customerCars:garage+legacy,products:fitment,accessories:accessoryFits+autoFits,requests:submissions+imports,model3d:g.model3dKey?1:0,history:await snapshotReferences(tx,g.vehicle.make,g.vehicle.model)};
+   return {usage,canDelete:Object.values(usage).every(n=>n===0)};
   }),
   remove:(uid:string,kind:string,id:string)=>run(uid,async tx=>{
    if(kind==="brands"){const b=await tx.vehicleBrand.findUnique({where:{id}});if(!b)return fail("NOT_FOUND","Brand not found.",404);if(await tx.vehicle.count({where:{brandId:id}})||await snapshotReferences(tx,b.name))return fail("REFERENCED","Deactivate this referenced brand instead.",409);await tx.vehicleBrand.delete({where:{id}});}
@@ -74,6 +81,7 @@ export function createTaxonomyService(){
   })
  };
 }
+export const BODY_TYPES=["sedan","hatchback","suv","van","pickup"];
 const bool=(v:unknown)=>typeof v==="boolean"?v:fail("INVALID_STATUS","Active status must be boolean.");
 async function snapshotReferences(tx:Tx,make:string,model?:string){
  // String snapshots have no foreign keys. Include original requests and service

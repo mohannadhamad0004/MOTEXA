@@ -8,6 +8,7 @@ import { fail, parseCarModel } from "./vehicle3d-validation.js";
 import { assetBytes, assetHash, publicModelPath, registerExistingRevisions, effectiveVehicleModels } from "./vehicle3d-revisions.js";
 import { recoverCatalogJournal, stageCatalogMetadata } from "./vehicle3d-promotion.js";
 import { accessoryGate, modelFileSha, saveSegmentation } from "./car-part-map.js";
+import { refitPublishedAccessories } from "./accessory-autofit.js";
 
 type Tx = Prisma.TransactionClient;
 const configFields = ["lengthM", "preRotateX", "rotateY", "groundOffset", "centerX", "keepBox", "paintNodes", "paintMaterials", "bakedPaint", "rimsSwappable", "wing", "rack", "zones"];
@@ -47,7 +48,8 @@ export function createVehicleModelService() {
     const sourceImport = r.importId ? await tx.vehicle3DImport.findUnique({ where: { id: r.importId }, select: { validation: true, sourceProvider: true } }) : null;
     const references = await usage(tx, key, r.generationId);
     const effectiveAvailable = (await effectiveVehicleModels(tx)).get(g.id)?.key === key;
-    return { key, generationId: g.id, make: g.vehicle.make, model: g.vehicle.model, code: g.code, yearFrom: g.yearFrom, yearTo: g.yearTo,
+    const status = assetBytes(key) === null ? "FAILED" : effectiveAvailable ? "PUBLISHED" : (r.metadata as Record<string, unknown>).geometryReviewRequired === true ? "IN_REVIEW" : "HIDDEN";
+    return { key, status, bodyType: g.bodyType, nameEn: g.nameEn, nameAr: g.nameAr, brandId: g.vehicle.brandId, aliases: g.vehicle.brand?.aliases ?? [], generationId: g.id, make: g.vehicle.make, model: g.vehicle.model, code: g.code, yearFrom: g.yearFrom, yearTo: g.yearTo,
       published: effectiveAvailable, effectiveAvailable, publicationRequested: g.isPublished && g.model3dKey === key, reviewRequired: (r.metadata as Record<string, unknown>).geometryReviewRequired === true,
       current: g.model3dKey === key, revision: r.revision, sha256: r.sha256, bytes: assetBytes(key), viewerConfig: r.viewerConfig,
       source: sourceImport?.sourceProvider ?? (r.submissionId ? "MESHY" : r.importId ? "MANUAL_IMPORT" : "LEGACY_CATALOG"),
@@ -88,6 +90,32 @@ export function createVehicleModelService() {
       return Promise.all(rows.map(r => detail(tx, r.key)));
     }),
     get: (uid: string, key: string) => run(uid, tx => detail(tx, key)),
+    /** Every retained revision of this car's generation, newest first. The current one is what customers get; the rest are restorable. */
+    revisions: (uid: string, key: string) => run(uid, async tx => {
+      const r = await load(tx, key);
+      const rows = await tx.vehicle3DRevision.findMany({ where: { generationId: r.generationId }, orderBy: { createdAt: "desc" } });
+      return { revisions: rows.map(x => { const m = x.metadata as unknown as ModelMetadata, bytes = assetBytes(x.key);
+        return { key: x.key, revision: x.revision, createdAt: x.createdAt, current: r.generation.model3dKey === x.key, bytes, sha256: x.sha256, source: x.importId ? "IMPORT" : x.submissionId ? "MESHY" : "LEGACY_CATALOG",
+          title: m.title ?? null, author: m.author ?? null, license: m.license ?? null, restorable: r.generation.model3dKey !== x.key && bytes !== null && assetHash(x.key) === x.sha256 && (x.metadata as Record<string, unknown>).geometryReviewRequired !== true }; }) };
+    }),
+    /** Make a retained revision the car's current model (confirmed in the UI). The swap is journaled like a publication; the replaced model stays in the history. */
+    restore: async (uid: string, key: string, body: { revision?: unknown }) => {
+      const out = await mutate(uid, key, body.revision, "RESTORE", async (tx, r, manifest) => {
+        const g = r.generation;
+        if (g.model3dKey === key) return fail("MODEL_CURRENT", "This version is already the current model.", 409);
+        if (!g.isActive || !g.vehicle.isActive || !g.vehicle.brand?.isActive) return fail("INACTIVE", "Activate the brand, model and generation first.", 409);
+        if (!existsSync(publicModelPath(key)) || assetHash(key) !== r.sha256) return fail("PUBLICATION_BLOCKED", "This version's file is missing or changed, so it cannot be restored.", 409);
+        const old = r.metadata as unknown as ModelMetadata;
+        if ((old as unknown as Record<string, unknown>).geometryReviewRequired === true || !parseCarModel(r.viewerConfig)) return fail("PUBLICATION_BLOCKED", "This version was never approved, so it cannot be restored.", 409);
+        const manifestKey = Object.entries(manifest).find(([, m]) => m.file === g.model3dKey)?.[0];
+        if (!manifestKey) return fail("PUBLICATION_BLOCKED", "Catalog metadata is missing.", 409);
+        manifest[manifestKey] = { ...old, inApp: true, previousCatalogMetadata: manifest[manifestKey] } as ModelMetadata;
+        await tx.vehicleGeneration.update({ where: { id: g.id }, data: { isPublished: true, model3dKey: key, modelSourceUrl: old.url || null, modelLicense: old.license } });
+        await tx.auditLog.create({ data: { actorId: uid, action: "VEHICLE3D_CATALOG_RESTORE", targetId: g.id, details: { model3dKey: key, previousModel3dKey: g.model3dKey } } });
+      });
+      void refitPublishedAccessories();
+      return out;
+    },
     configure: async (uid: string, key: string, body: { revision?: unknown; config?: unknown }) => {
       const patch = body.config;
       if (!patch || typeof patch !== "object" || Array.isArray(patch) || Object.keys(patch).some(k => !configFields.includes(k))) return fail("CONFIG_INVALID", "Unsupported viewer setting.");

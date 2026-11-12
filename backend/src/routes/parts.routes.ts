@@ -9,6 +9,7 @@ import { MIN_PHOTO_BYTES, type ParsedUpload, hasPhoto, filePath, parseUpload, re
 import { requireApprovedProvider } from "../services/provider-onboarding.js";
 import { checklist, loadApp } from "../services/provider-onboarding.js";
 import { strictNumber } from "../services/numbers.js";
+import { effectiveVehicleModels } from "../services/vehicle3d-revisions.js";
 import { errorBody } from "../services/error-codes.js";
 
 // Parts shops + products. Mounted at /api.
@@ -576,13 +577,16 @@ const admin = [requireAuth, requirePartsAdmin, express.json()];
 // Counts only (department home screen).
 router.get("/admin/parts/stats", ...admin, async (_req, res) => {
   try {
-    const [pendingShops, approvedShops, hiddenProducts, needsChanges] = await Promise.all([
+    const [pendingShops, approvedShops, hiddenProducts, needsChanges, shops, products, cars3d] = await Promise.all([
       prisma.partsShopProfile.count({ where: { verificationStatus: "PENDING" } }),
       prisma.partsShopProfile.count({ where: { verificationStatus: "APPROVED" } }),
       prisma.partsProduct.count({ where: { isHidden: true } }),
       prisma.partsShopProfile.count({ where: { verificationStatus: "NEEDS_CHANGES" } }),
+      prisma.partsShopProfile.count(),
+      prisma.partsProduct.count(),
+      effectiveVehicleModels().then(m => m.size),
     ]);
-    return res.json({ success: true, stats: { pendingShops, approvedShops, hiddenProducts, needsChanges } });
+    return res.json({ success: true, stats: { pendingShops, approvedShops, hiddenProducts, needsChanges, shops, products, cars3d } });
   } catch (e) {
     return fail(res, "Parts stats error", e);
   }

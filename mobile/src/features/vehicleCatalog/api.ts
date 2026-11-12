@@ -13,6 +13,7 @@ export const vehicleCatalog={
  list:()=>api<Taxonomy>("GET",taxonomyPath),
  save:async(kind:string,id:string|null,body:unknown)=>(await api<{record:{id:string}}>(id?"PATCH":"POST",`${taxonomyPath}/${kind}${id?`/${id}`:""}`,body)).record,
  remove:(kind:string,id:string)=>api("DELETE",`${taxonomyPath}/${kind}/${id}`),
+ generationUsage:(id:string)=>api<{usage:{customerCars:number;products:number;accessories:number;requests:number;model3d:number;history:number};canDelete:boolean}>("GET",`${taxonomyPath}/generations/${id}/usage`),
  suggestions:(make:string,model:string,year:number)=>api<{generations:(Generation&{make:string;model:string})[];brands:Brand[];models:Model[]}>("GET",`${taxonomyPath}/suggestions?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&year=${year}`),
  imports:async()=>(await api<{imports:ModelImport[]}>("GET",importPath)).imports,
  getImport:async(id:string)=>(await api<{import:ModelImport}>("GET",`${importPath}/${id}`)).import,

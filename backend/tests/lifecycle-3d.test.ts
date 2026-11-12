@@ -163,6 +163,12 @@ test("A/B/C/E/F: authoritative 3D lifecycle, real fitting, publication, manageme
    const candidate=await imports.upload(admin,{generationId:e36.id,dataBase64:bytes.toString("base64"),source:"Isolated replacement test fixture",author:"Fixture",license:"Test fixture only",lengthM:4.5});importIds.push(candidate.id);
    assert.equal((await prisma.vehicleGeneration.findUniqueOrThrow({where:{id:e36.id}})).model3dKey,key);const ready=await imports.validate(admin,candidate.id,{});assert.equal(assetHash(key),hash);
    const promoted=await imports.publish(admin,candidate.id,{visuallyVerified:true,validationVersion:(ready.validation as any).validatedAt,replaceExistingKey:key});ownedKeys.push(promoted.publishedModel3dKey!);assert.notEqual(promoted.publishedModel3dKey,key);assert.equal(assetHash(key),hash);
+   // history + restore: the replaced model stays in the history and can be made current again; the replacement stays too
+   const rev=(await models.revisions(admin,key)).revisions;assert.equal(rev.filter(r=>r.current).length,1);assert.equal(rev.find(r=>r.current)!.key,promoted.publishedModel3dKey);assert.equal(rev.find(r=>r.key===key)!.restorable,true);
+   const restored=await models.restore(admin,key,{revision:(await models.get(admin,key)).revision});
+   assert.equal((await prisma.vehicleGeneration.findUniqueOrThrow({where:{id:e36.id}})).model3dKey,key);assert.equal(restored.published,true);assert.equal(assetHash(key),hash);assert.ok(existsSync(publicModelPath(promoted.publishedModel3dKey!)));
+   await assert.rejects(models.restore(admin,key,{revision:restored.revision}),{code:"MODEL_CURRENT"});
+   assert.ok((await models.revisions(admin,key)).revisions.some(r=>r.key===promoted.publishedModel3dKey&&r.restorable));
   });
  }finally{
   await new Promise<void>(r=>server.close(()=>r()));

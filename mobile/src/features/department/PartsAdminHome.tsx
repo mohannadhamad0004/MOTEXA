@@ -1,6 +1,4 @@
-// Parts Admin dashboard (the Spare-parts department Home): inspect, verify, approve. Real data only: counts from GET /admin/parts/stats,
-// shops (with their product counts) from GET /admin/parts/shops, applications from the provider review list. The admin API has no
-// cross-shop product list (products are reviewed inside each shop: hide / show), so there is no product feed here, only the real count.
+// Parts Admin dashboard: five cards, each with a real count (GET /admin/parts/stats, the 3D accessory list, unread messages). Counts that have not loaded are hidden.
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Href, router, useFocusEffect } from "expo-router";
@@ -16,7 +14,7 @@ import { adminAccessoryApi } from "../accessory3d/api";
 import { fmtDay } from "../provider/labels";
 import type { Verification } from "../parts/partsService";
 import { Head, Kpi, Rise, Skeleton, Tap } from "./TowAdminHome";
-import { Avatar, CountBadge, DeptPage, Empty, Pill, StatusChip, cardStyle, useDT } from "./ui";
+import { Avatar, CountBadge, DButton, DeptPage, Empty, Pill, StatusChip, cardStyle, useDT } from "./ui";
 import { useThreeDCount } from "./ThreeDRequests";
 
 const go = (path: string) => router.push(path as Href);
@@ -49,158 +47,50 @@ function Hero() {
   );
 }
 
+/** One home card: a header (title, real count, badge) plus up to two action buttons. No other buttons for the same place on this screen. */
+function HomeCard({ icon, title, sub, count, badge, actions }: { icon: React.ComponentProps<typeof Ionicons>["name"]; title: string; sub: string; count?: number; badge?: number; actions: { label: string; onPress: () => void; ghost?: boolean }[] }) {
+  const d = useDT();
+  return (
+    <View style={{ ...cardStyle(d), padding: 16, marginBottom: 14, gap: 12 }}>
+      <View style={{ flexDirection: d.row, alignItems: "center", gap: 12 }}>
+        <Ionicons name={icon} size={26} color="#E0A36F" />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ color: d.ink, fontSize: 16, fontWeight: "800", textAlign: d.align }}>{title}</Text>
+          <Text style={{ color: d.muted, marginTop: 2, textAlign: d.align }}>{sub}</Text>
+        </View>
+        {count !== undefined ? <Text style={{ color: d.ink, fontSize: 22, fontWeight: "800" }}>{count}</Text> : null}
+        <CountBadge n={badge ?? 0} />
+      </View>
+      <View style={{ flexDirection: d.row, flexWrap: "wrap", gap: 10 }}>
+        {actions.map((x) => <View key={x.label} style={{ flexGrow: 1, flexBasis: 140 }}><DButton compact label={x.label} variant={x.ghost ? "ghost" : "primary"} onPress={x.onPress} /></View>)}
+      </View>
+    </View>
+  );
+}
+
 export function PartsAdminHome() {
   const d = useDT();
   const stats = useLoad(async () => api<{ stats: Record<string, number> }>("GET", "/admin/parts/stats").then((r) => r.stats), []);
-  const shops = useLoad(async () => api<{ shops: ShopRow[] }>("GET", "/admin/parts/shops").then((r) => r.shops), []);
-  const queue = useLoad(() => review.list("PARTS", "NEW"), [], 15000);
-  const partMaps = useLoad(() => adminAccessoryApi.partMaps(), []);
   const threeD = useThreeDCount();
+  const unread = useLoad(() => review.counts("PARTS").then((c) => c.unreadMessages), [], 15000);
 
   const num = (v: number | undefined) => (stats.data ? String(v ?? 0) : stats.loading ? "…" : "—");
   const pending = stats.data?.pendingShops ?? 0;
   const hidden = stats.data?.hiddenProducts ?? 0;
-  const list = [...(shops.data ?? [])].sort((a, b) => Number(b.verificationStatus === "APPROVED") - Number(a.verificationStatus === "APPROVED")).slice(0, 3);
-  const reload = () => (void stats.reload(), void shops.reload(), void queue.reload());
-  const oops = (e: string) => <Empty icon="cloud-offline-outline" text={e || d.t("Something went wrong.", "حدث خطأ ما.")} hint={d.t("Pull down to try again.", "اسحب للأسفل للمحاولة مجددًا.")} />;
+  const reload = () => (void stats.reload(), void threeD.list.reload(), void unread.reload());
 
   return (
-    <DeptPage hero={<Hero />} onRefresh={reload} refreshing={(stats.loading || shops.loading || queue.loading) && !!(stats.data || shops.data)}>
-      <Tap label={d.t("3D workspace", "مساحة العمل ثلاثية الأبعاد")} onPress={()=>go("/dept/3d")} style={{...cardStyle(d),padding:16,marginBottom:14}}><Text style={{color:d.ink,fontSize:18,fontWeight:"800",textAlign:d.align}}>{d.t("3D workspace", "مساحة العمل ثلاثية الأبعاد")}</Text><Text style={{color:d.muted,textAlign:d.align,marginTop:5}}>{d.t("Vehicle models · accessory models · imports · fit review", "نماذج السيارات · نماذج القطع · الاستيراد · مراجعة التركيب")}</Text></Tap>
-      {/* every shop 3D request: ONE place (Requests > 3D requests), the count is what waits for the Parts Admin */}
-      <Tap label={`${d.t("3D requests", "طلبات ثلاثية الأبعاد")}${threeD.needs ? ` ${threeD.needs}` : ""}`} onPress={() => go("/dept/requests?seg=3d")} style={{ ...cardStyle(d), padding: 16, marginBottom: 14, flexDirection: d.row, alignItems: "center", gap: 12 }}>
-        <Ionicons name="cube-outline" size={26} color="#E0A36F" />
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: d.ink, fontSize: 16, fontWeight: "800", textAlign: d.align }}>{d.t("3D requests", "طلبات ثلاثية الأبعاد")}</Text>
-          <Text style={{ color: d.muted, marginTop: 2, textAlign: d.align }}>{threeD.list.data ? (threeD.needs ? d.t(`${threeD.needs} waiting for you · ${threeD.list.data.length} in all`, `${threeD.needs} بانتظارك · ${threeD.list.data.length} بالمجموع`) : d.t(`Nothing waiting · ${threeD.list.data.length} in all`, `لا شيء بانتظارك · ${threeD.list.data.length} بالمجموع`)) : threeD.list.error ? threeD.list.error : d.t("Loading…", "جارٍ التحميل…")}</Text>
-        </View>
-        <CountBadge n={threeD.needs} />
-      </Tap>
-      <Tap label={d.t("Vehicle catalog and customer requests", "كتالوج المركبات وطلبات العملاء")} onPress={()=>go("/dept/vehicles")} style={{...cardStyle(d),padding:16,marginBottom:18}}>
-        <Text style={{color:d.ink,fontSize:16,fontWeight:"700"}}>{d.t("Vehicle catalog and customer requests", "كتالوج المركبات وطلبات العملاء")}</Text>
-      </Tap>
-      <View style={{ flexDirection: d.row, flexWrap: "wrap", justifyContent: "space-between", rowGap: 12, marginBottom: 22 }}>
-        <Kpi i={0} icon="clipboard-outline" value={num(stats.data?.pendingShops)} label={d.t("Pending shops", "متاجر قيد المراجعة")} warn={pending > 0} onPress={() => go("/dept/requests")} />
-        <Kpi i={1} icon="create-outline" value={num(stats.data?.needsChanges)} label={d.t("Needs changes", "بانتظار التعديل")} onPress={() => go("/dept/requests")} />
-        <Kpi i={2} icon="shield-checkmark-outline" value={num(stats.data?.approvedShops)} label={d.t("Approved shops", "متاجر معتمدة")} onPress={() => go("/dept/directory")} />
-        <Kpi i={3} icon="eye-off-outline" value={num(stats.data?.hiddenProducts)} label={d.t("Hidden products", "منتجات مخفية")} onPress={() => go("/dept/directory")} />
-      </View>
-
-      <Tap label={d.t("Customer 3D submissions", "طلبات النماذج ثلاثية الأبعاد")} onPress={() => go("/dept/3d-submissions")} style={{ ...cardStyle(d), padding: 16, marginBottom: 22 }}>
-        <Text style={{ color: d.ink, fontSize: 16, fontWeight: "800", textAlign: d.align }}>{d.t("Customer 3D submissions", "طلبات النماذج ثلاثية الأبعاد")}</Text>
-        <Text style={{ color: d.muted, marginTop: 4, textAlign: d.align }}>{d.t("Inspect photos and models before catalog approval.", "افحص الصور والنماذج قبل اعتمادها في الكتالوج.")}</Text>
-      </Tap>
-
-      {/* one task per published car until its part map is confirmed: then every future accessory fits it automatically */}
-      <Tap label={d.t("Confirm car part maps", "تأكيد خرائط قطع السيارات")} onPress={() => go("/dept/accessory-zones")} style={{ ...cardStyle(d), padding: 16, marginBottom: 12 }}>
-        <Text style={{ color: d.ink, fontSize: 16, fontWeight: "800", textAlign: d.align }}>{d.t("Confirm car part maps", "تأكيد خرائط قطع السيارات")}</Text>
-        <Text style={{ color: d.muted, marginTop: 4, textAlign: d.align }}>{partMaps.data
-          ? `${d.t("To confirm", "بانتظار التأكيد")}: ${partMaps.data.filter(m => m.status !== "confirmed").length} / ${partMaps.data.length} · ${d.t("each confirmed car fits every future accessory automatically", "كل سيارة مؤكدة تُركَّب عليها الإكسسوارات القادمة تلقائيًا")}`
-          : partMaps.error ? partMaps.error : d.t("Loading…", "جارٍ التحميل…")}</Text>
-      </Tap>
-
-      <Tap label={d.t("Shop accessories in 3D", "إكسسوارات المتاجر ثلاثية الأبعاد")} onPress={() => go("/dept/requests?seg=3d")} style={{ ...cardStyle(d), padding: 16, marginBottom: 22 }}>
-        <Text style={{ color: d.ink, fontSize: 16, fontWeight: "800", textAlign: d.align }}>{d.t("Shop accessories in 3D", "إكسسوارات المتاجر ثلاثية الأبعاد")}</Text>
-        <Text style={{ color: d.muted, marginTop: 4, textAlign: d.align }}>{d.t("Review photos, start generation, check the fit on a car, publish: see Requests > 3D requests.", "راجع الصور، ابدأ الإنشاء، تحقق من التركيب على سيارة، انشر: في الطلبات > طلبات ثلاثية الأبعاد.")}</Text>
-      </Tap>
-
-      {/* parts orders (read only): all orders, and the deliveries in progress on the map */}
-      <Head title={d.t("Orders", "الطلبات")} caption={d.t("Customer orders across all shops", "طلبات الزبائن في كل المتاجر")} action={d.t("All", "الكل")} onAction={() => go("/dept/orders")} />
-      <View style={{ flexDirection: d.row, gap: 10, marginBottom: 22 }}>
-        <Tap label={d.t("All orders", "كل الطلبات")} onPress={() => go("/dept/orders")} style={{ ...cardStyle(d), flex: 1, padding: 14, gap: 6 }}>
-          <Ionicons name="receipt-outline" size={22} color="#E0A36F" />
-          <Text style={{ color: d.ink, fontSize: 14, fontWeight: "800", textAlign: d.align }}>{d.t("All orders", "كل الطلبات")}</Text>
-        </Tap>
-        <Tap label={d.t("Active deliveries", "التوصيلات الجارية")} onPress={() => go("/dept/orders/map")} style={{ ...cardStyle(d), flex: 1, padding: 14, gap: 6 }}>
-          <Ionicons name="bicycle-outline" size={22} color="#E0A36F" />
-          <Text style={{ color: d.ink, fontSize: 14, fontWeight: "800", textAlign: d.align }}>{d.t("Active deliveries", "التوصيلات الجارية")}</Text>
-        </Tap>
-      </View>
-
-      <Head title={d.t("Needs review", "بحاجة إلى مراجعة")} caption={d.t("Shop applications waiting for a decision", "طلبات متاجر بانتظار القرار")} action={d.t("All", "الكل")} onAction={() => go("/dept/requests")} />
-      {queue.data ? (
-        queue.data.length === 0 ? (
-          <Empty icon="checkmark-done-outline" text={d.t("Nothing is waiting for review.", "لا شيء بانتظار المراجعة.")} hint={d.t("New shop applications appear here.", "تظهر طلبات المتاجر الجديدة هنا.")} />
-        ) : (
-          queue.data.slice(0, 3).map((r, i) => (
-            <Rise key={r.id} i={4 + i}>
-              <Tap label={r.name} onPress={() => go(`/dept/review/shop/${r.id}`)} style={{ ...cardStyle(d), padding: 14, marginBottom: 10 }}>
-                <View style={{ flexDirection: d.row, alignItems: "center", gap: 12 }}>
-                  <Avatar name={r.name} />
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text numberOfLines={1} style={{ color: d.ink, fontSize: 15, lineHeight: 22, fontWeight: "800", textAlign: d.align }}>{r.name}</Text>
-                    <Text numberOfLines={1} style={{ color: d.muted, fontSize: 12, lineHeight: 18, textAlign: d.align }}>{r.ownerName} · {cityLabel(r.city, d.ar)}</Text>
-                  </View>
-                  <Ionicons name={d.ar ? "chevron-back" : "chevron-forward"} size={18} color={d.accent} />
-                </View>
-                <View style={{ flexDirection: d.row, flexWrap: "wrap", gap: 6, marginTop: 10 }}>
-                  <StatusChip status={r.status} />
-                  {r.submittedAt ? <Pill icon="calendar-outline" label={fmtDay(r.submittedAt)} /> : null}
-                  {r.pendingDocuments ? <Pill tone="amber" icon="document-text-outline" label={`${r.pendingDocuments} ${d.t("documents waiting", "مستندات بانتظار المراجعة")}`} /> : null}
-                  <Pill tone="bronze" icon="search-outline" label={d.t("Review", "مراجعة")} />
-                </View>
-              </Tap>
-            </Rise>
-          ))
-        )
-      ) : queue.loading ? (
-        <Skeleton n={2} />
-      ) : (
-        oops(queue.error ?? "")
-      )}
-
-      <View style={{ height: 14 }} />
-      <Head title={d.t("Parts shops", "متاجر قطع الغيار")} action={d.t("All", "الكل")} onAction={() => go("/dept/directory")} />
-      {shops.data ? (
-        list.length === 0 ? (
-          <Empty icon="storefront-outline" text={d.t("No parts shops yet.", "لا توجد متاجر بعد.")} />
-        ) : (
-          list.map((s, i) => (
-            <Rise key={s.id} i={7 + i}>
-              <Tap label={s.shopName} onPress={() => go(`/dept/review/shop/${s.id}`)} style={{ ...cardStyle(d), padding: 14, marginBottom: 10 }}>
-                <View style={{ flexDirection: d.row, alignItems: "center", gap: 12 }}>
-                  <Avatar name={s.shopName} />
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text numberOfLines={1} style={{ color: d.ink, fontSize: 15, lineHeight: 22, fontWeight: "800", textAlign: d.align }}>{s.shopName}</Text>
-                    <Text numberOfLines={1} style={{ color: d.muted, fontSize: 12, lineHeight: 18, textAlign: d.align }}>
-                      {[cityLabel(s.city, d.ar), `${s.productCount} ${s.productCount === 1 ? d.t("product", "منتج") : d.t("products", "منتجات")}`].join(" · ")}
-                    </Text>
-                  </View>
-                  <StatusChip status={s.verificationStatus} />
-                </View>
-                {s.hiddenProductCount > 0 ? (
-                  <View style={{ flexDirection: d.row, marginTop: 10 }}>
-                    <Pill tone="amber" icon="eye-off-outline" label={`${s.hiddenProductCount} ${d.t("hidden", "مخفي")}`} />
-                  </View>
-                ) : null}
-              </Tap>
-            </Rise>
-          ))
-        )
-      ) : shops.loading ? (
-        <Skeleton n={2} />
-      ) : (
-        oops(shops.error ?? "")
-      )}
-
-      <View style={{ height: 14 }} />
-      <Head title={d.t("Product review", "مراجعة المنتجات")} />
-      <Rise i={10}>
-        <Tap label={d.t("Product review", "مراجعة المنتجات")} onPress={() => go("/dept/directory")} style={{ ...cardStyle(d), padding: 14 }}>
-          <View style={{ flexDirection: d.row, alignItems: "center", gap: 12 }}>
-            <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: d.soft }}>
-              <Ionicons name="disc-outline" size={22} color={d.accent} />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ color: d.ink, fontSize: 14, lineHeight: 21, fontWeight: "800", textAlign: d.align }}>{d.t("Products are reviewed inside each shop", "تُراجَع المنتجات داخل كل متجر")}</Text>
-              <Text style={{ color: d.muted, fontSize: 12, lineHeight: 18, textAlign: d.align }}>
-                {stats.data ? `${hidden} ${d.t("hidden right now. Open a shop to hide or show a product.", "مخفي حاليًا. افتح متجرًا لإخفاء منتج أو إظهاره.")}` : d.t("Open a shop to hide or show a product.", "افتح متجرًا لإخفاء منتج أو إظهاره.")}
-              </Text>
-            </View>
-            <Ionicons name={d.ar ? "chevron-back" : "chevron-forward"} size={18} color={d.accent} />
-          </View>
-        </Tap>
-      </Rise>
+    <DeptPage hero={<Hero />} onRefresh={reload} refreshing={stats.loading && !!stats.data}>
+      {/* five cards, each with a real count; a count that has not loaded is hidden, never faked */}
+      <HomeCard icon="storefront-outline" title={d.t("Shops", "المتاجر")} sub={d.t("Applications and approved shops", "الطلبات والمتاجر المعتمدة")} count={stats.data?.shops} badge={pending}
+        actions={[{ label: d.t("Review applications", "مراجعة الطلبات"), onPress: () => go("/dept/requests") }, { label: d.t("All shops", "كل المتاجر"), ghost: true, onPress: () => go("/dept/directory") }]} />
+      <HomeCard icon="disc-outline" title={d.t("Products", "المنتجات")} sub={d.t("Hide or show products inside each shop, and customer orders", "إخفاء المنتجات أو إظهارها داخل كل متجر، وطلبات الزبائن")} count={stats.data?.products} badge={hidden}
+        actions={[{ label: d.t("Orders", "الطلبات"), onPress: () => go("/dept/orders") }, { label: d.t("Active deliveries", "التوصيلات الجارية"), ghost: true, onPress: () => go("/dept/orders/map") }]} />
+      <HomeCard icon="car-sport-outline" title={d.t("3D cars", "سيارات ثلاثية الأبعاد")} sub={stats.data ? d.t(`${stats.data.cars3d ?? 0} published for customers`, `${stats.data.cars3d ?? 0} منشورة للعملاء`) : d.t("Loading…", "جارٍ التحميل…")} count={stats.data?.cars3d}
+        actions={[{ label: d.t("Add 3D model", "إضافة نموذج"), onPress: () => go("/dept/3d/add") }, { label: d.t("Manage 3D models", "إدارة النماذج"), ghost: true, onPress: () => go("/dept/3d/vehicles") }]} />
+      <HomeCard icon="cube-outline" title={d.t("3D accessories", "إكسسوارات ثلاثية الأبعاد")} sub={threeD.list.data ? (threeD.needs ? d.t(`${threeD.needs} waiting for you`, `${threeD.needs} بانتظارك`) : d.t("Nothing waiting", "لا شيء بانتظارك")) : d.t("Requests, fit review, publishing", "الطلبات ومراجعة التركيب والنشر")} count={threeD.list.data?.length} badge={threeD.needs}
+        actions={[{ label: d.t("3D requests", "طلبات ثلاثية الأبعاد"), onPress: () => go("/dept/requests?seg=3d") }, { label: d.t("Fit review", "مراجعة التركيب"), ghost: true, onPress: () => go("/dept/accessory-zones?mode=fits") }]} />
+      <HomeCard icon="chatbubbles-outline" title={d.t("Messages", "الرسائل")} sub={d.t("Conversations with shops", "المحادثات مع المتاجر")} count={unread.data ?? undefined} actions={[{ label: d.t("Open messages", "فتح الرسائل"), onPress: () => go("/dept/messages") }]} />
 
       <Text style={{ fontSize: 8, lineHeight: 16, letterSpacing: 1, textAlign: "center", marginTop: 14, color: d.muted }}>MOTEXA • PARTS ADMIN</Text>
     </DeptPage>
