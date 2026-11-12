@@ -51,7 +51,7 @@ test('wing ON hides every triangle of the mapped stock spoiler and sits on the l
 });
 
 test('front bumper above the seam limit is refused without hiding any mapped stock part', { skip }, () => {
-  const M3 = resolve(ROOT, '3d-source/accessory-photos/test/free_bmw_e36_m3_front_bumper.glb'); if (!existsSync(M3)) return; // a real E36 bumper (CC BY test part)
+  const M3 = resolve(ROOT, '3d-source/accessory-photos/test/bmw_e46_bumper.glb'); if (!existsSync(M3)) return; // a bumper of another car (the E36 M3 bumper now fits: its bonnet-line seam is inside the 25 mm limit)
   const { fit } = run('bumper', ['--views=refusalcheck', `--part=${M3}`], { partMap: mapOf(seg.proposal), kit: { type: 'FRONT_BUMPER' } });
   assert.equal(fit.zone.how, 'part map');
   assert.match(fit.refused,/does not fit this car cleanly \(.*gap/);

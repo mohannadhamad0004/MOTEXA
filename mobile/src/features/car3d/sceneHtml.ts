@@ -131,7 +131,7 @@ function rimPCA(points) {
 // AUTO-FIT RULES (pure, no three.js: also run by the tests). Fit versions per fitter group: bump only the group whose fitter changed, so only
 // that group's stored fits are recomputed (approved / admin-corrected fits of other groups stay). Both objects are JSON: the server parses them.
 export const FIT_RULES_JS = String.raw`
-var FIT_VERSIONS = {"rims": 8, "wings": 4, "bumpers": 5, "other": 4};
+var FIT_VERSIONS = {"rims": 8, "wings": 4, "bumpers": 6, "other": 4};
 // wings = the add-on fitter (wing, spoiler, roof rack); every type not listed is "other"
 var FIT_GROUPS = {"RIMS": "rims", "WING": "wings", "SPOILER": "wings", "ROOF_RACK": "wings", "FRONT_BUMPER": "bumpers", "REAR_BUMPER": "bumpers"};
 function fitVersion(type) { return FIT_VERSIONS[FIT_GROUPS[type] || "other"]; }
@@ -639,6 +639,10 @@ function fitUnder(car, src, type, size, info) {
 // Width matched by one uniform scale, at most +-5 % stretch in height / depth, top edge on the stock top edge, face on the stock face.
 // Then the edge gaps: the stock bumper's seam (where it met fenders, lights, bonnet / boot line) against the new bumper, as you would see it.
 var BUMPER_MAX_GAP_MM = 10, BUMPER_MAX_DEEPER_MM = 30;
+// The bonnet / boot line: the car's own panel overlaps the bumper's top edge there, so a seam point can sit 2 cm from the part's projected edge
+// with nothing visible behind (E36 front bumper: p90 16.6, max 21.8 mm, checked in close-ups). Every other region keeps 10 mm.
+// ponytail: fixed 25 mm for this region; per-car seam rules if a car shows a real slot under the panel.
+function seamLimit(region) { return region === "bonnetBootLine" ? 25 : BUMPER_MAX_GAP_MM; }
 var LIGHTISH = /light|lamp|lens|signal|indicator|fog|blinker|reflector/i;
 function worldTris(node) { // every triangle of the placed part, world space
   node.updateMatrixWorld(true); var out = [];
@@ -683,7 +687,7 @@ function bumperGaps(car, zone, node) {
       if (f.line) { [[f.a,f.b],[f.b,f.c],[f.c,f.a]].forEach(function (e) { edgeLine.set(e[0],e[1]).closestPointToPoint(q,true,cp); var d=cp.distanceTo(q); if(isFinite(d))best=Math.min(best,d); }); }
       else { f.closestPointToPoint(q, cp); var d=cp.distanceTo(q); if(isFinite(d))best=Math.min(best,d); } });
     var mmv = best === Infinity ? 60 : Math.min(best * 1000, 60); (regions[region] = regions[region] || []).push(mmv); // > 6 cm counts as 60 mm
-    if (mmv > BUMPER_MAX_GAP_MM) worst.push({ region: region, mm: Math.round(mmv), at: s.p.toArray().map(round3), by: s.by.name });
+    if (mmv > seamLimit(region)) worst.push({ region: region, mm: Math.round(mmv), at: s.p.toArray().map(round3), by: s.by.name });
   });
   var out = {}; Object.keys(regions).forEach(function (r) { var v = regions[r].sort(function (p, q) { return p - q; });
     out[r] = { n: v.length, p90: Math.round(v[Math.floor(0.9 * (v.length - 1))] * 10) / 10, max: Math.round(v[v.length - 1] * 10) / 10 }; });
@@ -721,7 +725,7 @@ function fitBumper(car, src, type, zone, info, force, raw) { // raw (evidence on
   info.zone = { how: zone.how, size: ts.toArray().map(round3), hidden: zone.hide.length };
   info.stretch = [1, round3(sy), round3(sz)]; info.deeperThanStockMm = Math.round(deeper);
   info.gapsMm = best.gaps; info.worstSeamPoints = info.gapsMm.worst;
-  var bad = Object.keys(info.gapsMm).filter(function (r) { return info.gapsMm[r].n >= 5 && info.gapsMm[r].p90 > BUMPER_MAX_GAP_MM; });
+  var bad = Object.keys(info.gapsMm).filter(function (r) { return info.gapsMm[r].n >= 5 && info.gapsMm[r].p90 > seamLimit(r); });
   if (bad.length || deeper > BUMPER_MAX_DEEPER_MM) {
     var why = bad.map(function (r) { return r + " gap " + info.gapsMm[r].p90 + " mm"; }); if (deeper > BUMPER_MAX_DEEPER_MM) why.push("reaches " + Math.round(deeper) + " mm into the body");
     var msg = "this bumper does not fit this car cleanly (" + why.join(", ") + ")";
@@ -1492,7 +1496,8 @@ function editApply(s) {
     car.edit = { meshes: meshes, key: null };
     post({ type: "pieces", count: n });
   }
-  var k = JSON.stringify(pe); if (car.edit.key === k) return; car.edit.key = k;
+  boxApply(pe.boxPts);
+  var k = JSON.stringify([pe.label, pe.labels]); if (car.edit.key === k) return; car.edit.key = k;
   var of = {}, grey = new THREE.Color(0xb7bbc0), c = new THREE.Color();
   Object.keys(pe.labels || {}).forEach(function (L) { (pe.labels[L] || []).forEach(function (id) { of[id] = L; }); });
   car.edit.meshes.forEach(function (o) {
@@ -1505,18 +1510,38 @@ function editApply(s) {
     col.needsUpdate = true;
   });
 }
-function pickPiece(e) {
+function editHit(e) {
   var r = renderer.domElement.getBoundingClientRect(), rc = new THREE.Raycaster();
   rc.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
-  var hit = rc.intersectObjects(car.edit.meshes, false).filter(function (h) { return h.object.visible; })[0];
+  return rc.intersectObjects(car.edit.meshes, false).filter(function (h) { return h.object.visible; })[0];
+}
+function pickPiece(e) {
+  var hit = editHit(e);
   if (hit) post({ type: "pick", id: "m" + hit.object.userData.pi + "c" + segment(hit.object).tri[hit.faceIndex] });
+}
+// Box mode (state.partEdit.boxPts = the tapped points, world space): a tap posts { type: "boxPt", p: [x, y, z] }; the points' min/max is the box
+// (green); with 4 points every piece whose bounds lie inside it (2 % of the car's size tolerance) is posted as { type: "boxIds", ids }.
+function boxPoint(e) { var hit = editHit(e); if (hit) post({ type: "boxPt", p: hit.point.toArray().map(function (n) { return Math.round(n * 1e4) / 1e4; }) }); }
+function boxApply(pts) {
+  var k = JSON.stringify(pts || null); if (car.edit.boxKey === k) return; car.edit.boxKey = k;
+  if (car.edit.boxG) { car.group.remove(car.edit.boxG); car.edit.boxG = null; }
+  if (!Array.isArray(pts) || !pts.length) return;
+  var g = new THREE.Group(), b = new THREE.Box3(), s = car.rb.getSize(new THREE.Vector3()), dot = new THREE.SphereGeometry(Math.max(s.x, s.y, s.z) * 0.008, 12, 8);
+  pts.forEach(function (p) { var v = new THREE.Vector3(p[0], p[1], p[2]), m = new THREE.Mesh(dot, RED); m.position.copy(v); m.renderOrder = 3; g.add(m); b.expandByPoint(v); });
+  if (pts.length > 1) { var c = b.getCenter(new THREE.Vector3()), sz = b.getSize(new THREE.Vector3()).max(new THREE.Vector3(0.005, 0.005, 0.005)), m = new THREE.Mesh(new THREE.BoxGeometry(sz.x, sz.y, sz.z), GREEN);
+    m.position.copy(c); m.renderOrder = 2; g.add(m); g.add(new THREE.Box3Helper(b, 0x2e9d4f)); }
+  car.group.add(g); car.edit.boxG = g;
+  if (pts.length < 4) return;
+  var tol = b.clone(); tol.min.addScaledVector(s, -0.02); tol.max.addScaledVector(s, 0.02);
+  var ids = []; car.edit.meshes.forEach(function (o) { segment(o).boxes.forEach(function (pb, c) { if (tol.containsBox(pb)) ids.push("m" + o.userData.pi + "c" + c); }); });
+  post({ type: "boxIds", ids: ids });
 }
 var building = null;
 async function apply() {
   var s = state; if (!s) return;
   scene.background = new THREE.Color(s.bg);
   controls.enabled = !!s.interactive;
-  controls.autoRotate = !s.reduced && !!s.autoRotate;
+  controls.autoRotate = !s.reduced && !!s.autoRotate && !(s.partEdit && s.partEdit.boxPts); // paused in Box mode so taps land
   if (!car || car.file !== s.file || car.zkey !== carKey(s)) {
     if (!assets[s.file]) { post({ type: "need", keys: [s.file] }); return; }
     if (building) return;
@@ -1541,7 +1566,7 @@ var lastTap = 0, downAt = null;
 renderer.domElement.addEventListener("pointerdown", function (e) { downAt = { x: e.clientX, y: e.clientY }; });
 renderer.domElement.addEventListener("pointerup", function (e) {
   if (!state || !state.interactive || !downAt || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 10) return;
-  if (state.partEdit && car && car.edit) { pickPiece(e); return; } // editor: a tap selects a piece (no double-tap reset)
+  if (state.partEdit && car && car.edit) { if (state.partEdit.boxPts) boxPoint(e); else pickPiece(e); return; } // editor: a tap selects a piece (no double-tap reset)
   var now = Date.now(); if (now - lastTap < 320) { reset(); lastTap = 0; } else lastTap = now;
 });
 window.addEventListener("resize", function () { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
