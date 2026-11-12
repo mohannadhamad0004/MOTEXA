@@ -493,15 +493,15 @@ function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
     return next;
   });
   // box mode: 4 taps on the car make a box; "add / remove pieces inside" changes this label; each box can be undone
-  const [boxMode, setBoxMode] = useState(false), [pts, setPts] = useState<number[][]>([]), [inside, setInside] = useState<string[] | null>(null), [undo, setUndo] = useState<PartMap[]>([]);
+  const [boxMode, setBoxMode] = useState(false), [turning, setTurning] = useState(false), [missed, setMissed] = useState(false), [pts, setPts] = useState<number[][]>([]), [inside, setInside] = useState<string[] | null>(null), [undo, setUndo] = useState<PartMap[]>([]);
   useEffect(() => { setPts([]); setInside(null); setUndo([]); }, [key]);
-  const addPt = (p: number[]) => { setInside(null); setPts(a => a.length >= 4 ? [p] : [...a, p]); };
+  const addPt = (p: number[]) => { setMissed(false); setInside(null); setPts(a => a.length >= 4 ? [p] : [...a, p]); };
   const applyBox = (add: boolean) => { if (!inside) return; const ids = new Set(inside); setUndo(u => [...u.slice(-19), draft]); setDraft(d => {
     const next: PartMap = {};
     for (const L of PART_LABELS) { let l = d[L] ?? []; if (add || L === label) l = l.filter(x => !ids.has(x)); if (add && L === label) l = [...l, ...inside]; if (l.length) next[L] = l; }
     return next;
   }); setPts([]); setInside(null); };
-  const partEdit = useMemo(() => ({ label, labels: draft, boxPts: boxMode ? pts : null }), [label, draft, boxMode, pts]);
+  const partEdit = useMemo(() => ({ label, labels: draft, boxPts: boxMode ? pts : null, boxTurn: boxMode && turning }), [label, draft, boxMode, pts, turning]);
   const changed = !!detail && JSON.stringify(draft) !== JSON.stringify(detail.map ?? null);
   const confirmed = (list.data ?? []).filter(m => m.status === "confirmed").length;
   const statusText = (st: string) => st === "confirmed" ? t("Confirmed: used for customers", "مؤكدة: تُستخدم للعملاء") : st === "proposed" ? t("Proposed: not used yet (zones until confirmed)", "مقترحة: غير مستخدمة بعد (المناطق حتى التأكيد)")
@@ -525,14 +525,19 @@ function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
             return <Chip key={L} label={`${t(...PART_LABEL_NAMES[L])} · ${draft[L]?.length ?? 0}${p ? ` (${Math.round(p.confidence * 100)}%)` : ""}`} on={label === L} onPress={() => setLabel(L)} />;
           })}</View>
           <View style={{ marginTop: 12, gap: 8 }}>
-            {car ? <Car3DView model={car} assetLoader={assetLoader} color="#c3c7cc" bg={g.cardSoft} partEdit={partEdit} onPick={pick} onPieces={setPieces} onBoxPoint={addPt} onBoxIds={setInside} interactive style={{ height: 320, borderRadius: 16 }} />
+            {car ? <Car3DView model={car} assetLoader={assetLoader} color="#c3c7cc" bg={g.cardSoft} partEdit={partEdit} onPick={pick} onPieces={setPieces} onBoxPoint={addPt} onBoxIds={setInside} onBoxMiss={() => setMissed(true)} interactive style={{ height: 320, borderRadius: 16 }} />
               : <Note>{t("This car's 3D model is not in the app catalog yet.", "نموذج هذه السيارة غير موجود في كتالوج التطبيق بعد.")}</Note>}
             <View style={[row, { gap: 8 }]}>
               <Chip label={t("Tap pieces", "اختيار بالضغط")} on={!boxMode} onPress={() => { setBoxMode(false); setPts([]); setInside(null); }} />
-              <Chip label={t("Box", "مربع تحديد")} on={boxMode} onPress={() => setBoxMode(true)} />
+              <Chip label={t("Box", "مربع تحديد")} on={boxMode} onPress={() => { setBoxMode(true); setTurning(false); }} />
             </View>
             {boxMode ? <View style={{ gap: 8 }}>
-              <Note>{pts.length < 4 ? `${t(`Tap 4 corners around the ${t(...PART_LABEL_NAMES[label]).toLowerCase()}`, `اضغط على 4 زوايا حول ${t(...PART_LABEL_NAMES[label])}`)} (${pts.length}/4). ${t("Turn the car between taps so the box also reaches the ends near the wheels.", "أدر السيارة بين الضغطات ليصل المربع أيضًا إلى الأطراف قرب العجلات.")}`
+              <View style={[row, { gap: 8 }]}>
+                <Chip label={t("Place corners", "وضع الزوايا")} on={!turning} onPress={() => setTurning(false)} />
+                <Chip label={t("Turn the car", "تدوير السيارة")} on={turning} onPress={() => setTurning(true)} />
+              </View>
+              {missed && !turning ? <Note tone="warning">{t("That tap missed the car. Tap on the car body.", "لم تقع الضغطة على السيارة. اضغط على جسم السيارة.")}</Note> : null}
+              <Note>{pts.length < 4 ? `${t(`Tap 4 corners around the ${t(...PART_LABEL_NAMES[label]).toLowerCase()}`, `اضغط على 4 زوايا حول ${t(...PART_LABEL_NAMES[label])}`)} (${pts.length}/4). ${turning ? t("Drag to turn the car, then choose Place corners.", "اسحب لتدوير السيارة، ثم اختر وضع الزوايا.") : t("The car stays still while you place corners. To reach the ends near the wheels, choose Turn the car, turn it, then Place corners again.", "تبقى السيارة ثابتة أثناء وضع الزوايا. للوصول إلى الأطراف قرب العجلات اختر تدوير السيارة ثم عد إلى وضع الزوايا.")}`
                 : `${t("Pieces inside the box", "القطع داخل المربع")}: ${inside?.length ?? "…"}. ${t("Tap again to start a new box.", "اضغط مجددًا لبدء مربع جديد.")}`}</Note>
               <View style={[row, { gap: 10, flexWrap: "wrap" }]}>
                 <GButton flex label={t("Add pieces inside", "إضافة القطع داخل المربع")} disabled={busy || !inside?.length} onPress={() => applyBox(true)} />

@@ -7,6 +7,7 @@ import { prisma } from "../prisma.js";
 import { PROVIDER_STORAGE_DIR } from "../uploads/providerFiles.js";
 import { PUBLIC_ACCESSORY_DIR } from "../services/accessory3d.js";
 import { autoFitAccessory } from "../services/accessory-autofit.js";
+import { prepareManualAccessory } from "../services/accessory3d.js";
 import { storePrivate } from "../services/vehicle3d-private-assets.js";
 import { normText } from "../services/fitment.js";
 
@@ -56,6 +57,7 @@ async function main() {
     acc = acc ? await prisma.productAccessory3D.update({ where: { id: acc.id }, data: fields }) : await prisma.productAccessory3D.create({ data: { ...fields, productId: product.id, shopId: shop.id, kitPart: "MAIN" } });
   }
   await prisma.productAccessory3DFit.upsert({ where: { accessoryId_generationId: { accessoryId: acc.id, generationId: gen.id } }, create: { accessoryId: acc.id, generationId: gen.id }, update: {} });
+  if ((acc.validation as { valid?: boolean } | null)?.valid !== true) await prepareManualAccessory(acc.id, null); // same optimise + validation as a generated model
   await autoFitAccessory(acc.id);
   console.log(`E36 bumper product ${product.id}, accessory ${acc.id}, fits ${gen.model3dKey}`);
 }

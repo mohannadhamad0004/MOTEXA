@@ -1521,7 +1521,15 @@ function pickPiece(e) {
 }
 // Box mode (state.partEdit.boxPts = the tapped points, world space): a tap posts { type: "boxPt", p: [x, y, z] }; the points' min/max is the box
 // (green); with 4 points every piece whose bounds lie inside it (2 % of the car's size tolerance) is posted as { type: "boxIds", ids }.
-function boxPoint(e) { var hit = editHit(e); if (hit) post({ type: "boxPt", p: hit.point.toArray().map(function (n) { return Math.round(n * 1e4) / 1e4; }) }); }
+function boxPoint(e) {
+  var hit = editHit(e); if (!hit) { post({ type: "boxMiss" }); return; }
+  // the dot shows at once (before the app answers); boxApply redraws all points from the app's state
+  if (!car.edit.boxG) { car.edit.boxG = new THREE.Group(); car.group.add(car.edit.boxG); }
+  var s = car.rb.getSize(new THREE.Vector3()), m = new THREE.Mesh(new THREE.SphereGeometry(Math.max(s.x, s.y, s.z) * 0.008, 12, 8), RED); m.position.copy(hit.point); m.renderOrder = 3; car.edit.boxG.add(m);
+  post({ type: "boxPt", p: hit.point.toArray().map(function (n) { return Math.round(n * 1e4) / 1e4; }) });
+}
+/** Box mode places corners (orbit off) unless the admin chose "Turn the car" (boxTurn). */
+function placingBox(s) { return !!(s && s.partEdit && s.partEdit.boxPts && !s.partEdit.boxTurn && car && car.edit); }
 function boxApply(pts) {
   var k = JSON.stringify(pts || null); if (car.edit.boxKey === k) return; car.edit.boxKey = k;
   if (car.edit.boxG) { car.group.remove(car.edit.boxG); car.edit.boxG = null; }
@@ -1540,7 +1548,7 @@ var building = null;
 async function apply() {
   var s = state; if (!s) return;
   scene.background = new THREE.Color(s.bg);
-  controls.enabled = !!s.interactive;
+  controls.enabled = !!s.interactive && !(s.partEdit && s.partEdit.boxPts && !s.partEdit.boxTurn); // Box mode: a touch places a corner, it never turns the car
   controls.autoRotate = !s.reduced && !!s.autoRotate && !(s.partEdit && s.partEdit.boxPts); // paused in Box mode so taps land
   if (!car || car.file !== s.file || car.zkey !== carKey(s)) {
     if (!assets[s.file]) { post({ type: "need", keys: [s.file] }); return; }
@@ -1564,9 +1572,21 @@ var q = window.__q; window.car3d = handle; q.forEach(handle);
 function reset() { camera.position.copy(home.pos); controls.target.copy(home.target); controls.update(); }
 var lastTap = 0, downAt = null;
 renderer.domElement.addEventListener("pointerdown", function (e) { downAt = { x: e.clientX, y: e.clientY }; });
+// Box corners on a touch screen come from touchend (a phone WebView can cancel the pointer stream, e.g. when the page scroll takes the
+// gesture); a mouse still uses pointerup below.
+var touchAt = null;
+renderer.domElement.addEventListener("touchstart", function (e) { touchAt = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null; }, { passive: true });
+renderer.domElement.addEventListener("touchend", function (e) {
+  var t = e.changedTouches[0], start = touchAt; touchAt = null;
+  if (!placingBox(state) || !start || !t || e.touches.length || Math.hypot(t.clientX - start.x, t.clientY - start.y) > 14) return;
+  if (e.cancelable) e.preventDefault(); // no synthetic mouse events after it
+  boxPoint(t);
+});
 renderer.domElement.addEventListener("pointerup", function (e) {
   if (!state || !state.interactive || !downAt || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 10) return;
-  if (state.partEdit && car && car.edit) { if (state.partEdit.boxPts) boxPoint(e); else pickPiece(e); return; } // editor: a tap selects a piece (no double-tap reset)
+  if (state.partEdit && car && car.edit) { // editor: a tap selects a piece / places a box corner (no double-tap reset)
+    if (!state.partEdit.boxPts) pickPiece(e); else if (placingBox(state) && e.pointerType !== "touch") boxPoint(e); // touch: touchend above
+    return; }
   var now = Date.now(); if (now - lastTap < 320) { reset(); lastTap = 0; } else lastTap = now;
 });
 window.addEventListener("resize", function () { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });

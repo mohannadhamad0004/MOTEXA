@@ -7,6 +7,7 @@ import { prisma } from "../prisma.js";
 import { PROVIDER_STORAGE_DIR } from "../uploads/providerFiles.js";
 import { PUBLIC_ACCESSORY_DIR } from "../services/accessory3d.js";
 import { autoFitAccessory } from "../services/accessory-autofit.js";
+import { prepareManualAccessory } from "../services/accessory3d.js";
 import { storePrivate } from "../services/vehicle3d-private-assets.js";
 
 // DEV ONLY: "Mesh rims 17″ (set of 4)" in the demo shop (demo.parts@), Wheels, Universal by size, with a published 3D rim.
@@ -41,11 +42,11 @@ async function main() {
   }
 
   const bytes = await readFile(GLB), file = `acc-${createHash("sha256").update(bytes).digest("hex").slice(0, 16)}`;
-  mkdirSync(PUBLIC_ACCESSORY_DIR, { recursive: true });
-  if (!existsSync(path.join(PUBLIC_ACCESSORY_DIR, `${file}.glb`))) copyFileSync(GLB, path.join(PUBLIC_ACCESSORY_DIR, `${file}.glb`));
   let acc = await prisma.productAccessory3D.findUnique({ where: { productId_kitPart: { productId: product.id, kitPart: "MAIN" } } });
   const specs = { accessoryType: "RIMS" as const, rimInches: 17, rimWidthIn: 8, rimPcd: "5x112", rimOffsetMm: 35, rimFinish: "SILVER" as const };
-  if (!acc?.privateModelPath || acc.publishedFile !== file) {
+  if (!acc?.privateModelPath) {
+    mkdirSync(PUBLIC_ACCESSORY_DIR, { recursive: true });
+    if (!existsSync(path.join(PUBLIC_ACCESSORY_DIR, `${file}.glb`))) copyFileSync(GLB, path.join(PUBLIC_ACCESSORY_DIR, `${file}.glb`));
     const fields = { ...specs, status: "PUBLISHED" as const, privateModelPath: storePrivate(bytes, "glb"), publishedFile: file, publishedAt: new Date(),
       provider: "MANUAL", generationMode: "manual", generationStage: "READY", visualVerifiedAt: new Date(),
       sourceMetadata: { license: "CC BY 4.0", author: "Martin Trafas", source: "https://sketchfab.com/3d-models/bbs-rs16-tuner-car-wheel-4e50d45e5ff04d00927a50c150e088c1", devOnly: true, note: "dev test part, replace before demo" } };
@@ -53,6 +54,7 @@ async function main() {
   } else acc = await prisma.productAccessory3D.update({ where: { id: acc.id }, data: specs });
   await prisma.productAccessory3DFit.deleteMany({ where: { accessoryId: acc.id } }); // Universal by size: no generation list
   console.log(`Rims product ${product.id}, accessory ${acc.id}: fitting on every published 3D car…`);
+  if ((acc.validation as { valid?: boolean } | null)?.valid !== true) await prepareManualAccessory(acc.id, null); // same optimise + validation as a generated model
   await autoFitAccessory(acc.id);
   const fits = await prisma.accessoryAutoFit.findMany({ where: { accessoryId: acc.id }, select: { model3dKey: true, fit: true } });
   console.log(fits.map(f => `${f.model3dKey}: ${(f.fit as { failed?: string }).failed ? "does not fit (" + (f.fit as { failed: string }).failed + ")" : "fits"}`).join("\n"));

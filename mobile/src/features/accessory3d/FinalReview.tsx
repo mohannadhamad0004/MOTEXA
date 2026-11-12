@@ -29,6 +29,7 @@ export function AccessoryFinalReview({a, busy, act, children}: {a: AdminAccessor
       {status(t("Model validation","التحقق من النموذج"),label(review.model.validation))}
       {review.model.validation!=="PASSED"&&review.model.reason?<Note tone="warning">{review.model.reason}</Note>:null}
       {review.canRetryProcessing?<GButton label={t("Retry processing","إعادة معالجة النموذج")} disabled={busy} onPress={()=>void act("start",{retryProcessing:true})}/>:null}
+      {review.canValidateManual?<GButton label={busy?t("Validating…","جارٍ التحقق…"):t("Run validation","تشغيل التحقق")} disabled={busy} onPress={()=>void act("validate")}/>:null}
       {status(t("Publication","النشر"),label(review.publication.state))}
       {review.model.exists?<GButton variant="secondary" label={published?t("View published model","عرض النموذج المنشور"):t("Preview generated model","معاينة النموذج المُنشأ")} onPress={()=>setShowModel(v=>!v)}/>:null}
       {showModel?<Car3DView model={{key:review.publication.file?.replace(/\.glb$/,"")??`private-accessory-${a.id}-${a.modelRevision}`,generation:a.product?.name??"",lengthM:1.7,rotateY:0,groundOffset:0,paintNodes:[],paintMaterials:[],rimsSwappable:false,wing:none,rack:none,credit:{title:a.product?.name??"",author:"",url:"",license:published?"Published accessory":"Private review"}}} assetLoader={review.publication.file?undefined:()=>adminAccessoryApi.asset(a.id,"model")} color="#c3c7cc" bg={g.cardSoft} interactive style={{height:280}}/>:null}

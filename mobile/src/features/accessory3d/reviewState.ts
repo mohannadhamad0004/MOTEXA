@@ -9,6 +9,8 @@ export type AccessoryReview = {
   targets: ReviewTarget[];
   publication: {state: string; file?: string | null; canPublish: boolean; blockers: {code: string; message: string; generationId?: string}[]};
   canRetryProcessing: boolean;
+  /** a manually imported GLB not yet optimised / validated: "Run validation" (same pipeline as a generated model) */
+  canValidateManual?: boolean;
 };
 export const REVIEW_LABELS: Record<string, [string, string]> = {
   NOT_RUN: ["Not run", "لم يُنفّذ"], RUNNING: ["Running", "جارٍ التنفيذ"], PASSED: ["Passed", "ناجح"],

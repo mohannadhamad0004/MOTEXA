@@ -9,7 +9,7 @@ import { fitVersion } from '../src/services/accessory-autofit.js';
 import { prisma } from '../src/prisma.js';
 const hash = (p: string) => createHash('sha256').update(readFileSync(p)).digest('hex');
 const out = path.join(REPO_ROOT, 'docs/3d/rims-general');
-const part = path.join(REPO_ROOT, 'backend/public/3d/accessories/acc-512a47b76cd1b556.glb');
+const part = path.join(REPO_ROOT, '3d-source/rims/bbs-rs16/rim.glb');
 const selected = process.argv.find(a => a.startsWith('--cars='))?.slice(7).split(',');
 const shots = new Set(['bmw-3-series-e36', 'mercedes-e-class-w212', 'audi-a4-b5', 'peugeot-208-2nd-gen-p21', 'peugeot-308-2nd-gen-t9', 'toyota-corolla-e210']);
 const results: unknown[] = [];

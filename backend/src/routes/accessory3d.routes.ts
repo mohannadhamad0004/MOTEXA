@@ -6,7 +6,7 @@ import express, { Router, type Request, type Response } from "express";
 import { unsupportedCars } from "../services/car-part-map.js";
 import { requireAuth, requireCustomer, requirePartsAdmin, requirePartsProvider } from "../middleware/auth.middleware.js";
 import { requireApprovedProvider } from "../services/provider-onboarding.js";
-import { createAccessory3DService, parseKitPart } from "../services/accessory3d.js";
+import { createAccessory3DService, parseKitPart, prepareManualAccessory } from "../services/accessory3d.js";
 import { createPartMapService } from "../services/car-part-map.js";
 import { autoFitAccessory, createAutoFitService } from "../services/accessory-autofit.js";
 import { Vehicle3DError } from "../services/vehicle3d-validation.js";
@@ -49,6 +49,7 @@ export function createAccessory3DRouter(service = createAccessory3DService(), pa
   router.post(a + "/:id/start", ...admin, json, handle(async (req, res, uid) => res.status(202).json({ accessory: req.body?.retryProcessing === true ? await service.retryProcessing(uid,p(req,"id")) : await service.start(uid, p(req, "id"), req.body?.confirmPaid, req.body?.replaceRevision) })));
   router.post(a + "/:id/preview", ...admin, json, handle(async (req, res, uid) => res.json({ accessory: await service.preview(uid, p(req, "id"), req.body?.generationId) })));
   router.post(a + "/:id/regenerate", ...admin, json, handle(async (req, res, uid) => res.json({ accessory: await service.regenerate(uid, p(req, "id"), req.body?.notes) })));
+  router.post(a + "/:id/validate", ...admin, handle(async (req, res, uid) => { await prepareManualAccessory(p(req, "id"), uid); res.json({ accessory: await service.adminGet(p(req, "id")) }); }));
   router.post(a + "/:id/refit", ...admin, handle(async(req,res,uid)=>res.json(await autoFits.rerun(uid,p(req,"id")))));
   router.post(a + "/:id/unpublish", ...admin, handle(async(req,res,uid)=>res.json({accessory:await service.publication(uid,p(req,"id"),false)})));
   router.post(a + "/:id/reactivate", ...admin, handle(async(req,res,uid)=>res.json({accessory:await service.publication(uid,p(req,"id"),true)})));

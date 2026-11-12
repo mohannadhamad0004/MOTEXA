@@ -106,7 +106,7 @@ const adm = "/admin/parts/accessory-3d";
 export const adminAccessoryApi = {
   list: async () => (await api<{ accessories: ListedAccessory[] }>("GET", adm)).accessories,
   get: async (id: string) => (await api<{ accessory: AdminAccessory }>("GET", `${adm}/${id}`)).accessory,
-  act: (id: string, action: "approve" | "reject" | "start" | "preview" | "regenerate" | "publish"|"refit"|"unpublish"|"reactivate"|"discard-candidate", body: Record<string, unknown> = {}) => api("POST", `${adm}/${id}/${action}`, body),
+  act: (id: string, action: "approve" | "reject" | "start" | "preview" | "regenerate" | "publish"|"refit"|"unpublish"|"reactivate"|"discard-candidate"|"validate", body: Record<string, unknown> = {}) => api("POST", `${adm}/${id}/${action}`, body),
   asset: (id: string, asset: string) => authenticatedBase64(`${adm}/${id}/assets/${asset}`),
   setCredits: (shopId: string, monthlyCredits: number) => api("PUT", `/admin/parts/shops/${shopId}/accessory-3d-credits`, { monthlyCredits }),
   zones: async () => (await api<{ models: ZoneModel[] }>("GET", "/admin/parts/accessory-zones")).models,
