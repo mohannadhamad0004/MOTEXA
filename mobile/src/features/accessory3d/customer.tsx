@@ -19,7 +19,7 @@ function usePhotos(ids: string[]) {
   const key = ids.join(",");
   useEffect(() => {
     let live = true; setUris(ids.map(() => null)); setFailed(false);
-    ids.forEach((id, i) => void customerAccessoryApi.photo(id).then(b => live && setUris(u => u.map((x, j) => j === i ? `data:image/jpeg;base64,${b}` : x)), () => { if (live) setFailed(true); }));
+    ids.forEach((id, i) => void customerAccessoryApi.photo(id).then(b => live && setUris(u => u.map((x, j) => j === i ? `data:image/jpeg;base64,${b}` : x)), () => { if (live) { setFailed(true); setUris(u => u.map((x, j) => j === i ? "" : x)); } })); // "" = this photo failed (null = still loading)
     return () => { live = false; };
   }, [key, tick]); // eslint-disable-line react-hooks/exhaustive-deps
   return { uris, failed, retry: () => setTick(n => n + 1) };
@@ -39,7 +39,7 @@ function Spin({ uris, label }: { uris: (string | null)[]; label: string }) {
     accessible accessibilityRole="adjustable" accessibilityLabel={`${label}, ${t("photo", "صورة")} ${i + 1} / ${uris.length}`}
     accessibilityActions={[{ name: "increment" }, { name: "decrement" }]} onAccessibilityAction={e => setI(v => (v + (e.nativeEvent.actionName === "increment" ? 1 : -1) + uris.length) % uris.length)}
     style={{ height: 240, borderRadius: 16, overflow: "hidden", backgroundColor: g.cardSoft, alignItems: "center", justifyContent: "center" }}>
-    {uri ? <Image source={{ uri }} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : <GText soft>{t("Loading…", "جارٍ التحميل…")}</GText>}
+    {uri ? <Image source={{ uri }} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : <GText soft>{uri === "" ? t("Photo unavailable", "الصورة غير متاحة") : t("Loading…", "جارٍ التحميل…")}</GText>}
     <View style={{ position: "absolute", bottom: 8, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, backgroundColor: g.card }}>
       <GText style={gType.tiny}>{`↔ ${t("Drag to turn", "اسحب للتدوير")} · ${i + 1}/${uris.length}`}</GText>
     </View>
@@ -83,7 +83,7 @@ export function ProductAccessory3D({ productId, car, onPreview }: { productId: s
       {installed.spin && uris.length >= 12 ? <Spin uris={uris} label={t("Installed look, 360°", "شكلها بعد التركيب ٣٦٠°")} />
         : <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
           {uris.map((u, i) => <View key={i} style={{ width: 260, height: 180, borderRadius: 16, overflow: "hidden", backgroundColor: g.cardSoft, alignItems: "center", justifyContent: "center" }}>
-            {u ? <Image accessibilityLabel={`${t("Installed look", "شكلها بعد التركيب")} ${i + 1}`} source={{ uri: u }} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : <GText soft style={gType.tiny}>{t("Loading…", "جارٍ التحميل…")}</GText>}
+            {u ? <Image accessibilityLabel={`${t("Installed look", "شكلها بعد التركيب")} ${i + 1}`} source={{ uri: u }} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : <GText soft style={gType.tiny}>{u === "" ? t("Photo unavailable", "الصورة غير متاحة") : t("Loading…", "جارٍ التحميل…")}</GText>}
           </View>)}
         </ScrollView>}
       {photosFailed && uris.some(u => !u) ? <View style={{ gap: 8, marginTop: 8 }}>
