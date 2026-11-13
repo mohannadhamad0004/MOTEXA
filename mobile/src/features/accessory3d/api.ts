@@ -72,7 +72,7 @@ export type PartMapListItem = { key: string; name: string; status: PartMapStatus
 /** Measured in the part-map editor (8-point shape on the car model, real scale), per label. */
 export type PartSize = { widthMm: number; heightMm: number; depthMm: number; at?: string };
 export type PartSizes = Partial<Record<PartLabel, PartSize>>;
-export type PartMapDetail = PartMapListItem & { sizes?: PartSizes | null; viewerConfig?: CarModel; privateReview?: boolean; modelSha256: string | null; proposal: Partial<Record<PartLabel, { ids: string[]; confidence: number; by: string }>> | null; map: PartMap | null };
+export type PartMapDetail = PartMapListItem & { sizes?: PartSizes | null; cuts?: Partial<Record<"FRONT_BUMPER" | "REAR_BUMPER", number[][]>>; viewerConfig?: CarModel; privateReview?: boolean; modelSha256: string | null; proposal: Partial<Record<PartLabel, { ids: string[]; confidence: number; by: string }>> | null; map: PartMap | null };
 export type ZoneModel = { key: string; name: string; fileZones: Partial<Record<AccessoryType, AccessoryZone>>; zones: Partial<Record<AccessoryType, AccessoryZone>> };
 /** Add-ons that hide the car's own part while on (mirrors backend REPLACES_STOCK). */
 export const REPLACES_STOCK: AccessoryType[] = ["WING", "SPOILER", "ROOF_RACK", "MIRROR_COVERS", "RIMS"];
@@ -119,6 +119,8 @@ export const adminAccessoryApi = {
   partMap: async (key: string) => (await api<{ partMap: PartMapDetail }>("GET", `/admin/parts/part-maps/${key}`)).partMap,
   /** map null = unconfirm (the car goes back to the zone cut) */
   confirmPartMap: async (key: string, modelSha256: string, map: PartMap | null) => (await api<{ partMap: PartMapDetail }>("PUT", `/admin/parts/part-maps/${key}`, { modelSha256, map })).partMap,
+  /** cut mode for a bumper merged into the body: the 8 points, or null = off */
+  savePartCut: async (key: string, label: "FRONT_BUMPER" | "REAR_BUMPER", pts: number[][] | null) => (await api<{ cuts: NonNullable<PartMapDetail["cuts"]> }>("PUT", `/admin/parts/part-maps/${key}/cuts/${label}`, { pts })).cuts,
   savePartSize: async (key: string, label: PartLabel, size: PartSize) => (await api<{ sizes: PartSizes }>("PUT", `/admin/parts/part-maps/${key}/sizes/${label}`, size)).sizes,
   autoFits: async (model3dKey: string) => (await api<{ fits: AutoFitRow[] }>("GET", `/admin/parts/auto-fits?model3dKey=${encodeURIComponent(model3dKey)}`)).fits,
   /** approve the fit with a correction (null = the pure auto-fit: "Reset to auto-fit") */

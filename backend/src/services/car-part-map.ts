@@ -109,10 +109,24 @@ export function accessoryGate(pieces: Piece[], dims: number[], proposal: Proposa
   return { verdict: problems.length ? "REJECTED" : Object.keys(limited).length ? "LIMITED" : "FULL", problems, warnings, limited, text,
     checks: { dimsM: dims, wheels, stockSpoilerSeparate: !!p.SPOILER?.ids?.length, singlePiece: blob } };
 }
+/** Cut mode: the admin's 8-point hull per bumper label, only for the exact model file it was drawn on. */
+export const CUT_LABELS = ["FRONT_BUMPER", "REAR_BUMPER"] as const;
+export function currentCuts(map: { modelSha256: string; cuts?: unknown } | null, key: string): Partial<Record<(typeof CUT_LABELS)[number], number[][]>> {
+  if (!map?.cuts || map.modelSha256 !== modelFileSha(key)) return {};
+  return Object.fromEntries(Object.entries(map.cuts as Record<string, { pts: number[][]; sha: string }>).filter(([k, c]) => (CUT_LABELS as readonly string[]).includes(k) && c?.sha === map.modelSha256).map(([k, c]) => [k, c.pts]));
+}
+/** Where a replacement bumper goes on this car: its confirmed part-map piece(s) (WAY 1), the admin's cut region (WAY 2), or not usable. */
+export function bumperSpace(map: { modelSha256: string; confirmedAt: Date | null; map: unknown; cuts?: unknown } | null, key: string, type: string): "PART_MAP" | "CUT" | "STALE" | "MISSING" {
+  if (map && map.modelSha256 !== modelFileSha(key)) return "STALE";
+  if (currentCuts(map, key)[type as (typeof CUT_LABELS)[number]]) return "CUT";
+  const ids = (map?.map as Record<string, unknown[]> | null)?.[type];
+  return map?.confirmedAt && Array.isArray(ids) && ids.length ? "PART_MAP" : "MISSING";
+}
 /** Can this car's CURRENT 3D model show a replacement part of this type? A confirmed map decides bumpers (the same rule as fitEligibility);
  *  otherwise the automatic proposal's gate. Returns the reason it can't (e.g. NOT_SEPARATE), or null = supported / not known yet (no current map). */
-export function partLimit(map: { modelSha256: string; confirmedAt: Date | null; map: unknown; pieces: unknown; dims: unknown; proposal: unknown } | null, key: string, type: string): string | null {
+export function partLimit(map: { modelSha256: string; confirmedAt: Date | null; map: unknown; pieces: unknown; dims: unknown; proposal: unknown; cuts?: unknown } | null, key: string, type: string): string | null {
   if (!map || map.modelSha256 !== modelFileSha(key)) return null;
+  if (currentCuts(map, key)[type as (typeof CUT_LABELS)[number]]) return null; // cut mode: usable on this car
   if (map.confirmedAt && (type === "FRONT_BUMPER" || type === "REAR_BUMPER")) return (map.map as Record<string, unknown> | null)?.[type] ? null : "NOT_SEPARATE";
   return accessoryGate(map.pieces as never, map.dims as number[], map.proposal as never).limited[type as GateType] ?? null;
 }
@@ -145,6 +159,11 @@ export function autoSegment(key: string) {
   return running.get(key)!;
 }
 
+/** Cut regions for these models (viewer config partCuts), only for the served file they were drawn on. */
+export async function partCuts(keys: string[]) {
+  const rows = await prisma.carPartMap.findMany({ where: { model3dKey: { in: keys }, cuts: { not: Prisma.DbNull } }, select: { model3dKey: true, modelSha256: true, cuts: true } });
+  return new Map(rows.map(r => [r.model3dKey, currentCuts(r, r.model3dKey)] as const).filter(([, c]) => Object.keys(c).length));
+}
 /** Confirmed maps for these models, only where the served file is still the segmented one. */
 export async function confirmedPartMaps(keys: string[]): Promise<Map<string, PartMap>> {
   const rows = await prisma.carPartMap.findMany({ where: { model3dKey: { in: keys }, confirmedAt: { not: null } }, select: { model3dKey: true, modelSha256: true, map: true } });
@@ -174,7 +193,7 @@ export function createPartMapService() {
   const shape = (key: string, r: Awaited<ReturnType<typeof prisma.carPartMap.findUnique>>) => {
     const sha = modelFileSha(key), pieces = (r?.pieces ?? []) as Piece[];
     const status = !r ? "none" : r.modelSha256 !== sha ? "stale" : r.confirmedAt ? "confirmed" : singleBlob(pieces) ? "single" : "proposed";
-    return { key, status, modelSha256: r?.modelSha256 ?? null, pieces: pieces.length, dims: r?.dims ?? null, proposal: r?.proposal ?? null, map: r?.map ?? null, sizes: r?.sizes ?? null,
+    return { key, status, modelSha256: r?.modelSha256 ?? null, pieces: pieces.length, dims: r?.dims ?? null, proposal: r?.proposal ?? null, map: r?.map ?? null, sizes: r?.sizes ?? null, cuts: r ? currentCuts(r, key) : {},
       confirmedAt: r?.confirmedAt ?? null, segmentedAt: r?.segmentedAt ?? null, proposalSummary: summary(r?.proposal as Proposal), mapSummary: summary(r?.map as PartMap),
       gate: r && r.modelSha256 === sha ? accessoryGate(pieces, r.dims as number[], r.proposal as Proposal) : null };
   };
@@ -218,6 +237,25 @@ export function createPartMapService() {
         const sizes = { ...(r.sizes as Record<string, unknown> | null ?? {}), [label]: size };
         await tx.carPartMap.update({ where: { model3dKey: key }, data: { sizes: sizes as Prisma.InputJsonValue } });
         return sizes;
+      });
+    },
+    /** Cut mode for a bumper merged into the body: 8 world points (metres, the editor's), or null = off. Saved for this exact model file. */
+    saveCut: async (uid: string, key: string, label: string, body: { pts?: unknown }) => {
+      if (importId(key)) return fail("NOT_SUPPORTED", "Draw the cut on the published car model.", 409);
+      if (!(CUT_LABELS as readonly string[]).includes(label)) return fail("INVALID_LABEL", "Cut mode is for bumpers only.");
+      const pts = body.pts;
+      if (pts !== null && !(Array.isArray(pts) && pts.length === 8 && pts.every(p => Array.isArray(p) && p.length === 3 && p.every(n => typeof n === "number" && Number.isFinite(n) && Math.abs(n) <= 10))))
+        return fail("INVALID_CUT", "A cut needs exactly 8 points.");
+      return prisma.$transaction(async tx => {
+        await tx.$queryRaw`SELECT "model3dKey" FROM "CarPartMap" WHERE "model3dKey"=${key} FOR UPDATE`;
+        const r = await tx.carPartMap.findUnique({ where: { model3dKey: key }, select: { cuts: true, modelSha256: true } });
+        if (!r) return fail("NOT_SEGMENTED", "This car has not been split into parts yet.", 409);
+        if (r.modelSha256 !== modelFileSha(key)) return fail("STALE_PART_MAP", "The car model changed. Reload the editor.", 409);
+        const cuts = { ...(r.cuts as Record<string, unknown> | null ?? {}) };
+        if (pts === null) delete cuts[label]; else cuts[label] = { pts, sha: r.modelSha256, at: new Date().toISOString() };
+        await tx.auditLog.create({ data: { actorId: uid, action: pts === null ? "PART_CUT_REMOVED" : "PART_CUT_SAVED", targetId: key, details: { label, sha: r.modelSha256 } } });
+        await tx.carPartMap.update({ where: { model3dKey: key }, data: { cuts: Object.keys(cuts).length ? cuts as Prisma.InputJsonValue : Prisma.DbNull } });
+        return currentCuts({ modelSha256: r.modelSha256, cuts }, key);
       });
     },
     /** Confirm the admin's map (null = unconfirm: the car goes back to zones). Only for the file the pieces came from. */

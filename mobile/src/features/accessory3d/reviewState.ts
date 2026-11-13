@@ -1,6 +1,7 @@
 export type ReviewTarget = {
   generationId: string; model3dKey: string | null; name: string; nameAr: string; has3d: boolean; semanticPart: string;
-  partMap: "NOT_REQUIRED" | "CONFIRMED" | "MISSING" | "STALE";
+  /** CUT = cut mode: the bumper is merged into the body and the Parts Admin drew the region to cut */
+  partMap: "NOT_REQUIRED" | "CONFIRMED" | "CUT" | "MISSING" | "STALE";
   fit: {state: "NOT_RUN" | "RUNNING" | "PASSED" | "NEEDS_CORRECTION" | "FAILED" | "APPROVED"; current: boolean; approvedAt: string | null; reason: string | null};
   previewCurrent: boolean;
 };
@@ -15,7 +16,7 @@ export type AccessoryReview = {
 export const REVIEW_LABELS: Record<string, [string, string]> = {
   NOT_RUN: ["Not run", "لم يُنفّذ"], RUNNING: ["Running", "جارٍ التنفيذ"], PASSED: ["Passed", "ناجح"],
   NEEDS_CORRECTION: ["Needs correction", "يحتاج إلى تصحيح"], FAILED: ["Failed", "فشل"], APPROVED: ["Approved", "معتمد"],
-  NOT_REQUIRED: ["Not required", "غير مطلوبة"], CONFIRMED: ["Confirmed", "مؤكدة"], MISSING: ["Missing", "مفقودة"], STALE: ["Stale", "قديمة"],
+  NOT_REQUIRED: ["Not required", "غير مطلوبة"], CONFIRMED: ["Confirmed", "مؤكدة"], CUT: ["Cut mode", "وضع القص"], MISSING: ["Missing", "مفقودة"], STALE: ["Stale", "قديمة"],
   PRIVATE_CANDIDATE: ["Private candidate", "نموذج خاص"], READY_FOR_FINAL_REVIEW: ["Ready for final review", "جاهز للمراجعة النهائية"], PUBLISHED: ["Published", "منشور"],
   UNPUBLISHED: ["Unpublished", "غير منشور"],
 };

@@ -11,7 +11,7 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
-import { modelFileSha } from "./car-part-map.js";
+import { modelFileSha, bumperSpace } from "./car-part-map.js";
 import { REPO_ROOT } from "./vehicle3d-catalog.js";
 import { PRIVATE_3D_DIR, privatePath } from "./vehicle3d-private-assets.js";
 import { digest, fail } from "./vehicle3d-validation.js";
@@ -136,7 +136,7 @@ export async function fitEligibility(accessoryId:string,generationId:string,priv
   if(!a)return no("NO_ACCESSORY_3D");
   if(a.accessoryType==="FRONT_BUMPER"||a.accessoryType==="REAR_BUMPER"){
     const map=await tx.carPartMap.findUnique({where:{model3dKey:g.model3dKey}});
-    if(!map?.confirmedAt||map.modelSha256!==modelFileSha(g.model3dKey)||!(map.map as Record<string,unknown>)?.[a.accessoryType])return no("PART_MAP_STALE");
+    const space=bumperSpace(map,g.model3dKey,a.accessoryType);if(space!=="PART_MAP"&&space!=="CUT")return no("PART_MAP_STALE"); // cut mode = usable on this car only
   }
   const r=await tx.accessoryAutoFit.findUnique({where:{accessoryId_generationId:{accessoryId,generationId}}});
   if(!r||r.model3dKey!==g.model3dKey||typeOf(r.fit)!==a.accessoryType||!validFit(r.fit)||!await currentFit(r,privateModelPath))return no("FIT_NOT_READY");
