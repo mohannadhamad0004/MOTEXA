@@ -25,7 +25,7 @@ export function AccessoryFinalReview({a, busy, act, children}: {a: AdminAccessor
     <Card><GText style={[gType.title,align]}>{t("3D final review","المراجعة النهائية للنموذج")}</GText><View style={{gap:10,marginTop:12}}>
       <GText style={[gType.label,align]}>{t("Model","النموذج")}</GText>
       {status(t("Generated","مُنشأ"),review.model.generated?t("Yes","نعم"):t("Not complete","غير مكتمل"))}
-      {status(t("Optimized","مُحسّن"),review.model.optimized?t("Yes","نعم"):t("Not complete","غير مكتمل"))}
+      {status(t("Optimized","مُحسّن"),review.model.keptOriginal?t("Not needed: original kept (under 8 MB)","غير مطلوب: أُبقي الملف الأصلي (أقل من 8 ميغابايت)"):review.model.optimized?t("Yes","نعم"):t("Not complete","غير مكتمل"))}
       {status(t("Model validation","التحقق من النموذج"),label(review.model.validation))}
       {review.model.validation!=="PASSED"&&review.model.reason?<Note tone="warning">{review.model.reason}</Note>:null}
       {review.canRetryProcessing?<GButton label={t("Retry processing","إعادة معالجة النموذج")} disabled={busy} onPress={()=>void act("start",{retryProcessing:true})}/>:null}

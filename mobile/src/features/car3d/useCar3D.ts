@@ -111,7 +111,9 @@ export function useCar3D(p: Car3DProps, send: (m: object) => void) {
       for (const key of x.keys.filter((key): key is string => typeof key === "string" && (key === modelFile(m) || isModelFile(key) || privateKits.some(k=>k.file===key&&!!k.assetLoader))).slice(0, 4))
         (key === modelFile(m) && assetLoader ? assetLoader() : privateKits.find(k=>k.file===key)?.assetLoader?.() ?? modelBase64(key)).then(
           (b64) => sendRef.current({ type: "asset", key, b64 }),
-          (e) => setError(String(e?.message ?? e))
+          // only the car itself failing is "Couldn't load the 3D view"; a failed accessory file leaves the loaded car on screen
+          // and is reported like any other fit problem
+          (e) => key === modelFile(m) ? setError(String(e?.message ?? e)) : onFitError.current?.(String(e?.message ?? e).slice(0, 300), privateKits.find(k => k.file === key)?.type ?? null)
         );
   }, [m, assetLoader, privateKits]);
   const retry = () => {

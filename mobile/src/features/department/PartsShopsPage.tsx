@@ -1,24 +1,20 @@
-// Parts Admin: Parts shops (the Shops tab). EVERY parts shop account the admin controls, as a list or on a map, with real status filters
-// and search. Data: GET /admin/parts/shops (all shops, not paginated, so filters, counts and search are complete) and the provider review
-// list (documents waiting). One account = one physical shop, so the map has one marker per saved shop location; nothing is guessed from
-// a city. Opening a shop goes to the existing review screen, which holds the documents and the approve / request changes / reject actions.
+// Parts Admin: Parts shops (the Shops tab). EVERY parts shop account the admin controls, as a list with real status filters and search.
+// Data: GET /admin/parts/shops (all shops, not paginated, so filters, counts and search are complete) and the provider review list
+// (documents waiting). "Show on map" opens the full-screen directory map (/dept/directory-map: one pin per saved shop location, coloured
+// by status). Opening a shop goes to the existing review screen, which holds the documents and the approve / request changes / reject actions.
 import { Ionicons } from "@expo/vector-icons";
 import { Href, router } from "expo-router";
 import { useMemo, useState } from "react";
-import { TextInput, View, useWindowDimensions } from "react-native";
+import { TextInput, View } from "react-native";
 import InteractiveButton from "../../components/InteractiveButton";
 import { Text } from "../../components/MotexaVisual";
 import { api } from "../../core/config/api";
 import { CATALOG_GROUPS } from "../../core/constants/categories";
 import { cityLabel } from "../../core/constants/cities";
 import { useLoad } from "../../core/hooks/useLoad";
-import { useReduced } from "../../motion";
-import { ShopPhoto } from "../catalog/partsLanding";
-import { ShopsMap } from "../catalog/ShopsMap";
 import { review } from "../provider/api";
 import type { Verification } from "../parts/partsService";
-import { fmtPoint } from "./LocationRow";
-import { Avatar, DButton, DeptPage, Empty, ItemCard, Load, Pill, Section, StatusChip, cardStyle, useDT } from "./ui";
+import { Avatar, DButton, DeptPage, Empty, ItemCard, Load, Pill, Section, StatusChip, useDT } from "./ui";
 
 const go = (path: string) => router.push(path as Href);
 const ltr = (v: string) => "⁦" + v + "⁩";
@@ -59,16 +55,12 @@ const catLabel = (k: string, ar: boolean) => {
 
 export function PartsShopsPage() {
   const d = useDT();
-  const { height } = useWindowDimensions();
-  const reduced = useReduced();
   const state = useLoad(async () => {
     const [shops, pending] = await Promise.all([api<{ shops: Shop[] }>("GET", "/admin/parts/shops").then((r) => r.shops), review.list("PARTS", "NEW")]);
     return { shops, pendingDocs: new Map(pending.map((p) => [p.id, p.pendingDocuments])) };
   }, []);
-  const [view, setView] = useState<"list" | "map">("list");
   const [filter, setFilter] = useState<Filter>("ALL");
   const [q, setQ] = useState("");
-  const [sel, setSel] = useState<string | null>(null);
 
   const data = state.data;
   const shown = useMemo(() => {
@@ -80,24 +72,6 @@ export function PartsShopsPage() {
     });
   }, [data, filter, q]);
   const count = (k: Filter) => (data?.shops ?? []).filter((s) => k === "ALL" || s.verificationStatus === k).length;
-
-  // real stored points only: one marker per shop that saved a location
-  const pins = useMemo(() => shown.filter((s) => s.baseLat != null && s.baseLng != null).map((s) => ({ id: s.id, name: s.shopName, lat: s.baseLat!, lng: s.baseLng!, kind: "shop" as const, dim: s.verificationStatus !== "APPROVED", shop: s })), [shown]);
-  const selected = pins.find((p) => p.id === sel)?.shop ?? null;
-  const noPoint = shown.length - pins.length;
-
-  const toggle = (k: "list" | "map", en: string, ar: string, icon: keyof typeof Ionicons.glyphMap) => (
-    <InteractiveButton
-      key={k}
-      accessibilityRole="button"
-      accessibilityState={{ selected: view === k }}
-      onPress={() => setView(k)}
-      style={{ flex: 1, minHeight: 40, borderRadius: 20, flexDirection: d.row, alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: view === k ? d.fill : "transparent" }}
-    >
-      <Ionicons name={icon} size={17} color={view === k ? d.fillInk : d.muted} />
-      <Text style={{ color: view === k ? d.fillInk : d.ink, fontSize: 13, fontWeight: "700" }}>{d.t(en, ar)}</Text>
-    </InteractiveButton>
-  );
 
   const labels = (s: Shop) => s.categories.map((k) => catLabel(k, d.ar)).filter(Boolean);
   /** shop name, then brand · branch on its own line so a long name never squeezes the rest */
@@ -113,9 +87,8 @@ export function PartsShopsPage() {
   return (
     <DeptPage onRefresh={() => void state.reload()} refreshing={state.loading && !!data}>
       <Section title={d.t("Parts shops", "متاجر قطع الغيار")} caption={d.t("Every shop account: one account is one physical shop or branch.", "كل حساب متجر: الحساب الواحد هو متجر أو فرع فعلي واحد.")} />
-      <View style={{ ...cardStyle(d), flexDirection: d.row, padding: 4, marginBottom: 12 }}>
-        {toggle("list", "List", "قائمة", "list-outline")}
-        {toggle("map", "Map", "خريطة", "map-outline")}
+      <View style={{ marginBottom: 12 }}>
+        <DButton icon="map-outline" label={d.t("Show on map", "عرض على الخريطة")} onPress={() => go("/dept/directory-map")} />
       </View>
       <View style={{ flexDirection: d.row, alignItems: "center", gap: 10, borderRadius: 17, borderWidth: 1, borderColor: d.border, backgroundColor: d.paper, paddingHorizontal: 14, marginBottom: 12 }}>
         <Ionicons name="search-outline" size={20} color={d.muted} />
@@ -147,7 +120,6 @@ export function PartsShopsPage() {
 
       <Load state={state}>
         {() =>
-          view === "list" ? (
             shown.length === 0 ? (
               <Empty icon="search-outline" text={q || filter !== "ALL" ? d.t("Nothing matches.", "لا توجد نتائج مطابقة.") : d.t("No parts shops yet.", "لا توجد متاجر بعد.")} />
             ) : (
@@ -181,56 +153,6 @@ export function PartsShopsPage() {
                 );
               })
             )
-          ) : (
-            <View style={{ gap: 12 }}>
-              <View style={{ flexDirection: d.row, alignItems: "center", gap: 6 }}>
-                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: "#B97A3F", alignItems: "center", justifyContent: "center" }}>
-                  <Ionicons name="storefront" size={13} color="#FFF" />
-                </View>
-                <Text style={{ color: d.muted, fontSize: 12 }}>{d.t("Parts shop (grey = not approved)", "متجر قطع غيار (رمادي = غير معتمد)")}</Text>
-              </View>
-              {pins.length === 0 ? (
-                <Empty icon="map-outline" text={d.t("No stored locations to show.", "لا توجد مواقع محفوظة لعرضها.")} hint={d.t("Only locations the shops saved are shown.", "تظهر فقط المواقع التي حفظتها المتاجر.")} />
-              ) : (
-                <View style={{ height: Math.min(460, Math.round(height * 0.5)), borderRadius: 20, overflow: "hidden", borderWidth: 1, borderColor: d.border }}>
-                  <ShopsMap
-                    pins={pins.map(({ id, name, lat, lng, dim }) => ({ id, name, lat, lng, dim }))}
-                    selectedId={sel}
-                    fitKey={`${filter}|${q}|${pins.length}`}
-                    onSelect={setSel}
-                    onBackground={() => setSel(null)}
-                    height={Math.min(460, Math.round(height * 0.5))}
-                  />
-                </View>
-              )}
-              {selected ? (
-                <View style={{ ...cardStyle(d), padding: 14, gap: 8 }} accessibilityLiveRegion="polite">
-                  <View style={{ flexDirection: d.row, alignItems: "flex-start", gap: 10 }}>
-                    <View style={{ width: 64, height: 64, borderRadius: 12, overflow: "hidden" }}>
-                      <ShopPhoto uri={selected.storefrontUri ?? null} height={64} />
-                    </View>
-                    <Names s={selected} />
-                    <StatusChip status={selected.verificationStatus} />
-                  </View>
-                  <Text style={{ color: d.muted, fontSize: 12, lineHeight: 18, textAlign: d.align }}>
-                    {[cityLabel(selected.city, d.ar), selected.address].filter(Boolean).join(" · ")}
-                    {`
-${selected.productCount} ${selected.productCount === 1 ? d.t("product", "منتج") : d.t("products", "منتجات")}${selected.hiddenProductCount ? ` · ${selected.hiddenProductCount} ${d.t("hidden", "مخفية")}` : ""}`}
-                  </Text>
-                  {labels(selected).length ? (
-                    <Text numberOfLines={2} style={{ color: d.muted, fontSize: 12, lineHeight: 18, textAlign: d.align }}>{labels(selected).slice(0, 4).join(d.ar ? "، " : ", ")}{labels(selected).length > 4 ? ` +${labels(selected).length - 4}` : ""}</Text>
-                  ) : null}
-                  <Text style={{ color: d.muted, fontSize: 12, textAlign: d.align, writingDirection: "ltr" }}>{fmtPoint(selected.baseLat!, selected.baseLng!)}</Text>
-                  <DButton variant="ghost" icon="eye-outline" label={d.t("View shop & products", "عرض المتجر والمنتجات")} onPress={() => go(`/dept/review/shop/${selected.id}`)} />
-                </View>
-              ) : pins.length ? (
-                <Text style={{ color: d.muted, fontSize: 12, textAlign: d.align }}>{d.t("Tap a marker for a summary.", "المس علامة لعرض ملخص.")}</Text>
-              ) : null}
-              {noPoint ? (
-                <Text style={{ color: d.muted, fontSize: 12, lineHeight: 19, textAlign: d.align }}>{d.t(`Not on the map (no saved location): ${noPoint} shops.`, `غير ظاهرة على الخريطة (بلا موقع محفوظ): ${noPoint} متاجر.`)}</Text>
-              ) : null}
-            </View>
-          )
         }
       </Load>
     </DeptPage>

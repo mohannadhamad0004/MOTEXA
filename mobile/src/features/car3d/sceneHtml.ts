@@ -1544,11 +1544,16 @@ function boxApply(pts) {
   var ids = []; car.edit.meshes.forEach(function (o) { segment(o).boxes.forEach(function (pb, c) { if (tol.containsBox(pb)) ids.push("m" + o.userData.pi + "c" + c); }); });
   post({ type: "boxIds", ids: ids });
 }
-var building = null;
+var building = null, lastResetView = null;
 async function apply() {
   var s = state; if (!s) return;
   scene.background = new THREE.Color(s.bg);
-  controls.enabled = !!s.interactive && !(s.partEdit && s.partEdit.boxPts && !s.partEdit.boxTurn); // Box mode: a touch places a corner, it never turns the car
+  // Box mode placing points: one finger never moves the view (a tap places a point); two fingers pinch-zoom and pan; the mouse wheel
+  // zooms and the right button pans. "Turn the car" rotates as usual. The part-map editor can always pan; other viewers never pan.
+  controls.enabled = !!s.interactive;
+  controls.enableRotate = !(s.partEdit && s.partEdit.boxPts && !s.partEdit.boxTurn); // set before the car is built too
+  controls.enablePan = !!s.partEdit;
+  if (s.partEdit && s.partEdit.resetView !== undefined && s.partEdit.resetView !== lastResetView) { if (lastResetView !== null) reset(); lastResetView = s.partEdit.resetView; }
   controls.autoRotate = !s.reduced && !!s.autoRotate && !(s.partEdit && s.partEdit.boxPts); // paused in Box mode so taps land
   if (!car || car.file !== s.file || car.zkey !== carKey(s)) {
     if (!assets[s.file]) { post({ type: "need", keys: [s.file] }); return; }
@@ -1583,7 +1588,7 @@ renderer.domElement.addEventListener("touchend", function (e) {
   boxPoint(t);
 });
 renderer.domElement.addEventListener("pointerup", function (e) {
-  if (!state || !state.interactive || !downAt || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 10) return;
+  if (!state || !state.interactive || !downAt || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 10 || (e.pointerType === "mouse" && e.button !== 0)) return;
   if (state.partEdit && car && car.edit) { // editor: a tap selects a piece / places a box corner (no double-tap reset)
     if (!state.partEdit.boxPts) pickPiece(e); else if (placingBox(state) && e.pointerType !== "touch") boxPoint(e); // touch: touchend above
     return; }

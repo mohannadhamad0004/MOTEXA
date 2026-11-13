@@ -29,8 +29,8 @@ import { LocationProblem, useCurrentLocation, useForegroundLocationWatch } from 
 import { RouteSummary, useRoute } from "./useRoute";
 
 // ---- garage adapters: this customer-only screen keeps its structure; these give it the "Mo's Garage" look ----
-type IconName = "back" | "search" | "pin" | "chev" | "spark" | "arrow";
-const ICON: Record<IconName, GIconName> = { back: "arrow-back", search: "search-outline", pin: "navigate-outline", chev: "chevron-forward", spark: "flash-outline", arrow: "arrow-forward" };
+type IconName = "back" | "search" | "pin" | "chev" | "spark" | "arrow" | "fit";
+const ICON: Record<IconName, GIconName> = { back: "arrow-back", search: "search-outline", pin: "navigate-outline", chev: "chevron-forward", spark: "flash-outline", arrow: "arrow-forward", fit: "scan-outline" };
 /** Garage colours under the names this screen was written with. */
 function useTheme() {
   const { g, row, align, isArabic } = useGarageTheme();
@@ -143,8 +143,8 @@ type Req = { kind: "tow"; data: CustomerTowRequest } | { kind: "mech"; data: Cus
 const TERMINAL = ["DECLINED", "CANCELLED", "COMPLETED"];
 const TOW_TYPES: TruckType[] = ["FLATBED", "WHEEL_LIFT", "HEAVY_DUTY"];
 
-/** Round overlay button (back). */
-function OverlayButton({ icon, label, onPress, on = false }: { icon: IconName; label: string; onPress: () => void; on?: boolean }) {
+/** Round overlay button (back). Also used by the admin directory maps (department/AdminMapScreen). */
+export function OverlayButton({ icon, label, onPress, on = false }: { icon: IconName; label: string; onPress: () => void; on?: boolean }) {
   const { c } = useTheme();
   return (
     <Pressable
@@ -158,8 +158,9 @@ function OverlayButton({ icon, label, onPress, on = false }: { icon: IconName; l
   );
 }
 
-/** Home map filter: a check chip per place type, in its pin colour (so the chips are the legend), with the real count. */
-function LayerChip({ kind, label, count, on, onPress }: { kind: Kind; label: string; count: number | null; on: boolean; onPress: () => void }) {
+/** Home map filter: a check chip per place type, in its pin colour (so the chips are the legend), with the real count.
+ *  Also used by the admin directory maps (department/AdminMapScreen) with their own colours. */
+export function LayerChip({ color, icon, label, count, on, onPress }: { color: string; icon: GIconName; label: string; count: number | null; on: boolean; onPress: () => void }) {
   const { g, row } = useGarageTheme();
   return (
     <Pressable
@@ -169,11 +170,11 @@ function LayerChip({ kind, label, count, on, onPress }: { kind: Kind; label: str
       onPress={onPress}
       style={({ pressed }) => [
         row,
-        { minHeight: 44, alignItems: "center", gap: 8, paddingHorizontal: 10, borderRadius: gShape.pill, borderWidth: 1.5, borderColor: on ? PLACE_COLOR[kind] : g.line, backgroundColor: on ? g.card : "transparent", opacity: pressed ? 0.86 : 1 },
+        { minHeight: 44, alignItems: "center", gap: 8, paddingHorizontal: 10, borderRadius: gShape.pill, borderWidth: 1.5, borderColor: on ? color : g.line, backgroundColor: on ? g.card : "transparent", opacity: pressed ? 0.86 : 1 },
       ]}
     >
-      <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: on ? PLACE_COLOR[kind] : g.line, alignItems: "center", justifyContent: "center" }}>
-        <GIcon name={on ? "checkmark" : PLACE_ICON[kind]} size={14} color="#FFFFFF" />
+      <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: on ? color : g.line, alignItems: "center", justifyContent: "center" }}>
+        <GIcon name={on ? "checkmark" : icon} size={14} color="#FFFFFF" />
       </View>
       <GText style={{ fontSize: 13, lineHeight: 18, fontWeight: "700", color: on ? g.ink : g.soft }}>{count === null ? label : `${label} · ${count}`}</GText>
     </Pressable>
@@ -600,7 +601,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
         step === "select" ? (
           <HScroll>
             {KINDS.map((k) => (
-              <LayerChip key={k} kind={k} label={layerLabel[k]} count={loadCount ? counts[k] : null} on={layers[k]} onPress={() => toggleLayer(k)} />
+              <LayerChip key={k} color={PLACE_COLOR[k]} icon={PLACE_ICON[k]} label={layerLabel[k]} count={loadCount ? counts[k] : null} on={layers[k]} onPress={() => toggleLayer(k)} />
             ))}
           </HScroll>
         ) : null

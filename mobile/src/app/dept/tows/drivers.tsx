@@ -10,6 +10,9 @@ import { useLoad } from "../../../core/hooks/useLoad";
 import { AdminDriver, DriverApproval, adminDrivers } from "../../../features/tow/dispatchService";
 import { gType, useGarageTheme } from "../../../theme/garage";
 
+/** Two decisions per row: four in one row cut the labels to "A" / "Re…" at 390 px (T-02). */
+const HALF = { flexGrow: 1, flexBasis: "45%" } as const;
+
 const FILTERS: DriverApproval[] = ["PENDING", "APPROVED", "REJECTED", "SUSPENDED"];
 
 /** Licence image: private, so the request carries the admin's token. */
@@ -103,12 +106,12 @@ export default function DriverReview() {
                 </View>
               </View>
             ) : (
-              <View style={[row, { gap: 10, marginTop: 8 }]}>
-                {d.approval !== "APPROVED" ? <GButton flex icon="checkmark" label={t("Approve", "اعتماد")} disabled={busy || !d.licenceUri} onPress={() => void decide(d, "APPROVE")} /> : null}
-                {d.approval === "PENDING" ? <GButton flex variant="secondary" label={t("Request changes", "طلب تعديل")} onPress={() => setAsk({ d, decision: "REQUEST_CHANGES" })} /> : null}
-                {d.approval === "PENDING" ? <GButton flex variant="secondary" label={t("Reject", "رفض")} onPress={() => setAsk({ d, decision: "REJECT" })} /> : null}
-                <GButton flex variant="ghost" label={t("Edit", "تعديل")} onPress={() => setEdit({ d, name: d.name, phone: d.phone, licence: d.licenceNumber ?? "" })} />
-                {d.approval === "APPROVED" ? <GButton flex variant="danger" label={t("Suspend", "إيقاف")} onPress={() => setAsk({ d, decision: "SUSPEND" })} /> : null}
+              <View style={[row, { gap: 10, marginTop: 8, flexWrap: "wrap" }]}>
+                {d.approval !== "APPROVED" ? <GButton style={HALF} icon="checkmark" label={t("Approve", "اعتماد")} disabled={busy || !d.licenceUri} onPress={() => void decide(d, "APPROVE")} /> : null}
+                {d.approval === "PENDING" ? <GButton style={HALF} variant="secondary" label={t("Request changes", "طلب تعديل")} onPress={() => setAsk({ d, decision: "REQUEST_CHANGES" })} /> : null}
+                {d.approval === "PENDING" ? <GButton style={HALF} variant="secondary" label={t("Reject", "رفض")} onPress={() => setAsk({ d, decision: "REJECT" })} /> : null}
+                <GButton style={HALF} variant="ghost" label={t("Edit", "تعديل")} onPress={() => setEdit({ d, name: d.name, phone: d.phone, licence: d.licenceNumber ?? "" })} />
+                {d.approval === "APPROVED" ? <GButton style={HALF} variant="danger" label={t("Suspend", "إيقاف")} onPress={() => setAsk({ d, decision: "SUSPEND" })} /> : null}
               </View>
             )}
           </Card>

@@ -28,3 +28,10 @@ export function threeDError(error:unknown,t:(en:string,ar:string)=>string){
  return pair?t(...pair):t(e?.message??"Could not complete the 3D action. Try again.","تعذّر إكمال الإجراء ثلاثي الأبعاد. تحقق من التفاصيل وحاول مجددًا.");
 }
 export function threeDReason(code:string|null|undefined,t:(en:string,ar:string)=>string){return t(...(THREE_D_ERRORS[code??""]??THREE_D_ERRORS.FIT_REVIEW_REQUIRED));}
+
+/** Customer wording: admin-pipeline states (review, fit, part map, missing model) are not the customer's to act on. Only codes the
+ *  customer can do something about keep their own text (request the car in 3D, pick a compatible Garage car). */
+const CUSTOMER_KEEP=new Set(["NO_VEHICLE_3D","NO_COMPATIBLE_GARAGE_CAR"]);
+export function customerThreeDReason(code:string|null|undefined,t:(en:string,ar:string)=>string){
+ return code&&CUSTOMER_KEEP.has(code)?threeDReason(code,t):t("3D preview coming soon for your car","المعاينة ثلاثية الأبعاد لسيارتك قريبًا");
+}
