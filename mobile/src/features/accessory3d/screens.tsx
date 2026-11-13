@@ -17,6 +17,7 @@ import { refreshRuntimeModels, useCatalogModelKey } from "../car3d/runtimeModels
 import { normalizeNumberText } from "../../core/constants/numbers";
 import { ACCESSORY_TYPE_LABELS, KIT_PART_TYPE, PREVIEW_VIEWS, REPLACES_STOCK, STATUS_LABELS, adminAccessoryApi, isBumper, shopAccessoryApi, sizeField, typesForCategory, type KitPart,
   type Accessory, type AccessoryStatus, type AutoFitRow, type PartMapDetail, type Preview, type ZoneBox, RIM_FINISHES, RIM_FINISH_LABELS, type RimFinish } from "./api";
+import { shapeSize, sizeMismatches, SIZE_LABEL } from "./partSize";
 import { NO_ADJUST, type FitAdjust } from "../car3d/car3d";
 import { GateSummary } from "./gate";
 import { DeptPage, Section as DeptSection, useDT } from "../department/ui";
@@ -396,6 +397,12 @@ export function AdminAccessory3DDetail() {
         {Object.entries(a.size).filter(([, v]) => v !== null).map(([k, v]) => <GText key={k} soft style={align}>{`${t(...sizeLabel[k]!)}: ${v}`}</GText>)}
         <GText style={[gType.label, align, { marginTop: 10 }]}>{t("Fits", "تناسب")}</GText>
         {a.fits.map(f => <GText key={f.id} soft style={align}>{`${isArabic ? f.nameAr : f.name} (${f.years[0]}–${f.years[1]})${f.id === a.installedGenerationId ? ` · ${t("in the installed photos", "في صور التركيب")}` : ""}${f.has3d ? " · 3D" : ""}`}</GText>)}
+        {a.fits.map(f => { const L = SIZE_LABEL[a.accessoryType], m = L ? f.partSizes?.[L] : null; if (!m) return null;
+          const off = sizeMismatches(a.accessoryType, a.size, m), car = isArabic ? f.nameAr : f.name;
+          return <View key={`size-${f.id}`} style={{ marginTop: 8 }}>
+            <GText soft style={align}>{`${t("Measured on the", "المقاس على")} ${car}: ${fmtSize(m)} ${t("mm (width × height × depth)", "مم (العرض × الارتفاع × العمق)")}`}</GText>
+            {off.length ? <Note tone="warning">{`${t("Real size differs by more than 15% from the measured part", "المقاس الحقيقي يختلف بأكثر من 15% عن القطعة المقاسة")} (${car}): ${off.map(o => `${t(...sizeLabel[o.field]!)} ${o.shop} ≠ ${o.measured}`).join(" · ")}`}</Note> : null}
+          </View>; })}
         <SupportWarning type={a.accessoryType} generationIds={a.fits.map(f => f.id)} name={id => { const f = a.fits.find(x => x.id === id); return f ? (isArabic ? f.nameAr : f.name) : id; }} />
       </Card>
       <Section title={t("Loose part photos (sent to the 3D provider)", "صور القطعة (تُرسل لمزود النموذج)")}><PhotoStrip photos={a.partPhotos} load={load} /></Section>
@@ -476,6 +483,18 @@ const USED_BY: Record<PartLabel, [string, string]> = {
   SPOILER: ["wing / spoiler", "الجناح / السبويلر"], SIDE_SKIRTS: ["side skirts", "التنانير الجانبية"], MIRRORS: ["mirror covers", "أغطية المرايا"],
   WHEELS: ["rims (tyre-named pieces stay)", "الجنوط (تبقى القطع المسماة إطارًا)"], ROOF_RAILS: ["roof rack", "حامل السقف"],
 };
+/** The 8 points of a shape, in order: 4 where the part meets the car, then 4 on its outer edge. */
+const SHAPE_STEPS: [string, string][] = [
+  ["seam with the car, far left (e.g. the wheel-arch seam).", "خط التقاء القطعة بالسيارة، أقصى اليسار (مثل خط قوس العجلة)."],
+  ["seam with the car, top left (bonnet / boot line or light).", "خط التقاء القطعة بالسيارة، أعلى اليسار (خط غطاء المحرك / الصندوق أو الضوء)."],
+  ["seam with the car, top right (bonnet / boot line or light).", "خط التقاء القطعة بالسيارة، أعلى اليمين (خط غطاء المحرك / الصندوق أو الضوء)."],
+  ["seam with the car, far right (e.g. the wheel-arch seam).", "خط التقاء القطعة بالسيارة، أقصى اليمين (مثل خط قوس العجلة)."],
+  ["outer edge, bottom left corner of the part.", "الحافة الخارجية، الزاوية السفلية اليسرى للقطعة."],
+  ["outer edge, bottom right corner of the part.", "الحافة الخارجية، الزاوية السفلية اليمنى للقطعة."],
+  ["outer edge, the part's outermost point on the left.", "الحافة الخارجية، أبعد نقطة للقطعة على اليسار."],
+  ["outer edge, the part's outermost point on the right.", "الحافة الخارجية، أبعد نقطة للقطعة على اليمين."],
+];
+const fmtSize = (z: { widthMm: number; heightMm: number; depthMm: number }) => `${z.widthMm} × ${z.heightMm} × ${z.depthMm}`;
 const fromProposal = (d: PartMapDetail): PartMap => d.map ?? Object.fromEntries(Object.entries(d.proposal ?? {}).map(([k, v]) => [k, v!.ids]));
 function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }) {
   const { t } = useL(); const { g, row, align } = useGarageTheme();
@@ -493,12 +512,14 @@ function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
     for (const L of PART_LABELS) { const ids = (d[L] ?? []).filter(x => x !== id); if (L === label && !was) ids.push(id); if (ids.length) next[L] = ids; }
     return next;
   });
-  // box mode: 4 taps on the car make a box; "add / remove pieces inside" changes this label; each box can be undone
+  // shape mode: 8 taps on the car (4 seams with the car, then 4 on the part's outer edge) make a convex shape; "add / remove pieces inside"
+  // changes this label; each shape can be undone. The 8 points also give the part's real size (saved per label).
   const [boxMode, setBoxMode] = useState(false), [turning, setTurning] = useState(false), [missed, setMissed] = useState(false), [pts, setPts] = useState<number[][]>([]), [inside, setInside] = useState<string[] | null>(null), [undo, setUndo] = useState<PartMap[]>([]);
   // a bigger view: full screen (same label + points), and "Reset view" after zooming / panning / turning
   const [full, setFull] = useState(false), [resetView, setResetView] = useState(0);
   useEffect(() => { setPts([]); setInside(null); setUndo([]); }, [key]);
-  const addPt = (p: number[]) => { setMissed(false); setInside(null); setPts(a => a.length >= 4 ? [p] : [...a, p]); };
+  const addPt = (p: number[]) => { setMissed(false); setInside(null); setPts(a => a.length >= 8 ? [p] : [...a, p]); };
+  const size = shapeSize(pts), saved = detail?.sizes?.[label];
   const applyBox = (add: boolean) => { if (!inside) return; const ids = new Set(inside); setUndo(u => [...u.slice(-19), draft]); setDraft(d => {
     const next: PartMap = {};
     for (const L of PART_LABELS) { let l = d[L] ?? []; if (add || L === label) l = l.filter(x => !ids.has(x)); if (add && L === label) l = [...l, ...inside]; if (l.length) next[L] = l; }
@@ -516,26 +537,32 @@ function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
   const boxControls = <>
             <View style={[row, { gap: 8 }]}>
               <Chip label={t("Tap pieces", "اختيار بالضغط")} on={!boxMode} onPress={() => { setBoxMode(false); setPts([]); setInside(null); }} />
-              <Chip label={t("Box", "مربع تحديد")} on={boxMode} onPress={() => { setBoxMode(true); setTurning(false); }} />
+              <Chip label={t("8-point shape", "شكل من 8 نقاط")} on={boxMode} onPress={() => { setBoxMode(true); setTurning(false); }} />
             </View>
             {boxMode ? <View style={{ gap: 8 }}>
               <View style={[row, { gap: 8 }]}>
-                <Chip label={t("Place corners", "وضع الزوايا")} on={!turning} onPress={() => setTurning(false)} />
+                <Chip label={t("Place points", "وضع النقاط")} on={!turning} onPress={() => setTurning(false)} />
                 <Chip label={t("Turn the car", "تدوير السيارة")} on={turning} onPress={() => setTurning(true)} />
               </View>
               {missed && !turning ? <Note tone="warning">{t("That tap missed the car. Tap on the car body.", "لم تقع الضغطة على السيارة. اضغط على جسم السيارة.")}</Note> : null}
-              <Note>{pts.length < 4 ? `${t(`Tap 4 corners around the ${t(...PART_LABEL_NAMES[label]).toLowerCase()}`, `اضغط على 4 زوايا حول ${t(...PART_LABEL_NAMES[label])}`)} (${pts.length}/4). ${turning ? t("Drag to turn the car, then choose Place corners.", "اسحب لتدوير السيارة، ثم اختر وضع الزوايا.") : t("One tap = one point. Pinch to zoom, drag with two fingers to move the view; to turn the car choose Turn the car.", "ضغطة واحدة = نقطة واحدة. قرّب بإصبعين واسحب بإصبعين لتحريك العرض؛ لتدوير السيارة اختر تدوير السيارة.")}`
-                : `${t("Pieces inside the box", "القطع داخل المربع")}: ${inside?.length ?? "…"}. ${t("Tap again to start a new box.", "اضغط مجددًا لبدء مربع جديد.")}`}</Note>
+              <Note>{pts.length < 8 ? `${t(`Point ${pts.length + 1} of 8`, `النقطة ${pts.length + 1} من 8`)}: ${t(...SHAPE_STEPS[pts.length]!)} ${turning ? t("Drag to turn the car, then choose Place points.", "اسحب لتدوير السيارة، ثم اختر وضع النقاط.") : t("One tap = one point. Pinch to zoom, drag with two fingers to move the view; to turn the car choose Turn the car.", "ضغطة واحدة = نقطة واحدة. قرّب بإصبعين واسحب بإصبعين لتحريك العرض؛ لتدوير السيارة اختر تدوير السيارة.")}`
+                : `${t("Pieces inside the shape", "القطع داخل الشكل")}: ${inside?.length ?? "…"}. ${t("Tap again to start a new shape.", "اضغط مجددًا لبدء شكل جديد.")}`}</Note>
+              {size ? <View style={{ gap: 8 }}>
+                <GText style={[gType.label, align]}>{`${t("Measured size", "المقاس المقاس")}: ${fmtSize(size)} ${t("(width × height × depth, mm)", "(العرض × الارتفاع × العمق، مم)")}`}</GText>
+                <GButton variant="secondary" icon="resize-outline" label={`${t("Save size for", "حفظ المقاس لـ")} ${t(...PART_LABEL_NAMES[label])}`} disabled={busy || !detail}
+                  onPress={() => void work(async () => { const sizes = await adminAccessoryApi.savePartSize(detail!.key, label, size); setDetail(d => d && { ...d, sizes }); })} />
+              </View> : null}
+              {saved ? <GText soft style={[gType.caption, align]}>{`${t("Saved size", "المقاس المحفوظ")}: ${fmtSize(saved)} ${t("mm", "مم")}`}</GText> : null}
               <View style={{ gap: 10 }}>
-                <GButton label={t("Add pieces inside", "إضافة القطع داخل المربع")} disabled={busy || !inside?.length} onPress={() => applyBox(true)} />
-                <GButton variant="secondary" label={t("Remove pieces inside", "إزالة القطع داخل المربع")} disabled={busy || !inside?.length} onPress={() => applyBox(false)} />
+                <GButton label={t("Add pieces inside", "إضافة القطع داخل الشكل")} disabled={busy || !inside?.length} onPress={() => applyBox(true)} />
+                <GButton variant="secondary" label={t("Remove pieces inside", "إزالة القطع داخل الشكل")} disabled={busy || !inside?.length} onPress={() => applyBox(false)} />
               </View>
               <View style={[row, { gap: 10, flexWrap: "wrap" }]}>
                 <GButton flex variant="secondary" label={t("Undo last point", "تراجع عن آخر نقطة")} disabled={!pts.length} onPress={() => { setPts(a => a.slice(0, -1)); setInside(null); }} />
                 <GButton flex variant="secondary" label={t("Clear points", "مسح النقاط")} disabled={!pts.length} onPress={() => { setPts([]); setInside(null); }} />
               </View>
               <View style={[row, { gap: 10 }]}>
-                <GButton flex variant="secondary" label={t("Undo the last box", "التراجع عن آخر مربع")} disabled={!undo.length} onPress={() => { setDraft(undo[undo.length - 1]!); setUndo(u => u.slice(0, -1)); }} />
+                <GButton flex variant="secondary" label={t("Undo last shape", "التراجع عن آخر شكل")} disabled={!undo.length} onPress={() => { setDraft(undo[undo.length - 1]!); setUndo(u => u.slice(0, -1)); }} />
               </View>
             </View> : null}
   </>;
@@ -574,7 +601,7 @@ function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
               <GButton flex variant="secondary" icon="refresh" label={t("Reset view", "إعادة ضبط العرض")} onPress={() => setResetView(n => n + 1)} />
             </View> : null}
             {boxControls}
-            <Swatch color={PART_LABEL_COLORS[label]} label={`${t(...PART_LABEL_NAMES[label])}: ${boxMode ? t("pieces fully inside the box", "القطع الموجودة كليًا داخل المربع") : t("tap a piece to add or remove it", "اضغط على قطعة لإضافتها أو إزالتها")} · ${t("used by the", "يستخدمها")} ${t(...USED_BY[label])}`} />
+            <Swatch color={PART_LABEL_COLORS[label]} label={`${t(...PART_LABEL_NAMES[label])}: ${boxMode ? t("pieces fully inside the shape", "القطع الموجودة كليًا داخل الشكل") : t("tap a piece to add or remove it", "اضغط على قطعة لإضافتها أو إزالتها")} · ${t("used by the", "يستخدمها")} ${t(...USED_BY[label])}`} />
             <GText soft style={[gType.caption, align]}>{`${t("Other labels are dimmed, grey = not mapped", "التسميات الأخرى باهتة، الرمادي = غير محدد")} · ${pieces ?? detail.pieces} ${t("pieces", "قطعة")}`}</GText>
             {detail.proposal?.[label] ? <GText soft style={[gType.caption, align]}>{`${t("Proposal", "الاقتراح")}: ${detail.proposal[label]!.ids.length} ${t("pieces", "قطعة")} · ${Math.round(detail.proposal[label]!.confidence * 100)}% · ${detail.proposal[label]!.by === "name+shape" ? t("name and shape", "الاسم والشكل") : t("shape only", "الشكل فقط")}`}</GText>
               : <GText soft style={[gType.caption, align]}>{t("No proposal for this label: tap the pieces, or leave it empty (the zone cut is used).", "لا يوجد اقتراح لهذه التسمية: اضغط على القطع، أو اتركها فارغة (يُستخدم قص المناطق).")}</GText>}

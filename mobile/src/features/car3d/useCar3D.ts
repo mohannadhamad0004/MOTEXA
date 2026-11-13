@@ -31,13 +31,13 @@ export type Car3DProps = {
   zonePreview?: AccessoryType | null;
   onZone?: (info: { hidden: number; how: string | null; note: string | null }) => void;
   /** Parts Admin part-map editor: the car in pieces coloured by label (the chosen label bright); a tap reports the piece id */
-  /** boxPts set = box mode: a tap reports a point on the car (onBoxPoint); with 4 points the pieces inside are reported (onBoxIds) */
+  /** boxPts set = shape mode: a tap reports a point on the car (onBoxPoint); with 8 points the pieces inside their convex hull are reported (onBoxIds) */
   partEdit?: { label: PartLabel; labels: PartMap; boxPts?: number[][] | null; boxTurn?: boolean } | null;
   onPick?: (pieceId: string) => void;
   onPieces?: (count: number) => void;
   onBoxPoint?: (p: number[]) => void;
   onBoxIds?: (ids: string[]) => void;
-  /** a Box-mode tap that did not land on the car */
+  /** a shape-mode tap that did not land on the car */
   onBoxMiss?: () => void;
   /** drag / pinch / double-tap; off = a preview that only auto-rotates */
   interactive?: boolean;

@@ -1545,6 +1545,8 @@ model CarPartMap {
   dims              Json
   proposal          Json
   map               Json?
+  /// measured size per label (Parts Admin 8-point shape): { LABEL: { widthMm, heightMm, depthMm, at } }
+  sizes             Json?
   confirmedAt       DateTime?
   confirmedByUserId String?
   segmentedAt       DateTime  @default(now())

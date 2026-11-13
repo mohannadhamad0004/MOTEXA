@@ -67,6 +67,7 @@ export function createAccessory3DRouter(service = createAccessory3DService(), pa
   router.get("/admin/parts/part-maps/:key/model", ...admin, handle(async (req, res) => sendPrivate(res, { bytes: await partMaps.asset(p(req, "key")), mime: "model/gltf-binary" })));
   router.get("/admin/parts/part-maps/:key", ...admin, handle(async (req, res) => res.json({ partMap: await partMaps.get(p(req, "key")) })));
   router.post("/admin/parts/part-maps/:key/segment", ...admin, handle(async (req, res, uid) => res.json({ partMap: await partMaps.segment(uid, p(req, "key")) })));
+  router.put("/admin/parts/part-maps/:key/sizes/:label", ...admin, express.json({ limit: "4kb" }), handle(async (req, res, uid) => res.json({ sizes: await partMaps.saveSize(uid, p(req, "key"), p(req, "label"), req.body ?? {}) })));
   router.put("/admin/parts/part-maps/:key", ...admin, mapJson, handle(async (req, res, uid) => res.json({ partMap: await partMaps.confirm(uid, p(req, "key"), req.body ?? {}) })));
 
   // auto-fits on one car model: list (+ background computing), approve with an optional correction (adj null = reset to auto-fit)
