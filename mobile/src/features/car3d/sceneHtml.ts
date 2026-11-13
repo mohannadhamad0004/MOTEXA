@@ -212,6 +212,8 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+import { ConvexHull } from "three/addons/math/ConvexHull.js";
+import { ConvexGeometry } from "three/addons/geometries/ConvexGeometry.js";
 window.__booted = true;
 ${PART_RULES_JS}
 ${FIT_RULES_JS}
@@ -403,7 +405,7 @@ function segment(o) {
     var r = find(wid[triVert(g, t, 0)]), c = num.get(r); if (c === undefined) { c = num.size; num.set(r, c); boxes.push(new THREE.Box3()); tris.push(0); }
     tri[t] = c; tris[c]++; for (var j = 0; j < 3; j++) { var vi = triVert(g, t, j); boxes[c].expandByPoint(v.set(wp[vi * 3], wp[vi * 3 + 1], wp[vi * 3 + 2])); }
   }
-  var seg = { tri: tri, boxes: boxes, tris: tris }; SEG.set(o, seg); return seg;
+  var seg = { tri: tri, boxes: boxes, tris: tris, wp: wp }; SEG.set(o, seg); return seg;
 }
 function carMeshes(car) { var l = []; car.root.traverse(function (o) { if (o.isMesh && o.userData.pi !== undefined) l.push(o); }); return l; }
 /** Every piece of the car (ids, names, triangle counts, bounds as fractions of the car's box) for the auto-labeller and the database. */
@@ -1519,8 +1521,13 @@ function pickPiece(e) {
   var hit = editHit(e);
   if (hit) post({ type: "pick", id: "m" + hit.object.userData.pi + "c" + segment(hit.object).tri[hit.faceIndex] });
 }
-// Box mode (state.partEdit.boxPts = the tapped points, world space): a tap posts { type: "boxPt", p: [x, y, z] }; the points' min/max is the box
-// (green); with 4 points every piece whose bounds lie inside it (2 % of the car's size tolerance) is posted as { type: "boxIds", ids }.
+// Shape mode (state.partEdit.boxPts = the tapped points, world space, max 8): a tap posts { type: "boxPt", p: [x, y, z] }; dots 1-4 (seams
+// with the car, amber) and 5-8 (outer edge, red) are numbered; with 8 points their convex hull is shown (green, drawn through the body) and
+// every piece with at least INSIDE_SHARE of its vertices inside it (2 % of the car's length tolerance; mechanical pieces such as the exhaust
+// skipped) is posted as { type: "boxIds", ids } ({ type: "boxIds", ids: [] } when flat). A shell between the seams bulges past the hull, so
+// "all vertices" missed the E36 rear bumper skin (72 % inside); calibration knob, measured on that one car.
+var SEAM = new THREE.MeshBasicMaterial({ color: 0xffa000, toneMapped: false }), INSIDE_SHARE = 0.7;
+var HULL = new THREE.MeshBasicMaterial({ color: 0x2e9d4f, transparent: true, opacity: 0.18, depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
 function boxPoint(e) {
   var hit = editHit(e); if (!hit) { post({ type: "boxMiss" }); return; }
   // the dot shows at once (before the app answers); boxApply redraws all points from the app's state
@@ -1528,20 +1535,39 @@ function boxPoint(e) {
   var s = car.rb.getSize(new THREE.Vector3()), m = new THREE.Mesh(new THREE.SphereGeometry(Math.max(s.x, s.y, s.z) * 0.008, 12, 8), RED); m.position.copy(hit.point); m.renderOrder = 3; car.edit.boxG.add(m);
   post({ type: "boxPt", p: hit.point.toArray().map(function (n) { return Math.round(n * 1e4) / 1e4; }) });
 }
-/** Box mode places corners (orbit off) unless the admin chose "Turn the car" (boxTurn). */
+/** Shape mode places points (orbit off) unless the admin chose "Turn the car" (boxTurn). */
 function placingBox(s) { return !!(s && s.partEdit && s.partEdit.boxPts && !s.partEdit.boxTurn && car && car.edit); }
+var NUM_TEX = {};
+function numSprite(n, size) {
+  if (!NUM_TEX[n]) { var c = document.createElement("canvas"); c.width = c.height = 64; var x = c.getContext("2d");
+    x.fillStyle = "#111"; x.beginPath(); x.arc(32, 32, 30, 0, 7); x.fill(); x.fillStyle = "#fff"; x.font = "bold 40px sans-serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(String(n), 32, 34);
+    NUM_TEX[n] = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, toneMapped: false }); }
+  var sp = new THREE.Sprite(NUM_TEX[n]); sp.scale.setScalar(size); sp.renderOrder = 4; return sp;
+}
 function boxApply(pts) {
   var k = JSON.stringify(pts || null); if (car.edit.boxKey === k) return; car.edit.boxKey = k;
   if (car.edit.boxG) { car.group.remove(car.edit.boxG); car.edit.boxG = null; }
   if (!Array.isArray(pts) || !pts.length) return;
-  var g = new THREE.Group(), b = new THREE.Box3(), s = car.rb.getSize(new THREE.Vector3()), dot = new THREE.SphereGeometry(Math.max(s.x, s.y, s.z) * 0.008, 12, 8);
-  pts.forEach(function (p) { var v = new THREE.Vector3(p[0], p[1], p[2]), m = new THREE.Mesh(dot, RED); m.position.copy(v); m.renderOrder = 3; g.add(m); b.expandByPoint(v); });
-  if (pts.length > 1) { var c = b.getCenter(new THREE.Vector3()), sz = b.getSize(new THREE.Vector3()).max(new THREE.Vector3(0.005, 0.005, 0.005)), m = new THREE.Mesh(new THREE.BoxGeometry(sz.x, sz.y, sz.z), GREEN);
-    m.position.copy(c); m.renderOrder = 2; g.add(m); g.add(new THREE.Box3Helper(b, 0x2e9d4f)); }
+  var g = new THREE.Group(), s = car.rb.getSize(new THREE.Vector3()), r = Math.max(s.x, s.y, s.z) * 0.008, dot = new THREE.SphereGeometry(r, 12, 8), vs = [];
+  pts.forEach(function (p, i) { var v = new THREE.Vector3(p[0], p[1], p[2]), m = new THREE.Mesh(dot, i < 4 ? SEAM : RED); m.position.copy(v); m.renderOrder = 3; g.add(m);
+    var l = numSprite(i + 1, r * 5); l.position.copy(v).add(new THREE.Vector3(0, r * 3.5, 0)); g.add(l); vs.push(v); });
   car.group.add(g); car.edit.boxG = g;
-  if (pts.length < 4) return;
-  var tol = b.clone(); tol.min.addScaledVector(s, -0.02); tol.max.addScaledVector(s, 0.02);
-  var ids = []; car.edit.meshes.forEach(function (o) { segment(o).boxes.forEach(function (pb, c) { if (tol.containsBox(pb)) ids.push("m" + o.userData.pi + "c" + c); }); });
+  if (pts.length < 8) return;
+  var hull = null; try { hull = new ConvexHull().setFromPoints(vs); } catch (e) { hull = null; }
+  var faces = hull ? hull.faces.filter(function (f) { return f.area > 1e-8; }) : [];
+  if (faces.length < 4) { post({ type: "boxIds", ids: [] }); return; } // flat: the points lie in one plane
+  var hm = new THREE.Mesh(new ConvexGeometry(vs), HULL); hm.renderOrder = 2; g.add(hm);
+  g.add(new THREE.LineSegments(new THREE.EdgesGeometry(hm.geometry, 20), new THREE.LineBasicMaterial({ color: 0x2e9d4f, toneMapped: false })));
+  // ponytail: every vertex x every face (<= 12 faces for 8 points); fine for car models, a BVH if it ever stalls
+  var tol = Math.max(s.x, s.z) * 0.02, hb = new THREE.Box3().setFromPoints(vs).expandByScalar(tol), ids = [], v = new THREE.Vector3();
+  var inHull = function (x, y, z) { v.set(x, y, z); for (var i = 0; i < faces.length; i++) if (faces[i].normal.dot(v) - faces[i].constant > tol) return false; return true; };
+  car.edit.meshes.forEach(function (o) {
+    if (MECHANICAL.test(o.name || "")) return;
+    var seg = segment(o), geo = o.geometry, n = new Float64Array(seg.boxes.length), k = new Float64Array(seg.boxes.length);
+    for (var t = 0; t < seg.tri.length; t++) { var c = seg.tri[t]; if (!hb.intersectsBox(seg.boxes[c])) continue;
+      for (var j = 0; j < 3; j++) { var vi = triVert(geo, t, j); n[c]++; if (inHull(seg.wp[vi * 3], seg.wp[vi * 3 + 1], seg.wp[vi * 3 + 2])) k[c]++; } }
+    for (var c2 = 0; c2 < n.length; c2++) if (n[c2] && k[c2] >= INSIDE_SHARE * n[c2]) ids.push("m" + o.userData.pi + "c" + c2);
+  });
   post({ type: "boxIds", ids: ids });
 }
 var building = null, lastResetView = null;
@@ -1577,7 +1603,7 @@ var q = window.__q; window.car3d = handle; q.forEach(handle);
 function reset() { camera.position.copy(home.pos); controls.target.copy(home.target); controls.update(); }
 var lastTap = 0, downAt = null;
 renderer.domElement.addEventListener("pointerdown", function (e) { downAt = { x: e.clientX, y: e.clientY }; });
-// Box corners on a touch screen come from touchend (a phone WebView can cancel the pointer stream, e.g. when the page scroll takes the
+// Shape points on a touch screen come from touchend (a phone WebView can cancel the pointer stream, e.g. when the page scroll takes the
 // gesture); a mouse still uses pointerup below.
 var touchAt = null;
 renderer.domElement.addEventListener("touchstart", function (e) { touchAt = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null; }, { passive: true });

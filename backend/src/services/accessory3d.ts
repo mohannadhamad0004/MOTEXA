@@ -468,9 +468,10 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
       const product = await tx.partsProduct.findUnique({ where: { id: a.productId }, select: { name: true, brand: true, partNumber: true, category: true, shop: { select: { id: true, shopName: true, accessory3dMonthlyCredits: true } } } });
       const gens = await accessoryTargets(a.id,tx);
       const keys = new Set(activeModels().map(m => m.key));
+      const sizes = new Map((await tx.carPartMap.findMany({ where: { model3dKey: { in: gens.flatMap(g => g.model3dKey ? [g.model3dKey] : []) } }, select: { model3dKey: true, sizes: true } })).map(r => [r.model3dKey, r.sizes]));
       return { ...accessoryShape(a), review: await accessoryReview(a,tx), providerTaskId: a.providerTaskId, product, creditsThisMonth: await creditsThisMonth(tx, a.shopId), monthlyCredits: product?.shop.accessory3dMonthlyCredits ?? 5,
         mode: generationMode() === "mock" ? "mock" : "real", paidEnabled: paidGenerationEnabled() && !!process.env.MESHY_API_KEY?.trim(), estimatedProviderCredits: MESHY_GENERATION_CREDITS,
-        fits: await Promise.all(gens.map(async g => ({ id: g.id, name: `${g.vehicle.make} ${g.nameEn}`, nameAr: `${g.vehicle.makeAr} ${g.nameAr}`, years: [g.yearFrom, g.yearTo], has3d: !!g.model3dKey && g.isPublished && keys.has(g.model3dKey),fit:await fitEligibility(a.id,g.id,a.privateModelPath,tx) }))) };
+        fits: await Promise.all(gens.map(async g => ({ id: g.id, name: `${g.vehicle.make} ${g.nameEn}`, nameAr: `${g.vehicle.makeAr} ${g.nameAr}`, years: [g.yearFrom, g.yearTo], has3d: !!g.model3dKey && g.isPublished && keys.has(g.model3dKey), partSizes: (g.model3dKey && sizes.get(g.model3dKey)) ?? null,fit:await fitEligibility(a.id,g.id,a.privateModelPath,tx) }))) };
     }),
     approve: (uid: string, id: string) => run(async tx => {
       const a = await admin(tx, id, true);

@@ -174,7 +174,7 @@ export function createPartMapService() {
   const shape = (key: string, r: Awaited<ReturnType<typeof prisma.carPartMap.findUnique>>) => {
     const sha = modelFileSha(key), pieces = (r?.pieces ?? []) as Piece[];
     const status = !r ? "none" : r.modelSha256 !== sha ? "stale" : r.confirmedAt ? "confirmed" : singleBlob(pieces) ? "single" : "proposed";
-    return { key, status, modelSha256: r?.modelSha256 ?? null, pieces: pieces.length, dims: r?.dims ?? null, proposal: r?.proposal ?? null, map: r?.map ?? null,
+    return { key, status, modelSha256: r?.modelSha256 ?? null, pieces: pieces.length, dims: r?.dims ?? null, proposal: r?.proposal ?? null, map: r?.map ?? null, sizes: r?.sizes ?? null,
       confirmedAt: r?.confirmedAt ?? null, segmentedAt: r?.segmentedAt ?? null, proposalSummary: summary(r?.proposal as Proposal), mapSummary: summary(r?.map as PartMap),
       gate: r && r.modelSha256 === sha ? accessoryGate(pieces, r.dims as number[], r.proposal as Proposal) : null };
   };
@@ -202,6 +202,23 @@ export function createPartMapService() {
     segment: async (uid: string, key: string) => {
       if (importId(key)) { const { r, validation } = await candidate(key); return candidateShape(key, r, validation); } // validation already segmented this exact candidate
       await saveSegmentation(key, uid, true); return { ...shape(key, await prisma.carPartMap.findUnique({ where: { model3dKey: key } })), viewerConfig: await reviewSource(key), privateReview: true };
+    },
+    /** The measured size of one label (8-point shape in the editor, mm). Independent of the map: confirming / unconfirming keeps it. */
+    saveSize: async (uid: string, key: string, label: string, body: { widthMm?: unknown; heightMm?: unknown; depthMm?: unknown }) => {
+      if (importId(key)) return fail("NOT_SUPPORTED", "Measure the published car model.", 409); // ponytail: imports keep no sizes until published
+      if (!(PART_LABELS as readonly string[]).includes(label)) return fail("INVALID_LABEL", "Unknown part label.");
+      const mm = (v: unknown) => typeof v === "number" && Number.isInteger(v) && v > 0 && v <= 10000;
+      if (!mm(body.widthMm) || !mm(body.heightMm) || !mm(body.depthMm)) return fail("INVALID_SIZE", "Width, height and depth must be whole mm between 1 and 10000.");
+      const size = { widthMm: body.widthMm as number, heightMm: body.heightMm as number, depthMm: body.depthMm as number, at: new Date().toISOString() };
+      return prisma.$transaction(async tx => {
+        await tx.$queryRaw`SELECT "model3dKey" FROM "CarPartMap" WHERE "model3dKey"=${key} FOR UPDATE`;
+        const r = await tx.carPartMap.findUnique({ where: { model3dKey: key }, select: { sizes: true } });
+        if (!r) return fail("NOT_SEGMENTED", "This car has not been split into parts yet.", 409);
+        await tx.auditLog.create({ data: { actorId: uid, action: "PART_SIZE_MEASURED", targetId: key, details: { label, ...size } } });
+        const sizes = { ...(r.sizes as Record<string, unknown> | null ?? {}), [label]: size };
+        await tx.carPartMap.update({ where: { model3dKey: key }, data: { sizes: sizes as Prisma.InputJsonValue } });
+        return sizes;
+      });
     },
     /** Confirm the admin's map (null = unconfirm: the car goes back to zones). Only for the file the pieces came from. */
     confirm: async (uid: string, key: string, body: { map?: unknown; modelSha256?: unknown }) => prisma.$transaction(async tx => {
