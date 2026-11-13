@@ -32,7 +32,7 @@ export type Car3DProps = {
   onZone?: (info: { hidden: number; how: string | null; note: string | null }) => void;
   /** Parts Admin part-map editor: the car in pieces coloured by label (the chosen label bright); a tap reports the piece id */
   /** boxPts set = shape mode: a tap reports a point on the car (onBoxPoint); with 8 points the pieces inside their convex hull are reported (onBoxIds) */
-  partEdit?: { label: PartLabel; labels: PartMap; boxPts?: number[][] | null; boxTurn?: boolean } | null;
+  partEdit?: { label: PartLabel; labels: PartMap; boxPts?: number[][] | null; boxTurn?: boolean; /** the saved cut, clipped live (Parts Admin preview) */ cutPreview?: { label: string; pts: number[][]; sideGrow?: number } | null } | null;
   onPick?: (pieceId: string) => void;
   onPieces?: (count: number) => void;
   onBoxPoint?: (p: number[]) => void;

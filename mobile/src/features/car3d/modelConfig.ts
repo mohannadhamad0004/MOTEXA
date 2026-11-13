@@ -17,13 +17,19 @@ export const PART_LABELS=["FRONT_BUMPER","REAR_BUMPER","SPOILER","SIDE_SKIRTS","
 export type PartLabel=typeof PART_LABELS[number];
 /** A confirmed part map: label -> piece ids "m<mesh>c<component>" of one exact model file. */
 export type PartMap=Partial<Record<PartLabel,string[]>>;
-/** Cut mode: a bumper merged into the body, drawn by the Parts Admin as 8 world points (metres); the viewer clips the car inside their hull. */
+/** Cut mode: a bumper merged into the body, drawn by the Parts Admin as 8 world points (metres); the viewer clips the car inside their hull.
+ *  sideGrow (metres, 0-0.2) = the admin's extra "Corner grow" on the bumper's two side faces. */
 export const CUT_LABELS=["FRONT_BUMPER","REAR_BUMPER"] as const;
-export type PartCuts=Partial<Record<typeof CUT_LABELS[number],number[][]>>;
+export type PartCut={pts:number[][];sideGrow?:number};
+export type PartCuts=Partial<Record<typeof CUT_LABELS[number],PartCut>>;
 export function parsePartCuts(v:unknown):PartCuts|null{
   if(!object(v)||Object.keys(v).some(k=>!(CUT_LABELS as readonly string[]).includes(k)))return null;
   const out:PartCuts={};
-  for(const[k,pts]of Object.entries(v)){if(!Array.isArray(pts)||pts.length!==8||!pts.every(p=>Array.isArray(p)&&p.length===3&&p.every(n=>number(n,10))))return null;out[k as keyof PartCuts]=pts.map(p=>(p as number[]).map(Number));}
+  for(const[k,c]of Object.entries(v)){
+    if(!object(c)||Object.keys(c).some(x=>x!=="pts"&&x!=="sideGrow"))return null;const pts=c.pts;
+    if(!Array.isArray(pts)||pts.length!==8||!pts.every(p=>Array.isArray(p)&&p.length===3&&p.every(n=>number(n,10))))return null;
+    if(c.sideGrow!==undefined&&(!number(c.sideGrow,0.2)||Number(c.sideGrow)<0))return null;
+    out[k as keyof PartCuts]={pts:pts.map(p=>(p as number[]).map(Number)),...(c.sideGrow?{sideGrow:Number(c.sideGrow)}:{})};}
   return out;
 }
 export function parsePartMap(v:unknown):PartMap|null{

@@ -523,13 +523,20 @@ function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
   // cut mode (WAY 2): a bumper merged into the body is drawn with the 8 points and cut out of the car while a replacement is on
   const cutLabel = label === "FRONT_BUMPER" || label === "REAR_BUMPER" ? label : null, cutOn = !!(cutLabel && detail?.cuts?.[cutLabel]);
   const merged = !!cutLabel && (list.data ?? []).find(m => m.key === key)?.gate?.limited?.[cutLabel] === "NOT_SEPARATE";
-  const setCut = (on: boolean) => { if (!cutLabel || !detail) return; void work(async () => { const cuts = await adminAccessoryApi.savePartCut(detail.key, cutLabel, on ? pts : null); setDetail(d => d && { ...d, cuts }); }); };
+  const setCut = (on: boolean) => { if (!cutLabel || !detail) return; void work(async () => { const cuts = await adminAccessoryApi.savePartCut(detail.key, cutLabel, { pts: on ? pts : null }); setDetail(d => d && { ...d, cuts }); }); };
   const applyBox = (add: boolean) => { if (!inside) return; const ids = new Set(inside); setUndo(u => [...u.slice(-19), draft]); setDraft(d => {
     const next: PartMap = {};
     for (const L of PART_LABELS) { let l = d[L] ?? []; if (add || L === label) l = l.filter(x => !ids.has(x)); if (add && L === label) l = [...l, ...inside]; if (l.length) next[L] = l; }
     return next;
   }); setPts([]); setInside(null); };
-  const partEdit = useMemo(() => ({ label, labels: draft, boxPts: boxMode ? pts : null, boxTurn: boxMode && turning, resetView }), [label, draft, boxMode, pts, turning, resetView]);
+  // "Corner grow" (whole cm, saved on each tap) and the live preview: the editor's car is cut exactly as the customer's viewer cuts it
+  const savedCut = cutLabel ? detail?.cuts?.[cutLabel] : undefined, [grow, setGrow] = useState(0), [preview, setPreview] = useState(false);
+  useEffect(() => { setGrow(Math.round((savedCut?.sideGrow ?? 0) * 100)); }, [savedCut]);
+  useEffect(() => { setPreview(false); }, [key, label]);
+  const changeGrow = (d: number) => { if (!cutLabel || !detail) return; const next = Math.min(20, Math.max(0, grow + d)); if (next === grow) return; setGrow(next);
+    void work(async () => { const cuts = await adminAccessoryApi.savePartCut(detail.key, cutLabel, { sideGrowCm: next }); setDetail(x => x && { ...x, cuts }); }); };
+  const cutPreview = useMemo(() => preview && cutLabel && savedCut ? { label: cutLabel, pts: savedCut.pts, ...(grow ? { sideGrow: grow / 100 } : {}) } : null, [preview, cutLabel, savedCut, grow]);
+  const partEdit = useMemo(() => ({ label, labels: draft, boxPts: boxMode ? pts : null, boxTurn: boxMode && turning, resetView, cutPreview }), [label, draft, boxMode, pts, turning, resetView, cutPreview]);
   const changed = !!detail && JSON.stringify(draft) !== JSON.stringify(detail.map ?? null);
   const confirmed = (list.data ?? []).filter(m => m.status === "confirmed").length;
   const statusText = (st: string) => st === "confirmed" ? t("Confirmed: used for customers", "مؤكدة: تُستخدم للعملاء") : st === "proposed" ? t("Proposed: not used yet (zones until confirmed)", "مقترحة: غير مستخدمة بعد (المناطق حتى التأكيد)")
@@ -544,6 +551,16 @@ function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
               <Check label={t("Cut this region (cut mode)", "قص هذه المنطقة (وضع القص)")} checked={cutOn} disabled={busy || !detail || (!cutOn && pts.length < 8)} onPress={() => setCut(!cutOn)} />
               <GText soft style={[gType.caption, align]}>{cutOn ? t("Cut mode is on: while a replacement bumper is shown, everything of the car inside the saved shape is cut away (lights, glass, wheels and exhaust stay).", "وضع القص مفعّل: أثناء عرض مصد بديل يُقص كل ما بداخل الشكل المحفوظ من السيارة (تبقى الأضواء والزجاج والعجلات والعادم).")
                 : t("Place all 8 points, then turn this on to save the shape.", "ضع النقاط الثماني ثم فعّل هذا لحفظ الشكل.")}</GText>
+              {cutOn ? <View style={{ gap: 8 }}>
+                <View style={[row, { gap: 10, alignItems: "center", flexWrap: "wrap" }]}>
+                  <GText style={[gType.label, align]}>{t("Corner grow", "توسيع الزوايا")}</GText>
+                  <GButton variant="secondary" label="–" disabled={busy || grow <= 0} onPress={() => changeGrow(-1)} />
+                  <GText style={{ minWidth: 56, textAlign: "center" }}>{`+${grow} ${t("cm", "سم")}`}</GText>
+                  <GButton variant="secondary" label="+" disabled={busy || grow >= 20} onPress={() => changeGrow(1)} />
+                </View>
+                <GText soft style={[gType.caption, align]}>{t("Cuts further at the two ends of the bumper (rounded corners). Turn on the preview to see it.", "يقص أبعد عند طرفي المصد (الزوايا المستديرة). فعّل المعاينة لرؤيته.")}</GText>
+                <Check label={t("Preview the cut on the car", "معاينة القص على السيارة")} checked={preview} onPress={() => setPreview(v => !v)} />
+              </View> : null}
             </View> : null}
             <View style={[row, { gap: 8 }]}>
               <Chip label={t("Tap pieces", "اختيار بالضغط")} on={!boxMode} onPress={() => { setBoxMode(false); setPts([]); setInside(null); }} />
