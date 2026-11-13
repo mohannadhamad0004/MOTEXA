@@ -9,6 +9,7 @@ import { TextInput, View } from "react-native";
 import InteractiveButton from "../../components/InteractiveButton";
 import { Text } from "../../components/MotexaVisual";
 import { cityLabel } from "../../core/constants/cities";
+import { api } from "../../core/config/api";
 import { useLoad } from "../../core/hooks/useLoad";
 import { hapticError, hapticSuccess } from "../../motion";
 import { partsAdminService } from "../parts/partsService";
@@ -30,6 +31,22 @@ const kindLabel = (t: (en: string, ar: string) => string, k: Kind) => (k === "TO
 
 export const AppStatusPill = ({ status }: { status: string }) => <StatusChip status={status} />;
 
+/** Tow review queue: drivers added by companies wait for licence review on their own screen; without this row they were invisible here (T-01). */
+function PendingDrivers() {
+  const d = useDT();
+  const s = useLoad(() => api<{ stats: { pendingDrivers?: number } }>("GET", "/admin/tow/stats").then((r) => r.stats.pendingDrivers ?? 0), [], 15000);
+  if (!s.data) return null;
+  return (
+    <ItemCard label={d.t("Drivers waiting for licence review", "سائقون بانتظار مراجعة الرخصة")} onPress={() => go("/dept/tows/drivers")}>
+      <View style={{ flexDirection: d.row, alignItems: "center", gap: 12 }}>
+        <Ionicons name="id-card-outline" size={24} color={d.fill} />
+        <Text style={{ flex: 1, color: d.ink, fontSize: 15, lineHeight: 22, fontWeight: "800", textAlign: d.align }}>{d.t("Drivers waiting for licence review", "سائقون بانتظار مراجعة الرخصة")}</Text>
+        <CountBadge n={s.data} />
+      </View>
+    </ItemCard>
+  );
+}
+
 // ---------------------------------------------------------------- list with tabs
 export function ApplicationsList({ kind, header }: { kind: Kind; header?: React.ReactNode }) {
   const d = useDT();
@@ -45,6 +62,7 @@ export function ApplicationsList({ kind, header }: { kind: Kind; header?: React.
   return (
     <DeptPage onRefresh={() => (void counts.reload(), void list.reload())} refreshing={list.loading && !!list.data}>
       {header}
+      {kind === "TOW" ? <PendingDrivers /> : null}
       <Section title={d.t("Applications", "الطلبات")} caption={kindLabel(d.t, kind) + " · " + d.t("review, request changes, approve", "راجع واطلب تعديلات ووافق")} />
       <View style={{ flexDirection: d.row, flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
         {tabs.map((x) => {

@@ -16,7 +16,7 @@ export function TripMap(_props: { pickup: Point; dropoff?: Point | null; height?
   return null;
 }
 
-export type ServicePin = { id: string; name: string; lat: number; lng: number; kind: "tow" | "mech" | "hq" | "shop"; dim: boolean; color?: string };
+export type ServicePin = { id: string; name: string; lat: number; lng: number; kind: "tow" | "mech" | "hq" | "shop" | "car"; dim: boolean; color?: string };
 export function ServiceMap(_props: Record<string, unknown>) {
   return null;
 }

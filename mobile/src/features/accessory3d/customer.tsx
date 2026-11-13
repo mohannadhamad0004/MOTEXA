@@ -9,7 +9,7 @@ import { useLoad } from "../../core/hooks/useLoad";
 import type { Car } from "../catalog/myCar";
 import { gType, useGarageTheme } from "../../theme/garage";
 import { customerAccessoryApi, RIM_FINISH_LABELS, type CustomerPart, type RimSpecs } from "./api";
-import {threeDReason} from "../vehicleCatalog/lifecycleText";
+import {customerThreeDReason} from "../vehicleCatalog/lifecycleText";
 import {selectPreviewCar} from "./eligibility";
 
 /** All photos as data URIs (authenticated, memory only); null while loading. */
@@ -72,7 +72,7 @@ export function ProductAccessory3D({ productId, car, onPreview }: { productId: s
     {!onPreview?<View style={{gap:10,marginTop:12}}>
       {choices.data&&choices.data.length>1?choices.data.filter(c=>c.allowed).map(c=><GButton key={c.carId} variant="secondary" label={`${chosen?.carId===c.carId?"✓ ":""}${c.make} ${c.model} ${c.year}`} onPress={()=>setSelected(c.carId)}/>):null}
       {viewable&&parts.some(x=>x.model)?<GButton icon="cube-outline" label={t("View on my car","اعرضها على سيارتي")} onPress={()=>router.push({pathname:"/customer/car3d",params:{product:productId,carId:chosen!.carId}})}/>:<>
-        <Note>{threeDReason(!parts.some(x=>x.model)?"NO_ACCESSORY_3D":chosen?.reason??"NO_COMPATIBLE_GARAGE_CAR",t)}</Note>
+        <Note>{customerThreeDReason(!parts.some(x=>x.model)?"NO_ACCESSORY_3D":chosen?.reason??"NO_COMPATIBLE_GARAGE_CAR",t)}</Note>
         {chosen?.reason==="NO_VEHICLE_3D"?<GButton variant="secondary" label={t("Request my car in 3D","طلب سيارتي ثلاثية الأبعاد")} onPress={()=>router.push({pathname:"/customer/vehicle-requests/[id]",params:{id:"new",garageCarId:chosen.carId}} as never)}/>:!chosen?<GButton variant="secondary" label={t("Open Garage","فتح الكراج")} onPress={()=>router.push("/customer/garage" as never)}/>:null}
       </>}
       {choices.error?<Note tone="danger">{t("Could not check your Garage. Refresh to retry.","تعذّر فحص كراجك. حدّث لإعادة المحاولة.")}</Note>:null}

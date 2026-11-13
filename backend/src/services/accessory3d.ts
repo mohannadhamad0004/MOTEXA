@@ -141,7 +141,7 @@ async function accessoryReview(a: Full, tx: Tx) {
   if (!reviewed || reviewed.fit.state !== "APPROVED") block("FIT_REVIEW_REQUIRED","Review and approve a current successful fit on the final-preview vehicle.",reviewed?.generationId);
   if (!reviewed?.previewCurrent) block("STALE_VISUAL_REVIEW","Render the final preview after the latest fit review.",reviewed?.generationId);
   const published = a.status === "PUBLISHED" && !a.deactivatedAt && !!a.publishedFile && existsSync(path.join(PUBLIC_ACCESSORY_DIR,a.publishedFile+".glb"));
-  return {model: {generated: real, exists: !!bytes, optimized, validation: validated ? "PASSED" : a.validation || a.generationErrorCode ? "FAILED" : "NOT_RUN", reason: validationReason},
+  return {model: {generated: real, exists: !!bytes, optimized, keptOriginal: optimized && (processing as {optimisation?: string} | undefined)?.optimisation === "SKIPPED_ORIGINAL_KEPT", validation: validated ? "PASSED" : a.validation || a.generationErrorCode ? "FAILED" : "NOT_RUN", reason: validationReason},
     targets, publication: {state: published ? "PUBLISHED" : a.deactivatedAt ? "UNPUBLISHED" : blockers.length ? "PRIVATE_CANDIDATE" : "READY_FOR_FINAL_REVIEW", file: published ? `accessories/${a.publishedFile}.glb` : null, canPublish: !blockers.length, blockers},
     canRetryProcessing: real && a.provider !== "MANUAL" && ["APPROVED_FOR_GENERATION","READY_FOR_FINAL_REVIEW"].includes(a.status) && (!validated || !optimized),
     canValidateManual: a.provider === "MANUAL" && a.generationMode === "manual" && !!bytes && (!validated || !optimized)};
@@ -149,14 +149,25 @@ async function accessoryReview(a: Full, tx: Tx) {
 /** A manually imported GLB (provider MANUAL) gets the same local optimisation + validation as a Meshy result (normalizeAccessory). The
  *  imported file is kept as the raw source and every run starts from it; the optimised file becomes the model and, when published, the
  *  public file (content-addressed). The replaced optimised / public file is deleted (no kept old versions). Fits are recomputed. */
-export async function prepareManualAccessory(id: string, uid: string | null) {
+/** Validate an imported GLB as it is (no optimisation): the same safety limits (final <= MAX_MODEL_BYTES, triangles, bounds). Used when the
+ *  original is already small enough and optimisation would change how it is measured (E36 bumper: FIT-QA samples follow triangle order). */
+async function validateOriginal(bytes: Buffer) {
+  const checked = await readSafeGLB(bytes, 300_000); // refuses > MAX_MODEL_BYTES
+  const mats = checked.doc.getRoot().listMaterials();
+  return { bytes, report: { valid: true, sha256: digest(bytes), triangles: Math.floor(checked.triangles), bytes: bytes.length,
+    processing: { rawBytes: bytes.length, optimizedBytes: bytes.length, finalLimitBytes: MAX_MODEL_BYTES, qualityGate: "PASS", optimisation: "SKIPPED_ORIGINAL_KEPT" },
+    textures: checked.doc.getRoot().listTextures().length, materials: mats.length, transparentMaterials: mats.filter(m => m.getAlphaMode() !== "OPAQUE").length,
+    warnings: ["Validated as imported (not optimised)."], visualVerificationRequired: true } };
+}
+export async function prepareManualAccessory(id: string, uid: string | null, opts: { keepOriginal?: boolean } = {}) {
   const a = await prisma.productAccessory3D.findUnique({ where: { id } });
   if (!a) return fail("NOT_FOUND", "Accessory not found.", 404);
   if (a.provider !== "MANUAL" || a.generationMode !== "manual") return fail("NOT_MANUAL", "Only a manually imported model is validated here; a generated model uses Retry processing.", 409);
   const source = [a.rawModelPath, a.privateModelPath].find((p): p is string => !!p && existsSync(privatePath(p)));
   if (!source) return fail("MODEL_REQUIRED", "The imported model file is missing.", 409);
-  const normalized = await normalizeAccessory(readFileSync(privatePath(source))); // throws Vehicle3DError with the reason (size, geometry)
-  const prepared = storePrivate(normalized.bytes, "glb");
+  const keep = opts.keepOriginal === true;
+  const normalized = keep ? await validateOriginal(readFileSync(privatePath(source))) : await normalizeAccessory(readFileSync(privatePath(source))); // throws with the reason
+  const prepared = keep ? source : storePrivate(normalized.bytes, "glb"); // kept original: the model IS the imported file (no separate raw copy)
   const file = a.publishedFile ? `acc-${normalized.report.sha256.slice(0, 16)}` : null;
   try {
     if (file) { mkdirSync(PUBLIC_ACCESSORY_DIR, { recursive: true }); const target = path.join(PUBLIC_ACCESSORY_DIR, `${file}.glb`); if (!existsSync(target)) copyFileSync(privatePath(prepared), target); }
@@ -165,12 +176,12 @@ export async function prepareManualAccessory(id: string, uid: string | null) {
       const now = await tx.productAccessory3D.findUnique({ where: { id } });
       if (!now || now.privateModelPath !== a.privateModelPath || now.rawModelPath !== a.rawModelPath) return fail("REVIEW_CONFLICT", "The model changed during validation. Reload and run it again.", 409);
       if (file && await tx.productAccessory3D.findFirst({ where: { publishedFile: file, id: { not: id } } })) return fail("DUPLICATE_PROMOTION", "This exact model is already published for another product.", 409);
-      await tx.productAccessory3D.update({ where: { id }, data: { rawModelPath: source, privateModelPath: prepared, publishedFile: file,
+      await tx.productAccessory3D.update({ where: { id }, data: { rawModelPath: keep ? null : source, privateModelPath: prepared, publishedFile: file,
         validation: { ...normalized.report, validatedAt: new Date().toISOString() } as Prisma.InputJsonValue,
         sourceMetadata: { ...(a.sourceMetadata as object ?? {}), processing: normalized.report.processing } as Prisma.InputJsonValue, generationErrorCode: null, failureReason: null } });
-      await audit(tx, uid, "MANUAL_VALIDATED", id, { bytes: normalized.report.bytes, rawBytes: normalized.report.processing.rawBytes, file });
+      await audit(tx, uid, "MANUAL_VALIDATED", id, { bytes: normalized.report.bytes, rawBytes: normalized.report.processing.rawBytes, file, optimised: !keep });
     });
-  } catch (e) { removePrivate(prepared); throw e; }
+  } catch (e) { if (prepared !== source) removePrivate(prepared); throw e; }
   if (a.privateModelPath && a.privateModelPath !== source && a.privateModelPath !== prepared) removePrivate(a.privateModelPath); // the old optimised model
   if (a.publishedFile && a.publishedFile !== file && !await prisma.productAccessory3D.findFirst({ where: { publishedFile: a.publishedFile } }))
     rmSync(path.join(PUBLIC_ACCESSORY_DIR, `${a.publishedFile}.glb`), { force: true });
@@ -536,7 +547,9 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
         return await run(async tx => {
           const now = await admin(tx, id, true);
           if (!["READY_FOR_FINAL_REVIEW","PUBLISHED"].includes(now.status) || modelRevision(now) !== rendered.modelRevision) return fail("STALE_VISUAL_REVIEW", "The model changed while rendering. Reload.", 409);
-          const updated = await tx.productAccessory3D.update({ where: { id }, data: { preview: rendered as Prisma.InputJsonValue, visualVerifiedAt: null }, include });
+          // a published part stays verified: same model (revision checked above), and publish only runs from READY_FOR_FINAL_REVIEW, so
+          // clearing it here would hide the part from customers with no way back. Per-car visibility is the fit approval.
+          const updated = await tx.productAccessory3D.update({ where: { id }, data: { preview: rendered as Prisma.InputJsonValue, visualVerifiedAt: now.status === "PUBLISHED" ? now.visualVerifiedAt : null }, include });
           await audit(tx, uid, "PREVIEW", id, { generationId }); for (const k of previewKeys(now.preview)) removePrivate(k);
           return accessoryShape(updated);
         });

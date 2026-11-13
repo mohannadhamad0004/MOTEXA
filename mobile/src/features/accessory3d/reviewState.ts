@@ -5,7 +5,7 @@ export type ReviewTarget = {
   previewCurrent: boolean;
 };
 export type AccessoryReview = {
-  model: {generated: boolean; exists: boolean; optimized: boolean; validation: string; reason: string | null};
+  model: {generated: boolean; exists: boolean; optimized: boolean; keptOriginal?: boolean; validation: string; reason: string | null};
   targets: ReviewTarget[];
   publication: {state: string; file?: string | null; canPublish: boolean; blockers: {code: string; message: string; generationId?: string}[]};
   canRetryProcessing: boolean;

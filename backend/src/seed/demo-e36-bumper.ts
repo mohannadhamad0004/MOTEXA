@@ -57,7 +57,7 @@ async function main() {
     acc = acc ? await prisma.productAccessory3D.update({ where: { id: acc.id }, data: fields }) : await prisma.productAccessory3D.create({ data: { ...fields, productId: product.id, shopId: shop.id, kitPart: "MAIN" } });
   }
   await prisma.productAccessory3DFit.upsert({ where: { accessoryId_generationId: { accessoryId: acc.id, generationId: gen.id } }, create: { accessoryId: acc.id, generationId: gen.id }, update: {} });
-  if ((acc.validation as { valid?: boolean } | null)?.valid !== true) await prepareManualAccessory(acc.id, null); // same optimise + validation as a generated model
+  if ((acc.validation as { valid?: boolean } | null)?.valid !== true) await prepareManualAccessory(acc.id, null, { keepOriginal: true }); // validated as imported: optimising changes its FIT-QA samples (STATUS.md Future work)
   await autoFitAccessory(acc.id);
   console.log(`E36 bumper product ${product.id}, accessory ${acc.id}, fits ${gen.model3dKey}`);
 }

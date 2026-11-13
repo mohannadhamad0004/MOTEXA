@@ -21,7 +21,9 @@ export function ProviderLayout({children,area:given,title,subtitle,hero,bottom,o
   children:ReactNode;area?:ProviderArea;title?:string;subtitle?:string;hero?:ReactNode;bottom?:ReactNode;onRefresh?:()=>void;refreshing?:boolean;scroll?:boolean;
   tag?:string;tr?:string;kind?:string;brand?:string;back?:boolean;signOutButton?:boolean;tabs?:boolean;entry?:string;overlap?:number;
 }){
-  const d=useDT(),insets=useSafeAreaInsets(),path=usePathname(),area=given??(path.includes("/parts")?"parts":"tow"),base=providerPath(area);
+  const d=useDT(),insets=useSafeAreaInsets(),path=usePathname(),area=given??(path.includes("/parts")?"parts":"tow");
+  // tow drivers reuse this layout: their home is /driver and the company's links (trucks, drivers, settings...) are not theirs (T-03)
+  const driver=path==="/driver"||path.startsWith("/driver/"),base=driver?"/driver":providerPath(area);
   const [settings,setSettings]=useState(false),tabbed=useContext(InTabs),{g}=useGarageTheme();
   const h=isValidElement(hero)?hero.props as {title?:string;line?:string;onBack?:()=>void;children?:ReactNode;action?:{label:string;onPress:()=>void}}:{};
   const button=(label:string,onPress:()=>void)=><Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={{minHeight:44,justifyContent:"center",paddingHorizontal:10}}><Text style={{color:d.accent,fontWeight:"700",textAlign:d.align}}>{label}</Text></Pressable>;
@@ -34,7 +36,7 @@ export function ProviderLayout({children,area:given,title,subtitle,hero,bottom,o
       {h.children}
       {h.action?button(h.action.label,h.action.onPress):null}
     </View>
-    {tabbed?null:<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection:d.row,gap:8,paddingBottom:16}}>
+    {tabbed||driver?null:<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection:d.row,gap:8,paddingBottom:16}}>
       {providerLinks[area].map(n=>{const target=providerPath(area,n.path),on=path===target;return <Pressable key={n.path} accessibilityRole="button" accessibilityState={{selected:on}} onPress={()=>router.navigate(target as Href)} style={{minHeight:44,justifyContent:"center",paddingHorizontal:14,borderRadius:22,borderWidth:1,borderColor:on?d.fill:d.border,backgroundColor:on?d.fill:d.surface}}><Text style={{color:on?d.fillInk:d.ink,fontSize:12,fontWeight:"700"}}>{d.t(n.en,n.ar)}</Text></Pressable>;})}
     </ScrollView>}
   </>;

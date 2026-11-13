@@ -207,7 +207,9 @@ export function createAutoFitService(options:{compute?:typeof computeFit}={}) {
         if (!ok && a.status === "PUBLISHED") void autoFitAccessory(a.id);
         out.push({ accessoryId: a.id, productId: a.productId, productName: a.product?.name ?? "", kitPart: a.kitPart, type: a.accessoryType, status: a.status,
           hasModel: !!a.privateModelPath && existsSync(privatePath(a.privateModelPath)), modelRevision: partRevision(a.privateModelPath),
-          file: a.status === "PUBLISHED" && a.publishedFile ? `accessories/${a.publishedFile}.glb` : null, size: { widthMm: a.widthMm, lengthMm: a.lengthMm, rimInches: a.rimInches },
+          // the public file only while it is actually served (isPublic3DAsset: verified + active); otherwise the admin screen loads the
+          // private model, instead of a 404 that showed "Couldn't load the 3D view" over the loaded car (unpublished rims)
+          file: a.status === "PUBLISHED" && a.publishedFile && a.visualVerifiedAt && !a.deactivatedAt ? `accessories/${a.publishedFile}.glb` : null, size: { widthMm: a.widthMm, lengthMm: a.lengthMm, rimInches: a.rimInches },
           generation: { id: f.generationId, name: `${f.generation.vehicle.make} ${f.generation.nameEn}` }, finish: a.rimFinish,
           fit: ok && r ? { fit: r.fit, adj: r.adj, approvedAt: r.approvedAt } : null, computing: running.has(a.id) });
       }

@@ -197,6 +197,8 @@ export async function updateDriver(ownerUserId: string, driverId: string, b: any
     data.licenceNumber = b.licenceNumber.trim();
   }
   if ((b?.licenceNumber !== undefined || b?.licencePhoto) && d.approval !== "SUSPENDED") Object.assign(data, { approval: "PENDING", approvalReason: null });
+  // changes requested (PENDING + reason): a new photo or phone is the company's resubmission too, not only a licence edit (T-02)
+  else if (d.approval === "PENDING" && d.approvalReason && (b?.photo || b?.phone !== undefined)) data.approvalReason = null;
   const stored: string[] = [];
   let old: string[] = [];
   try {

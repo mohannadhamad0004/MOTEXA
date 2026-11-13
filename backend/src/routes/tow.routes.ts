@@ -664,13 +664,14 @@ const admin = [requireAuth, requireTowAdmin, express.json()];
 // Counts only (department home screen).
 router.get("/admin/tow/stats", ...admin, async (_req, res) => {
   try {
-    const [pendingCompanies, approvedCompanies, pendingTrucks, needsChanges] = await Promise.all([
+    const [pendingCompanies, approvedCompanies, pendingTrucks, needsChanges, pendingDrivers] = await Promise.all([
       prisma.towCompanyProfile.count({ where: { verificationStatus: "PENDING" } }),
       prisma.towCompanyProfile.count({ where: { verificationStatus: "APPROVED" } }),
       prisma.truck.count({ where: { verificationStatus: "PENDING" } }),
       prisma.towCompanyProfile.count({ where: { verificationStatus: "NEEDS_CHANGES" } }),
+      prisma.towDriver.count({ where: { approval: "PENDING" } }), // new / resubmitted drivers waiting for licence review (T-01)
     ]);
-    return res.json({ success: true, stats: { pendingCompanies, approvedCompanies, pendingTrucks, needsChanges } });
+    return res.json({ success: true, stats: { pendingCompanies, approvedCompanies, pendingTrucks, needsChanges, pendingDrivers } });
   } catch (e) {
     return fail(res, "Tow stats error", e);
   }

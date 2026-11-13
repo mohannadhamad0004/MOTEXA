@@ -19,7 +19,7 @@ import { fmtDay } from "../provider/labels";
 import { towAdminService } from "../tow/towService";
 import type { Truck } from "../tow/towService";
 import { truckTypeLabel } from "./departments";
-import { Avatar, DeptPage, Empty, Pill, StatusChip, cardStyle, useDT } from "./ui";
+import { Avatar, CountBadge, DeptPage, Empty, Pill, StatusChip, cardStyle, useDT } from "./ui";
 
 type IconName = keyof typeof Ionicons.glyphMap;
 const go = (path: string) => router.push(path as Href);
@@ -149,7 +149,7 @@ export function TowAdminHome() {
 
   const approved = fleet.data?.trucks.filter((t) => t.verification === "APPROVED") ?? [];
   const num = (v: number | undefined, ready: boolean) => (ready ? String(v ?? 0) : stats.loading || fleet.loading ? "…" : "—");
-  const toReview = stats.data ? (stats.data.pendingCompanies ?? 0) + (stats.data.pendingTrucks ?? 0) : undefined;
+  const toReview = stats.data ? (stats.data.pendingCompanies ?? 0) + (stats.data.pendingTrucks ?? 0) + (stats.data.pendingDrivers ?? 0) : undefined;
   const companyName = new Map((fleet.data?.companies ?? []).map((c) => [c.id, c.name]));
   // trucks on a job first, then available, then the rest
   const rank = (t: Truck) => (t.hasActiveJob ? 0 : t.operational === "AVAILABLE" ? 1 : t.operational === "BUSY" ? 2 : 3);
@@ -187,6 +187,7 @@ export function TowAdminHome() {
       <Pressable accessibilityRole="button" accessibilityLabel={d.t("Drivers' licences", "رخص السائقين")} onPress={() => go("/dept/tows/drivers")} style={{ ...cardStyle(d), flexDirection: d.row, alignItems: "center", gap: 12, padding: 14, marginBottom: 22 }}>
         <Ionicons name="id-card-outline" size={24} color="#E0A36F" />
         <Text style={{ flex: 1, color: d.ink, fontSize: 14, fontWeight: "800", textAlign: d.align }}>{d.t("Review drivers' licences", "مراجعة رخص السائقين")}</Text>
+        <CountBadge n={stats.data?.pendingDrivers ?? 0} />
         <Ionicons name={d.ar ? "chevron-back" : "chevron-forward"} size={18} color={d.muted} />
       </Pressable>
 
