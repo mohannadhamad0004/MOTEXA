@@ -14,7 +14,7 @@ import { Prisma, type AccessoryKitPart, type AccessoryType, type ProductAccessor
 import { prisma } from "../prisma.js";
 import { createMeshyClient, MeshyError, MESHY_GENERATION_CREDITS, PROVIDER_DOWNLOAD_MAX_BYTES } from "./meshy-client.js";
 import { generationMode, paidGenerationEnabled, requireFixtureRuntime, testProviderRuntime } from "./generation-runtime.js";
-import { confirmedPartMaps, rimProposals, modelFileSha } from "./car-part-map.js";
+import { confirmedPartMaps, rimProposals, modelFileSha, partCuts, bumperSpace } from "./car-part-map.js";
 import { createAutoFitService, saveFit, autoFitAccessory, fitEligibility, accessoryTargets, currentFit, validFit, isAccessoryFitRunning, refreshPublishedAccessory } from "./accessory-autofit.js";
 import { REPO_ROOT, activeModels, type ViewerConfig } from "./vehicle3d-catalog.js";
 import { privatePath, storePrivate, removePrivate, PRIVATE_3D_DIR } from "./vehicle3d-private-assets.js";
@@ -115,7 +115,8 @@ async function accessoryReview(a: Full, tx: Tx) {
   const targets = await Promise.all((await accessoryTargets(a.id,tx)).map(async g=>{
     const has3d = !!g.model3dKey && g.isPublished && keys.has(g.model3dKey) && !!modelFileSha(g.model3dKey);
     const map = isBumper(a.accessoryType) && g.model3dKey ? await tx.carPartMap.findUnique({where: {model3dKey: g.model3dKey}}) : null;
-    const partMap = !isBumper(a.accessoryType) ? "NOT_REQUIRED" : map && map.modelSha256 !== modelFileSha(g.model3dKey!) ? "STALE" : !map?.confirmedAt || !Array.isArray((map.map as Record<string,unknown> | null)?.[a.accessoryType]) || !(map.map as Record<string,unknown[]>)[a.accessoryType]?.length ? "MISSING" : "CONFIRMED";
+    const space = isBumper(a.accessoryType) ? bumperSpace(map, g.model3dKey!, a.accessoryType) : null;
+    const partMap = !space ? "NOT_REQUIRED" : space === "PART_MAP" ? "CONFIRMED" : space; // CUT = cut mode (bumper merged into the body)
     const fit = saved.find(f=>f.generationId===g.id), current = !!fit && validFit(fit.fit) && (fit.fit as {type?:string}).type === a.accessoryType && !!a.privateModelPath && fit.model3dKey === g.model3dKey && await currentFit(fit,a.privateModelPath);
     const data = fit?.fit as {failed?: string; previousCorrection?: unknown; needsCorrection?: boolean} | undefined;
     const state = isAccessoryFitRunning(a.id) ? "RUNNING" : !current ? "NOT_RUN" : data?.failed ? "FAILED" : !fit?.approvedAt && (data?.needsCorrection || data?.previousCorrection) ? "NEEDS_CORRECTION" : fit?.approvedAt ? "APPROVED" : "PASSED";
@@ -233,17 +234,18 @@ export async function modelWithZones(key: string, tx: Tx | typeof prisma = prism
   const m = parseCarModel(revision?.viewerConfig)??activeModels().find(x => x.key === key); if (!m) return null;
   const rows = await tx.accessoryFitZone.findMany({ where: { model3dKey: key } }), partMap = (await confirmedPartMaps([key])).get(key);
   const z = rows.length ? { ...m, zones: { ...(m.zones ?? {}), ...Object.fromEntries(rows.map(r => [r.accessoryType, r.zone as never])) } } : m;
-  const rimProposal = partMap?.WHEELS?.length ? undefined : (await rimProposals([key])).get(key);
-  return { ...z, ...(partMap ? { partMap } : {}), ...(rimProposal ? { rimProposal } : {}) } as ViewerConfig;
+  const rimProposal = partMap?.WHEELS?.length ? undefined : (await rimProposals([key])).get(key), cuts = (await partCuts([key])).get(key);
+  return { ...z, ...(partMap ? { partMap } : {}), ...(cuts ? { partCuts: cuts } : {}), ...(rimProposal ? { rimProposal } : {}) } as ViewerConfig;
 }
 export async function mergeZones<T extends { key: string; zones?: unknown }>(models: T[]) {
   const rows = await prisma.accessoryFitZone.findMany({ where: { model3dKey: { in: models.map(m => m.key) } } });
   const proposals = await rimProposals(models.map(m => m.key));
   const maps = await confirmedPartMaps(models.map(m => m.key)); // confirmed part maps of the exact served file ride along too
-  return models.map(m => { const z = rows.filter(r => r.model3dKey === m.key), pm = maps.get(m.key);
+  const cuts = await partCuts(models.map(m => m.key)); // cut-mode bumpers (merged into the body) too
+  return models.map(m => { const z = rows.filter(r => r.model3dKey === m.key), pm = maps.get(m.key), pc = cuts.get(m.key);
     const withZones = z.length ? { ...m, zones: { ...(m.zones as object ?? {}), ...Object.fromEntries(z.map(r => [r.accessoryType, r.zone])) } } : m;
     const rimProposal = pm?.WHEELS?.length ? undefined : proposals.get(m.key);
-    return { ...withZones, ...(pm ? {partMap:pm} : {}), ...(rimProposal ? {rimProposal} : {}) }; });
+    return { ...withZones, ...(pm ? {partMap:pm} : {}), ...(pc ? {partCuts:pc} : {}), ...(rimProposal ? {rimProposal} : {}) }; });
 }
 
 /** Six views of the private part fitted on a catalog car (the real mobile viewer code, offline). Images stay private. */

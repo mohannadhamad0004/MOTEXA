@@ -3,7 +3,7 @@
 // in the git-ignored 3d-source/ by backend/scripts/optimize-3d.ts, which also writes the generated block below; credits in
 // docs/3d/CREDITS.md) and are downloaded once by the app (car3d.ts). "check" comments = guesses to look at in the viewer.
 import type { Car } from "../catalog/myCar";
-import type { AccessoryType, AccessoryZone, PartMap } from "./modelConfig";
+import type { AccessoryType, AccessoryZone, PartMap, PartCuts } from "./modelConfig";
 
 export type Offset = { x: number; y: number; z: number; scale: number };
 
@@ -35,6 +35,8 @@ export type CarModel = {
   zones?: Partial<Record<AccessoryType, AccessoryZone>>;
   /** the Parts Admin's confirmed part map for this exact model file (server catalog only); see sceneHtml PART MAP */
   partMap?: PartMap;
+  /** cut mode: bumpers merged into the body, 8 world points per label (server catalog only); see sceneHtml CUT MODE */
+  partCuts?: PartCuts;
   rimProposal?: { ids: string[]; confidence: number };
   keepBox?: { y: [number, number]; z: [number, number]; /** also removed by name (a displaced duplicate headlight set) */ names?: string[] };
   /** per-model nudges for the computed wing / roof-rack anchors (metres, after scaling) */

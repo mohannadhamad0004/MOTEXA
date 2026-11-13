@@ -1547,6 +1547,8 @@ model CarPartMap {
   map               Json?
   /// measured size per label (Parts Admin 8-point shape): { LABEL: { widthMm, heightMm, depthMm, at } }
   sizes             Json?
+  /// cut mode per bumper label (merged into the body): { LABEL: { pts: 8 x [x, y, z] world metres, sha, at } }
+  cuts              Json?
   confirmedAt       DateTime?
   confirmedByUserId String?
   segmentedAt       DateTime  @default(now())

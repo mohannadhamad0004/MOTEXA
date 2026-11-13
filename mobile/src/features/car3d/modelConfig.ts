@@ -17,6 +17,15 @@ export const PART_LABELS=["FRONT_BUMPER","REAR_BUMPER","SPOILER","SIDE_SKIRTS","
 export type PartLabel=typeof PART_LABELS[number];
 /** A confirmed part map: label -> piece ids "m<mesh>c<component>" of one exact model file. */
 export type PartMap=Partial<Record<PartLabel,string[]>>;
+/** Cut mode: a bumper merged into the body, drawn by the Parts Admin as 8 world points (metres); the viewer clips the car inside their hull. */
+export const CUT_LABELS=["FRONT_BUMPER","REAR_BUMPER"] as const;
+export type PartCuts=Partial<Record<typeof CUT_LABELS[number],number[][]>>;
+export function parsePartCuts(v:unknown):PartCuts|null{
+  if(!object(v)||Object.keys(v).some(k=>!(CUT_LABELS as readonly string[]).includes(k)))return null;
+  const out:PartCuts={};
+  for(const[k,pts]of Object.entries(v)){if(!Array.isArray(pts)||pts.length!==8||!pts.every(p=>Array.isArray(p)&&p.length===3&&p.every(n=>number(n,10))))return null;out[k as keyof PartCuts]=pts.map(p=>(p as number[]).map(Number));}
+  return out;
+}
 export function parsePartMap(v:unknown):PartMap|null{
   if(!object(v)||Object.keys(v).some(k=>!(PART_LABELS as readonly string[]).includes(k)))return null;
   const out:PartMap={};
@@ -51,13 +60,14 @@ export function parseCarModel(v:unknown):CarModel|null{
   if(v.zones!==undefined){const z=v.zones;if(!object(z)||Object.keys(z).length>ACCESSORY_TYPES.length+1)return null;m.zones={};
     for(const[raw,f]of Object.entries(z)){const type=raw==="frontBumper"?"FRONT_BUMPER":raw;if(!(ACCESSORY_TYPES as readonly string[]).includes(type))return null;const zone=parseZone(f);if(!zone)return null;m.zones[type as AccessoryType]=zone;}}
   if(v.partMap!==undefined){const pm=parsePartMap(v.partMap);if(!pm)return null;m.partMap=pm;}
+  if(v.partCuts!==undefined){const pc=parsePartCuts(v.partCuts);if(!pc)return null;if(Object.keys(pc).length)m.partCuts=pc;}
   if(v.rimProposal!==undefined){const p=v.rimProposal;if(!object(p)||!number(p.confidence,1)||Number(p.confidence)<0)return null;const pm=parsePartMap({WHEELS:p.ids});if(!pm?.WHEELS)return null;m.rimProposal={ids:pm.WHEELS,confidence:Number(p.confidence)};}
   return m;
 }
 /** This exact function is used by the native/WebView path and protocol tests/audit. */
 export function modelForViewer(m:CarModel){
   return {lengthM:m.lengthM,preRotateX:m.preRotateX,rotateY:m.rotateY,groundOffset:m.groundOffset,paintNodes:m.paintNodes,paintMaterials:m.paintMaterials,bakedPaint:m.bakedPaint,
-    centerX:m.centerX,keepBox:m.keepBox,zones:m.zones,partMap:m.partMap,...(m.rimProposal?{rimProposal:m.rimProposal}:{})};
+    centerX:m.centerX,keepBox:m.keepBox,zones:m.zones,partMap:m.partMap,...(m.partCuts?{partCuts:m.partCuts}:{}),...(m.rimProposal?{rimProposal:m.rimProposal}:{})};
 }
 /** A published shop accessory file (content-addressed, served under /api/3d/ only while its product is PUBLISHED). */
 export const ACCESSORY_FILE=/^accessories\/acc-[a-f0-9]{16}\.glb$/;

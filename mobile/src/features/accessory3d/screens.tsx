@@ -520,6 +520,10 @@ function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
   useEffect(() => { setPts([]); setInside(null); setUndo([]); }, [key]);
   const addPt = (p: number[]) => { setMissed(false); setInside(null); setPts(a => a.length >= 8 ? [p] : [...a, p]); };
   const size = shapeSize(pts), saved = detail?.sizes?.[label];
+  // cut mode (WAY 2): a bumper merged into the body is drawn with the 8 points and cut out of the car while a replacement is on
+  const cutLabel = label === "FRONT_BUMPER" || label === "REAR_BUMPER" ? label : null, cutOn = !!(cutLabel && detail?.cuts?.[cutLabel]);
+  const merged = !!cutLabel && (list.data ?? []).find(m => m.key === key)?.gate?.limited?.[cutLabel] === "NOT_SEPARATE";
+  const setCut = (on: boolean) => { if (!cutLabel || !detail) return; void work(async () => { const cuts = await adminAccessoryApi.savePartCut(detail.key, cutLabel, on ? pts : null); setDetail(d => d && { ...d, cuts }); }); };
   const applyBox = (add: boolean) => { if (!inside) return; const ids = new Set(inside); setUndo(u => [...u.slice(-19), draft]); setDraft(d => {
     const next: PartMap = {};
     for (const L of PART_LABELS) { let l = d[L] ?? []; if (add || L === label) l = l.filter(x => !ids.has(x)); if (add && L === label) l = [...l, ...inside]; if (l.length) next[L] = l; }
@@ -535,6 +539,12 @@ function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
   // one viewer at a time (inline or full screen): both read the same label + points, so switching keeps them
   const viewer = (style: object) => car ? <Car3DView model={car} assetLoader={assetLoader} color="#c3c7cc" bg={g.cardSoft} partEdit={partEdit} onPick={pick} onPieces={setPieces} onBoxPoint={addPt} onBoxIds={setInside} onBoxMiss={() => setMissed(true)} interactive style={style} /> : null;
   const boxControls = <>
+            {merged || cutOn ? <View style={{ gap: 8 }}>
+              {merged ? <Note tone="warning">{t(`This car's ${t(...PART_LABEL_NAMES[label]).toLowerCase()} isn't a separate piece. Draw it with 8 points to use cut mode.`, `${t(...PART_LABEL_NAMES[label])} في هذه السيارة ليس قطعة منفصلة. ارسمه بـ 8 نقاط لاستخدام وضع القص.`)}</Note> : null}
+              <Check label={t("Cut this region (cut mode)", "قص هذه المنطقة (وضع القص)")} checked={cutOn} disabled={busy || !detail || (!cutOn && pts.length < 8)} onPress={() => setCut(!cutOn)} />
+              <GText soft style={[gType.caption, align]}>{cutOn ? t("Cut mode is on: while a replacement bumper is shown, everything of the car inside the saved shape is cut away (lights, glass, wheels and exhaust stay).", "وضع القص مفعّل: أثناء عرض مصد بديل يُقص كل ما بداخل الشكل المحفوظ من السيارة (تبقى الأضواء والزجاج والعجلات والعادم).")
+                : t("Place all 8 points, then turn this on to save the shape.", "ضع النقاط الثماني ثم فعّل هذا لحفظ الشكل.")}</GText>
+            </View> : null}
             <View style={[row, { gap: 8 }]}>
               <Chip label={t("Tap pieces", "اختيار بالضغط")} on={!boxMode} onPress={() => { setBoxMode(false); setPts([]); setInside(null); }} />
               <Chip label={t("8-point shape", "شكل من 8 نقاط")} on={boxMode} onPress={() => { setBoxMode(true); setTurning(false); }} />

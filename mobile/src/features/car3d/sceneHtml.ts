@@ -225,6 +225,7 @@ var renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.localClippingEnabled = true; // cut mode (material clipping planes)
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
 document.body.appendChild(renderer.domElement);
@@ -462,6 +463,36 @@ function stockMeshes(car, type) {
   });
   return out;
 }
+// ---- CUT MODE: a bumper merged into the body (no separate piece to hide). model.partCuts = { FRONT_BUMPER | REAR_BUMPER: 8 world points }
+// (Parts Admin, part-map editor "Cut this region"). While such a bumper is on, every fragment of the car inside the points' convex hull is
+// discarded by clipping planes on the car's own materials (clipIntersection: only inside ALL hull planes), even inside one big merged mesh;
+// lights, glass, wheels and mechanical pieces (exhaust) keep their material and stay. The bumper is fitted to the hull (fitBumper).
+// The 8 points sit ON the bumper skin, so their hull runs under its outward bulge (the W203 rear bumper's centre stands ~8 cm proud of the
+// chord between its corners): every hull face that faces AWAY from the car's centre (rear / bottom / outer sides) is pushed outward by
+// CUT_GROW; faces made only of seam points (1-4, where the part meets the car) and faces toward the rest of the car stay exact.
+// ponytail: one cut at a time (three's clipping is one convex region per material); a front + rear cut together shows only the first.
+var CUT_GROW = 0.09; // metres; calibration knob, set on the W203 rear bumper
+function cutOf(car, label) {
+  car.cutHulls = car.cutHulls || {}; if (label in car.cutHulls) return car.cutHulls[label];
+  var pts = car.cuts && car.cuts[label], out = null;
+  if (Array.isArray(pts) && pts.length === 8) try {
+    var vs = pts.map(function (p) { return new THREE.Vector3(p[0], p[1], p[2]); }), faces = new ConvexHull().setFromPoints(vs).faces.filter(function (f) { return f.area > 1e-8; });
+    var seamOnly = function (f) { var e = f.edge, ok = true; do { var i = vs.findIndex(function (v) { return v.distanceTo(e.head().point) < 1e-6; }); if (i < 0 || i > 3) ok = false; e = e.next; } while (e !== f.edge); return ok; };
+    var mid = car.rb.getCenter(new THREE.Vector3()), out = function (f) { return f.normal.dot(mid.clone().sub(f.midpoint)) < 0; };
+    var fs = faces.map(function (f) { return { n: f.normal.clone(), c: f.constant + (!seamOnly(f) && out(f) ? CUT_GROW : 0) }; });
+    if (fs.length >= 4) out = { label: label, box: new THREE.Box3().setFromPoints(vs), faces: fs, planes: fs.map(function (f) { return new THREE.Plane(f.n.clone(), -f.c); }) };
+  } catch (e) { out = null; }
+  return (car.cutHulls[label] = out);
+}
+/** Signed distance (metres) of a world point to the hull: < 0 inside. */
+function cutDist(cut, v) { var d = -Infinity; for (var i = 0; i < cut.faces.length; i++) d = Math.max(d, cut.faces[i].n.dot(v) - cut.faces[i].c); return d; }
+/** The car meshes a cut clips (not wheels, lights, glass or mechanical pieces). */
+function cutMeshes(car) {
+  if (car.cutList) return car.cutList; var l = [];
+  car.root.traverse(function (o) { if (!o.isMesh || o.userData.shadow || car.wheels.meshes.indexOf(o) >= 0 || Array.isArray(o.material)) return; var nm = o.name + " " + (o.material.name || "");
+    if (!LIGHTISH.test(nm) && !GLASS.test(nm) && !MECHANICAL.test(nm)) l.push(o); });
+  return (car.cutList = l);
+}
 /** What an accessory hides while it is on: { hide: meshes, T: their box (fit target for body kits), box, how }, or null (nothing).
  *  Body kits: their fit zone. Add-ons: their replace zone, else separate stock meshes. A box cuts separate named meshes when they really
  *  hold the zone, else the painted shell (triangles split exactly at the box faces); small meshes lying entirely inside go with it.
@@ -473,6 +504,9 @@ function replaceZone(car, type) {
     if (wp) rimPieces(car).sources.forEach(function (s) { rh.push(s.mesh); rT.expandByObject(s.mesh); });
     return (car.zones[type] = rh.length ? { hide: rh, T: rT, box: rT.clone(), how: car.parts.WHEELS ? "part map wheels" : "wheel analysis" } : null);
   }
+  // cut mode (the bumper is merged into the body): the admin's 8-point hull is the stock bumper; nothing is hidden whole, cutApply clips it
+  var cut = type === "FRONT_BUMPER" || type === "REAR_BUMPER" ? cutOf(car, type) : null;
+  if (cut) return (car.zones[type] = { hide: [], cut: cut, T: cut.box.clone(), box: cut.box.clone(), how: "cut" });
   // a confirmed part map: hide exactly the car's own pieces of this kind (lip / diffuser only take the bumper's position, see buildAccessory)
   var pm = car.parts[PART_OF[type]];
   if (pm && type !== "FRONT_LIP" && type !== "REAR_DIFFUSER") {
@@ -657,12 +691,14 @@ function worldTris(node) { // every triangle of the placed part, world space
 function bumperGaps(car, zone, node) {
   var T = zone.T, ts = T.getSize(new THREE.Vector3()), cx = (T.min.x + T.max.x) / 2, near = T.clone().expandByScalar(0.06), C = 0.01, key = function (v) { return Math.round(v.x / C) + "," + Math.round(v.y / C) + "," + Math.round(v.z / C); };
   // the car around the hole: vertices of the visible meshes near the stock bumper, hashed on a 1 cm grid (with the mesh they belong to)
-  var grid = new Map();
-  car.root.traverse(function (o) { if (!o.isMesh || !o.visible || zone.hide.indexOf(o) >= 0 || car.wheels.meshes.indexOf(o) >= 0) return;
-    eachVert(o, function (v) { if (near.containsPoint(v)) grid.set(key(v), o); }); });
+  // cut mode: the car inside the hull is clipped away (not "around the hole"); the stock bumper = the clipped car within 2 cm of the hull surface
+  var grid = new Map(), cut = zone.cut, clipped = cut ? cutMeshes(car) : [];
+  car.root.traverse(function (o) { if (!o.isMesh || !o.visible || zone.hide.indexOf(o) >= 0 || car.wheels.meshes.indexOf(o) >= 0) return; var cl = cut && clipped.indexOf(o) >= 0;
+    eachVert(o, function (v) { if (near.containsPoint(v) && !(cl && cutDist(cut, v) < 0)) grid.set(key(v), o); }); });
   // seam = stock bumper vertices within ~2 cm of the car around it (its edge against fenders, lights, bonnet / boot line)
   var seam = [];
-  zone.hide.forEach(function (h) { eachVert(h, function (v) {
+  (cut ? clipped : zone.hide).forEach(function (h) { eachVert(h, function (v) {
+    if (cut) { if (!near.containsPoint(v)) return; var dc = cutDist(cut, v); if (dc >= 0 || dc < -0.02) return; }
     var x = Math.round(v.x / C), y = Math.round(v.y / C), z = Math.round(v.z / C), hit = null;
     for (var dx = -2; dx <= 2 && !hit; dx++) for (var dy = -2; dy <= 2 && !hit; dy++) for (var dz = -2; dz <= 2 && !hit; dz++) hit = grid.get((x + dx) + "," + (y + dy) + "," + (z + dz)) || null;
     if (hit) seam.push({ p: v.clone(), by: hit }); }); });
@@ -710,8 +746,8 @@ function coveredStock(car, zone) {
 }
 function fitBumper(car, src, type, zone, info, force, raw) { // raw (evidence only): the stock covered pieces stay, as before FIT-QA tiers
   var front = type === "FRONT_BUMPER", end = KIT[type].end;
-  if (!zone || zone.how !== "part map") throw new Error("no confirmed " + (front ? "front" : "rear") + " bumper in this car's part map: 3D preview not available for this car");
-  var covered = raw ? [] : coveredStock(car, zone); info.hidesWithStock = covered; // hidden with the stock bumper (buildAccessory: hideMore)
+  if (!zone || (zone.how !== "part map" && zone.how !== "cut")) throw new Error("no confirmed " + (front ? "front" : "rear") + " bumper in this car's part map: 3D preview not available for this car");
+  var covered = raw || zone.cut ? [] : coveredStock(car, zone); info.hidesWithStock = covered; // hidden with the stock bumper (buildAccessory: hideMore)
   var T = zone.T, ts = T.getSize(new THREE.Vector3());
   // A multi-mesh bumper's inner trim can reverse a vertex-density orientation guess. Choose from both headings by real seam geometry.
   var candidates = ["x", "x-reverse"].map(function (long) {
@@ -1077,7 +1113,8 @@ function qaSamples(node, budget) { // part-local points of every visible mesh of
   var step = Math.max(1, Math.floor(out.length / (budget * 1.5))); return out.filter(function (_, i) { return i % step === 0; });
 }
 /** The car near a box as a 4 cm grid of world triangles (with vertex normals; wheel = inside a wheel's cylinder: clips, never a contact). */
-function qaBody(car, box, skip, extra) {
+function qaBody(car, box, skip, extra, cut) { // cut: the car inside the hull is clipped away while the part is on: not body
+  var clipped = cut ? cutMeshes(car) : [];
   var cells = new Map(), tris = [], v = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], n = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], nm = new THREE.Matrix3();
   var wheelAt = function (p) { return car.wheels.list.some(function (w) { return Math.hypot(p.y - w.center.y, p.z - w.center.z) < w.r * 1.04 && Math.abs(p.x - w.center.x) < 0.25; }); };
   var edge = new Set(), ek = function (p) { return Math.round(p.x * 100) + "," + Math.round(p.y * 100) + "," + Math.round(p.z * 100); };
@@ -1090,6 +1127,7 @@ function qaBody(car, box, skip, extra) {
     cnt.forEach(function (c, key0) { if (c !== 1) return; key0.split("|").forEach(function (s0) { var q = s0.split(",").map(function (x) { return +x / 1e4; }); var wp = new THREE.Vector3(q[0], q[1], q[2]).applyMatrix4(m.matrixWorld); if (box.containsPoint(wp)) edge.add(ek(wp)); }); });
     for (var t = 0; t < triCount(g); t++) { for (var j = 0; j < 3; j++) { var k = triVert(g, t, j); v[j].fromBufferAttribute(P, k).applyMatrix4(m.matrixWorld); if (N) n[j].fromBufferAttribute(N, k).applyMatrix3(nm).normalize(); }
       var tb = new THREE.Box3().setFromPoints(v); if (!tb.intersectsBox(box)) continue;
+      if (cut && clipped.indexOf(m) >= 0 && cutDist(cut, v[0]) < 0 && cutDist(cut, v[1]) < 0 && cutDist(cut, v[2]) < 0) continue;
       var tr = new THREE.Triangle(v[0].clone(), v[1].clone(), v[2].clone()), fn = tr.getNormal(new THREE.Vector3()), ns = N ? [n[0].clone(), n[1].clone(), n[2].clone()] : [fn, fn, fn];
       var id = tris.length; tris.push({ t: tr, n: ns, wheel: wheelAt(tr.getMidpoint(new THREE.Vector3())), by: m.name, id: id });
       for (var x = Math.floor(tb.min.x / QA_CELL); x <= Math.floor(tb.max.x / QA_CELL); x++) for (var y = Math.floor(tb.min.y / QA_CELL); y <= Math.floor(tb.max.y / QA_CELL); y++) for (var z = Math.floor(tb.min.z / QA_CELL); z <= Math.floor(tb.max.z / QA_CELL); z++) {
@@ -1215,7 +1253,7 @@ function fitQA(car, type, f, place, zone, group, baseAdj, noRefuse, raw) { // ra
     n.rotation.set(b.rot[0] + j.rx, b.rot[1] + j.ry * p.side, b.rot[2]); n.scale.fromArray(b.sc).multiplyScalar(j.s * s); n.updateMatrixWorld(true); }); };
   var none = { x: 0, y: 0, z: 0, rx: 0, ry: 0, s: 1 };
   setPl(none, 0, 0, 0, 1); var box = new THREE.Box3(); nodes.forEach(function (n) { box.expandByObject(n); }); box.expandByScalar(0.12);
-  var body = qaBody(car, box, skip, extra); body.setPart(nodes); var samples = nodes.map(function (n) { return qaSamples(n, Math.round(2400 / nodes.length)); });
+  var body = qaBody(car, box, skip, extra, zone && zone.cut); body.setPart(nodes); var samples = nodes.map(function (n) { return qaSamples(n, Math.round(2400 / nodes.length)); });
   // the car's OWN part measured the same way (stock wheels / stock bumper / stock spoiler...): when it already clips as deep, the model is the cause
   var stock = type === "RIMS" ? wheelParts(car).reduce(function (a, q) { return a.concat(q.tyre.concat(q.rim).map(function (e) { return e.obj; })); }, []) : zone ? zone.hide.filter(function (o) { return o.isMesh; }) : [];
   var IW = type === "RIMS", sm = stock.length ? qaMeasure(body, stock, stock.map(function (o) { return qaSamples(o, Math.round(2400 / stock.length)); }), IW) : null;
@@ -1409,7 +1447,7 @@ async function build(s) {
 
   if (car) scene.remove(car.group);
   scene.add(group);
-  return { file: s.file, zkey: carKey(s), rimProposal: m.rimProposal || null, parts: parts, edit: null, group: group, root: root, paint: paint, paintMeshes: paintMeshes, tint: tint, rb: rb, wheels: wheels, wingAt: wingAt, spoilerAt: spoilerAt, roofAt: roofAt, tuned: m.zones || {}, zones: {}, acc: null, accs: {}, accP: {}, accFail: {}, prev: null };
+  return { file: s.file, zkey: carKey(s), rimProposal: m.rimProposal || null, cuts: m.partCuts || {}, parts: parts, edit: null, group: group, root: root, paint: paint, paintMeshes: paintMeshes, tint: tint, rb: rb, wheels: wheels, wingAt: wingAt, spoilerAt: spoilerAt, roofAt: roofAt, tuned: m.zones || {}, zones: {}, acc: null, accs: {}, accP: {}, accFail: {}, prev: null };
 }
 
 function addAdj(a, b) { var ok = function (v) { return typeof v === "number" && isFinite(v); };
@@ -1458,6 +1496,17 @@ function kitApply(s) {
   car.stockHidden.forEach(function (o) { if (!hidden.has(o)) { o.visible = car.stockVisibility.get(o); car.stockVisibility.delete(o); } });
   hidden.forEach(function (o) { if (!car.stockVisibility.has(o)) car.stockVisibility.set(o, o.visible); o.visible = false; });
   car.stockHidden = hidden;
+  var on = null; ks.forEach(function (k) { var a = car.accs[k.type + "|" + k.file]; if (!on && a && a.zone && a.zone.cut) on = a.zone.cut; });
+  cutApply(car, on);
+}
+/** Turn the clip on (cut) / off (null): the meshes get a clipped clone of their material (same shader hooks), the originals come back after. */
+function cutApply(car, cut) {
+  var k = cut ? cut.label : null; if ((car.cutOn || null) === k) return; car.cutOn = k;
+  (car.cutSwaps || []).forEach(function (e) { e.o.material = e.m; }); car.cutSwaps = []; car.cutMats = car.cutMats || new Map();
+  if (!cut) return;
+  cutMeshes(car).forEach(function (o) { var m = o.material, c = car.cutMats.get(m);
+    if (!c) { c = m.clone(); c.onBeforeCompile = m.onBeforeCompile; c.customProgramCacheKey = m.customProgramCacheKey; car.cutMats.set(m, c); }
+    c.clippingPlanes = cut.planes; c.clipIntersection = true; c.needsUpdate = true; car.cutSwaps.push({ o: o, m: m }); o.material = c; });
 }
 // ---- zone preview (Parts Admin): red = the car's own part that will be hidden, green = where the accessory goes ----
 var RED = new THREE.MeshBasicMaterial({ color: 0xe53935, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, toneMapped: false });
@@ -1489,7 +1538,7 @@ function previewApply(s) {
 // label bright, others dimmed, unlabelled grey); a tap posts { type: "pick", id }. On entry: { type: "pieces", count }.
 var PART_COLORS = { FRONT_BUMPER: 0x1e88e5, REAR_BUMPER: 0x8e24aa, SPOILER: 0xe53935, SIDE_SKIRTS: 0xfb8c00, MIRRORS: 0x00acc1, WHEELS: 0x43a047, ROOF_RAILS: 0xc0a000 };
 var EDIT_MAT = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7, metalness: 0, side: THREE.DoubleSide });
-function carKey(s) { return JSON.stringify([s.model.zones || {}, s.partEdit ? "edit" : s.model.partMap || null, s.model.rimProposal || null]); }
+function carKey(s) { return JSON.stringify([s.model.zones || {}, s.partEdit ? "edit" : s.model.partMap || null, s.model.rimProposal || null, s.partEdit ? null : s.model.partCuts || null]); }
 function editApply(s) {
   var pe = s.partEdit;
   if (!car.edit) {
@@ -1588,6 +1637,7 @@ async function apply() {
     s = state;
   }
   car.paint.forEach(function (p) { p.color.set(s.color); });
+  if (car.cutMats) car.cutMats.forEach(function (c, m) { if (m.color && c.color) c.color.copy(m.color); }); // cut mode: the clipped paint follows
   if (car.tint) car.tint.value.set(s.color);
   if (s.partEdit) editApply(s); else { kitApply(s); previewApply(s); }
   if (!shownOnce) { shownOnce = true; post({ type: "shown" }); }
