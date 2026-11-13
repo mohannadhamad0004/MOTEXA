@@ -111,9 +111,11 @@ export function accessoryGate(pieces: Piece[], dims: number[], proposal: Proposa
 }
 /** Cut mode: the admin's 8-point hull per bumper label, only for the exact model file it was drawn on. */
 export const CUT_LABELS = ["FRONT_BUMPER", "REAR_BUMPER"] as const;
-export function currentCuts(map: { modelSha256: string; cuts?: unknown } | null, key: string): Partial<Record<(typeof CUT_LABELS)[number], number[][]>> {
+/** Viewer form: { LABEL: { pts, sideGrow? (metres) } }; sideGrowCm = the admin's "Corner grow" on the bumper's two side faces. */
+export function currentCuts(map: { modelSha256: string; cuts?: unknown } | null, key: string): Partial<Record<(typeof CUT_LABELS)[number], { pts: number[][]; sideGrow?: number }>> {
   if (!map?.cuts || map.modelSha256 !== modelFileSha(key)) return {};
-  return Object.fromEntries(Object.entries(map.cuts as Record<string, { pts: number[][]; sha: string }>).filter(([k, c]) => (CUT_LABELS as readonly string[]).includes(k) && c?.sha === map.modelSha256).map(([k, c]) => [k, c.pts]));
+  return Object.fromEntries(Object.entries(map.cuts as Record<string, { pts: number[][]; sha: string; sideGrowCm?: number }>).filter(([k, c]) => (CUT_LABELS as readonly string[]).includes(k) && c?.sha === map.modelSha256)
+    .map(([k, c]) => [k, { pts: c.pts, ...(c.sideGrowCm ? { sideGrow: c.sideGrowCm / 100 } : {}) }]));
 }
 /** Where a replacement bumper goes on this car: its confirmed part-map piece(s) (WAY 1), the admin's cut region (WAY 2), or not usable. */
 export function bumperSpace(map: { modelSha256: string; confirmedAt: Date | null; map: unknown; cuts?: unknown } | null, key: string, type: string): "PART_MAP" | "CUT" | "STALE" | "MISSING" {
@@ -239,21 +241,26 @@ export function createPartMapService() {
         return sizes;
       });
     },
-    /** Cut mode for a bumper merged into the body: 8 world points (metres, the editor's), or null = off. Saved for this exact model file. */
-    saveCut: async (uid: string, key: string, label: string, body: { pts?: unknown }) => {
+    /** Cut mode for a bumper merged into the body: 8 world points (metres, the editor's), or null = off; sideGrowCm (whole cm 0-20) = the
+     *  "Corner grow" on its two side faces (pts left out = only the grow changes). Saved for this exact model file. */
+    saveCut: async (uid: string, key: string, label: string, body: { pts?: unknown; sideGrowCm?: unknown }) => {
       if (importId(key)) return fail("NOT_SUPPORTED", "Draw the cut on the published car model.", 409);
       if (!(CUT_LABELS as readonly string[]).includes(label)) return fail("INVALID_LABEL", "Cut mode is for bumpers only.");
-      const pts = body.pts;
-      if (pts !== null && !(Array.isArray(pts) && pts.length === 8 && pts.every(p => Array.isArray(p) && p.length === 3 && p.every(n => typeof n === "number" && Number.isFinite(n) && Math.abs(n) <= 10))))
+      const pts = body.pts, grow = body.sideGrowCm;
+      if (grow !== undefined && !(typeof grow === "number" && Number.isInteger(grow) && grow >= 0 && grow <= 20)) return fail("INVALID_CUT", "Corner grow must be whole cm between 0 and 20.");
+      if (pts === undefined && grow === undefined) return fail("INVALID_CUT", "Nothing to save.");
+      if (pts !== null && pts !== undefined && !(Array.isArray(pts) && pts.length === 8 && pts.every(p => Array.isArray(p) && p.length === 3 && p.every(n => typeof n === "number" && Number.isFinite(n) && Math.abs(n) <= 10))))
         return fail("INVALID_CUT", "A cut needs exactly 8 points.");
       return prisma.$transaction(async tx => {
         await tx.$queryRaw`SELECT "model3dKey" FROM "CarPartMap" WHERE "model3dKey"=${key} FOR UPDATE`;
         const r = await tx.carPartMap.findUnique({ where: { model3dKey: key }, select: { cuts: true, modelSha256: true } });
         if (!r) return fail("NOT_SEGMENTED", "This car has not been split into parts yet.", 409);
         if (r.modelSha256 !== modelFileSha(key)) return fail("STALE_PART_MAP", "The car model changed. Reload the editor.", 409);
-        const cuts = { ...(r.cuts as Record<string, unknown> | null ?? {}) };
-        if (pts === null) delete cuts[label]; else cuts[label] = { pts, sha: r.modelSha256, at: new Date().toISOString() };
-        await tx.auditLog.create({ data: { actorId: uid, action: pts === null ? "PART_CUT_REMOVED" : "PART_CUT_SAVED", targetId: key, details: { label, sha: r.modelSha256 } } });
+        const cuts = { ...(r.cuts as Record<string, { pts: number[][]; sha: string; sideGrowCm?: number }> | null ?? {}) }, old = cuts[label];
+        if (pts === undefined && (!old || old.sha !== r.modelSha256)) return fail("NO_CUT", "Save the cut first.", 409);
+        if (pts === null) delete cuts[label];
+        else cuts[label] = { pts: (pts ?? old!.pts) as number[][], sha: r.modelSha256, sideGrowCm: (grow as number | undefined) ?? (pts === undefined ? old?.sideGrowCm : 0) ?? 0, at: new Date().toISOString() } as never;
+        await tx.auditLog.create({ data: { actorId: uid, action: pts === null ? "PART_CUT_REMOVED" : "PART_CUT_SAVED", targetId: key, details: { label, sha: r.modelSha256, ...(pts === null ? {} : { sideGrowCm: cuts[label]!.sideGrowCm }) } } });
         await tx.carPartMap.update({ where: { model3dKey: key }, data: { cuts: Object.keys(cuts).length ? cuts as Prisma.InputJsonValue : Prisma.DbNull } });
         return currentCuts({ modelSha256: r.modelSha256, cuts }, key);
       });
