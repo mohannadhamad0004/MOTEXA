@@ -7,11 +7,16 @@ import * as DocumentPicker from "expo-document-picker";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, TextInput, View } from "react-native";
-import { Card, GButton, GIcon, GText, Note, Sheet, StepperHeader, StickyActionBar } from "../../components/garage";
-import { ProviderLayout } from "../../components/layout/ProviderLayout";
+import { ActivityIndicator, BackHandler, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Press, Rise } from "../../components/blueprint/motion";
+import { Card, GButton, GIcon, GText, IconButton, Note, Sheet, StickyActionBar } from "../../components/garage";
 import { apiUrl } from "../../core/config/api";
 import { localFileToBase64 } from "../../core/constants/files";
+import { isoLatin, rtl } from "../../core/constants/bidi";
+import { normalizeNumberText } from "../../core/constants/numbers";
+import { M, useReduced } from "../../motion";
 import { photoErrorText, pickPhoto } from "../../core/hooks/pickPhoto";
 import { useL } from "../../core/hooks/useL";
 import { useLoad } from "../../core/hooks/useLoad";
@@ -20,8 +25,8 @@ import { useVehicleList } from "../catalog/VehiclePicker";
 import { threeDError } from "../vehicleCatalog/lifecycleText";
 import { ACCESSORY_TYPE_LABELS, isBumper, shopAccessoryApi, typesForCategory, type Accessory } from "./api";
 import { accessorySupport } from "./support";
-import { PartArt, SLOT_LABELS, SlotArt, WIZARD_TYPES, slotKind, type WizardType } from "./wizardArt";
-import { PrivateImage, Check } from "./screens";
+import { PART_IMAGES, SLOT_LABELS, SlotArt, WIZARD_TYPES, slotKind, slotPart, type WizardType } from "./wizardArt";
+import { PrivateImage } from "./screens";
 
 type T = (en: string, ar: string) => string;
 type Gen = { id: string; en: string; ar: string; years: string; photo: string | null; has3d: boolean };
@@ -29,7 +34,10 @@ const STEP_OF_FIELD: Record<string, number> = { type: 0, fits: 1, partPhotos: 2,
 /** Typical sizes, the starting value when the shop says it knows the size (cm across the car; rims in inches). */
 const TYPICAL: Record<WizardType, number> = { FRONT_BUMPER: 175, REAR_BUMPER: 175, WING: 130, RIMS: 17 };
 const RIM_SIZES = [14, 15, 16, 17, 18, 19, 20, 21, 22];
-const metres = (cm: number, t: T) => { const m = (cm / 100).toFixed(2).replace(/0$/, ""); return t(`about ${m} m wide`, `عرضها نحو ${m} م`); };
+const metres = (cm: number, t: T) => { const m = (cm / 100).toFixed(2).replace(/0$/, ""); return t(`about ${m} m wide`, `عرضها نحو ⁦${m}⁩ م`); };
+/** Strong ease-out: step content and selection marks enter fast and settle. */
+const OUT = Easing.bezier(0.23, 1, 0.32, 1);
+/** The selected-card mark: fades in from 70 % (never from 0). */
 
 export function ShopWizard({ productId, onDone }: { productId: string; onDone: () => void }) {
   const { t, isArabic } = useL(); const { g, row, align } = useGarageTheme();
@@ -41,8 +49,11 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
   const [step, setStep] = useState(0), [type, setType] = useState<WizardType | null>(null), [fits, setFits] = useState<string[]>([]), [installedGen, setInstalledGen] = useState<string | null>(null);
   const [knowSize, setKnowSize] = useState(false), [sizeText, setSizeText] = useState(""), [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState<string | null>(null), [errors, setErrors] = useState<Record<number, string[]>>({}), [sent, setSent] = useState(false);
-  const [pick, setPick] = useState<null | { kind: "PART"; slot: number; photoId?: string } | { kind: "INSTALLED" }>(null), [search, setSearch] = useState("");
+  const [pick, setPick] = useState<null | { kind: "PART"; slot: number; photoId?: string; replace?: boolean } | { kind: "INSTALLED" }>(null), [search, setSearch] = useState("");
+  const [leaving, setLeaving] = useState(false), [dir, setDir] = useState<1 | -1>(1);
+  const insets = useSafeAreaInsets(), reduced = useReduced();
   const scroll = useRef<ScrollView>(null);
+  const go = (to: number) => { setDir(to >= step ? 1 : -1); setStep(to); };
   const top = () => (scroll.current as unknown as { scrollTo?: (o: { y: number; animated: boolean }) => void } | null)?.scrollTo?.({ y: 0, animated: true });
 
   // start from the saved draft (once), at the first step that still needs something
@@ -54,11 +65,21 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
     const main = a ? (a.accessoryType === "RIMS" ? a.size.rimInches : a.size.widthMm) : null;
     if (main != null) { setKnowSize(true); setSizeText(String(a!.accessoryType === "RIMS" ? main : Math.round(main / 10))); }
     if (a) setStep(!a.fitsGenerationIds.length && !(a.accessoryType === "RIMS" && state.data.isUniversal) ? 1 : (a.partPhotos.length >= 2 || a.shopModel) ? 3 : 2);
+    else if (t0) setStep(1); // only one part fits this product: it is chosen, start at the car
   }, [state.data]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // leaving: the draft is saved as it goes, so only confirm when there is one (Android back included)
+  const exit = () => (router.canGoBack() ? router.back() : router.navigate("/provider/parts/products" as never));
+  const leave = () => { if (a && !sent) setLeaving(true); else exit(); };
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => { if (leaving || pick) return false; leave(); return true; });
+    return () => sub.remove();
+  }); // eslint-disable-line react-hooks/exhaustive-deps
 
   const rims = type === "RIMS", bySize = rims && !!state.data?.isUniversal, universalBumper = !!type && isBumper(type) && !!state.data?.isUniversal;
   const gens: Gen[] = useMemo(() => (vehicles.list ?? []).flatMap(v => (v.generations ?? []).map(x => ({ id: x.id, en: `${v.make} ${x.nameEn}`, ar: `${v.makeAr} ${x.nameAr}`, years: `${x.yearFrom}–${x.yearTo}`, photo: x.photoUrl, has3d: !!x.model3dKey }))), [vehicles.list]);
-  const genName = (id: string) => { const x = gens.find(y => y.id === id); return x ? (isArabic ? x.ar : x.en) : "…"; };
+  const shown = (x: Gen) => (isArabic ? isoLatin(x.ar) : x.en);
+  const genName = (id: string) => { const x = gens.find(y => y.id === id); return x ? shown(x) : "…"; };
   const support = useLoad(() => (type && isBumper(type) ? accessorySupport(type) : Promise.resolve([])), [type]);
   const cantShow = (id: string) => !!support.data?.some(u => u.generationId === id);
   const load = (id: string) => () => shopAccessoryApi.asset(productId, id);
@@ -104,7 +125,7 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
     try { await fn(); await state.reload(); setErrors(e => ({ ...e, [onErrStep]: [] })); return true; }
     catch (e) {
       const issues = (e as { data?: { issues?: { field: string; message: string }[] } }).data?.issues;
-      if (issues?.length) { const first = Math.min(...issues.map(i => STEP_OF_FIELD[i.field] ?? 4)); setErrors(issues.reduce<Record<number, string[]>>((m, i) => { const k = STEP_OF_FIELD[i.field] ?? 4; (m[k] = m[k] ?? []).push(i.message); return m; }, {})); setStep(first); top(); }
+      if (issues?.length) { const first = Math.min(...issues.map(i => STEP_OF_FIELD[i.field] ?? 4)); setErrors(issues.reduce<Record<number, string[]>>((m, i) => { const k = STEP_OF_FIELD[i.field] ?? 4; (m[k] = m[k] ?? []).push(i.message); return m; }, {})); go(first); top(); }
       else setErrors(x => ({ ...x, [onErrStep]: [threeDError(e, t)] }));
       return false;
     } finally { setBusy(null); }
@@ -113,9 +134,10 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
     const p = problems(step); if (p.length) { setErrors(e => ({ ...e, [step]: p })); return; }
     if (step === 1 || step === 3) { if (!await run("save", save)) return; } // the draft (created on step 2) and its details
     if (step === 4) { if (await run("submit", async () => { await save(); await shopAccessoryApi.submit(productId); })) setSent(true); return; }
-    setErrors(e => ({ ...e, [step]: [] })); setStep(step + 1); top();
+    setErrors(e => ({ ...e, [step]: [] })); go(step + 1); top();
   };
-  const back = () => { if (step === 0) router.back(); else { setStep(step - 1); top(); } };
+  const first = types.length === 1 ? 1 : 0; // one fitting part: its step is skipped
+  const back = () => { if (step <= first) leave(); else { go(step - 1); top(); } };
 
   const addPhoto = async (from: "camera" | "library") => {
     const target = pick; setPick(null); if (!target) return;
@@ -144,32 +166,31 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
     {title("What part is it?", "ما القطعة؟", t("Pick the one you sell. Customers will see it on their own car.", "اختر القطعة التي تبيعها. سيراها العملاء على سياراتهم."))}
     {!types.length ? <Note tone="warning">{t("This product's category has no 3D parts. Body, Exterior accessories and Wheels products can be shown in 3D.", "فئة هذا المنتج لا تدعم القطع ثلاثية الأبعاد. منتجات الهيكل والإكسسوارات الخارجية والجنوط فقط.")}</Note> : null}
     <View style={[row, { flexWrap: "wrap", gap: 12 }]}>
-      {types.map(k => { const on = type === k; return <Pressable key={k} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={t(...ACCESSORY_TYPE_LABELS[k])}
+      {types.map(k => { const on = type === k, wide = types.length % 2 === 1; return <Press key={k} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={t(...ACCESSORY_TYPE_LABELS[k])}
         onPress={() => { if (a && a.accessoryType !== k && fits.length) setInstalledGen(null); setType(k); setErrors(e => ({ ...e, 0: [] })); }}
-        style={({ pressed }) => ({ width: "47.5%", minHeight: 150, padding: 14, gap: 10, alignItems: "center", justifyContent: "center", borderRadius: gShape.card, backgroundColor: on ? g.tint : g.card, borderWidth: 2, borderColor: on ? g.accent : g.line, opacity: pressed ? 0.9 : 1 })}>
-        <PartArt type={k} size={104} />
-        <View style={[row, { alignItems: "center", gap: 6 }]}>
-          {on ? <GIcon name="checkmark-circle" size={20} color={g.accent} /> : null}
+        style={{ width: wide ? "100%" : "47.5%", padding: 8, paddingBottom: 12, gap: 8, borderRadius: gShape.card, backgroundColor: on ? g.tint : g.card, borderWidth: 2, borderColor: on ? g.accent : g.line }}>
+        <Image source={PART_IMAGES[k]} contentFit="contain" style={{ width: "100%", aspectRatio: 3 / 2 }} accessibilityIgnoresInvertColors />
+        <View style={[row, { alignItems: "center", justifyContent: "center", gap: 6, minHeight: 24 }]}>
+          {on ? <Enter from={0.7} ms={200}><GIcon name="checkmark-circle" size={20} color={g.accent} /></Enter> : null}
           <GText style={[gType.title, { textAlign: "center" }]}>{t(...ACCESSORY_TYPE_LABELS[k])}</GText>
         </View>
-      </Pressable>; })}
+      </Press>; })}
     </View>
-    {state.data?.productName ? <GText soft style={[gType.caption, align, { marginTop: 14 }]}>{`${t("Product", "المنتج")}: ${state.data.productName}`}</GText> : null}
   </>;
 
   const q = search.trim().toLowerCase();
   const results = q.length >= 2 ? gens.filter(x => !fits.includes(x.id) && (x.en.toLowerCase().includes(q) || x.ar.includes(search.trim()))).slice(0, 12) : gens.filter(x => x.has3d && !fits.includes(x.id)).slice(0, 8);
   const carRow = (x: Gen, chosen: boolean) => {
     const warn = !x.has3d ? t("No 3D model of this car yet: customers can't see parts on it in 3D.", "لا يوجد نموذج ثلاثي الأبعاد لهذه السيارة بعد: لن يرى العملاء القطع عليها.") : cantShow(x.id) ? t(`This car's 3D model can't show a new ${t(...ACCESSORY_TYPE_LABELS[type!]).toLowerCase()} yet. You can still add it; it shows once the car's model is improved.`, `لا يستطيع نموذج هذه السيارة عرض ${ACCESSORY_TYPE_LABELS[type!][1]} جديد بعد. يمكنك إضافتها، وستظهر عند تحسين نموذج السيارة.`) : null;
-    return <Pressable key={x.id} accessibilityRole="button" accessibilityLabel={`${isArabic ? x.ar : x.en}${chosen ? `, ${t("chosen, tap to remove", "مختارة، اضغط للإزالة")}` : ""}`}
+    return <Pressable key={x.id} accessibilityRole="button" accessibilityLabel={`${shown(x)}${chosen ? `, ${t("chosen, tap to remove", "مختارة، اضغط للإزالة")}` : ""}`}
       onPress={() => { setFits(chosen ? fits.filter(i => i !== x.id) : [...fits, x.id]); if (chosen && installedGen === x.id) setInstalledGen(null); setSearch(""); setErrors(e => ({ ...e, 1: [] })); }}
       style={({ pressed }) => [row, { gap: 12, padding: 10, borderRadius: gShape.small, backgroundColor: chosen ? g.tint : g.card, borderWidth: chosen ? 2 : 1, borderColor: chosen ? g.accent : g.line, alignItems: "center", opacity: pressed ? 0.9 : 1 }]}>
       <View style={{ width: 84, height: 58, borderRadius: 10, overflow: "hidden", backgroundColor: g.cardSoft, alignItems: "center", justifyContent: "center" }}>
         {x.photo ? <Image source={{ uri: apiUrl(x.photo) }} contentFit="cover" style={{ width: "100%", height: "100%" }} accessibilityLabel="" /> : <GIcon name="car-sport-outline" size={28} color={g.soft} />}
       </View>
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-        <GText numberOfLines={2} style={[gType.label, align, { fontWeight: "800" }]}>{isArabic ? x.ar : x.en}</GText>
-        <GText soft style={[gType.caption, align]}>{x.years}</GText>
+        <GText numberOfLines={2} style={[gType.label, align, { fontWeight: "800" }]}>{shown(x)}</GText>
+        <GText soft style={[gType.caption, align]}>{isArabic ? isoLatin(x.years) : x.years}</GText>
         {warn ? <View style={[row, { gap: 4, alignItems: "flex-start" }]}><GIcon name="alert-circle-outline" size={14} color={g.warning} /><GText style={[gType.tiny, align, { color: g.warning, flex: 1 }]}>{warn}</GText></View> : null}
       </View>
       <GIcon name={chosen ? "close-circle" : "add-circle-outline"} size={26} color={chosen ? g.accent : g.soft} />
@@ -187,8 +208,8 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
       </View> : null}
       <View style={[row, { alignItems: "center", gap: 10, minHeight: 52, borderRadius: gShape.small, borderWidth: 1, borderColor: g.line, backgroundColor: g.card, paddingHorizontal: 14 }]}>
         <GIcon name="search-outline" size={20} color={g.soft} />
-        <TextInput value={search} onChangeText={setSearch} placeholder={t("Search brand or model, e.g. BMW 3 Series", "ابحث بالعلامة أو الطراز، مثل BMW الفئة 3")} placeholderTextColor={g.soft} accessibilityLabel={t("Search cars", "ابحث عن سيارة")}
-          style={{ flex: 1, color: g.ink, fontSize: 16, minHeight: 48, textAlign: align.textAlign }} />
+        <TextInput value={search} onChangeText={setSearch} placeholder={t("Search brand or model, e.g. BMW 3 Series", rtl(isoLatin("ابحث بالعلامة أو الطراز، مثل BMW الفئة 3")))} placeholderTextColor={g.soft} accessibilityLabel={t("Search cars", "ابحث عن سيارة")}
+          style={{ flex: 1, color: g.ink, fontSize: 16, minHeight: 48, textAlign: align.textAlign, writingDirection: isArabic ? "rtl" : "ltr" }} />
       </View>
       <GText soft style={[gType.caption, align, { marginTop: 10, marginBottom: 8 }]}>{q.length >= 2 ? (results.length ? t("Tap a car to add it.", "اضغط على سيارة لإضافتها.") : "") : t("Cars with a 3D model (search to see every car):", "سيارات لها نموذج ثلاثي الأبعاد (ابحث لرؤية كل السيارات):")}</GText>
       {!vehicles.list && !vehicles.error ? <ActivityIndicator color={g.accent} /> : null}
@@ -200,17 +221,25 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
 
   const slotCard = (i: number) => {
     const ph = slotPhoto(i), [en, ar] = SLOT_LABELS[slots][i]!;
-    return <Pressable key={i} accessibilityRole="button" accessibilityLabel={`${t(en, ar)}: ${ph ? t("photo added, tap to change", "أُضيفت صورة، اضغط للتغيير") : t("add a photo", "أضف صورة")}`} onPress={() => setPick({ kind: "PART", slot: i, photoId: ph?.id })}
+    return <Pressable key={i} accessibilityRole="button" accessibilityLabel={`${t(en, ar)}: ${ph ? t("photo added, tap to view", "أُضيفت صورة، اضغط للعرض") : t("add a photo", "أضف صورة")}`} onPress={() => setPick({ kind: "PART", slot: i, photoId: ph?.id })}
       style={({ pressed }) => ({ width: "47.5%", borderRadius: gShape.card, borderWidth: ph ? 2 : 1.5, borderStyle: ph ? "solid" : "dashed", borderColor: ph ? g.success : g.line, backgroundColor: g.card, padding: 10, gap: 8, opacity: pressed ? 0.9 : 1 })}>
       <View style={{ height: 110, borderRadius: 12, overflow: "hidden", backgroundColor: g.cardSoft, alignItems: "center", justifyContent: "center" }}>
-        {busy === `slot-${i}` ? <ActivityIndicator color={g.accent} /> : ph ? <PrivateImage load={load(ph.id)} label={ph.id} height={110} /> : <SlotArt kind={slots} slot={i} size={92} />}
+        {busy === `slot-${i}` ? <ActivityIndicator color={g.accent} /> : ph ? <PrivateImage load={load(ph.id)} label={ph.id} height={110} /> : <SlotArt part={slotPart(type)} slot={i} size={104} />}
       </View>
       <View style={[row, { alignItems: "center", gap: 6 }]}>
-        <GIcon name={ph ? "checkmark-circle" : "camera-outline"} size={18} color={ph ? g.success : g.accentText} />
+        {ph ? <Enter from={0.7} ms={200}><GIcon name="checkmark-circle" size={18} color={g.success} /></Enter> : <GIcon name="camera-outline" size={18} color={g.accentText} />}
         <GText style={[gType.label, align, { fontWeight: "800", flex: 1 }]}>{t(en, ar)}</GText>
       </View>
     </Pressable>;
   };
+  /** A photo thumbnail with a small × badge in its top corner (44 px touch area). */
+  const thumb = (id: string, w: number, h: number) => <View key={id} style={{ width: w, height: h }}>
+    <PrivateImage load={load(id)} label={id} height={h} />
+    <Pressable accessibilityRole="button" accessibilityLabel={t("Remove this photo", "احذف هذه الصورة")} disabled={!!busy} onPress={() => removePhoto(id)} hitSlop={8}
+      style={{ position: "absolute", top: -6, [isArabic ? "left" : "right"]: -6, width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+      <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: g.ink, borderWidth: 2, borderColor: g.page, alignItems: "center", justifyContent: "center" }}><GIcon name="close" size={15} color={g.page} /></View>
+    </Pressable>
+  </View>;
   const filled = [0, 1, 2, 3].filter(i => slotPhoto(i)).length + loose.length;
   const stepPhotos = <>
     {title("Photos of the part alone", "صور القطعة وحدها", t("2 photos are enough, 4 give the best 3D model.", "تكفي صورتان، وأربع صور تعطي أفضل نموذج."))}
@@ -219,15 +248,14 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
         <View key={tx} style={[row, { gap: 10, alignItems: "center", paddingVertical: 4 }]}><GIcon name={ic as never} size={20} color={g.accentText} /><GText style={[gType.bodySm, align, { flex: 1 }]}>{tx}</GText></View>)}
     </Card>
     <View style={[row, { alignItems: "center", justifyContent: "space-between", marginTop: 16, marginBottom: 10 }]}>
-      <GText style={[gType.label, { fontWeight: "800" }]}>{t(`${filled} of 4 photos`, `${filled} من ٤ صور`)}</GText>
+      <GText style={[gType.label, { fontWeight: "800" }]}>{t(`${filled} of 4 photos`, `${filled} من 4 صور`)}</GText>
       <GText soft style={gType.caption}>{filled >= 4 ? t("Great: all angles", "ممتاز: كل الزوايا") : filled >= 2 ? t(`${4 - filled} more recommended`, `يُنصح بـ${4 - filled} أخرى`) : t(`${2 - filled} more needed`, `تحتاج ${2 - filled} أخرى`)}</GText>
     </View>
-    <View style={{ height: 6, borderRadius: 3, backgroundColor: g.line, overflow: "hidden", marginBottom: 14 }}><View style={{ width: `${Math.min(4, filled) * 25}%`, height: 6, backgroundColor: filled >= 2 ? g.success : g.accent }} /></View>
+    <View style={{ height: 6, borderRadius: 3, backgroundColor: g.line, overflow: "hidden", marginBottom: 14, alignItems: isArabic ? "flex-end" : "flex-start" }}><Bar to={Math.min(4, filled) / 4} color={filled >= 2 ? g.success : g.accent} /></View>
     <View style={[row, { flexWrap: "wrap", gap: 12 }]}>{[0, 1, 2, 3].map(slotCard)}</View>
     {loose.length ? <View style={{ marginTop: 14, gap: 8 }}>
       <GText style={[gType.label, align, { fontWeight: "800" }]}>{t("Earlier photos", "صور سابقة")}</GText>
-      <View style={[row, { flexWrap: "wrap", gap: 8 }]}>{loose.map(p => <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={t("Remove this photo", "احذف هذه الصورة")} onPress={() => removePhoto(p.id)} style={{ width: 90, gap: 4 }}>
-        <PrivateImage load={load(p.id)} label={p.id} height={70} /><GText style={[gType.tiny, { color: g.danger, textAlign: "center" }]}>{t("Remove", "حذف")}</GText></Pressable>)}</View>
+      <View style={[row, { flexWrap: "wrap", gap: 12, paddingTop: 6 }]}>{loose.map(p => thumb(p.id, 90, 70))}</View>
     </View> : null}
     <View style={[row, { alignItems: "center", gap: 10, marginVertical: 18 }]}><View style={{ flex: 1, height: 1, backgroundColor: g.line }} /><GText soft style={gType.caption}>{t("or", "أو")}</GText><View style={{ flex: 1, height: 1, backgroundColor: g.line }} /></View>
     <Card>
@@ -245,13 +273,14 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
     </Card>
   </>;
 
+  const stepBtn = (icon: "add" | "remove", label: string, by: 1 | -1) => <Press accessibilityLabel={label} onPress={() => { if (!type) return; setSizeText(String(Math.max(1, Math.min(999, (Number(sizeText) || TYPICAL[type]) + by)))); setErrors(e => ({ ...e, 3: [] })); }}
+    style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 1.5, borderColor: g.line, alignItems: "center", justifyContent: "center", backgroundColor: g.card }}><GIcon name={icon} size={26} color={g.ink} /></Press>;
   const stepDetails = <>
     {title("A few optional details", "تفاصيل اختيارية", t("Skip anything you don't know: the MOTEXA team fills it in.", "تخطَّ ما لا تعرفه: يكمله فريق موتكسا."))}
     <GText style={[gType.title, align, { marginBottom: 4 }]}>{t("Photos on a car", "صور على سيارة")}<GText soft style={gType.caption}>{`  ${t("optional · up to 3", "اختياري · حتى ٣")}`}</GText></GText>
     <GText soft style={[gType.caption, align, { marginBottom: 10 }]}>{t("If you have photos of the part fitted on a car, they help customers and our team.", "إن كانت لديك صور للقطعة مركّبة على سيارة فهي تساعد العملاء وفريقنا.")}</GText>
-    <View style={[row, { flexWrap: "wrap", gap: 10 }]}>
-      {installed.map(p => <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={t("Remove this photo", "احذف هذه الصورة")} onPress={() => removePhoto(p.id)} style={{ width: 100, gap: 4 }}>
-        <PrivateImage load={load(p.id)} label={p.id} height={80} /><GText style={[gType.tiny, { color: g.danger, textAlign: "center" }]}>{t("Remove", "حذف")}</GText></Pressable>)}
+    <View style={[row, { flexWrap: "wrap", gap: 12, paddingTop: 6 }]}>
+      {installed.map(p => thumb(p.id, 100, 80))}
       {installed.length < 3 ? <Pressable accessibilityRole="button" accessibilityLabel={t("Add a photo on a car", "أضف صورة على سيارة")} onPress={() => setPick({ kind: "INSTALLED" })}
         style={{ width: 100, height: 80, borderRadius: 12, borderWidth: 1.5, borderStyle: "dashed", borderColor: g.line, alignItems: "center", justifyContent: "center", backgroundColor: g.card }}>
         {busy === "installed" ? <ActivityIndicator color={g.accent} /> : <GIcon name="add" size={28} color={g.accentText} />}
@@ -278,32 +307,34 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
         style={{ minWidth: 56, minHeight: 48, borderRadius: 12, borderWidth: 1.5, borderColor: sizeValue === n ? g.accent : g.line, backgroundColor: sizeValue === n ? g.tint : g.card, alignItems: "center", justifyContent: "center" }}>
         <GText style={[gType.title, { color: sizeValue === n ? g.accentText : g.ink }]}>{`${n}″`}</GText></Pressable>)}</View>
       : <Card soft style={{ marginTop: 4 }}>
-        <View style={[row, { alignItems: "center", gap: 10 }]}>
-          <Pressable accessibilityRole="button" accessibilityLabel={t("Narrower", "أضيق")} onPress={() => { setSizeText(String(Math.max(1, (Number(sizeText) || TYPICAL[type]) - 1))); setErrors(e => ({ ...e, 3: [] })); }} style={{ width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: g.line, alignItems: "center", justifyContent: "center", backgroundColor: g.card }}><GIcon name="remove" size={22} color={g.ink} /></Pressable>
-          <View style={{ flex: 1, alignItems: "center" }}>
-            <View style={[row, { alignItems: "baseline", gap: 6 }]}>
-              <TextInput value={sizeText} onChangeText={v => { setSizeText(v.replace(/[^0-9]/g, "").slice(0, 3)); setErrors(e => ({ ...e, 3: [] })); }} keyboardType="number-pad" accessibilityLabel={t("Width in centimetres", "العرض بالسنتيمتر")}
-                style={{ fontSize: 30, fontWeight: "800", color: g.ink, minWidth: 70, textAlign: "center", writingDirection: "ltr", padding: 0 }} />
-              <GText style={gType.title}>{t("cm", "سم")}</GText>
+        <View style={[row, { alignItems: "center", gap: 12 }]}>
+          {stepBtn("remove", t("Narrower", "أضيق"), -1)}
+          <View style={{ flex: 1, alignItems: "center", gap: 4 }}>
+            <View style={[row, { alignItems: "center", justifyContent: "center", alignSelf: "stretch", minHeight: 60, borderRadius: gShape.small, borderWidth: 1.5, borderColor: g.line, backgroundColor: g.card, paddingHorizontal: 10 }]}>
+              <TextInput value={sizeText} onChangeText={v => { setSizeText(normalizeNumberText(v).replace(/[^0-9]/g, "").slice(0, 3)); setErrors(e => ({ ...e, 3: [] })); }} keyboardType="number-pad" maxLength={3} selectTextOnFocus
+                accessibilityLabel={t("Width in centimetres", "العرض بالسنتيمتر")} underlineColorAndroid="transparent"
+                style={[{ fontSize: 30, fontWeight: "800", color: g.ink, width: 72, textAlign: "center", writingDirection: "ltr", padding: 0, borderWidth: 0 }, Platform.OS === "web" ? ({ outlineStyle: "none" } as object) : null]} />
+              <GText style={[gType.title, { color: g.soft }]}>{t("cm", "سم")}</GText>
             </View>
-            {sizeValue ? <GText soft style={gType.caption}>{metres(sizeValue, t)}</GText> : null}
+            {sizeValue ? <GText soft style={[gType.caption, { textAlign: "center" }]}>{metres(sizeValue, t)}</GText> : null}
           </View>
-          <Pressable accessibilityRole="button" accessibilityLabel={t("Wider", "أعرض")} onPress={() => { setSizeText(String((Number(sizeText) || TYPICAL[type]) + 1)); setErrors(e => ({ ...e, 3: [] })); }} style={{ width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: g.line, alignItems: "center", justifyContent: "center", backgroundColor: g.card }}><GIcon name="add" size={22} color={g.ink} /></Pressable>
+          {stepBtn("add", t("Wider", "أعرض"), 1)}
         </View>
-        <GText soft style={[gType.caption, { textAlign: "center", marginTop: 8 }]}>{t(`Started from a typical ${t(...ACCESSORY_TYPE_LABELS[type]).toLowerCase()}. Measure from one end to the other.`, `بدأنا من مقاس ${ACCESSORY_TYPE_LABELS[type][1]} المعتاد. قِس من طرف إلى الطرف الآخر.`)}</GText>
+        <GText soft style={[gType.caption, { textAlign: "center", marginTop: 10 }]}>{t(`Started from a typical ${t(...ACCESSORY_TYPE_LABELS[type]).toLowerCase()}. Measure from one end to the other.`, `بدأنا من مقاس ${ACCESSORY_TYPE_LABELS[type][1]} المعتاد. قِس من طرف إلى الطرف الآخر.`)}</GText>
       </Card>) : null}
   </>;
 
-  const editLink = (to: number) => <Pressable accessibilityRole="button" accessibilityLabel={`${t("Edit", "تعديل")} ${steps[to]}`} onPress={() => { setStep(to); top(); }} style={{ minHeight: 44, justifyContent: "center", paddingHorizontal: 6 }}>
+  const editLink = (to: number) => <Pressable accessibilityRole="button" accessibilityLabel={`${t("Edit", "تعديل")} ${steps[to]}`} onPress={() => { go(to); top(); }} style={{ minHeight: 44, justifyContent: "center", paddingHorizontal: 6 }}>
     <GText style={[gType.label, { color: g.accentText, fontWeight: "800" }]}>{t("Edit", "تعديل")}</GText></Pressable>;
   const reviewRow = (to: number, icon: string, label: string, children: React.ReactNode) => <View style={{ paddingVertical: 12, borderTopWidth: to ? 1 : 0, borderTopColor: g.line, gap: 8 }}>
-    <View style={[row, { alignItems: "center", gap: 10 }]}><GIcon name={icon as never} size={20} color={g.accentText} /><GText soft style={[gType.caption, align, { flex: 1, fontWeight: "700" }]}>{label}</GText>{editLink(to)}</View>
+    <View style={[row, { alignItems: "center", gap: 10 }]}><GIcon name={icon as never} size={20} color={g.accentText} /><GText soft style={[gType.caption, align, { flex: 1, fontWeight: "700" }]}>{label}</GText>{to >= first ? editLink(to) : null}</View>
     {children}
   </View>;
+  const consentText = t("I own these photos and files. MOTEXA may create a 3D model of this part and show it, with my photos, to customers.", "أملك هذه الصور والملفات. يجوز لموتكسا إنشاء نموذج ثلاثي الأبعاد لهذه القطعة وعرضه مع صوري للعملاء.");
   const stepReview = <>
     {title("Check and send", "راجع وأرسل", t("The MOTEXA team reviews your request, then creates the 3D model.", "يراجع فريق موتكسا طلبك ثم ينشئ النموذج ثلاثي الأبعاد."))}
     <Card>
-      {reviewRow(0, "cube-outline", t("Part", "القطعة"), type ? <View style={[row, { alignItems: "center", gap: 12 }]}><PartArt type={type} size={70} /><GText style={[gType.title, align, { flex: 1 }]}>{t(...ACCESSORY_TYPE_LABELS[type])}</GText></View> : null)}
+      {reviewRow(0, "cube-outline", t("Part", "القطعة"), type ? <View style={[row, { alignItems: "center", gap: 12 }]}><Image source={PART_IMAGES[type]} contentFit="contain" style={{ width: 96, aspectRatio: 3 / 2 }} accessibilityIgnoresInvertColors /><GText style={[gType.title, align, { flex: 1 }]}>{t(...ACCESSORY_TYPE_LABELS[type])}</GText></View> : null)}
       {reviewRow(1, "car-sport-outline", t("Fits", "تناسب"), bySize ? <GText style={[gType.body, align]}>{t("Any car (Universal)", "أي سيارة (عامة)")}</GText> : <View style={{ gap: 4 }}>{fits.map(id => <GText key={id} style={[gType.body, align]}>{`• ${genName(id)}`}{cantShow(id) ? <GText style={[gType.caption, { color: g.warning }]}>{`  ${t("(3D not possible yet)", "(العرض غير ممكن بعد)")}`}</GText> : null}</GText>)}</View>)}
       {reviewRow(2, "images-outline", t("Photos of the part", "صور القطعة"), <View style={{ gap: 8 }}>
         <View style={[row, { flexWrap: "wrap", gap: 8 }]}>{(a?.partPhotos ?? []).map(p => <View key={p.id} style={{ width: 72, gap: 2 }}><PrivateImage load={load(p.id)} label={p.id} height={60} />{p.slot !== undefined ? <GText soft numberOfLines={1} style={[gType.tiny, { textAlign: "center" }]}>{t(...SLOT_LABELS[slots][p.slot]!)}</GText> : null}</View>)}</View>
@@ -315,42 +346,98 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
         <GText style={[gType.body, align]}>{knowSize && sizeValue ? (rims ? t(`${sizeValue}-inch rims`, `جنوط ${sizeValue} إنش`) : `${sizeValue} ${t("cm", "سم")} · ${metres(sizeValue, t)}`) : t("Size: the admin will measure it", "المقاس: سيقيسه المسؤول")}</GText>
       </View>)}
     </Card>
-    <View style={{ marginTop: 14 }}><Check checked={consent} onPress={() => { setConsent(v => !v); setErrors(e => ({ ...e, 4: [] })); }}
-      label={t("I own these photos and files. MOTEXA may create a 3D model of this part and show it, with my photos, to customers.", "أملك هذه الصور والملفات. يجوز لموتكسا إنشاء نموذج ثلاثي الأبعاد لهذه القطعة وعرضه مع صوري للعملاء.")} /></View>
+    <Press accessibilityRole="checkbox" accessibilityState={{ checked: consent }} onPress={() => { setConsent(v => !v); setErrors(e => ({ ...e, 4: [] })); }}
+      style={[row, { marginTop: 14, minHeight: 64, padding: 16, gap: 14, alignItems: "center", borderRadius: gShape.card, borderWidth: 2, borderColor: consent ? g.accent : g.line, backgroundColor: consent ? g.tint : g.card }]}>
+      <View style={{ width: 28, height: 28, borderRadius: 8, borderWidth: 2, borderColor: consent ? g.accent : g.soft, backgroundColor: consent ? g.accent : "transparent", alignItems: "center", justifyContent: "center" }}>
+        {consent ? <Enter from={0.7} ms={200}><GIcon name="checkmark" size={20} color={g.onAccent} /></Enter> : null}
+      </View>
+      <GText style={[gType.bodySm, align, { flex: 1, minWidth: 0 }]}>{consentText}</GText>
+    </Press>
   </>;
 
   const sentView = <View style={{ alignItems: "center", gap: 14, paddingVertical: 40 }}>
-    <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: g.tint, alignItems: "center", justifyContent: "center" }}><GIcon name="checkmark-circle" size={64} color={g.success} /></View>
-    <GText accessibilityRole="header" style={[gType.display, { textAlign: "center" }]}>{t("Sent for review", "أُرسل للمراجعة")}</GText>
-    <GText soft style={[gType.body, { textAlign: "center", maxWidth: 320 }]}>{t("The MOTEXA team checks your photos and creates the 3D model. We'll notify you when customers can see it on their cars.", "يفحص فريق موتكسا صورك وينشئ النموذج ثلاثي الأبعاد. سنُعلمك عندما يستطيع العملاء رؤيته على سياراتهم.")}</GText>
-    <View style={{ alignSelf: "stretch", gap: 10, marginTop: 10 }}>
+    <Enter from={0.85} ms={420} settle style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: g.tint, alignItems: "center", justifyContent: "center" }}><GIcon name="checkmark-circle" size={64} color={g.success} /></Enter>
+    <Rise i={2}><GText accessibilityRole="header" style={[gType.display, { textAlign: "center" }]}>{t("Sent for review", "أُرسل للمراجعة")}</GText></Rise>
+    <Rise i={3}><GText soft style={[gType.body, { textAlign: "center", maxWidth: 320 }]}>{t("The MOTEXA team checks your photos and creates the 3D model. We'll notify you when customers can see it on their cars.", "يفحص فريق موتكسا صورك وينشئ النموذج ثلاثي الأبعاد. سنُعلمك عندما يستطيع العملاء رؤيته على سياراتهم.")}</GText></Rise>
+    <Rise i={4} style={{ alignSelf: "stretch", gap: 10, marginTop: 10 }}>
       <GButton icon="eye-outline" label={t("See the request status", "عرض حالة الطلب")} onPress={onDone} />
       <GButton variant="secondary" label={t("Back to my products", "العودة إلى منتجاتي")} onPress={() => router.navigate("/provider/parts/products" as never)} />
-    </View>
+    </Rise>
   </View>;
 
   const busyLabel = busy === "submit" ? t("Sending…", "جارٍ الإرسال…") : busy === "save" ? t("Saving…", "جارٍ الحفظ…") : null;
-  const bar = sent || !state.data ? null : <StickyActionBar note={busyLabel ?? (step === 2 && filled < 2 && !a?.shopModel ? t("Add 2 photos to continue", "أضف صورتين للمتابعة") : undefined)}>
-    <GButton flex variant="secondary" icon={isArabic ? "arrow-forward" : "arrow-back"} label={step === 0 ? t("Cancel", "إلغاء") : t("Back", "رجوع")} disabled={!!busy} onPress={back} />
-    <GButton flex icon={step === 4 ? "paper-plane-outline" : undefined} label={step === 4 ? t("Submit", "إرسال") : t("Next", "التالي")} busy={busy === "save" || busy === "submit"} disabled={!!busy} onPress={() => void next()} />
+  const needConsent = step === 4 && !consent;
+  const bar = sent || !state.data ? null : <StickyActionBar note={busyLabel ?? (step === 2 && filled < 2 && !a?.shopModel ? t("Add 2 photos to continue", "أضف صورتين للمتابعة") : needConsent ? t("Tick the box above to send your request.", "ضع علامة على الخانة أعلاه لإرسال طلبك.") : undefined)}>
+    <GButton flex variant="secondary" icon={isArabic ? "arrow-forward" : "arrow-back"} label={step <= first ? t("Cancel", "إلغاء") : t("Back", "رجوع")} disabled={!!busy} onPress={back} />
+    <GButton flex icon={step === 4 ? "paper-plane-outline" : undefined} label={step === 4 ? t("Submit", "إرسال") : t("Next", "التالي")} busy={busy === "save" || busy === "submit"} disabled={!!busy || needConsent} onPress={() => void next()} />
   </StickyActionBar>;
 
-  return <ProviderLayout scrollRef={scroll} hero={undefined} title={t("Show it in 3D", "اعرضها ثلاثية الأبعاد")} subtitle={state.data?.productName} bottom={bar}>
-    {state.error && !state.data ? <Note tone="danger">{state.error}</Note> : null}
-    {!state.data ? <ActivityIndicator color={g.accent} style={{ marginTop: 40 }} /> : sent ? sentView : <>
-      <StepperHeader steps={steps} index={step} label={(i, n) => t(`Step ${i} of ${n}`, `الخطوة ${i} من ${n}`)} />
-      {a ? <View style={[row, { alignItems: "center", gap: 6, marginBottom: 12 }]}><GIcon name="cloud-done-outline" size={16} color={g.success} /><GText soft style={gType.caption}>{t("Draft saved automatically", "تُحفظ المسودة تلقائيًا")}</GText></View> : null}
-      {[stepPart, stepCar, stepPhotos, stepDetails, stepReview][step]}
-      {errorBox}
-      <View style={{ height: 130 }} />
-    </>}
+  // focused flow: no shop tabs, no settings gear; only close, the step and the product
+  const n = steps.length - first, at = step - first;
+  const header = <View style={{ paddingTop: insets.top + 6, paddingHorizontal: 12, paddingBottom: 10, gap: 10, backgroundColor: g.page, borderBottomWidth: 1, borderBottomColor: g.line }}>
+    <View style={[row, { alignItems: "center", gap: 8 }]}>
+      <IconButton icon="close" label={t("Close", "إغلاق")} onPress={leave} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <GText accessibilityRole="header" numberOfLines={1} style={[gType.title, align]}>{sent ? t("Show it in 3D", "اعرضها ثلاثية الأبعاد") : t(`Step ${at + 1} of ${n} · ${steps[step]}`, `الخطوة ${at + 1} من ${n} · ${steps[step]}`)}</GText>
+        {state.data?.productName ? <GText soft numberOfLines={1} style={[gType.caption, align]}>{state.data.productName}</GText> : null}
+      </View>
+    </View>
+    {sent || !state.data ? null : <View style={[row, { gap: 6, paddingHorizontal: 6 }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      {Array.from({ length: n }, (_, i) => <View key={i} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: g.line, overflow: "hidden" }}><Bar to={i <= at ? 1 : 0} color={g.accent} /></View>)}
+    </View>}
+  </View>;
+  const dx = (isArabic ? -1 : 1) * dir * 16;
+  const viewing = pick?.kind === "PART" && pick.photoId && !pick.replace ? pick : null;
+
+  return <View style={{ flex: 1, backgroundColor: g.page }}>
+    {header}
+    <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={{ width: "100%", maxWidth: 760, alignSelf: "center", paddingHorizontal: 18, paddingTop: 16, paddingBottom: insets.bottom + 40 }}>
+      {state.error && !state.data ? <Note tone="danger">{state.error}</Note> : null}
+      {!state.data ? <ActivityIndicator color={g.accent} style={{ marginTop: 40 }} /> : sent ? sentView : <>
+        {a ? <View style={[row, { alignItems: "center", gap: 6, marginBottom: 12 }]}><GIcon name="cloud-done-outline" size={16} color={g.success} /><GText soft style={gType.caption}>{t("Draft saved automatically", "تُحفظ المسودة تلقائيًا")}</GText></View> : null}
+        <Enter key={step} dx={dx} ms={240}>
+          {[stepPart, stepCar, stepPhotos, stepDetails, stepReview][step]}
+          {errorBox}
+        </Enter>
+        <View style={{ height: 130 }} />
+      </>}
+    </ScrollView>
+    {bar}
     <Sheet visible={!!pick} onClose={() => setPick(null)} title={pick?.kind === "PART" ? t(...SLOT_LABELS[slots][pick.slot]!) : t("Photo on a car", "صورة على سيارة")} closeLabel={t("Close", "إغلاق")}>
-      <View style={{ gap: 10 }}>
-        {pick?.kind === "PART" ? <View style={{ alignItems: "center", paddingBottom: 6 }}><SlotArt kind={slots} slot={pick.slot} size={130} /></View> : null}
+      {viewing ? <View style={{ gap: 10 }}>
+        <PrivateImage load={load(viewing.photoId!)} label={viewing.photoId!} height={280} />
+        <View style={[row, { gap: 10, marginTop: 6 }]}>
+          <GButton flex variant="secondary" icon="swap-horizontal-outline" label={t("Replace", "استبدال")} onPress={() => setPick({ ...viewing, replace: true })} />
+          <GButton flex variant="danger" icon="trash-outline" label={t("Remove", "حذف")} onPress={() => removePhoto(viewing.photoId!)} />
+        </View>
+      </View> : <View style={{ gap: 10 }}>
+        {pick?.kind === "PART" ? <View style={{ alignItems: "center", paddingBottom: 6 }}><SlotArt part={slotPart(type)} slot={pick.slot} size={150} /></View> : null}
         <GButton icon="camera-outline" label={t("Take a photo", "التقط صورة")} onPress={() => void addPhoto("camera")} />
         <GButton variant="secondary" icon="images-outline" label={t("Choose from gallery", "اختر من المعرض")} onPress={() => void addPhoto("library")} />
-        {pick?.kind === "PART" && pick.photoId ? <GButton variant="danger" icon="trash-outline" label={t("Remove this photo", "احذف هذه الصورة")} onPress={() => removePhoto(pick.photoId!)} /> : null}
+      </View>}
+    </Sheet>
+    <Sheet visible={leaving} onClose={() => setLeaving(false)} title={t("Save draft and leave?", "حفظ المسودة والخروج؟")} closeLabel={t("Keep editing", "متابعة التعديل")}>
+      <View style={{ gap: 10 }}>
+        <GText soft style={[gType.body, align]}>{t("Everything you added is already saved as a draft. Finish it any time from 3D parts.", "كل ما أضفته محفوظ كمسودة. يمكنك إكمالها في أي وقت من القطع ثلاثية الأبعاد.")}</GText>
+        <GButton icon="exit-outline" label={t("Save draft and leave", "حفظ المسودة والخروج")} onPress={() => { setLeaving(false); exit(); }} />
+        <GButton variant="secondary" label={t("Keep editing", "متابعة التعديل")} onPress={() => setLeaving(false)} />
       </View>
     </Sheet>
-  </ProviderLayout>;
+  </View>;
+}
+
+/** A progress fill that slides to its new value (220 ms ease-out; instant with reduced motion). */
+function Bar({ to, color }: { to: number; color: string }) {
+  const reduced = useReduced();
+  const st = useAnimatedStyle(() => ({ width: reduced ? `${to * 100}%` : withTiming(`${to * 100}%`, { duration: 220, easing: OUT }) }), [to, reduced]);
+  return <Animated.View style={[{ height: 6, backgroundColor: color }, st]} />;
+}
+
+/** Mount-in motion that runs the same on Android and web: fade + slide `dx` px and / or scale from `from`, ease-out (`settle` = a soft
+ *  overshoot, used once on the success mark). Reduced motion: a short fade only. */
+function Enter({ children, dx = 0, from = 1, ms, settle, style }: { children: React.ReactNode; dx?: number; from?: number; ms: number; settle?: boolean; style?: object }) {
+  const reduced = useReduced(), p = useSharedValue(0);
+  useEffect(() => { p.value = withTiming(1, { duration: reduced ? M.reduced : ms, easing: settle && !reduced ? Easing.bezier(0.34, 1.4, 0.64, 1) : OUT }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const st = useAnimatedStyle(() => ({ opacity: Math.min(1, p.value * 1.6), transform: reduced ? [] : [{ translateX: (1 - p.value) * dx }, { scale: from + (1 - from) * p.value }] }));
+  return <Animated.View style={[style, st]}>{children}</Animated.View>;
 }

@@ -269,7 +269,7 @@ function ClassicShopAccessory3DScreen() {
     <View style={{ gap: 14 }}>
       {state.error && !state.data ? <Note tone="danger">{state.error}</Note> : null}
       {!state.data ? <GText>{t("Loading…", "جارٍ التحميل…")}</GText> : !state.data.eligible ? (
-        <Note>{t("3D is available for body kits and exterior accessories (Body or Exterior accessories category) and rims (Wheels). Change the product's category first.", "العرض ثلاثي الأبعاد متاح لأطقم الهيكل والإكسسوارات الخارجية (فئة الهيكل أو الإكسسوارات الخارجية) والجنوط (فئة الجنوط). غيّر فئة المنتج أولًا.")}</Note>
+        <Note>{t("3D preview isn't available for this kind of part yet. It works for Bumpers & body kits, Wings & spoilers and Wheels (rims).", "المعاينة ثلاثية الأبعاد غير متاحة لهذا النوع من القطع بعد. تعمل مع فئات المصدات وأطقم الهيكل، والأجنحة والسبويلرات، والجنوط.")}</Note>
       ) : form ? <>
         {canKit || isKit ? <Section title={t("One part or a body kit?", "قطعة واحدة أم طقم هيكل؟")}>
           {canKit && !parts.length ? <View style={[row, { flexWrap: "wrap", gap: 8 }]}>

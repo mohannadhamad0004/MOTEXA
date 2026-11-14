@@ -93,9 +93,9 @@ export const STATUS_LABELS: Record<AccessoryStatus, [string, string]> = {
 };
 /** Which real size the fitter needs (mirrors backend sizeField). */
 export const sizeField = (type: AccessoryType): "rimInches" | "lengthMm" | "widthMm" => type === "RIMS" ? "rimInches" : type === "SIDE_SKIRTS" || type === "FENDER_FLARES" ? "lengthMm" : "widthMm";
-/** Product categories that may carry each type (mirrors backend accessoryCategoriesFor). */
-export const typesForCategory = (category: string | null | undefined): AccessoryType[] =>
-  category === "WHEELS" ? ["RIMS"] : category === "BODY" || category === "EXTERIOR_ACCESSORIES" ? (Object.keys(ACCESSORY_TYPE_LABELS) as AccessoryType[]).filter(k => k !== "RIMS") : [];
+/** The 3D parts a product category may carry (mirrors backend TYPES_FOR_CATEGORY). Every other category (roof racks, lips, mirrors…): none. */
+const TYPES_FOR_CATEGORY: Record<string, AccessoryType[]> = { BUMPERS_BODY_KITS: ["FRONT_BUMPER", "REAR_BUMPER"], WINGS_SPOILERS: ["WING"], WHEELS: ["RIMS"] };
+export const typesForCategory = (category: string | null | undefined): AccessoryType[] => TYPES_FOR_CATEGORY[category ?? ""] ?? [];
 
 const shop = (productId: string, rest = "", part: KitPart = "MAIN") => `/parts/me/products/${productId}/accessory-3d${rest}${part === "MAIN" ? "" : `?part=${part}`}`;
 export const shopAccessoryApi = {
