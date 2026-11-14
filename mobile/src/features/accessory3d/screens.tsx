@@ -6,7 +6,9 @@ import { photoErrorText, pickPhoto } from "../../core/hooks/pickPhoto";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Image, Modal, Pressable, ScrollView, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Card, Chip, GarageHero, GaragePage, GButton, GText, Note, Section, StatusChip } from "../../components/garage";
+import { Card, Chip, GarageHero, GaragePage, GButton, GIcon, GText, Note, Section, StatusChip } from "../../components/garage";
+import { isoLatin } from "../../core/constants/bidi";
+import { findCategory, labelOf } from "../../core/constants/categories";
 import { useL } from "../../core/hooks/useL";
 import { useLoad } from "../../core/hooks/useLoad";
 import { useVehicleList } from "../catalog/VehiclePicker";
@@ -99,15 +101,15 @@ function ShopModelCard({ a, busy, use }: { a: Accessory; busy: boolean; use: () 
   const inUse = a.provider === "MANUAL" && a.hasModel, can = ["PENDING_REVIEW", "APPROVED_FOR_GENERATION", "READY_FOR_FINAL_REVIEW"].includes(a.status) && !a.published && !inUse;
   return <Card style={{ borderWidth: 2, borderColor: g.accent }}>
     <View style={[row, { gap: 12, alignItems: "center" }]}>
-      <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: g.tint, alignItems: "center", justifyContent: "center" }}><GText style={{ fontSize: 24 }}>▣</GText></View>
+      <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: g.tint, alignItems: "center", justifyContent: "center" }}><GIcon name="cube-outline" size={26} color={g.accent} /></View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <GText style={[gType.title, align]}>{t("The shop sent its own 3D file", "أرسل المتجر ملفه ثلاثي الأبعاد")}</GText>
-        <GText soft style={[gType.caption, align]}>{inUse ? t("This file is the current 3D model.", "هذا الملف هو النموذج ثلاثي الأبعاد الحالي.") : t(".glb, safety-checked on upload. Using it costs no Meshy credits.", "ملف ‎.glb‎ فُحص عند الرفع. استخدامه لا يستهلك رصيد Meshy.")}</GText>
+        <GText soft style={[gType.caption, align]}>{inUse ? t("This file is the current 3D model.", "هذا الملف هو النموذج ثلاثي الأبعاد الحالي.") : t(".glb, safety-checked on upload. Using it costs no Meshy credits.", "ملف ⁦.glb⁩ فُحص عند الرفع. استخدامه لا يستهلك رصيد Meshy.")}</GText>
       </View>
     </View>
     {can ? <View style={{ marginTop: 12, gap: 8 }}>
       <GButton icon="cube-outline" label={t("Use this file as the 3D model", "استخدم هذا الملف كنموذج ثلاثي الأبعاد")} disabled={busy} onPress={use} />
-      <GText soft style={[gType.tiny, align]}>{t("It is optimised and validated like any manual import; then review the fit and publish as usual. A previous candidate stays in the history.", "يُحسَّن ويُتحقق منه كأي استيراد يدوي، ثم راجع التركيب وانشره كالمعتاد. يبقى النموذج السابق في السجل.")}</GText>
+      <GText soft style={[gType.tiny, align]}>{t("It is optimised and validated like any manual import; then review the fit and publish as usual. A model made earlier for this request stays until this one is published, then it is deleted for good (file and previews).", "يُحسَّن ويُتحقق منه كأي استيراد يدوي، ثم راجع التركيب وانشره كالمعتاد. يبقى أي نموذج سابق لهذا الطلب حتى يُنشر هذا، ثم يُحذف نهائيًا (الملف والمعاينات).")}</GText>
     </View> : null}
   </Card>;
 }
@@ -115,15 +117,19 @@ function ShopModelCard({ a, busy, use }: { a: Accessory; busy: boolean; use: () 
 async function pickJpeg(t: (en: string, ar: string) => string) {
   try { return (await pickPhoto())?.base64 ?? null; } catch (e) { throw new Error(photoErrorText(e, t)); }
 }
-function StatusCard({ a, admin }: { a: Accessory; admin?: boolean }) {
-  const { t } = useL(); const { align } = useGarageTheme();
+function StatusCard({ a, admin, product }: { a: Accessory; admin?: boolean; product?: { category: string | null } | null }) {
+  const { t, isArabic } = useL(); const { align } = useGarageTheme();
   const processing=accessoryProcessingLabel(a);
   const label=processing?t(...processing):a.lifecycleState==="FAILED"?t("Generation failed","تعذّر الإنشاء"):a.deactivatedAt?t("Unpublished","غير منشور"):a.lifecycleState==="GENERATION_QUEUED"?t("Generation queued","الإنشاء في قائمة الانتظار"):t(...STATUS_LABELS[a.status]);
   return <Card>
     <View style={{ alignItems: "flex-start", gap: 8 }}>
       <StatusChip tone={tone(a.status)} label={label} icon="cube-outline" />
       <GText style={[gType.title, align]}>{t(...ACCESSORY_TYPE_LABELS[a.accessoryType])}</GText>
+      {product ? <GText soft style={[gType.caption, align]}>{`${t("Product category", "فئة المنتج")}: ${labelOf(findCategory(product.category), isArabic) || product.category || t("none", "بلا فئة")}`}</GText> : null}
     </View>
+    {product && !typesForCategory(product.category).includes(a.accessoryType) ? <View style={{ marginTop: 10 }}><Note tone="warning" icon="alert-circle-outline">{t(
+      `The product's category does not match a ${t(...ACCESSORY_TYPE_LABELS[a.accessoryType]).toLowerCase()}: check that the shop picked the right product.`,
+      `فئة المنتج لا تطابق ${ACCESSORY_TYPE_LABELS[a.accessoryType][1]}: تأكد أن المتجر اختار المنتج الصحيح.`)}</Note></View> : null}
     {a.status === "GENERATING"&&!processing ? <GText style={[align, { marginTop: 8 }]}>{`${a.generationStage}${a.providerProgress !== null ? ` · ${a.providerProgress}%` : ""}`}</GText> : null}
     {a.mock ? <View style={{ marginTop: 10 }}><Note>{t("Mock mode: a plain stand-in shape that tests the workflow. It is not your part and can never be published.", "الوضع التجريبي: شكل بديل بسيط لاختبار الخطوات، وليس قطعتك، ولا يمكن نشره أبدًا.")}</Note></View> : null}
     {a.reviewNotes ? <View style={{ marginTop: 10 }}><Note tone={a.status === "REJECTED" ? "danger" : "accent"}>{a.reviewNotes}</Note></View> : null}
@@ -399,13 +405,13 @@ export function AdminAccessory3DDetail() {
   return <GaragePage hero={<GarageHero variant="detail" backLabel={t("Back", "رجوع")} onBack={() => router.back()} title={a?.product?.name ?? t("Accessory", "إكسسوار")} line={a?.product ? `${a.product.shop.shopName} · ${a.product.brand} ${a.product.partNumber}` : undefined} />}
     onRefresh={() => void item.reload()} refreshing={item.loading && !!item.data}>
     {!a ? (item.error ? <Note tone="danger">{item.error}</Note> : <GText>{t("Loading…", "جارٍ التحميل…")}</GText>) : <View style={{ gap: 14 }}>
-      <StatusCard a={a} admin />
+      <StatusCard a={a} admin product={a.product} />
       {a.hasModel||a.providerState==="SUCCEEDED"||a.status==="READY_FOR_FINAL_REVIEW"||a.status==="PUBLISHED"?<AccessoryFinalReview a={a} busy={busy} act={act}>{a.preview?<PreviewGrid preview={a.preview} load={load}/>:null}</AccessoryFinalReview>:null}
       {a.provider==="MESHY"&&a.providerTaskId?<Card><GText>{t("Meshy task","مهمة Meshy")}</GText><GText selectable style={{writingDirection:"ltr",textAlign:"left"}}>{a.providerTaskId}</GText></Card>:null}
       {a.status === "READY_FOR_FINAL_REVIEW" && a.provider === "MESHY" && a.providerState === "SUCCEEDED" ? <Card>
         <GButton variant="secondary" label={t("Generate a new 3D (costs Meshy credits)", "إنشاء نموذج ثلاثي الأبعاد جديد (يستهلك رصيد Meshy)")} disabled={busy} onPress={() => { setReplacement(true); setReplacementPaid(false); }} />
         {replacement ? <View style={{ gap: 10, marginTop: 12 }}>
-          <Note tone="warning">{t(`This creates a new Meshy task and costs approximately ${a.estimatedProviderCredits ?? 30} credits. The existing task and result remain in history.`, `سيُنشئ هذا مهمة Meshy جديدة بتكلفة تقديرية ${a.estimatedProviderCredits ?? 30} رصيدًا. تبقى المهمة والنتيجة الحاليتان في السجل.`)}</Note>
+          <Note tone="warning">{t(`This creates a new Meshy task and costs approximately ${a.estimatedProviderCredits ?? 30} credits. The current result stays until the new model is published, then it is deleted for good.`, `سيُنشئ هذا مهمة Meshy جديدة بتكلفة تقديرية ${a.estimatedProviderCredits ?? 30} رصيدًا. تبقى النتيجة الحالية حتى يُنشر النموذج الجديد، ثم تُحذف نهائيًا.`)}</Note>
           <Check checked={replacementPaid} disabled={busy} onPress={() => setReplacementPaid(v => !v)} label={t("I confirm the cost of a new generation", "أؤكد تكلفة إنشاء نموذج جديد")} />
           <GButton label={t("Confirm and start paid generation", "تأكيد وبدء الإنشاء المدفوع")} disabled={busy || !replacementPaid || !a.paidEnabled || left === 0} onPress={() => void act("start", { confirmPaid: true, replaceRevision: a.revision })} />
           <GButton variant="secondary" label={t("Cancel", "إلغاء")} onPress={() => { setReplacement(false); setReplacementPaid(false); }} />
@@ -423,13 +429,13 @@ export function AdminAccessory3DDetail() {
       </Card>:null}
       {a.fitmentNotes?<Note>{a.fitmentNotes}</Note>:null}
       {a.status==="PUBLISHED"?<GButton variant={a.deactivatedAt?"secondary":"danger"} label={a.deactivatedAt?t("Reactivate model","إعادة نشر النموذج"):t("Unpublish model","إلغاء نشر النموذج")} disabled={busy} onPress={()=>void act(a.deactivatedAt?"reactivate":"unpublish")}/>:null}
-      {a.hasModel&&a.status!=="PUBLISHED"&&a.status!=="GENERATING"?<GButton variant="danger" label={t("Discard private candidate (retain task history)","حذف النموذج الخاص مع حفظ تاريخ المهمة")} disabled={busy} onPress={()=>void act("discard-candidate")}/>:null}
+      {a.hasModel&&a.status!=="PUBLISHED"&&a.status!=="GENERATING"?<GButton variant="danger" label={t("Delete this private 3D model","حذف هذا النموذج الخاص")} disabled={busy} onPress={()=>void act("discard-candidate")}/>:null}
       <Card>
         <GText style={[gType.label, align]}>{t("Real size", "المقاس الحقيقي")}</GText>
         {Object.entries(a.size).filter(([, v]) => v !== null).map(([k, v]) => <GText key={k} soft style={align}>{`${t(...sizeLabel[k]!)}: ${v}`}</GText>)}
         {Object.values(a.size).every(v => v === null) ? <Note tone="warning" icon="resize-outline">{t("Size not given by the shop: measure it (part-map editor or the model).", "لم يُدخل المتجر المقاس: قِسه (محرر خريطة القطع أو النموذج).")}</Note> : null}
         <GText style={[gType.label, align, { marginTop: 10 }]}>{t("Fits", "تناسب")}</GText>
-        {a.fits.map(f => <GText key={f.id} soft style={align}>{`${isArabic ? f.nameAr : f.name} (${f.years[0]}–${f.years[1]})${f.id === a.installedGenerationId ? ` · ${t("in the installed photos", "في صور التركيب")}` : ""}${f.has3d ? " · 3D" : ""}`}</GText>)}
+        {a.fits.map(f => <GText key={f.id} soft style={align}>{`${isArabic ? isoLatin(`${f.nameAr} (${f.years[0]}–${f.years[1]})`) : `${f.name} (${f.years[0]}–${f.years[1]})`}${f.id === a.installedGenerationId ? ` · ${t("shown in installed photos", "ظاهرة في صور التركيب")}` : ""}${f.has3d ? ` · ${t("has a 3D model", "لها نموذج ثلاثي الأبعاد")}` : ` · ${t("no 3D model yet", "بلا نموذج ثلاثي الأبعاد بعد")}`}`}</GText>)}
         {a.fits.map(f => { const L = SIZE_LABEL[a.accessoryType], m = L ? f.partSizes?.[L] : null; if (!m) return null;
           const off = sizeMismatches(a.accessoryType, a.size, m), car = isArabic ? f.nameAr : f.name;
           return <View key={`size-${f.id}`} style={{ marginTop: 8 }}>
@@ -438,7 +444,7 @@ export function AdminAccessory3DDetail() {
           </View>; })}
         <SupportWarning type={a.accessoryType} generationIds={a.fits.map(f => f.id)} name={id => { const f = a.fits.find(x => x.id === id); return f ? (isArabic ? f.nameAr : f.name) : id; }} />
       </Card>
-      <Section title={t("Loose part photos (sent to the 3D provider)", "صور القطعة (تُرسل لمزود النموذج)")}>{a.partPhotos.length ? <PhotoStrip photos={a.partPhotos} load={load} labels={a.partPhotos.map(p => p.slot !== undefined ? t(...SLOT_LABELS[slotKind(a.accessoryType)][p.slot]!) : null)} /> : <GText soft style={align}>{t("No photos: the shop sent a 3D file instead.", "لا صور: أرسل المتجر ملفًا ثلاثي الأبعاد بدلًا منها.")}</GText>}</Section>
+      <Section title={t("Photos of the part", "صور القطعة")}>{a.partPhotos.length ? <PhotoStrip photos={a.partPhotos} load={load} labels={a.partPhotos.map(p => p.slot !== undefined ? t(...SLOT_LABELS[slotKind(a.accessoryType)][p.slot]!) : null)} /> : <GText soft style={align}>{t("No photos: the shop sent a 3D file instead.", "لا صور: أرسل المتجر ملفًا ثلاثي الأبعاد بدلًا منها.")}</GText>}</Section>
       {a.shopModel ? <ShopModelCard a={a} busy={busy} use={() => void act("use-shop-model")} /> : null}
       <Section title={`${t("Installed photos", "صور التركيب")}${a.installed360 ? " · 360°" : ""}`}><PhotoStrip photos={a.installedPhotos} load={load} /></Section>
 

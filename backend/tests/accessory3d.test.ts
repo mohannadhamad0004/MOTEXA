@@ -17,7 +17,9 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const jpg = (c: string) => sharp({ create: { width: 48, height: 48, channels: 3, background: c } }).jpeg().toBuffer().then(b => b.toString("base64"));
 const stubRender = async (a: any, generationId: string) => { const g=await prisma.vehicleGeneration.findUniqueOrThrow({where:{id:generationId}});const fit={version:fitVersion(a.accessoryType),type:a.accessoryType,orient:["fixture",0,"bottom"],placements:[{pos:[0,1,0],sc:[1,1,1],rot:[0,0,0],side:1}],shadows:[]};const saved=await saveFit(a,generationId,g.model3dKey!,fit);return {generationId,generationName:"Synthetic fixture",fitSnapshot:{carRevision:saved.carRevision,partRevision:saved.partRevision,fitVersion:saved.fitVersion,updatedAt:saved.updatedAt.toISOString()},model3dKey:g.model3dKey!,modelRevision:modelRevision(a),views:{},fit,renderedAt:new Date().toISOString()}; };
 
-async function fixture(work: (f: { owner: string; admin: string; shopId: string; productId: string; gid: string; service: ReturnType<typeof createAccessory3DService>; due: (id: string) => Promise<void> }) => Promise<void>, category = "BODY") {
+/** A file still locked (Windows: a fit worker's temp file) must not stop the rest of the cleanup, or the fixture rows leak into the dev DB. */
+const rmQuiet = (p: string) => { try { unlinkSync(p); } catch { /* left for the next run */ } };
+async function fixture(work: (f: { owner: string; admin: string; shopId: string; productId: string; gid: string; service: ReturnType<typeof createAccessory3DService>; due: (id: string) => Promise<void> }) => Promise<void>, category = "BUMPERS_BODY_KITS") {
   const owner = randomUUID(), admin = randomUUID(), vid = randomUUID(), gid = randomUUID(), shopId = randomUUID(), productId = randomUUID();
   const privBefore = new Set(existsSync(PRIVATE_3D_DIR) ? readdirSync(PRIVATE_3D_DIR) : []), pubBefore = new Set(existsSync(PUBLIC_ACCESSORY_DIR) ? readdirSync(PUBLIC_ACCESSORY_DIR) : []);
   const old = { mode: process.env.VEHICLE3D_MODE, allow: process.env.MESHY_ALLOW_PAID_GENERATION, key: process.env.MESHY_API_KEY };
@@ -36,8 +38,8 @@ async function fixture(work: (f: { owner: string; admin: string; shopId: string;
     // A resumed candidate schedules its real local fitter. Let this fixture's jobs finish before removing their files.
     await Promise.all(acc.map(a=>autoFitAccessory(a.id)));
     for (const [k, v] of Object.entries({ VEHICLE3D_MODE: old.mode, MESHY_ALLOW_PAID_GENERATION: old.allow, MESHY_API_KEY: old.key })) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
-    if (existsSync(PRIVATE_3D_DIR)) for (const p of readdirSync(PRIVATE_3D_DIR)) if (!privBefore.has(p)) unlinkSync(path.join(PRIVATE_3D_DIR, p));
-    if (existsSync(PUBLIC_ACCESSORY_DIR)) for (const p of readdirSync(PUBLIC_ACCESSORY_DIR)) if (!pubBefore.has(p)) unlinkSync(path.join(PUBLIC_ACCESSORY_DIR, p));
+    if (existsSync(PRIVATE_3D_DIR)) for (const p of readdirSync(PRIVATE_3D_DIR)) if (!privBefore.has(p)) rmQuiet(path.join(PRIVATE_3D_DIR, p));
+    if (existsSync(PUBLIC_ACCESSORY_DIR)) for (const p of readdirSync(PUBLIC_ACCESSORY_DIR)) if (!pubBefore.has(p)) rmQuiet(path.join(PUBLIC_ACCESSORY_DIR, p));
     await prisma.auditLog.deleteMany({ where: { OR: [{ actorId: { in: [owner, admin] } }, { targetId: { in: [shopId, ...acc.map(a => a.id)] } }] } });
     await prisma.partsProduct.deleteMany({ where: { id: productId } }); await prisma.partsShopProfile.deleteMany({ where: { id: shopId } });
     await prisma.vehicleGeneration.deleteMany({ where: { id: gid } }); await prisma.vehicle.deleteMany({ where: { id: vid } }); await prisma.vehicleBrand.deleteMany({ where: { id: vid } });
@@ -77,9 +79,8 @@ test("sizes are checked per part type, and submit lists every problem at once (a
   await save("FRONT_BUMPER", { widthMm: 1200 });
   await save("FRONT_BUMPER", { widthMm: 2100 });
   await assert.rejects(save("FRONT_BUMPER", { widthMm: 2100.5 }), (e: any) => e.code === "INVALID_SIZE");
-  await assert.rejects(save("SIDE_SKIRTS", { lengthMm: 500 }), (e: any) => /side skirt's length must be 1000.2800/.test(e.message));
-  await assert.rejects(save("MIRROR_COVERS", { widthMm: 1500 }), (e: any) => e.code === "INVALID_SIZE");
-  await save("MIRROR_COVERS", { widthMm: 200 });
+  // the product's category decides the part: a Bumpers & body kits product takes no side skirts, mirror covers or wing
+  for (const type of ["SIDE_SKIRTS", "MIRROR_COVERS", "WING"]) await assert.rejects(save(type, { widthMm: 1300, lengthMm: 1500 }), (e: any) => e.code === "CATEGORY_MISMATCH", type);
   const got = await f.service.get(f.owner, f.productId);
   assert.deepEqual(got.sizeRanges.FRONT_BUMPER, { field: "widthMm", min: 1200, max: 2100 });
   assert.equal(got.productName, "Front bumper");
