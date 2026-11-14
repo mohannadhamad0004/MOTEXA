@@ -2,6 +2,8 @@ import { SearchBar } from "../../../components/ui/Input";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
+import { ItemRow } from "../../../components/ItemActionsMenu";
+import { shopOrderActions } from "./shopActions";
 import { Badge, EmptyState, ErrorState, GarageHero,  GIcon, GText, SkeletonRows, StatusChip, Tabs, Tap } from "../../../components/garage";
 import { ProviderLayout as GaragePage } from "../../../components/layout/ProviderLayout";
 import { cityLabel } from "../../../core/constants/cities";
@@ -72,7 +74,7 @@ export default function ShopOrdersList() {
           <EmptyState photo="empty.requests" text={bucket === "new" ? t("No new orders.", "لا توجد طلبات جديدة.") : bucket === "active" ? t("No orders in progress.", "لا توجد طلبات قيد التنفيذ.") : t("No finished orders yet.", "لا توجد طلبات منتهية بعد.")} />
         ) : (
           data!.orders.filter(o=>!q.trim()||`${o.customer.firstName} ${o.id} ${o.items.map(i=>i.name).join(" ")}`.toLowerCase().includes(q.trim().toLowerCase())).map((o) => (
-            <Tap key={o.id} label={`${o.customer.firstName}, ${L.status[o.status]}`} onPress={() => router.push({ pathname: "/provider/parts/orders/[id]", params: { id: o.id } })} style={[{ padding: 14, borderRadius: gShape.card, backgroundColor: g.card, gap: 6 }, shadow(1)]}>
+            <ItemRow key={o.id} title={`${o.customer.firstName}, ${L.status[o.status]}`} onPress={() => router.push({ pathname: "/provider/parts/orders/[id]", params: { id: o.id } })} actions={shopOrderActions(t, o, (s) => L.status[s], load)} box={[{ padding: 14, borderRadius: gShape.card, backgroundColor: g.card, gap: 6 }, shadow(1)]}>
               <View style={[row, { alignItems: "center", gap: 8 }]}>
                 <GIcon name={o.fulfilment === "DELIVERY" ? "bicycle-outline" : "storefront-outline"} size={18} />
                 <GText numberOfLines={1} style={[gType.label, { fontWeight: "800", flex: 1 }, align]}>
@@ -85,7 +87,7 @@ export default function ShopOrdersList() {
                 <StatusChip tone={orderTone(o.status)} label={L.status[o.status]} />
                 <GText soft style={[gType.tiny, { writingDirection: "ltr" }]}>{fmtDateTime(o.updatedAt)}</GText>
               </View>
-            </Tap>
+            </ItemRow>
           ))
         )}
       </View>

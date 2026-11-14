@@ -2,7 +2,9 @@ import { Image } from "expo-image";
 import { router, useLocalSearchParams, type Href } from "expo-router";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
-import { Card, Chip, EmptyState, ErrorState, GButton, GText, Note, SkeletonRows, StatusChip } from "../../../components/garage";
+import { Chip, EmptyState, ErrorState, GButton, GText, Note, SkeletonRows, StatusChip } from "../../../components/garage";
+import { ItemRow } from "../../../components/ItemActionsMenu";
+import { shopProductActions } from "./shopActions";
 import { SearchBar } from "../../../components/ui/Input";
 import { ProviderLayout } from "../../../components/layout/ProviderLayout";
 import { formatPrice } from "../../../core/constants/money";
@@ -54,7 +56,7 @@ export default function ProductsPage(_props: { mode?: "products" | "inventory" |
         {shown.map((p) => {
           const free = Math.max(0, p.stock - (p.reservedStock ?? 0));
           return (
-            <Card key={p.id} pad={12} label={p.name} onPress={() => router.push(`/provider/parts/${p.id}` as Href)}>
+            <ItemRow key={p.id} title={p.name} subtitle={p.partNumber} onPress={() => router.push(`/provider/parts/${p.id}` as Href)} actions={shopProductActions(t, p, state.reload)}>
               <View style={[row, { alignItems: "center", gap: 12 }]}>
                 {p.imageUri ? <Image source={{ uri: p.imageUri }} style={{ width: 64, height: 64, borderRadius: gShape.small }} contentFit="cover" /> : <View style={{ width: 64, height: 64, borderRadius: gShape.small, backgroundColor: "rgba(128,128,128,0.2)" }} />}
                 <View style={{ flex: 1, minWidth: 0 }}>
@@ -67,7 +69,7 @@ export default function ProductsPage(_props: { mode?: "products" | "inventory" |
                 <StatusChip tone={free === 0 ? "danger" : free <= 3 ? "warning" : "success"} label={free === 0 ? t("Sold out", "نفدت") : t(`${free} in stock`, `${free} متوفر`)} />
                 <StatusChip tone={p.customerVisible ? "success" : "neutral"} label={p.customerVisible ? t("Visible", "ظاهر") : p.hidden ? t("Hidden by MOTEXA", "مخفي بواسطة موتكسا") : !p.imageUri ? t("Needs a photo", "يحتاج صورة") : t("Not visible", "غير ظاهر")} />
               </View>
-            </Card>
+            </ItemRow>
           );
         })}
       </View>
