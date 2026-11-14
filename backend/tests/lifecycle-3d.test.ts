@@ -103,7 +103,7 @@ test("A/B/C/E/F: authoritative 3D lifecycle, real fitting, publication, manageme
   assert.equal(target.vehicleId,createdVehicleId,"Fixture setup failed; never run the synthetic acceptance case against the real E36.");
   await t.test("A: shop rear bumper → approve → mocked Start → real auto-fit → review → publish → customer eligibility",async()=>{
    const productPhoto=(await sharp(randomBytes(256*256*3),{raw:{width:256,height:256,channels:3}}).jpeg().toBuffer()).toString("base64");
-   const response=await call("POST","/parts/me/products",shop,{name:"Rear bumper lifecycle fixture",brand:"Fixture",partNumber:randomUUID(),price:950,stock:1,category:"BODY",condition:"NEW",isUniversal:false,fitments:[{make:target.vehicle.make,model:target.vehicle.model,yearFrom:target.yearFrom,yearTo:target.yearTo,generationId:target.id}],image:{name:"synthetic-fixture.jpg",dataBase64:productPhoto}});
+   const response=await call("POST","/parts/me/products",shop,{name:"Rear bumper lifecycle fixture",brand:"Fixture",partNumber:randomUUID(),price:950,stock:1,category:"BUMPERS_BODY_KITS",condition:"NEW",isUniversal:false,fitments:[{make:target.vehicle.make,model:target.vehicle.model,yearFrom:target.yearFrom,yearTo:target.yearTo,generationId:target.id}],image:{name:"synthetic-fixture.jpg",dataBase64:productPhoto}});
    assert.equal(response.status,201,JSON.stringify(response.data));productId=response.data.product.id;
    const s=`/parts/me/products/${productId}/accessory-3d`;
    writeFileSync(path.join(dir,"config.json"),JSON.stringify(await modelWithZones(target.model3dKey!)));writeFileSync(path.join(dir,"kit.json"),JSON.stringify({type:"REAR_BUMPER"}));
@@ -147,7 +147,7 @@ test("A/B/C/E/F: authoritative 3D lifecycle, real fitting, publication, manageme
    assert.equal((await call("POST",a+"/reactivate",admin)).data.code,"FIT_REVIEW_REQUIRED");
    assert.equal((await call("PUT",`/admin/parts/auto-fits/${accessoryId}/${target.id}`,admin,{adj:null})).status,200);
    assert.equal((await call("POST",a+"/reactivate",admin)).status,200);assert.equal((await call("POST",a+"/discard-candidate",admin)).data.code,"DELETE_BLOCKED");assert.equal((await call("DELETE",`/parts/me/products/${productId}`,shop)).data.code,"DELETE_BLOCKED");
-   const privateProduct=await prisma.partsProduct.create({data:{shopId:(await prisma.partsShopProfile.findUniqueOrThrow({where:{userId:shop}})).id,name:"Failed candidate fixture",brand:"Fixture",partNumber:randomUUID(),partNumberNormalized:randomUUID(),price:1,category:"BODY"}});
+   const privateProduct=await prisma.partsProduct.create({data:{shopId:(await prisma.partsShopProfile.findUniqueOrThrow({where:{userId:shop}})).id,name:"Failed candidate fixture",brand:"Fixture",partNumber:randomUUID(),partNumberNormalized:randomUUID(),price:1,category:"WINGS_SPOILERS"}});
    const svc=createAccessory3DService(),draft=await svc.save(shop,privateProduct.id,{accessoryType:"WING",fitsGenerationIds:[target.id],widthMm:1300});
    await prisma.productAccessory3D.update({where:{id:draft.id},data:{status:"APPROVED_FOR_GENERATION",generationStage:"FAILED",generationErrorCode:"GENERATION_FAILED",creditsUsed:1}});
    assert.equal((await call("POST",`/admin/parts/accessory-3d/${draft.id}/discard-candidate`,admin)).status,200);assert.equal((await prisma.productAccessory3D.findUniqueOrThrow({where:{id:draft.id}})).creditsUsed,1);

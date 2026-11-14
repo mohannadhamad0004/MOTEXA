@@ -149,7 +149,7 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
   const removePhoto = (id: string) => { setPick(null); void run("remove", () => shopAccessoryApi.removePhoto(productId, id)); };
   const addModelFile = () => void DocumentPicker.getDocumentAsync({ type: ["model/gltf-binary", "application/octet-stream", "*/*"], copyToCacheDirectory: true }).then(async r => {
     if (r.canceled) return; const f = r.assets[0]!;
-    if (!f.name.toLowerCase().endsWith(".glb")) return setErrors(x => ({ ...x, [step]: [t("Choose a .glb file (a 3D model in binary glTF).", "اختر ملفًا بامتداد ‎.glb‎ (نموذج ثلاثي الأبعاد).")] }));
+    if (!f.name.toLowerCase().endsWith(".glb")) return setErrors(x => ({ ...x, [step]: [t("Choose a .glb file (a 3D model in binary glTF).", "اختر ملفًا بامتداد ⁦.glb⁩ (نموذج ثلاثي الأبعاد).")] }));
     if ((f.size ?? 0) > 8 * 1024 * 1024) return setErrors(x => ({ ...x, [step]: [t("That file is larger than 8 MB. Ask for a lighter export (fewer polygons, smaller textures).", "الملف أكبر من ٨ ميغابايت. اطلب نسخة أخف (مضلعات أقل وخامات أصغر).")] }));
     await run("model", async () => shopAccessoryApi.modelFile(productId, await localFileToBase64(f.uri)));
   }).catch(e => setErrors(x => ({ ...x, [step]: [threeDError(e, t)] })));
@@ -263,11 +263,11 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
         <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: g.tint, alignItems: "center", justifyContent: "center" }}><GIcon name="cube-outline" size={26} color={g.accent} /></View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <GText style={[gType.title, align]}>{t("I have a 3D file", "لدي ملف ثلاثي الأبعاد")}</GText>
-          <GText soft style={[gType.caption, align]}>{a?.shopModel ? t("Your .glb file is attached. The MOTEXA team checks it and uses it as the 3D model.", "ملفك ‎.glb‎ مرفق. يفحصه فريق موتكسا ويستخدمه كنموذج ثلاثي الأبعاد.") : t("Upload a .glb file (up to 8 MB). Then photos are optional.", "ارفع ملف ‎.glb‎ (حتى ٨ ميغابايت). عندها تصبح الصور اختيارية.")}</GText>
+          <GText soft style={[gType.caption, align]}>{a?.shopModel ? t("Your .glb file is attached. The MOTEXA team checks it and uses it as the 3D model.", "ملفك ⁦.glb⁩ مرفق. يفحصه فريق موتكسا ويستخدمه كنموذج ثلاثي الأبعاد.") : t("Upload a .glb file (up to 8 MB). Then photos are optional.", "ارفع ملف ⁦.glb⁩ (حتى ٨ ميغابايت). عندها تصبح الصور اختيارية.")}</GText>
         </View>
       </View>
       <View style={[row, { gap: 10, marginTop: 12 }]}>
-        <GButton flex variant="secondary" icon={a?.shopModel ? "swap-horizontal-outline" : "cloud-upload-outline"} label={busy === "model" ? t("Uploading…", "جارٍ الرفع…") : a?.shopModel ? t("Replace file", "استبدال الملف") : t("Upload .glb file", "رفع ملف ‎.glb‎")} busy={busy === "model"} disabled={!!busy} onPress={addModelFile} />
+        <GButton flex variant="secondary" icon={a?.shopModel ? "swap-horizontal-outline" : "cloud-upload-outline"} label={busy === "model" ? t("Uploading…", "جارٍ الرفع…") : a?.shopModel ? t("Replace file", "استبدال الملف") : t("Upload .glb file", "رفع ملف ⁦.glb⁩")} busy={busy === "model"} disabled={!!busy} onPress={addModelFile} />
         {a?.shopModel ? <GButton flex variant="danger" icon="trash-outline" label={t("Remove", "حذف")} disabled={!!busy} onPress={() => removePhoto(a.shopModel!.id)} /> : null}
       </View>
     </Card>
@@ -338,7 +338,7 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
       {reviewRow(1, "car-sport-outline", t("Fits", "تناسب"), bySize ? <GText style={[gType.body, align]}>{t("Any car (Universal)", "أي سيارة (عامة)")}</GText> : <View style={{ gap: 4 }}>{fits.map(id => <GText key={id} style={[gType.body, align]}>{`• ${genName(id)}`}{cantShow(id) ? <GText style={[gType.caption, { color: g.warning }]}>{`  ${t("(3D not possible yet)", "(العرض غير ممكن بعد)")}`}</GText> : null}</GText>)}</View>)}
       {reviewRow(2, "images-outline", t("Photos of the part", "صور القطعة"), <View style={{ gap: 8 }}>
         <View style={[row, { flexWrap: "wrap", gap: 8 }]}>{(a?.partPhotos ?? []).map(p => <View key={p.id} style={{ width: 72, gap: 2 }}><PrivateImage load={load(p.id)} label={p.id} height={60} />{p.slot !== undefined ? <GText soft numberOfLines={1} style={[gType.tiny, { textAlign: "center" }]}>{t(...SLOT_LABELS[slots][p.slot]!)}</GText> : null}</View>)}</View>
-        {a?.shopModel ? <View style={[row, { gap: 6, alignItems: "center" }]}><GIcon name="cube" size={16} color={g.success} /><GText style={[gType.bodySm, align]}>{t("Your 3D file (.glb) is attached", "ملفك ثلاثي الأبعاد (‎.glb‎) مرفق")}</GText></View> : null}
+        {a?.shopModel ? <View style={[row, { gap: 6, alignItems: "center" }]}><GIcon name="cube" size={16} color={g.success} /><GText style={[gType.bodySm, align]}>{t("Your 3D file (.glb) is attached", "ملفك ثلاثي الأبعاد (⁦.glb⁩) مرفق")}</GText></View> : null}
         {!partCount && !a?.shopModel ? <GText style={[gType.bodySm, { color: g.danger }]}>{t("No photos yet", "لا توجد صور بعد")}</GText> : null}
       </View>)}
       {reviewRow(3, "options-outline", t("Details", "التفاصيل"), <View style={{ gap: 4 }}>

@@ -281,6 +281,15 @@ export async function renderPreview(a: Full, generationId: string, tx: Tx | type
   } finally { rmSync(dir, { recursive: true, force: true }); }
 }
 const previewKeys = (p: unknown) => Object.values(((p ?? {}) as { views?: Record<string, string> }).views ?? {});
+/** Files of earlier candidates listed in generationHistory (raw / prepared .glb, preview renders), except any the current candidate uses.
+ *  A 3D model exists or is deleted: these go when the request is published or deleted (AGENTS.md 4a). */
+export const oldCandidateFiles = (a: { generationHistory: unknown; rawModelPath: string | null; privateModelPath: string | null; preview: unknown }) => {
+  const keep = new Set([a.rawModelPath, a.privateModelPath, ...previewKeys(a.preview)]);
+  return [...new Set((Array.isArray(a.generationHistory) ? a.generationHistory : []).flatMap((e: any) => [e?.raw, e?.prepared, ...previewKeys(e?.preview)]))]
+    .filter((k): k is string => typeof k === "string" && !!k && !keep.has(k));
+};
+/** generationHistory without file references: task ids, states and credits stay (the billing record). */
+export const historyWithoutFiles = (h: unknown) => (Array.isArray(h) ? h : []).map((e: any) => { const { raw: _r, prepared: _p, preview: _v, ...rest } = e ?? {}; return rest; });
 
 /** A real model source: a successful Meshy generation, or a manually imported GLB (provider MANUAL, no provider task). Never a mock. */
 export const isRealSource = (a: Pick<ProductAccessory3D, "generationMode" | "provider" | "sourceMetadata" | "providerState" | "providerTaskId">) =>
@@ -471,7 +480,7 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
         if (a.status === "GENERATING" || a.publishedAt || a.publishedFile || a.creditsUsed || a.providerTaskId) return fail("DELETE_BLOCKED", "Generated or published history must be retained. Ask Parts Admin to deactivate it.", 409);
         await tx.productAccessory3D.delete({ where: { id: a.id } }); await audit(tx, uid, "DELETE", a.id); return a; });
       for (const p of a.photos) removePrivate(p.path);
-      for (const k of [a.privateModelPath, a.rawModelPath, ...previewKeys(a.preview)]) removePrivate(k);
+      for (const k of [a.privateModelPath, a.rawModelPath, ...previewKeys(a.preview), ...oldCandidateFiles(a)]) removePrivate(k);
     },
     /** Private bytes: a photo id, "model" or "preview-<view>". Shop owner or Parts Admin only. */
     asset: (uid: string | null, productIdOrId: string, asset: string, asAdmin = false, part: AccessoryKitPart = "MAIN") => run(async tx => {
@@ -600,7 +609,7 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
       await tellShop(tx, a.shopId, ["We are redoing your 3D model", "نعيد إنشاء نموذجك ثلاثي الأبعاد"], [`${nm}: the first result was not good enough, a new one will be created.`, `${nm}: لم تكن النتيجة الأولى جيدة بما يكفي، سيُنشأ نموذج جديد.`]);
       return accessoryShape(updated);
     }),
-    publish: async (uid: string, id: string, input: { visuallyVerified?: unknown; modelRevision?: unknown; notes?: unknown }) => run(async tx => {
+    publish: async (uid: string, id: string, input: { visuallyVerified?: unknown; modelRevision?: unknown; notes?: unknown }) => { let old: string[] = []; const out = await run(async tx => {
       const a = await admin(tx, id, true);
       if (a.status !== "READY_FOR_FINAL_REVIEW" || !a.privateModelPath) return fail("REVIEW_CONFLICT", "Only a generated accessory awaiting final review can be published.", 409);
       if (!isRealSource(a)) return fail("MOCK_NOT_PUBLISHABLE", "Mock results can never be published. Run a real generation or import a real model.", 409);
@@ -620,12 +629,15 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
       if (other) return fail("DUPLICATE_PROMOTION", "This exact model is already published for another product.", 409);
       if (!existsSync(target)) copyFileSync(privatePath(a.privateModelPath), target); // content-addressed: same name = same bytes
       const updated = await tx.productAccessory3D.update({ where: { id }, data: { status: "PUBLISHED", deactivatedAt:null,publishedFile: file, publishedAt: new Date(), publishedByUserId: uid,
-        visualVerifiedAt: new Date(), reviewedAt: new Date(), reviewedByUserId: uid, reviewNotes: typeof input.notes === "string" ? input.notes.trim() || null : null }, include });
+        visualVerifiedAt: new Date(), reviewedAt: new Date(), reviewedByUserId: uid, reviewNotes: typeof input.notes === "string" ? input.notes.trim() || null : null,
+        generationHistory: historyWithoutFiles(a.generationHistory) as Prisma.InputJsonValue }, include });
       await audit(tx, uid, "PUBLISH", id, { file, modelRevision: current, previewGenerationId: (a.preview as { generationId?: string }).generationId ?? null });
+      old = oldCandidateFiles(a); // the earlier candidates are replaced by the published model: deleted, not kept
+      if (old.length) await audit(tx, uid, "OLD_CANDIDATES_DELETED", id, { files: old.length });
       const nm = await productName(tx, a.productId);
       await tellShop(tx, a.shopId, ["Your 3D part is live", "قطعتك ثلاثية الأبعاد منشورة"], [`${nm}: customers can now see it on their own car.`, `${nm}: يمكن للزبائن الآن رؤيتها على سياراتهم.`]);
       return accessoryShape(updated);
-    }),
+    }); for (const k of old) removePrivate(k); return out; },
     setCredits: (uid: string, shopId: string, monthly: unknown) => run(async tx => {
       if (!Number.isInteger(monthly) || (monthly as number) < 0 || (monthly as number) > 100) return fail("INVALID_CREDITS", "Monthly 3D generations are a whole number from 0 to 100.");
       const shop = await tx.partsShopProfile.update({ where: { id: shopId }, data: { accessory3dMonthlyCredits: monthly as number }, select: { id: true, accessory3dMonthlyCredits: true } }).catch(() => missing());

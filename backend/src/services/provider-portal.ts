@@ -3,7 +3,7 @@ import { hasPhoto } from "../uploads/providerFiles.js";
 import { noExpiredDocument } from "./truck-eligibility.js";
 import { Vehicle3DError } from "./vehicle3d-validation.js";
 import { createHash } from "node:crypto";
-import { modelWithZones, accessoryLifecycle } from "./accessory3d.js";
+import { ACCESSORY_CATEGORIES, modelWithZones, accessoryLifecycle } from "./accessory3d.js";
 import { modelFileSha } from "./car-part-map.js";
 import { accessoryTargets, fitEligibility } from "./accessory-autofit.js";
 
@@ -72,7 +72,7 @@ export async function updateShopProfile(uid:string,body:Record<string,unknown>) 
 
 /** Bounded product page, including all kit parts. Never issue one request per product. */
 export async function shop3dProducts(uid:string,page:number,q:string,submissions=false,productId?:string){
-  const shop=await portalOwner(uid,"parts"),where={shopId:shop.id,...(productId?{id:productId}:{}),...(q?{name:{contains:q,mode:"insensitive" as const}}:{}),...(submissions?{accessory3d:{some:{}}}:{})};
+  const shop=await portalOwner(uid,"parts"),where={shopId:shop.id,...(productId?{id:productId}:{}),...(q?{name:{contains:q,mode:"insensitive" as const}}:{}),...(submissions?{accessory3d:{some:{}}}:productId?{}:{OR:[{category:{in:ACCESSORY_CATEGORIES}},{accessory3d:{some:{}}}]})}; // the 3D list: only parts that can be shown in 3D (or already have a request)
   const [total,products]=await Promise.all([prisma.partsProduct.count({where}),prisma.partsProduct.findMany({where,orderBy:[{updatedAt:"desc"},{id:"desc"}],skip:(page-1)*12,take:12,include:{accessory3d:{include:{fits:{include:{generation:{include:{vehicle:true}}}},autoFits:true}}}})]);
   const output=[];
   for(const p of products){const parts=[];for(const a of p.accessory3d){const generations=[];
