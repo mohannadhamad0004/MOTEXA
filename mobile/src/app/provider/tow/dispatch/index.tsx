@@ -2,6 +2,8 @@ import { SearchBar } from "../../../../components/ui/Input";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
+import { ItemRow } from "../../../../components/ItemActionsMenu";
+import { companyJobActions } from "../../../../features/tow/provider/companyActions";
 import { EmptyState, ErrorState, GarageHero,  GIcon, GText, SkeletonRows, StatusChip, Tabs, Tap } from "../../../../components/garage";
 import { ProviderLayout as GaragePage } from "../../../../components/layout/ProviderLayout";
 import { useL } from "../../../../core/hooks/useL";
@@ -73,11 +75,10 @@ export default function CompanyDispatch({ initialBucket = "new" }: {initialBucke
           <EmptyState photo="empty.requests" text={bucket === "new" ? t("No new requests.", "لا توجد طلبات جديدة.") : bucket === "active" ? t("No active jobs.", "لا توجد مهام نشطة.") : t("No finished requests yet.", "لا توجد طلبات منتهية بعد.")} />
         ) : (
           shown.map((r) => (
-            <Tap key={r.id} label={`${r.customerName}, ${L[r.status]}`} onPress={() => router.push({ pathname: "/provider/tow/dispatch/[id]", params: { id: r.id } })} style={[{ padding: 14, borderRadius: gShape.card, backgroundColor: g.card, gap: 6 }, shadow(1)]}>
+            <ItemRow key={r.id} title={`${r.customerName}, ${L[r.status]}`} subtitle={`${r.vehicle.make} ${r.vehicle.model}`} onPress={() => router.push({ pathname: "/provider/tow/dispatch/[id]", params: { id: r.id } })} actions={companyJobActions(t, r, { reload: load })} box={[{ padding: 14, borderRadius: gShape.card, backgroundColor: g.card, gap: 6 }, shadow(1)]}>
               <View style={[row, { alignItems: "center", gap: 8 }]}>
                 <GIcon name="car-outline" size={18} />
                 <GText numberOfLines={1} style={[gType.label, { fontWeight: "800", flex: 1 }, align]}>{`${r.customerName} · ${r.vehicle.make} ${r.vehicle.model}`}</GText>
-                <GIcon name="chevron-forward" size={16} color={g.soft} flip />
               </View>
               <GText soft numberOfLines={1} style={[gType.caption, align]}>{r.pickupAddress}</GText>
               <GText style={[gType.caption, align, { color: r.driver ? g.ink : g.warning, fontWeight: "700" }]}>
@@ -87,7 +88,7 @@ export default function CompanyDispatch({ initialBucket = "new" }: {initialBucke
                 <StatusChip tone={towTone(r.status)} label={r.status === "EN_ROUTE" && r.arrivedAt ? L.ARRIVED : L[r.status]} />
                 <GText soft style={[gType.tiny, { writingDirection: "ltr" }]}>{fmtDateTime(r.updatedAt)}</GText>
               </View>
-            </Tap>
+            </ItemRow>
           ))
         )}
       </View>

@@ -4,6 +4,8 @@ import { Image } from "expo-image";
 import { View } from "react-native";
 import { PickedPhoto, photoErrorText, pickPhoto } from "../../../core/hooks/pickPhoto";
 import { publicImageUrl } from "../../../core/constants/files";
+import { ItemRow } from "../../../components/ItemActionsMenu";
+import { companyDriverActions } from "../../../features/tow/provider/companyActions";
 import { Card, Chip, EmptyState, ErrorState, Field, GarageHero,  GButton, GText, ListRow, Note, Section, Sheet, SkeletonRows, StatusChip, Toggle, Tone } from "../../../components/garage";
 import { ProviderLayout as GaragePage } from "../../../components/layout/ProviderLayout";
 import { useL } from "../../../core/hooks/useL";
@@ -128,7 +130,7 @@ export default function CompanyDrivers() {
           ) : (
             <View style={{ gap: 12, marginTop: 12 }}>
               {list.map((d) => (
-                <Card key={d.id}>
+                <ItemRow key={d.id} title={d.name} subtitle={d.truck ? d.truck.plate : undefined} actions={companyDriverActions(t, d, { reload: load, changeTruck: () => setTruckFor(d) })}>
                   <View style={[row, { alignItems: "center", gap: 8 }]}>
                     {publicImageUrl(d.photoUri) ? <Image source={{ uri: publicImageUrl(d.photoUri)! }} style={{ width: 40, height: 40, borderRadius: 20 }} contentFit="cover" /> : null}
                     <GText style={[gType.title, { flex: 1 }, align]}>{d.isOwner ? `${d.name} (${t("you", "أنت")})` : d.name}</GText>
@@ -136,13 +138,11 @@ export default function CompanyDrivers() {
                   </View>
                   <GText soft style={[gType.caption, align, { writingDirection: "ltr" }]}>{`${d.phone} · ${d.email}`}</GText>
                   {approvalText(d) ? <Note tone={d.approval === "PENDING" ? "neutral" : "danger"} icon="shield-checkmark-outline">{approvalText(d)!}</Note> : null}
-                  {!d.isOwner ? <GButton variant="ghost" icon="mail-outline" label={t("Send sign-in code again", "إرسال رمز الدخول مرة أخرى")} disabled={busy} onPress={() => void run(() => companyDispatch.invite(d.id))} /> : null}
-                  <ListRow icon="car-outline" title={d.truck ? `${type[d.truck.type]} · ${d.truck.plate}` : t("No truck linked", "لا توجد شاحنة")} sub={t("Change truck", "تغيير الشاحنة")} onPress={() => setTruckFor(d)} />
+                  <ListRow icon="car-outline" title={d.truck ? `${type[d.truck.type]} · ${d.truck.plate}` : t("No truck linked", "لا توجد شاحنة")} />
                   {d.job ? (
                     <ListRow divider icon="navigate-outline" title={`${t("Job", "مهمة")}: ${d.job.customerFirstName}`} sub={`${L[d.job.status]} · ${liveLabel(d.live, t)}`} onPress={() => router.push({ pathname: "/provider/tow/dispatch/[id]", params: { id: d.job!.id } })} />
                   ) : null}
-                  <Toggle label={t("Online", "متصل")} value={!d.offline} onChange={(v) => !busy && void run(() => companyDispatch.updateDriver(d.id, { offline: !v }))} />
-                </Card>
+                </ItemRow>
               ))}
             </View>
           )}
