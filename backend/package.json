@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
+    "test": "node scripts/test.mjs",
     "seed:test": "tsx src/seed/test-accounts.ts",
     "seed:providers": "tsx src/seed/provider-onboarding-demo.ts",
     "seed:mechanics": "tsx src/seed/mechanics-demo.ts",

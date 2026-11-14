@@ -35,7 +35,7 @@ import {removeStoredFiles} from "../src/uploads/providerFiles.js";
 
 after(()=>prisma.$disconnect());
 test("A/B/C/E/F: authoritative 3D lifecycle, real fitting, publication, management and IDOR",async t=>{
- assert.ok(process.env.MOTEXA_TEST_SCHEMA,"Use scripts/test-vehicle3d-suite.mjs; this test never writes to the development schema.");
+ assert.match(new URL(process.env.DATABASE_URL!).pathname,/_test$/,"Run with npm test; this test never writes to the development database.");
  const [shop,otherShop,admin,customer,otherCustomer,towAdmin]=Array.from({length:6},()=>randomUUID()) as [string,string,string,string,string,string];
  const users=[shop,otherShop,admin,customer,otherCustomer,towAdmin],ownedKeys:string[]=[],requestIds:string[]=[],importIds:string[]=[];
  const before=new Map([...catalogFiles(readManifest()).keys()].map(f=>[f,readFileSync(f,"utf8")]));
