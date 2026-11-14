@@ -190,11 +190,12 @@ export async function prepareManualAccessory(id: string, uid: string | null, opt
   return { bytes: normalized.report.bytes, rawBytes: normalized.report.processing.rawBytes, file };
 }
 export function accessoryShape(a: Full) {
-  const photos = (kind: string) => a.photos.filter(p => p.kind === kind).map(p => ({ id: p.id }));
+  const photos = (kind: string) => a.photos.filter(p => p.kind === kind).map(p => ({ id: p.id, ...(kind === "PART" && p.sortOrder >= 0 && p.sortOrder <= 3 ? { slot: p.sortOrder } : {}) }));
+  const shopModel = a.photos.find(p => p.kind === "SHOP_MODEL");
   return { id: a.id, productId: a.productId, kitPart: a.kitPart, accessoryType: a.accessoryType, status: a.status, lifecycleState: accessoryLifecycle(a), fitmentNotes:a.fitmentNotes, deactivatedAt:a.deactivatedAt, revision: a.revision, creditsUsed: a.creditsUsed,
     size: { widthMm: a.widthMm, heightMm: a.heightMm, depthMm: a.depthMm, lengthMm: a.lengthMm, rimInches: a.rimInches }, rim: rimOf(a),
     fitsGenerationIds: a.fits.map(f => f.generationId), installedGenerationId: a.installedGenerationId, installed360: a.installed360,
-    installedApproved: !!a.installedApprovedAt, partPhotos: photos("PART"), installedPhotos: photos("INSTALLED"),
+    installedApproved: !!a.installedApprovedAt, partPhotos: photos("PART"), installedPhotos: photos("INSTALLED"), shopModel: shopModel ? { id: shopModel.id } : null,
     submittedAt: a.submittedAt, reviewNotes: a.reviewNotes, reviewedAt: a.reviewedAt, approvedAt: a.approvedAt,
     generationMode: a.generationMode, provider: a.provider, providerState: a.providerState, providerProgress: a.providerProgress,
     generationStage: a.generationStage, generationErrorCode: a.generationErrorCode, failureReason: a.failureReason,
@@ -376,20 +377,50 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
       await audit(tx, uid, "SAVE", a.id);
       return accessoryShape((await load(tx, { id: a.id }))!);
     }),
-    addPhoto: async (uid: string, productId: string, kind: string, base64: unknown, part: AccessoryKitPart = "MAIN") => {
+    addPhoto: async (uid: string, productId: string, kind: string, base64: unknown, part: AccessoryKitPart = "MAIN", slotIn?: unknown) => {
       if (kind !== "PART" && kind !== "INSTALLED") return fail("INVALID_PHOTO", "Unknown photo kind.");
-      const jpeg = await cleanPhoto(base64); let key: string | null = null;
+      // guided part photo: slot 0-3 (back / left end / right end / three-quarter; rims: face / side / three-quarter / back), stored as sortOrder.
+      // ponytail: the angle lives in sortOrder; a proper angle column is future cleanup (STATUS.md)
+      const slot = kind === "PART" && slotIn !== undefined && slotIn !== null && slotIn !== "" ? Number(slotIn) : null;
+      if (slot !== null && !(Number.isInteger(slot) && slot >= 0 && slot <= 3)) return fail("INVALID_PHOTO", "Unknown photo slot.");
+      const jpeg = await cleanPhoto(base64); let key: string | null = null, replaced: string | null = null;
       try {
-        return await run(async tx => {
+        const out = await run(async tx => {
           const a = await owned(tx, uid, productId, true, part); editable(a);
-          const count = a.photos.filter(p => p.kind === kind).length;
+          const old = slot === null ? null : a.photos.find(p => p.kind === "PART" && p.sortOrder === slot) ?? null; // a new photo for a filled slot replaces it
+          if (old) { await tx.productAccessory3DPhoto.delete({ where: { id: old.id } }); replaced = old.path; }
+          const count = a.photos.filter(p => p.kind === kind && p !== old).length;
           if (count >= LIMITS[kind][1]) return fail("TOO_MANY_PHOTOS", kind === "PART" ? "At most 4 part photos." : "At most 24 installed photos.");
           key = storePrivate(jpeg, "jpg");
-          await tx.productAccessory3DPhoto.create({ data: { accessoryId: a.id, kind, path: key, sortOrder: Math.max(-1, ...a.photos.map(p => p.sortOrder)) + 1 } });
+          // free photos go after every slot (sortOrder >= 4), so they are never read as a guided angle
+          await tx.productAccessory3DPhoto.create({ data: { accessoryId: a.id, kind, path: key, sortOrder: slot ?? Math.max(3, ...a.photos.map(p => p.sortOrder)) + 1 } });
           await tx.productAccessory3D.update({ where: { id: a.id }, data: { status: "DRAFT", ...(kind === "INSTALLED" ? { installedApprovedAt: null } : {}) } });
-          await audit(tx, uid, `PHOTO_${kind}`, a.id);
+          await audit(tx, uid, `PHOTO_${kind}`, a.id, slot === null ? undefined : { slot });
           return accessoryShape((await load(tx, { id: a.id }))!);
         });
+        removePrivate(replaced); return out;
+      } catch (error) { removePrivate(key); throw error; }
+    },
+    /** "I have a 3D file": the shop's own GLB (safety-checked like any model), kept private as a SHOP_MODEL row; Parts Admin can use it
+     *  as the model (useShopModel) instead of generating one. One per part: a new file replaces the old one. */
+    addModelFile: async (uid: string, productId: string, base64: unknown, part: AccessoryKitPart = "MAIN") => {
+      if (typeof base64 !== "string" || !base64.length || base64.length > Math.ceil(MAX_MODEL_BYTES * 4 / 3) + 16) return fail("INVALID_MODEL_FILE", `Choose a .glb 3D file of at most ${Math.round(MAX_MODEL_BYTES / 1048576)} MB.`);
+      const bytes = Buffer.from(base64, "base64");
+      if (bytes.subarray(0, 4).toString() !== "glTF") return fail("INVALID_MODEL_FILE", "This is not a .glb 3D file (binary glTF).");
+      try { await readSafeGLB(bytes, 300_000); } catch (e) { return fail("INVALID_MODEL_FILE", e instanceof Vehicle3DError ? e.message : "This 3D file could not be read."); }
+      let key: string | null = null, replaced: string | null = null;
+      try {
+        const out = await run(async tx => {
+          const a = await owned(tx, uid, productId, true, part); editable(a);
+          const old = a.photos.find(p => p.kind === "SHOP_MODEL");
+          if (old) { await tx.productAccessory3DPhoto.delete({ where: { id: old.id } }); replaced = old.path; }
+          key = storePrivate(bytes, "glb");
+          await tx.productAccessory3DPhoto.create({ data: { accessoryId: a.id, kind: "SHOP_MODEL", path: key, sortOrder: 99 } });
+          await tx.productAccessory3D.update({ where: { id: a.id }, data: { status: "DRAFT" } });
+          await audit(tx, uid, "SHOP_MODEL_FILE", a.id, { bytes: bytes.length });
+          return accessoryShape((await load(tx, { id: a.id }))!);
+        });
+        removePrivate(replaced); return out;
       } catch (error) { removePrivate(key); throw error; }
     },
     removePhoto: async (uid: string, productId: string, photoId: string, part: AccessoryKitPart = "MAIN") => {
@@ -407,19 +438,20 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
       const a = await owned(tx, uid, productId, true, part); editable(a);
       // every problem at once (the app lists them all, each one opens its field)
       const universal = (await tx.partsProduct.findUnique({ where: { id: productId }, select: { isUniversal: true } }))?.isUniversal ?? false;
-      const n = (k: "PART" | "INSTALLED") => a.photos.filter(p => p.kind === k).length;
+      const n = (k: "PART" | "INSTALLED" | "SHOP_MODEL") => a.photos.filter(p => p.kind === k).length;
       const bySize = universalRim(a.accessoryType, universal);
       const issues: { code: string; field: string; message: string }[] = [];
       const add = (code: string, field: string, message: string) => { issues.push({ code, field, message }); };
       if (isBumper(a.accessoryType) && universal) add("BUMPER_NOT_UNIVERSAL", "fits", "Bumpers and body kits are made for specific cars: untick Universal on the product.");
-      if (n("PART") < 2 || n("PART") > 4) add("PART_PHOTOS_REQUIRED", "partPhotos", "Add 2-4 photos of the loose part (plain background, different angles).");
-      if (n("INSTALLED") < 1) add("INSTALLED_PHOTOS_REQUIRED", "installedPhotos", "Add at least one photo of the part installed on a car.");
-      else if (a.installed360 && n("INSTALLED") < 12) add("SPIN_SET_TOO_SMALL", "installedPhotos", "A 360° set needs at least 12 photos taken around the car.");
+      // the part: 2-4 photos of it alone, or the shop's own 3D file (Parts Admin then uses that file instead of generating one)
+      const shopModel = n("SHOP_MODEL") > 0;
+      if (n("PART") > 4 || (!shopModel && n("PART") < 2)) add("PART_PHOTOS_REQUIRED", "partPhotos", "Add 2-4 photos of the loose part (plain background, different angles), or upload your 3D file.");
       if (!a.fits.length && !bySize) add("FITS_REQUIRED", "fits", "Choose at least one generation this part fits.");
-      if (!a.installedGenerationId) add("INSTALLED_GENERATION_REQUIRED", "installedGen", "Choose which car the installed photos show.");
+      // installed photos are optional; when there are some, say which car they show (no 360-degree set: installed360 stays an optional field)
+      if (n("INSTALLED") > 0 && !a.installedGenerationId) add("INSTALLED_GENERATION_REQUIRED", "installedGen", "Choose which car the installed photos show.");
+      // the size is optional ("I don't know": Parts Admin measures it); a size that is given must be plausible
       const main = sizeField(a.accessoryType) as "widthMm" | "lengthMm" | "rimInches", mainValue = a[main];
-      if (mainValue === null) add("SIZE_REQUIRED", "size", a.accessoryType === "RIMS" ? "Enter the rim size in inches." : "Enter the part's real size in millimetres.");
-      else { const bad = main === "rimInches" ? null : sizeProblem(a.accessoryType, mainValue); if (bad) add("INVALID_SIZE", "size", bad); }
+      if (mainValue !== null) { const bad = main === "rimInches" ? null : sizeProblem(a.accessoryType, mainValue); if (bad) add("INVALID_SIZE", "size", bad); }
       if (consent !== true) add("CONSENT_REQUIRED", "consent", "Confirm you own these photos and allow MOTEXA to generate and show a 3D model of this part.");
       if (issues.length) throw new Vehicle3DError(400, issues[0].code, issues.length === 1 ? issues[0].message : `${issues.length} things need fixing: ${issues.map(i => i.message).join(" ")}`, issues);
       const updated = await tx.productAccessory3D.update({ where: { id: a.id }, data: { status: "PENDING_REVIEW", submittedAt: new Date(), reviewNotes: null,
@@ -446,7 +478,7 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
       const views = ((a.preview ?? {}) as { views?: Record<string, string> }).views ?? {};
       const key = asset === "model" ? a.privateModelPath : asset.startsWith("preview-") ? views[asset.slice(8)] ?? null : a.photos.find(p => p.id === asset)?.path ?? null;
       if (!key || !existsSync(privatePath(key))) return missing();
-      return { bytes: readFileSync(privatePath(key)), mime: asset === "model" ? "model/gltf-binary" : "image/jpeg" };
+      return { bytes: readFileSync(privatePath(key)), mime: asset === "model" || a.photos.find(p => p.id === asset)?.kind === "SHOP_MODEL" ? "model/gltf-binary" : "image/jpeg" };
     }),
 
     // ---- Parts Admin ----
@@ -610,6 +642,30 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
       await tellShop(tx,a.shopId,enabled?["Your 3D part is live again","قطعتك ثلاثية الأبعاد منشورة من جديد"]:["Your 3D part was unpublished","تم إيقاف نشر قطعتك ثلاثية الأبعاد"],enabled?[`${nm}: customers can see it on their car again.`,`${nm}: يمكن للزبائن رؤيتها على سياراتهم مجددًا.`]:[`${nm}: customers no longer see it in 3D. Contact MOTEXA if you have questions.`,`${nm}: لم يعد الزبائن يرونها بالأبعاد الثلاثية. تواصل مع موتكسا لأي استفسار.`]);
       return accessoryShape(row);
     }),
+    /** Parts Admin: the shop's own GLB (SHOP_MODEL) becomes the candidate model, as a manual import (provider MANUAL, no Meshy, no
+     *  credits), then the same optimisation + validation as any manual import runs (prepareManualAccessory). A previous candidate stays
+     *  in the generation history, like a regeneration. Validation failing leaves it MANUAL: "Run validation" can retry. */
+    useShopModel: async (uid: string, id: string) => {
+      await run(async tx => {
+        const a = await admin(tx, id, true), m = a.photos.find(p => p.kind === "SHOP_MODEL");
+        if (!m || !existsSync(privatePath(m.path))) return fail("NO_SHOP_MODEL", "This request has no 3D file from the shop.", 409);
+        if (a.publishedAt || a.publishedFile) return fail("REVIEW_CONFLICT", "A published model is not replaced here: unpublish it and ask the shop to edit and resubmit.", 409);
+        if (!["PENDING_REVIEW", "APPROVED_FOR_GENERATION", "READY_FOR_FINAL_REVIEW"].includes(a.status)) return fail("REVIEW_CONFLICT", a.status === "GENERATING" ? "Wait for the running generation to finish." : "Only a submitted request can use the shop's 3D file.", 409);
+        const history = Array.isArray(a.generationHistory) ? a.generationHistory : [];
+        if (a.revision) history.push({ revision: a.revision, provider: a.provider, taskId: a.providerTaskId, state: a.providerState, raw: a.rawModelPath, prepared: a.privateModelPath, preview: a.preview ?? null, error: a.generationErrorCode });
+        const key = storePrivate(readFileSync(privatePath(m.path)), "glb"); // its own copy: the shop's file stays as sent
+        await tx.productAccessory3D.update({ where: { id }, data: { status: "READY_FOR_FINAL_REVIEW", approvedAt: a.approvedAt ?? new Date(), approvedByUserId: a.approvedByUserId ?? uid,
+          provider: "MANUAL", generationMode: "manual", generationStage: "READY", providerTaskId: null, providerState: null, providerProgress: null,
+          rawModelPath: key, privateModelPath: key, validation: Prisma.JsonNull, preview: Prisma.JsonNull, visualVerifiedAt: null, revision: { increment: 1 },
+          generationErrorCode: null, failureReason: null, generationHistory: history as Prisma.InputJsonValue,
+          sourceMetadata: { ...(a.sourceMetadata as object ?? {}), shopModelFile: { photoId: m.id, usedAt: new Date().toISOString() } } as Prisma.InputJsonValue } });
+        await audit(tx, uid, "SHOP_MODEL_USED", id, { photoId: m.id });
+        return key;
+      });
+      await prepareManualAccessory(id, uid); // optimise + validate (throws with the reason; the request stays MANUAL for "Run validation")
+
+      return run(async tx => accessoryShape(await admin(tx, id)));
+    },
     discardCandidate:async(uid:string,id:string)=>{
       const a=await run(async tx=>{const a=await admin(tx,id,true);
         if(a.publishedAt||a.publishedFile||a.status==="GENERATING")return fail("DELETE_BLOCKED","Published history and running tasks cannot be deleted. Deactivate a published model instead.",409);

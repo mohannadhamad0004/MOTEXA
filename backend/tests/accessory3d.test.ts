@@ -51,7 +51,7 @@ async function submitted(f: Parameters<Parameters<typeof fixture>[0]>[0]) {
   return f.service.submit(f.owner, f.productId, true);
 }
 
-test("shop input is validated: category, fits, size, photo counts, 360 set, consent", () => fixture(async f => {
+test("shop input is validated: category, fits, size, photo counts, consent (installed photos, size and 360 are optional)", () => fixture(async f => {
   await assert.rejects(f.service.save(f.owner, f.productId, { accessoryType: "RIMS", fitsGenerationIds: [f.gid] }), /Wheels/);
   await assert.rejects(f.service.save(f.owner, f.productId, { accessoryType: "FRONT_BUMPER", fitsGenerationIds: [randomUUID()] }), /not in the catalog/);
   await assert.rejects(f.service.save(f.owner, f.productId, { accessoryType: "FRONT_BUMPER", fitsGenerationIds: [f.gid], widthMm: 5 }), /millimetres/);
@@ -59,10 +59,10 @@ test("shop input is validated: category, fits, size, photo counts, 360 set, cons
   await assert.rejects(f.service.submit(f.owner, f.productId, true), (e: any) => e.code === "PART_PHOTOS_REQUIRED");
   for (const c of ["red", "blue"]) await f.service.addPhoto(f.owner, f.productId, "PART", await jpg(c));
   await f.service.addPhoto(f.owner, f.productId, "INSTALLED", await jpg("green"));
-  await assert.rejects(f.service.submit(f.owner, f.productId, true), (e: any) => e.code === "SPIN_SET_TOO_SMALL");
-  await f.service.save(f.owner, f.productId, { accessoryType: "FRONT_BUMPER", fitsGenerationIds: [f.gid], installedGenerationId: f.gid });
-  await assert.rejects(f.service.submit(f.owner, f.productId, true), (e: any) => e.code === "SIZE_REQUIRED");
-  await f.service.save(f.owner, f.productId, { accessoryType: "FRONT_BUMPER", fitsGenerationIds: [f.gid], installedGenerationId: f.gid, widthMm: 1780 });
+  // installed photos need their car; a 360 set is no longer required (installed360 stays an optional field); no size = the admin measures it
+  await f.service.save(f.owner, f.productId, { accessoryType: "FRONT_BUMPER", fitsGenerationIds: [f.gid], installed360: true });
+  await assert.rejects(f.service.submit(f.owner, f.productId, true), (e: any) => e.code === "INSTALLED_GENERATION_REQUIRED");
+  await f.service.save(f.owner, f.productId, { accessoryType: "FRONT_BUMPER", fitsGenerationIds: [f.gid], installedGenerationId: f.gid, installed360: true });
   await assert.rejects(f.service.submit(f.owner, f.productId, false), (e: any) => e.code === "CONSENT_REQUIRED");
   assert.equal((await f.service.submit(f.owner, f.productId, true)).status, "PENDING_REVIEW");
   await assert.rejects(f.service.addPhoto(f.owner, f.productId, "PART", await jpg("white")), (e: any) => e.code === "ACCESSORY_LOCKED");
@@ -87,8 +87,9 @@ test("sizes are checked per part type, and submit lists every problem at once (a
   await f.service.save(f.owner, f.productId, { accessoryType: "FRONT_BUMPER", fitsGenerationIds: [f.gid], installed360: true });
   await assert.rejects(f.service.submit(f.owner, f.productId, false), (e: any) => {
     const fields = (e.issues as { code: string; field: string }[]).map(i => `${i.field}:${i.code}`);
-    assert.deepEqual(fields, ["partPhotos:PART_PHOTOS_REQUIRED", "installedPhotos:INSTALLED_PHOTOS_REQUIRED", "installedGen:INSTALLED_GENERATION_REQUIRED", "size:SIZE_REQUIRED", "consent:CONSENT_REQUIRED"]);
-    assert.match(e.message, /5 things need fixing/);
+    // no installed photos, no size: both optional now, so only the photos and the consent are missing
+    assert.deepEqual(fields, ["partPhotos:PART_PHOTOS_REQUIRED", "consent:CONSENT_REQUIRED"]);
+    assert.match(e.message, /2 things need fixing/);
     return true;
   });
   // an old draft that already holds an impossible size (630) is listed too, not silently accepted
@@ -341,4 +342,23 @@ test("wheel inset: rims only, per axle, whole mm 0-40; merged into the runtime c
     assert.deepEqual(await f.service.setZone(f.admin, key, "RIMS", { wheelInsetMm: { front: 16, rear: 29 } }), { wheelInsetMm: { front: 16, rear: 29 } });
     assert.deepEqual((await f.service.zones()).find(m => m.key === key)?.zones.RIMS, { wheelInsetMm: { front: 16, rear: 29 } });
   } finally { await f.service.setZone(f.admin, key, "RIMS", before as never); }
+}));
+
+test("wizard: guided photo slots replace in place, and the shop's own .glb can stand in for the photos", () => fixture(async f => {
+  await f.service.save(f.owner, f.productId, { accessoryType: "FRONT_BUMPER", fitsGenerationIds: [f.gid] });
+  await f.service.addPhoto(f.owner, f.productId, "PART", await jpg("red"), "MAIN", 0);
+  const first = (await f.service.addPhoto(f.owner, f.productId, "PART", await jpg("blue"), "MAIN", 2)).partPhotos;
+  assert.deepEqual(first.map((p: any) => p.slot), [0, 2]);
+  const again = (await f.service.addPhoto(f.owner, f.productId, "PART", await jpg("green"), "MAIN", 2)).partPhotos; // a new photo for slot 2 replaces it
+  assert.equal(again.length, 2); assert.notEqual(again[1].id, first[1].id);
+  await assert.rejects(f.service.addPhoto(f.owner, f.productId, "PART", await jpg("red"), "MAIN", 7), (e: any) => e.code === "INVALID_PHOTO");
+  await f.service.removePhoto(f.owner, f.productId, again[1].id);
+  await assert.rejects(f.service.submit(f.owner, f.productId, true), (e: any) => e.code === "PART_PHOTOS_REQUIRED"); // one photo, no file
+  await assert.rejects(f.service.addModelFile(f.owner, f.productId, Buffer.from("not a model").toString("base64")), (e: any) => e.code === "INVALID_MODEL_FILE");
+  const glb = (await mockAccessoryGLB("FRONT_BUMPER")).toString("base64");
+  const withFile = await f.service.addModelFile(f.owner, f.productId, glb);
+  assert.ok(withFile.shopModel);
+  const asset = await f.service.asset(f.owner, f.productId, withFile.shopModel!.id);
+  assert.equal(asset.mime, "model/gltf-binary");
+  assert.equal((await f.service.submit(f.owner, f.productId, true)).status, "PENDING_REVIEW"); // 1 photo + the file is enough
 }));
