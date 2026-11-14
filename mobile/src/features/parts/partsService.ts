@@ -187,6 +187,15 @@ export const partsShopService = {
     const r = await api<{ product: ApiProduct }>("POST", "/parts/me/products", await toBody(input));
     return toProduct(r.product);
   },
+  /** Only the stock number changes (the server accepts a partial PATCH and refuses less than the reserved amount). */
+  async setStock(_actor: Actor, id: string, stock: number) {
+    const r = await api<{ product: ApiProduct }>("PATCH", `/parts/me/products/${id}`, { stock });
+    return toProduct(r.product);
+  },
+  /** Delete one of my products (the server refuses while an accepted order or 3D history uses it). */
+  async removeProduct(_actor: Actor, id: string) {
+    await api("DELETE", `/parts/me/products/${id}`);
+  },
   /** Moderation fields are deliberately not part of ProductInput: shops cannot unhide a listing. */
   async updateProduct(_actor: Actor, id: string, input: ProductInput) {
     const r = await api<{ product: ApiProduct }>("PATCH", `/parts/me/products/${id}`, await toBody(input));

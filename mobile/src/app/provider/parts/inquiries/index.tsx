@@ -1,5 +1,6 @@
 import { Async, EmptyState } from "../../../../components/ui/Feedback";
-import { Card } from "../../../../components/ui/Card";
+import { ItemRow } from "../../../../components/ItemActionsMenu";
+import { shopInquiryActions } from "../../../../features/parts/provider/shopActions";
 import { ProviderLayout as DashboardLayout } from "../../../../components/layout/ProviderLayout";
 import { Segmented } from "../../../../components/ui/Chip";
 import { useL } from "../../../../core/hooks/useL";
@@ -39,7 +40,7 @@ export default function ShopInquiries() {
             <EmptyState icon="chatbubbles-outline" text={t("No questions here.", "لا توجد أسئلة هنا.")} />
           ) : (
             list.map((q) => (
-              <Card key={q.id} label={q.product.name} onPress={() => router.push(`/provider/parts/inquiries/${q.id}`)}>
+              <ItemRow key={q.id} title={q.product.name} subtitle={q.customerName} onPress={() => router.push(`/provider/parts/inquiries/${q.id}`)} actions={shopInquiryActions(t, q, state.reload)}>
                 <View style={[row, { justifyContent: "space-between", alignItems: "flex-start", gap: 10 }]}>
                   <View style={{ flex: 1 }}>
                     <Text numberOfLines={2} style={[{ color: col.text, fontSize: 15, fontWeight: "800" }, align]}>{q.product.name}</Text>
@@ -49,7 +50,7 @@ export default function ShopInquiries() {
                 </View>
                 {q.lastMessage ? <Text numberOfLines={2} style={[{ color: col.textDim, fontSize: 12, marginTop: 10 }, align]}>{q.lastMessage}</Text> : null}
                 <Text style={[{ color: col.textDim, fontSize: 10, marginTop: 8 }, align]}>{fmtDateTime(q.updatedAt)}</Text>
-              </Card>
+              </ItemRow>
             ))
           )
         }

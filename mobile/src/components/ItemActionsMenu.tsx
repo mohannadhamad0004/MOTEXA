@@ -25,7 +25,7 @@ export type ItemAction = {
   /** the action: navigation returns nothing, a request returns its promise (the sheet shows progress, then a toast) */
   run: (reason?: string) => Promise<unknown> | void;
   /** ask first (destructive actions get a default confirmation when this is left out) */
-  confirm?: { title?: string; message?: string | (() => Promise<string>); confirmLabel?: string; reason?: { label: string; required?: boolean } };
+  confirm?: { title?: string; message?: string | (() => Promise<string>); confirmLabel?: string; reason?: { label: string; required?: boolean; /** whole-number box (stock): digits only, filled with `initial` */ numeric?: boolean; initial?: string } };
   /** toast after a successful request (none for navigation) */
   success?: string;
   /** error text for a failed request (default: the error's message) */
@@ -87,7 +87,7 @@ export function ActionsSheet({ visible, onClose, title, subtitle, actions }: { v
     if (a.disabled || busy) return;
     const confirm = a.confirm ?? (a.destructive ? {} : null);
     if (!confirm) { void execute(a); return; }
-    setPending(a); setReason(""); setMessage(null);
+    setPending(a); setReason(confirm.reason?.initial ?? ""); setMessage(null);
     if (typeof confirm.message === "function") { setLoadingMsg(true); confirm.message().then((m) => setMessage(m)).catch((e) => setMessage(errorText(e, ""))).finally(() => setLoadingMsg(false)); }
     else setMessage(confirm.message ?? null);
   };
@@ -102,8 +102,8 @@ export function ActionsSheet({ visible, onClose, title, subtitle, actions }: { v
           {c.reason ? (
             <View style={{ gap: 6 }}>
               <GText style={[gType.label, align]}>{c.reason.label}</GText>
-              <TextInput accessibilityLabel={c.reason.label} value={reason} onChangeText={setReason} multiline maxLength={500} placeholderTextColor={g.soft}
-                style={{ color: g.ink, borderWidth: 1, borderColor: g.line, borderRadius: 12, padding: 12, minHeight: 84, textAlign: align.textAlign, backgroundColor: g.cardSoft, textAlignVertical: "top" }} />
+              <TextInput accessibilityLabel={c.reason.label} value={reason} onChangeText={c.reason.numeric ? (v) => setReason(v.replace(/[^0-9]/g, "").slice(0, 7)) : setReason} multiline={!c.reason.numeric} keyboardType={c.reason.numeric ? "number-pad" : "default"} maxLength={500} placeholderTextColor={g.soft}
+                style={{ color: g.ink, borderWidth: 1, borderColor: g.line, borderRadius: 12, padding: 12, minHeight: c.reason.numeric ? 48 : 84, textAlign: align.textAlign, backgroundColor: g.cardSoft, textAlignVertical: "top" }} />
             </View>
           ) : null}
           <GButton variant={pending.destructive ? "danger" : "primary"} label={c.confirmLabel ?? pending.label} busy={busy} disabled={busy || loadingMsg || needReason} onPress={() => void execute(pending, reason)} />
