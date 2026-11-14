@@ -113,6 +113,7 @@ export function createVehicle3DProcessor(options: ProcessorOptions = {}) {
 }
 export const processNextVehicle3DJob=(id: string|null=null)=>createVehicle3DProcessor()(id);
 export async function startVehicle3DWorker(){
+  if (process.env.NODE_ENV === "test") return () => {}; // tests drive jobs themselves; no background loop, no provider polling
   const {processNextSketchfabImport}=await import("./vehicle3d-import-worker.js");
   await prisma.$transaction(async tx=>{await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(762493031)`;await recoverCatalogJournal(tx);});
   cleanPreviewTemp();

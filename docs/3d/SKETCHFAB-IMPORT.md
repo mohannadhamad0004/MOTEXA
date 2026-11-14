@@ -113,7 +113,7 @@ npx prisma validate
 npx tsc --noEmit
 node --import ./scripts/register-typescript.mjs --test --test-concurrency=1 tests/sketchfab-import.test.ts tests/sketchfab-lifecycle.test.ts
 node --import ./scripts/register-typescript.mjs --test --test-concurrency=1 tests/vehicle3d.test.ts tests/managed-vehicle-catalog.test.ts tests/part-map.test.ts tests/model-gate.test.ts tests/meshy-generation.test.ts tests/garage.test.ts
-node scripts/test-vehicle3d-suite.mjs
+npm test   # fresh motexa_test database, never motexa_dev
 # mobile
 npx tsc --noEmit
 node --test tests/*.test.mjs

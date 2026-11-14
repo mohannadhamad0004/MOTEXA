@@ -21,6 +21,8 @@ export function createMeshyClient(options: { key?: string; fetcher?: typeof fetc
   const fetcher = options.fetcher ?? fetch;
   async function request(method: string, suffix = "", body?: unknown, resource = "multi-image-to-3d"): Promise<any> {
     if (!options.key) throw new MeshyError("PROVIDER_KEY_MISSING");
+    // NODE_ENV=test: only an injected fake transport; the real Meshy API is never called from a test process
+    if (!options.fetcher && process.env.NODE_ENV === "test") throw new MeshyError("TEST_FIXTURE_ONLY");
     let response: Response;
     try {
       response = await fetcher(`https://api.meshy.ai/openapi/v1/${resource}${suffix}`, {
@@ -57,6 +59,7 @@ export function createMeshyClient(options: { key?: string; fetcher?: typeof fetc
       let url: URL;
       try { url = new URL(String(value)); } catch { throw new MeshyError("PROVIDER_DOWNLOAD_UNAVAILABLE",true); }
       if (url.protocol !== "https:" || url.hostname !== "assets.meshy.ai" || url.username || url.password || (url.port && url.port !== "443")) throw new MeshyError("PROVIDER_ASSET_HOST_REJECTED");
+      if (!options.fetcher && process.env.NODE_ENV === "test") throw new MeshyError("TEST_FIXTURE_ONLY");
       let response: Response;
       try { response = await fetcher(url, { redirect:"error",signal:AbortSignal.timeout(30_000) }); }
       catch { throw new MeshyError("PROVIDER_DOWNLOAD_UNAVAILABLE",true); }

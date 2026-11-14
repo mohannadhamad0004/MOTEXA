@@ -29,7 +29,7 @@ From `backend/`:
 ```powershell
 npx tsc --noEmit
 npx prisma validate
-node scripts/test-vehicle3d-suite.mjs
+npm test   # fresh motexa_test database, never motexa_dev
 node --import ./scripts/register-typescript.mjs --import ./scripts/test-no-paid-provider.mjs --test tests/e36-rear-clearance.test.mjs
 ```
 

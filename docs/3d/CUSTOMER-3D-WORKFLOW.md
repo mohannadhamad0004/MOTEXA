@@ -118,7 +118,7 @@ Commands used:
 cd backend
 npx tsc --noEmit
 npx prisma validate
-node scripts/test-vehicle3d-suite.mjs
+npm test   # fresh motexa_test database, never motexa_dev
 node --import ./scripts/register-typescript.mjs --test tests/vehicle3d.test.ts
 cd ../mobile
 npx tsc --noEmit

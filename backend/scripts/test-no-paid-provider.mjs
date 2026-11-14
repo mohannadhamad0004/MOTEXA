@@ -3,5 +3,7 @@ const realFetch=globalThis.fetch;
 globalThis.fetch=(input,init)=>{
  const url=new URL(typeof input==='string'||input instanceof URL?input:input.url);
  if(/(^|\.)(meshy\.ai|sketchfab\.com|sketchfabcdn\.com)$/.test(url.hostname))throw Error('Live 3D provider access is forbidden in automated tests; inject a mock transport.');
+ // the developer's own backend (npm run dev) is never called from tests: npm test starts a separate one (API_URL)
+ if(process.env.MOTEXA_DEV_PORT&&(url.port||(url.protocol==='https:'?'443':'80'))===process.env.MOTEXA_DEV_PORT)throw Error('Tests must not call the development backend; use API_URL (npm test sets it).');
  return realFetch(input,init);
 };

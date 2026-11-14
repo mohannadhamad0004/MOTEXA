@@ -27,7 +27,7 @@
   },
   "fit": {
     "type": "REAR_BUMPER",
-    "fitVersion": 5,
+    "fitVersion": 6,
     "hidesWithStock": [],
     "zone": {
       "how": "part map",
@@ -268,6 +268,6 @@
   },
   "carSha256": "2f026865272597d4edb718be5c99e2bc74a790f98f53e06f45f33a177e55ab89",
   "partSha256": "12521e9ea55adfa1edcae77b85cd1598811acba4323d1b026048f908809e4f37",
-  "viewerSha256": "6df90e2df79943dd8e472bfd5c0d4cb12141072b9f741a9a9765e6e37b0c7d04",
+  "viewerSha256": "38f8fe75e288e8ac4147626a250ee7d0a46f94e01ebf11a30ce37dddb07cb21f",
   "screenshots": []
 }

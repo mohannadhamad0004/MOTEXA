@@ -4,7 +4,7 @@
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { prisma } from "../src/prisma.js";
-import { createAutoFitService, fitVersion, parseAdj, revisionOf, saveFit, validFit } from "../src/services/accessory-autofit.js";
+import { autoFitAccessory, createAutoFitService, fitVersion, parseAdj, revisionOf, saveFit, validFit } from "../src/services/accessory-autofit.js";
 import { createAccessory3DService } from "../src/services/accessory3d.js";
 
 after(() => prisma.$disconnect());
@@ -67,6 +67,8 @@ test("computed once; admin correction and reset; customers only get a current fi
     view = await createAccessory3DService().forProduct(a.productId, g.generationId); assert.equal(view?.autoFit, null);
     await assert.rejects(s.approve("admin", a.id, g.generationId, {}), { code: "FIT_NOT_READY" });
   } finally {
+    // the stale fit started a real background recompute: let it finish, or it writes after this cleanup and blocks the next test
+    await autoFitAccessory(a.id);
     await prisma.accessoryAutoFit.deleteMany({ where: { accessoryId: a.id, generationId: g.generationId } });
     if (saved) await prisma.accessoryAutoFit.create({ data: { ...saved, fit: saved.fit as object, adj: saved.adj === null ? undefined : saved.adj as object } });
     await prisma.auditLog.deleteMany({ where: { actorId: "admin", action: "ACCESSORY3D_FIT_APPROVED" } });
