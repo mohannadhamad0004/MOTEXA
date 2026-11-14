@@ -23,9 +23,11 @@ export type ItemAction = {
   /** why it is disabled (shown under the label) */
   hint?: string;
   /** the action: navigation returns nothing, a request returns its promise (the sheet shows progress, then a toast) */
-  run: (reason?: string) => Promise<unknown> | void;
+  run: (reason?: string, choice?: string) => Promise<unknown> | void;
   /** ask first (destructive actions get a default confirmation when this is left out) */
-  confirm?: { title?: string; message?: string | (() => Promise<string>); confirmLabel?: string; reason?: { label: string; required?: boolean; /** whole-number box (stock): digits only, filled with `initial` */ numeric?: boolean; initial?: string } };
+  confirm?: { title?: string; message?: string | (() => Promise<string>); confirmLabel?: string; reason?: { label: string; required?: boolean; /** whole-number box (stock): digits only, filled with `initial` */ numeric?: boolean; initial?: string };
+    /** pick one of these first (loaded when the step opens), e.g. a free driver; its id is the 2nd argument of run() */
+    choices?: () => Promise<{ id: string; label: string }[]>; choicesEmpty?: string };
   /** toast after a successful request (none for navigation) */
   success?: string;
   /** error text for a failed request (default: the error's message) */
@@ -69,14 +71,14 @@ const errorText = (e: unknown, fallback: string) => (e instanceof Error && e.mes
 export function ActionsSheet({ visible, onClose, title, subtitle, actions }: { visible: boolean; onClose: () => void; title: string; subtitle?: string; actions: ItemAction[] }) {
   const { t, isArabic } = useL();
   const { g, row, align } = useGarageTheme();
-  const [pending, setPending] = useState<ItemAction | null>(null), [busy, setBusy] = useState(false), [reason, setReason] = useState(""), [message, setMessage] = useState<string | null>(null), [loadingMsg, setLoadingMsg] = useState(false);
-  useEffect(() => { if (!visible) { setPending(null); setReason(""); setMessage(null); setBusy(false); } }, [visible]);
+  const [pending, setPending] = useState<ItemAction | null>(null), [busy, setBusy] = useState(false), [reason, setReason] = useState(""), [message, setMessage] = useState<string | null>(null), [loadingMsg, setLoadingMsg] = useState(false), [opts, setOpts] = useState<{ id: string; label: string }[] | null>(null), [picked, setPicked] = useState<string | null>(null);
+  useEffect(() => { if (!visible) { setPending(null); setReason(""); setMessage(null); setBusy(false); setOpts(null); setPicked(null); } }, [visible]);
 
-  const execute = async (a: ItemAction, why?: string) => {
+  const execute = async (a: ItemAction, why?: string, pick?: string) => {
     setBusy(true);
     if (toast) { toast = null; notify(); } // never leave the previous action's toast on screen while this one runs
     try {
-      const out = a.run(why?.trim() || undefined);
+      const out = a.run(why?.trim() || undefined, pick);
       if (out && typeof (out as Promise<unknown>).then === "function") { await out; hapticSuccess(); if (a.success) showToast(a.success, "ok"); }
       onClose();
     } catch (e) {
@@ -87,18 +89,28 @@ export function ActionsSheet({ visible, onClose, title, subtitle, actions }: { v
     if (a.disabled || busy) return;
     const confirm = a.confirm ?? (a.destructive ? {} : null);
     if (!confirm) { void execute(a); return; }
-    setPending(a); setReason(confirm.reason?.initial ?? ""); setMessage(null);
+    setPending(a); setReason(confirm.reason?.initial ?? ""); setMessage(null); setOpts(null); setPicked(null);
+    if (confirm.choices) confirm.choices().then(setOpts).catch((e) => { setOpts([]); setMessage(errorText(e, "")); });
     if (typeof confirm.message === "function") { setLoadingMsg(true); confirm.message().then((m) => setMessage(m)).catch((e) => setMessage(errorText(e, ""))).finally(() => setLoadingMsg(false)); }
     else setMessage(confirm.message ?? null);
   };
 
-  const c = pending ? (pending.confirm ?? {}) : null, needReason = !!c?.reason?.required && !reason.trim();
+  const c = pending ? (pending.confirm ?? {}) : null, needReason = !!c?.reason?.required && !reason.trim(), needPick = !!c?.choices && !picked;
   return (
     <Sheet visible={visible} onClose={() => { if (!busy) onClose(); }} title={pending ? (c?.title ?? `${pending.label}?`) : title} closeLabel={t("Close", "إغلاق")}>
       {pending && c ? (
         <View style={{ gap: 12 }}>
           <GText soft style={[gType.caption, align]}>{title}</GText>
           {loadingMsg ? <ActivityIndicator color={g.accent} /> : message ? <GText style={[gType.body, align]}>{message}</GText> : null}
+          {c.choices ? (
+            opts === null ? <ActivityIndicator color={g.accent} /> : !opts.length ? <GText soft style={[gType.body, align]}>{c.choicesEmpty ?? t("Nothing to choose from right now.", "لا يوجد ما يمكن اختياره الآن.")}</GText> : (
+              <View style={{ gap: 6 }}>{opts.map((o) => (
+                <Tap key={o.id} label={o.label} onPress={() => setPicked(o.id)} style={[row, { minHeight: 48, alignItems: "center", gap: 12, paddingHorizontal: 14, borderRadius: gShape.small, backgroundColor: picked === o.id ? g.tint : g.card, borderWidth: 1, borderColor: picked === o.id ? g.accent : g.line }]}>
+                  <GIcon name={picked === o.id ? "radio-button-on" : "radio-button-off"} size={20} color={picked === o.id ? g.accent : g.soft} />
+                  <GText style={[gType.label, align, { flex: 1 }]}>{o.label}</GText>
+                </Tap>))}</View>
+            )
+          ) : null}
           {c.reason ? (
             <View style={{ gap: 6 }}>
               <GText style={[gType.label, align]}>{c.reason.label}</GText>
@@ -106,7 +118,7 @@ export function ActionsSheet({ visible, onClose, title, subtitle, actions }: { v
                 style={{ color: g.ink, borderWidth: 1, borderColor: g.line, borderRadius: 12, padding: 12, minHeight: c.reason.numeric ? 48 : 84, textAlign: align.textAlign, backgroundColor: g.cardSoft, textAlignVertical: "top" }} />
             </View>
           ) : null}
-          <GButton variant={pending.destructive ? "danger" : "primary"} label={c.confirmLabel ?? pending.label} busy={busy} disabled={busy || loadingMsg || needReason} onPress={() => void execute(pending, reason)} />
+          <GButton variant={pending.destructive ? "danger" : "primary"} label={c.confirmLabel ?? pending.label} busy={busy} disabled={busy || loadingMsg || needReason || needPick} onPress={() => void execute(pending, reason, picked ?? undefined)} />
           <GButton variant="ghost" label={t("Cancel", "إلغاء")} disabled={busy} onPress={() => setPending(null)} />
         </View>
       ) : (
@@ -162,7 +174,7 @@ export function ItemRow({ title, subtitle, actions, onPress, children, style, bo
   const [open, setOpen] = useState(false);
   const body = (
     <Pressable accessibilityRole={onPress ? "button" : undefined} accessibilityLabel={title} accessibilityHint={t("Press and hold for actions", "اضغط مطولًا لعرض الإجراءات")} onPress={onPress} onLongPress={() => setOpen(true)} delayLongPress={380}
-      style={({ pressed }) => ({ gap: 6, paddingEnd: 40, opacity: pressed && onPress ? 0.9 : 1 })}>
+      style={({ pressed }) => ({ gap: 6, [isArabic ? "paddingLeft" : "paddingRight"]: 40, opacity: pressed && onPress ? 0.9 : 1 })}>
       {children}
     </Pressable>
   );
