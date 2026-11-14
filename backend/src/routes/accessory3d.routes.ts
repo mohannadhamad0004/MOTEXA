@@ -21,7 +21,7 @@ export function createAccessory3DRouter(service = createAccessory3DService(), pa
       res.status(500).json({ success: false, message: "Could not complete the 3D accessory request." });
     }
   };
-  const json = express.json({ limit: "8kb" }), photoJson = express.json({ limit: "7mb" });
+  const json = express.json({ limit: "8kb" }), photoJson = express.json({ limit: "7mb" }), modelJson = express.json({ limit: "12mb" });
   const shop = [guards.auth, guards.provider], shopWrite = [...shop, guards.approved], admin = [guards.auth, guards.admin], customer = [guards.auth, guards.customer];
   const p = (req: Request, k = "productId") => String(req.params[k]);
   /** ?part=FRONT|REAR: a body kit's bumper (default MAIN, every other product) */
@@ -34,7 +34,8 @@ export function createAccessory3DRouter(service = createAccessory3DService(), pa
   router.get(s, ...shop, handle(async (req, res, uid) => res.json(await service.get(uid, p(req), part(req)))));
   router.put(s, ...shopWrite, json, handle(async (req, res, uid) => res.json({ accessory: await service.save(uid, p(req), req.body ?? {}, part(req)) })));
   router.delete(s, ...shopWrite, handle(async (req, res, uid) => { await service.remove(uid, p(req), part(req)); res.json({ success: true }); }));
-  router.post(s + "/photos/:kind", ...shopWrite, photoJson, handle(async (req, res, uid) => res.status(201).json({ accessory: await service.addPhoto(uid, p(req), String(req.params.kind).toUpperCase(), req.body?.dataBase64, part(req)) })));
+  router.post(s + "/photos/:kind", ...shopWrite, photoJson, handle(async (req, res, uid) => res.status(201).json({ accessory: await service.addPhoto(uid, p(req), String(req.params.kind).toUpperCase(), req.body?.dataBase64, part(req), req.body?.slot) })));
+  router.post(s + "/model-file", ...shopWrite, modelJson, handle(async (req, res, uid) => res.status(201).json({ accessory: await service.addModelFile(uid, p(req), req.body?.dataBase64, part(req)) })));
   router.delete(s + "/photos/:photoId", ...shopWrite, handle(async (req, res, uid) => res.json({ accessory: await service.removePhoto(uid, p(req), p(req, "photoId"), part(req)) })));
   router.post(s + "/submit", ...shopWrite, json, handle(async (req, res, uid) => res.json({ accessory: await service.submit(uid, p(req), req.body?.consent, part(req)) })));
   router.post(s + "/revise", ...shopWrite, handle(async (req, res, uid) => res.json({ accessory: await service.revise(uid, p(req), part(req)) })));
@@ -50,6 +51,7 @@ export function createAccessory3DRouter(service = createAccessory3DService(), pa
   router.post(a + "/:id/preview", ...admin, json, handle(async (req, res, uid) => res.json({ accessory: await service.preview(uid, p(req, "id"), req.body?.generationId) })));
   router.post(a + "/:id/regenerate", ...admin, json, handle(async (req, res, uid) => res.json({ accessory: await service.regenerate(uid, p(req, "id"), req.body?.notes) })));
   router.post(a + "/:id/validate", ...admin, json, handle(async (req, res, uid) => { await prepareManualAccessory(p(req, "id"), uid, { keepOriginal: req.body?.keepOriginal === true }); res.json({ accessory: await service.adminGet(p(req, "id")) }); }));
+  router.post(a + "/:id/use-shop-model", ...admin, handle(async (req, res, uid) => res.json({ accessory: await service.useShopModel(uid, p(req, "id")) })));
   router.post(a + "/:id/refit", ...admin, handle(async(req,res,uid)=>res.json(await autoFits.rerun(uid,p(req,"id")))));
   router.post(a + "/:id/unpublish", ...admin, handle(async(req,res,uid)=>res.json({accessory:await service.publication(uid,p(req,"id"),false)})));
   router.post(a + "/:id/reactivate", ...admin, handle(async(req,res,uid)=>res.json({accessory:await service.publication(uid,p(req,"id"),true)})));

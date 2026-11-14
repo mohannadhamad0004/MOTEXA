@@ -26,7 +26,10 @@ export type Accessory = {
   lifecycleState?:string;fitmentNotes?:string|null;deactivatedAt?:string|null;
   id: string; productId: string; kitPart: KitPart; accessoryType: AccessoryType; status: AccessoryStatus; revision: number; creditsUsed: number; size: Size; rim: RimSpecs | null;
   fitsGenerationIds: string[]; installedGenerationId: string | null; installed360: boolean; installedApproved: boolean;
-  partPhotos: { id: string }[]; installedPhotos: { id: string }[]; reviewNotes: string | null; submittedAt: string | null;
+  /** slot 0-3 = the guided angle the shop filled (bumpers / wing: back, left end, right end, three-quarter; rims: face, side, three-quarter, back) */
+  partPhotos: { id: string; slot?: number }[]; installedPhotos: { id: string }[]; reviewNotes: string | null; submittedAt: string | null;
+  /** the shop's own .glb ("I have a 3D file"): Parts Admin can use it as the model instead of generating one */
+  shopModel?: { id: string } | null;
   generationMode: string | null; provider: string | null; providerTaskId?: string | null; providerState: string | null; providerProgress: number | null; generationStage: string;
   generationErrorCode: string | null; failureReason: string | null; hasModel: boolean; validation: Record<string, unknown> | null; processing?: Record<string,unknown>|null;
   preview: Preview; modelRevision: string; mock: boolean; published: boolean; updatedAt: string;
@@ -98,7 +101,9 @@ const shop = (productId: string, rest = "", part: KitPart = "MAIN") => `/parts/m
 export const shopAccessoryApi = {
   get: (productId: string, part: KitPart = "MAIN") => api<{ eligible: boolean; category: string | null; isUniversal: boolean; productName?: string; sizeRanges?: Partial<Record<AccessoryType, { field: "widthMm" | "lengthMm"; min: number; max: number }>>; accessory: Accessory | null; parts: { part: KitPart; type: AccessoryType; status: AccessoryStatus }[] }>("GET", shop(productId, "", part)),
   save: async (productId: string, body: Record<string, unknown>, part: KitPart = "MAIN") => (await api<{ accessory: Accessory }>("PUT", shop(productId, "", part), body)).accessory,
-  photo: (productId: string, kind: "PART" | "INSTALLED", dataBase64: string, part: KitPart = "MAIN") => api("POST", shop(productId, `/photos/${kind}`, part), { dataBase64 }),
+  photo: (productId: string, kind: "PART" | "INSTALLED", dataBase64: string, part: KitPart = "MAIN", slot?: number) => api("POST", shop(productId, `/photos/${kind}`, part), slot === undefined ? { dataBase64 } : { dataBase64, slot }),
+  /** "I have a 3D file": the shop's .glb (one per part; a new one replaces it) */
+  modelFile: (productId: string, dataBase64: string, part: KitPart = "MAIN") => api("POST", shop(productId, "/model-file", part), { dataBase64 }),
   removePhoto: (productId: string, photoId: string, part: KitPart = "MAIN") => api("DELETE", shop(productId, `/photos/${photoId}`, part)),
   submit: (productId: string, part: KitPart = "MAIN") => api("POST", shop(productId, "/submit", part), { consent: true }),
   revise: (productId: string, part: KitPart = "MAIN") => api("POST", shop(productId, "/revise", part)),
@@ -109,7 +114,7 @@ const adm = "/admin/parts/accessory-3d";
 export const adminAccessoryApi = {
   list: async () => (await api<{ accessories: ListedAccessory[] }>("GET", adm)).accessories,
   get: async (id: string) => (await api<{ accessory: AdminAccessory }>("GET", `${adm}/${id}`)).accessory,
-  act: (id: string, action: "approve" | "reject" | "start" | "preview" | "regenerate" | "publish"|"refit"|"unpublish"|"reactivate"|"discard-candidate"|"validate", body: Record<string, unknown> = {}) => api("POST", `${adm}/${id}/${action}`, body),
+  act: (id: string, action: "approve" | "reject" | "start" | "preview" | "regenerate" | "publish"|"refit"|"unpublish"|"reactivate"|"discard-candidate"|"validate"|"use-shop-model", body: Record<string, unknown> = {}) => api("POST", `${adm}/${id}/${action}`, body),
   asset: (id: string, asset: string) => authenticatedBase64(`${adm}/${id}/assets/${asset}`),
   setCredits: (shopId: string, monthlyCredits: number) => api("PUT", `/admin/parts/shops/${shopId}/accessory-3d-credits`, { monthlyCredits }),
   zones: async () => (await api<{ models: ZoneModel[] }>("GET", "/admin/parts/accessory-zones")).models,

@@ -26,6 +26,8 @@ import {threeDError} from "../vehicleCatalog/lifecycleText";
 import {accessoryProcessingLabel} from "./processing";
 import {AccessoryFinalReview} from "./FinalReview";
 import { SupportWarning } from "./support";
+import { ShopWizard } from "./ShopWizard";
+import { SLOT_LABELS, WIZARD_TYPES, isWizardType, slotKind } from "./wizardArt";
 
 const tone = (s: AccessoryStatus) => s === "PUBLISHED" ? "success" : s === "REJECTED" ? "danger" : s === "DRAFT" ? "neutral" : s === "READY_FOR_FINAL_REVIEW" ? "accent" : "warning";
 const VIEW_LABELS: Record<string, [string, string]> = { front: ["Front", "الأمام"], "front-three-quarter": ["Front 3/4", "أمام ٣/٤"], "left-side": ["Side", "الجانب"],
@@ -82,14 +84,32 @@ function PreviewGrid({ preview, load }: { preview: NonNullable<Preview>; load: (
     </View>
   </View>;
 }
-function PhotoStrip({ photos, load, onRemove }: { photos: { id: string }[]; load: (id: string) => () => Promise<string>; onRemove?: (id: string) => void }) {
+function PhotoStrip({ photos, load, onRemove, labels }: { photos: { id: string }[]; load: (id: string) => () => Promise<string>; onRemove?: (id: string) => void; labels?: (string | null)[] }) {
   const { t } = useL(); const { row } = useGarageTheme();
   return <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
     {photos.map((p, i) => <View key={p.id} style={{ width: "31%", gap: 4 }}>
       <PrivateImage load={load(p.id)} label={p.id} height={90} />
-      {onRemove ? <GButton variant="secondary" label={t("Remove", "حذف")} onPress={() => onRemove(p.id)} /> : <GText soft style={gType.tiny}>{`#${i + 1}`}</GText>}
+      {onRemove ? <GButton variant="secondary" label={t("Remove", "حذف")} onPress={() => onRemove(p.id)} /> : <GText soft style={gType.tiny}>{labels?.[i] ?? `#${i + 1}`}</GText>}
     </View>)}
   </View>;
+}
+/** The shop's own .glb ("I have a 3D file"): Parts Admin uses it as the model (manual import + the same validation), no Meshy. */
+function ShopModelCard({ a, busy, use }: { a: Accessory; busy: boolean; use: () => void }) {
+  const { t } = useL(); const { g, row, align } = useGarageTheme();
+  const inUse = a.provider === "MANUAL" && a.hasModel, can = ["PENDING_REVIEW", "APPROVED_FOR_GENERATION", "READY_FOR_FINAL_REVIEW"].includes(a.status) && !a.published && !inUse;
+  return <Card style={{ borderWidth: 2, borderColor: g.accent }}>
+    <View style={[row, { gap: 12, alignItems: "center" }]}>
+      <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: g.tint, alignItems: "center", justifyContent: "center" }}><GText style={{ fontSize: 24 }}>▣</GText></View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <GText style={[gType.title, align]}>{t("The shop sent its own 3D file", "أرسل المتجر ملفه ثلاثي الأبعاد")}</GText>
+        <GText soft style={[gType.caption, align]}>{inUse ? t("This file is the current 3D model.", "هذا الملف هو النموذج ثلاثي الأبعاد الحالي.") : t(".glb, safety-checked on upload. Using it costs no Meshy credits.", "ملف ‎.glb‎ فُحص عند الرفع. استخدامه لا يستهلك رصيد Meshy.")}</GText>
+      </View>
+    </View>
+    {can ? <View style={{ marginTop: 12, gap: 8 }}>
+      <GButton icon="cube-outline" label={t("Use this file as the 3D model", "استخدم هذا الملف كنموذج ثلاثي الأبعاد")} disabled={busy} onPress={use} />
+      <GText soft style={[gType.tiny, align]}>{t("It is optimised and validated like any manual import; then review the fit and publish as usual. A previous candidate stays in the history.", "يُحسَّن ويُتحقق منه كأي استيراد يدوي، ثم راجع التركيب وانشره كالمعتاد. يبقى النموذج السابق في السجل.")}</GText>
+    </View> : null}
+  </Card>;
 }
 /** Resized + converted to JPEG by the shared picker; failures say which step failed, in the current language. */
 async function pickJpeg(t: (en: string, ar: string) => string) {
@@ -122,7 +142,19 @@ function SpotView({ id, spots, on, children }: { id: string; spots: { current: R
 }
 
 // ---------------- shop ----------------
+/** The 5-step wizard for a new request or an editable draft of a front / rear bumper, rear wing or rims (single part); the full form
+ *  below for every other type, a body kit, and any request that is under review or later (its status, preview, "Edit and resubmit"). */
 export function ShopAccessory3DScreen() {
+  const { productId } = useLocalSearchParams<{ productId: string }>();
+  const { t } = useL();
+  const probe = useLoad(() => shopAccessoryApi.get(productId), [productId]);
+  if (!probe.data) return <ProviderLayout title={t("Show it in 3D", "اعرضها ثلاثية الأبعاد")}>{probe.error ? <Note tone="danger">{probe.error}</Note> : <GText soft>{t("Loading…", "جارٍ التحميل…")}</GText>}</ProviderLayout>;
+  const d = probe.data, a = d.accessory;
+  const wizard = d.eligible && !d.parts.some(x => x.part !== "MAIN") && WIZARD_TYPES.some(k => typesForCategory(d.category).includes(k))
+    && (!a || ((a.status === "DRAFT" || a.status === "REJECTED") && isWizardType(a.accessoryType)));
+  return wizard ? <ShopWizard productId={productId} onDone={() => void probe.reload()} /> : <ClassicShopAccessory3DScreen />;
+}
+function ClassicShopAccessory3DScreen() {
   const { productId } = useLocalSearchParams<{ productId: string }>();
   const { t, isArabic } = useL(); const { g, row, align } = useGarageTheme();
   // a body kit = one product with a FRONT and / or a REAR bumper, each its own 3D part (photos, generation, review)
@@ -395,6 +427,7 @@ export function AdminAccessory3DDetail() {
       <Card>
         <GText style={[gType.label, align]}>{t("Real size", "المقاس الحقيقي")}</GText>
         {Object.entries(a.size).filter(([, v]) => v !== null).map(([k, v]) => <GText key={k} soft style={align}>{`${t(...sizeLabel[k]!)}: ${v}`}</GText>)}
+        {Object.values(a.size).every(v => v === null) ? <Note tone="warning" icon="resize-outline">{t("Size not given by the shop: measure it (part-map editor or the model).", "لم يُدخل المتجر المقاس: قِسه (محرر خريطة القطع أو النموذج).")}</Note> : null}
         <GText style={[gType.label, align, { marginTop: 10 }]}>{t("Fits", "تناسب")}</GText>
         {a.fits.map(f => <GText key={f.id} soft style={align}>{`${isArabic ? f.nameAr : f.name} (${f.years[0]}–${f.years[1]})${f.id === a.installedGenerationId ? ` · ${t("in the installed photos", "في صور التركيب")}` : ""}${f.has3d ? " · 3D" : ""}`}</GText>)}
         {a.fits.map(f => { const L = SIZE_LABEL[a.accessoryType], m = L ? f.partSizes?.[L] : null; if (!m) return null;
@@ -405,7 +438,8 @@ export function AdminAccessory3DDetail() {
           </View>; })}
         <SupportWarning type={a.accessoryType} generationIds={a.fits.map(f => f.id)} name={id => { const f = a.fits.find(x => x.id === id); return f ? (isArabic ? f.nameAr : f.name) : id; }} />
       </Card>
-      <Section title={t("Loose part photos (sent to the 3D provider)", "صور القطعة (تُرسل لمزود النموذج)")}><PhotoStrip photos={a.partPhotos} load={load} /></Section>
+      <Section title={t("Loose part photos (sent to the 3D provider)", "صور القطعة (تُرسل لمزود النموذج)")}>{a.partPhotos.length ? <PhotoStrip photos={a.partPhotos} load={load} labels={a.partPhotos.map(p => p.slot !== undefined ? t(...SLOT_LABELS[slotKind(a.accessoryType)][p.slot]!) : null)} /> : <GText soft style={align}>{t("No photos: the shop sent a 3D file instead.", "لا صور: أرسل المتجر ملفًا ثلاثي الأبعاد بدلًا منها.")}</GText>}</Section>
+      {a.shopModel ? <ShopModelCard a={a} busy={busy} use={() => void act("use-shop-model")} /> : null}
       <Section title={`${t("Installed photos", "صور التركيب")}${a.installed360 ? " · 360°" : ""}`}><PhotoStrip photos={a.installedPhotos} load={load} /></Section>
 
       {a.status === "PENDING_REVIEW" ? <Card>

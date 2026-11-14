@@ -19,10 +19,11 @@ export class PhotoError extends Error {
  * Returns null when cancelled; throws PhotoError(kind) otherwise. The converted photo is remembered by uri so the services
  * can send it without reading the file again.
  */
-export async function pickPhoto(): Promise<PickedPhoto | null> {
+export async function pickPhoto(from: "library" | "camera" = "library"): Promise<PickedPhoto | null> {
   let asset: ImagePicker.ImagePickerAsset | undefined;
   try {
-    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 1, allowsEditing: false });
+    if (from === "camera" && !(await ImagePicker.requestCameraPermissionsAsync()).granted) throw new Error("camera");
+    const r = from === "camera" ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 1, allowsEditing: false }) : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 1, allowsEditing: false });
     if (r.canceled) return null;
     asset = r.assets[0];
   } catch {
