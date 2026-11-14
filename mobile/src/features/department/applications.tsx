@@ -23,6 +23,8 @@ import { useDepartment } from "./DepartmentContext";
 import { ReviewKind } from "./departments";
 import { LocationRow } from "./LocationRow";
 import { ProductLine, TruckReview } from "./review";
+import { ItemRow } from "../../components/ItemActionsMenu";
+import { providerActions } from "./itemActions";
 import { Avatar, Check, CountBadge, DButton, DeptPage, Empty, ItemCard, KV, Load, Panel, Pill, ReasonBox, Section, Sheet, StatusChip, cardStyle, useDT } from "./ui";
 
 const go = (path: string) => router.push(path as Href);
@@ -94,7 +96,8 @@ export function ApplicationsList({ kind, header }: { kind: Kind; header?: React.
           ) : (
             <>
               {rows.map((r) => (
-                <ItemCard key={r.id} label={r.name} onPress={() => go(`/dept/review/${kind === "TOW" ? "company" : "shop"}/${r.id}`)}>
+                <ItemRow key={r.id} title={r.name} subtitle={kindLabel(d.t, kind)} box={{ ...cardStyle(d), padding: 14 }} style={{ marginBottom: 10 }} onPress={() => go(`/dept/review/${kind === "TOW" ? "company" : "shop"}/${r.id}`)}
+                  actions={providerActions(d.t, kind, { id: r.id, status: r.status, pendingDocuments: r.pendingDocuments }, () => Promise.all([list.reload(), counts.reload()]))}>
                   <View style={{ flexDirection: d.row, alignItems: "center", gap: 12 }}>
                     <Avatar name={r.name} />
                     <View style={{ flex: 1, minWidth: 0 }}>
@@ -108,7 +111,7 @@ export function ApplicationsList({ kind, header }: { kind: Kind; header?: React.
                     {r.pendingDocuments ? <Pill tone="amber" icon="document-text-outline" label={`${r.pendingDocuments} ${r.pendingDocuments === 1 ? d.t("document waiting", "مستند بانتظار المراجعة") : d.t("documents waiting", "مستندات بانتظار المراجعة")}`} /> : null}
                     {r.submittedAt ? <Pill icon="calendar-outline" label={fmtDay(r.submittedAt)} /> : null}
                   </View>
-                </ItemCard>
+                </ItemRow>
               ))}
             </>
           )

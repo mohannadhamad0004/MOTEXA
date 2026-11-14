@@ -7,7 +7,9 @@ import { publicImageUrl } from "../../core/constants/files";
 import { useLoad } from "../../core/hooks/useLoad";
 import { ACCESSORY_TYPE_LABELS, STATUS_LABELS, adminAccessoryApi, type AccessoryStatus, type ListedAccessory } from "../accessory3d/api";
 import { fmtDateTime } from "../requests/requestBits";
-import { CountBadge, Empty, ItemCard, Load, Pill, useDT } from "./ui";
+import { ItemRow } from "../../components/ItemActionsMenu";
+import { accessoryActions } from "./itemActions";
+import { CountBadge, Empty, Load, Pill, cardStyle, useDT } from "./ui";
 
 /** Which requests need the Parts Admin to act: new submissions and models waiting for the final check. */
 export const NEEDS_ACTION: AccessoryStatus[] = ["PENDING_REVIEW", "READY_FOR_FINAL_REVIEW"];
@@ -71,7 +73,7 @@ export function ThreeDRequests({ list }: { list: ReturnType<typeof useThreeDCoun
             {!rows.length ? <Empty icon="cube-outline" text={d.t("No 3D requests here.", "لا توجد طلبات ثلاثية الأبعاد هنا.")} hint={d.t("Requests appear as soon as a shop submits them.", "تظهر الطلبات فور إرسالها من المتجر.")} /> : null}
             <View style={{ gap: 10 }}>
               {rows.map((a) => (
-                <ItemCard key={a.id} label={`${a.productName}, ${a.shopName}`} onPress={() => router.push(`/dept/accessory3d/${a.id}` as Href)}>
+                <ItemRow key={a.id} title={`${a.productName}, ${a.shopName}`} box={{ ...cardStyle(d), padding: 14 }} onPress={() => router.push(`/dept/accessory3d/${a.id}` as Href)} actions={accessoryActions(d.t, a, () => list.reload())}>
                   <View style={{ flexDirection: d.row, gap: 12, alignItems: "center" }}>
                     <Thumb a={a} />
                     <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
@@ -84,7 +86,7 @@ export function ThreeDRequests({ list }: { list: ReturnType<typeof useThreeDCoun
                   <View style={{ flexDirection: d.row, marginTop: 8 }}>
                     <Pill tone={tone(a.status)} label={d.t(...STATUS_LABELS[a.status]).split(":")[0]!} />
                   </View>
-                </ItemCard>
+                </ItemRow>
               ))}
             </View>
           </>

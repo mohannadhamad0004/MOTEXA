@@ -35,6 +35,7 @@ import { Text, VisualProvider, useReducedMotion } from "../../components/MotexaV
 import { EditorialTitle, SectionCaption } from "../../components/PremiumUI";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { garageDark, garageLight } from "../../theme/garage";
+import { ToastHost } from "../../components/ItemActionsMenu";
 import { useDepartment } from "./DepartmentContext";
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -180,6 +181,7 @@ export function DeptPage({
             {children}
           </LinearGradient>
         </ScrollView>
+        <ToastHost />
         {footer ? (
           <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12), backgroundColor: d.surface, borderTopWidth: 1, borderTopColor: d.border }}>
             <View style={{ width: "100%", maxWidth: 680, alignSelf: "center" }}>{footer}</View>

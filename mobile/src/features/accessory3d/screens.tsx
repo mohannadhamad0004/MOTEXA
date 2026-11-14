@@ -700,7 +700,10 @@ function AutoFitEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
     const zone = v.front || v.rear ? { ...rest, wheelInsetMm: v } : Object.keys(rest).length ? rest : null;
     await adminAccessoryApi.setZone(key!, "RIMS", zone);
   }, async () => { setInset(null); await Promise.all([fits.reload(), refreshRuntimeModels()]); });
-  const kit = useMemo(() => r?.hasModel && r.fit && !r.fit.fit.failed ? { type: r.type, file: r.file??`private-accessory-${r.accessoryId}-${r.modelRevision}.glb`, assetLoader:r.file?undefined:()=>adminAccessoryApi.asset(r.accessoryId,"model"), size: r.size, finish: r.finish ?? null, paintMatch: false, adj: NO_ADJUST, fit: draft ? undefined : r.fit.fit, baseAdj: adj } : null, [r, adj, draft]);
+  // a failed fit stores only its reason: the part is fitted live with the viewer's evidence flags (placed where the auto-fit put it, never
+  // refused), so the admin sees why and can try nudges; it still cannot be approved (here or on the server)
+  const kit = useMemo(() => r?.hasModel && r.fit ? { type: r.type, file: r.file??`private-accessory-${r.accessoryId}-${r.modelRevision}.glb`, assetLoader:r.file?undefined:()=>adminAccessoryApi.asset(r.accessoryId,"model"),
+    size: r.fit.fit.failed ? { ...r.size, forceFit: true } : r.size, ...(r.fit.fit.failed ? { qaEvidence: true } : {}), finish: r.finish ?? null, paintMatch: false, adj: NO_ADJUST, fit: draft || r.fit.fit.failed ? undefined : r.fit.fit, baseAdj: adj } : null, [r, adj, draft]);
   const gaps = (info.feetGapMm ?? info.topGapMm ?? []).map(x => x === null ? "—" : `${x} mm`).join(" / ");
   return <GaragePage hero={<GarageHero variant="detail" backLabel={t("Back", "رجوع")} onBack={() => router.back()} title={t("Accessory fits", "تركيب الإكسسوارات")} line={t("Each accessory is fitted to each car once, from the car's real shape. Check it, correct it if needed, approve.", "تُركّب كل قطعة على كل سيارة مرة واحدة، من شكل السيارة الحقيقي. افحصها وصحّحها إن لزم ثم اعتمدها.")} />}
     onRefresh={() => { void models.reload(); void fits.reload(); }} refreshing={(models.loading && !!models.data) || (fits.loading && !!fits.data)}>
@@ -746,16 +749,17 @@ function AutoFitEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
             </View>
             {draft ? <Note>{t("Preview of the draft override: save it to refit every rim on this car.", "معاينة التعديل المقترح: احفظه لإعادة تركيب كل الجنوط على هذه السيارة.")}</Note> : hasOverride ? <Note>{t("This car uses your override instead of the automatic position.", "تستخدم هذه السيارة تعديلك بدلاً من الموضع التلقائي.")}</Note> : null}
           </View> : null}
-          {r.fit && !failed ? <View style={{ gap: 6 }}>
+          {r.fit ? <View style={{ gap: 6 }}>
+            {failed ? <Note>{t("Failed fit, shown where the automatic fit placed it. The nudges only preview a correction: a failed fit cannot be approved. Fix the cause (cut, part map or part) and rerun the fit.", "تركيب فاشل، معروض حيث وضعه التركيب التلقائي. أزرار التحريك للمعاينة فقط: لا يمكن اعتماد تركيب فاشل. أصلح السبب (القص أو خريطة القطع أو القطعة) ثم أعد تشغيل التركيب.")}</Note> : null}
             {FIT_NUDGE.map(([en, ar, f, step, lim]) => <View key={f} style={[row, { alignItems: "center", gap: 8 }]}>
               <GText style={[gType.label, align, { flex: 1 }]}>{t(en, ar)}</GText>
               <GButton variant="secondary" label="−" onPress={() => setAdj(a => ({ ...a, [f]: fitBound(f, a[f] - step, lim) }))} />
               <GText soft style={[gType.tiny, { width: 48, textAlign: "center", writingDirection: "ltr" }]}>{adj[f].toFixed(3)}</GText>
               <GButton variant="secondary" label="+" onPress={() => setAdj(a => ({ ...a, [f]: fitBound(f, a[f] + step, lim) }))} />
             </View>)}
-            <Check checked={fitReviewed} disabled={busy||!!viewerFitError||!kit||!previewCar} onPress={()=>setFitReviewed(v=>!v)} label={t("I reviewed the generated part on this vehicle.","راجعت القطعة المُنشأة على هذه السيارة.")}/>
-            <GButton label={t("Approve fit", "اعتماد التركيب")} disabled={busy||r.computing||!fitReviewed||!!viewerFitError||!kit||!previewCar} onPress={() => void work(async()=>{await adminAccessoryApi.approveFit(r.accessoryId, r.generation.id, JSON.stringify(adj) === JSON.stringify(NO_ADJUST) ? null : adj);await adminAccessoryApi.act(r.accessoryId,"preview",{generationId:r.generation.id});}, fits.reload)} />
-            <GButton variant="secondary" label={t("Needs correction","يحتاج إلى تصحيح")} disabled={busy} onPress={()=>void work(()=>adminAccessoryApi.needsCorrection(r.accessoryId,r.generation.id),fits.reload)}/>
+            <Check checked={fitReviewed} disabled={busy||!!failed||!!viewerFitError||!kit||!previewCar} onPress={()=>setFitReviewed(v=>!v)} label={t("I reviewed the generated part on this vehicle.","راجعت القطعة المُنشأة على هذه السيارة.")}/>
+            <GButton label={t("Approve fit", "اعتماد التركيب")} disabled={busy||r.computing||!!failed||!fitReviewed||!!viewerFitError||!kit||!previewCar} onPress={() => void work(async()=>{await adminAccessoryApi.approveFit(r.accessoryId, r.generation.id, JSON.stringify(adj) === JSON.stringify(NO_ADJUST) ? null : adj);await adminAccessoryApi.act(r.accessoryId,"preview",{generationId:r.generation.id});}, fits.reload)} />
+            <GButton variant="secondary" label={t("Needs correction","يحتاج إلى تصحيح")} disabled={busy||!!failed} onPress={()=>void work(()=>adminAccessoryApi.needsCorrection(r.accessoryId,r.generation.id),fits.reload)}/>
             <GButton variant="secondary" label={t("Reset to auto-fit", "العودة إلى التركيب التلقائي")} disabled={busy} onPress={() => setAdj(NO_ADJUST)} />
           </View> : null}
         </View> : null}

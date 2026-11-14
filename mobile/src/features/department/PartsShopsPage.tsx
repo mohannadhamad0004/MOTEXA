@@ -14,7 +14,9 @@ import { cityLabel } from "../../core/constants/cities";
 import { useLoad } from "../../core/hooks/useLoad";
 import { review } from "../provider/api";
 import type { Verification } from "../parts/partsService";
-import { Avatar, DButton, DeptPage, Empty, ItemCard, Load, Pill, Section, StatusChip, useDT } from "./ui";
+import { ItemRow } from "../../components/ItemActionsMenu";
+import { providerActions } from "./itemActions";
+import { Avatar, DButton, DeptPage, Empty, Load, Pill, Section, StatusChip, cardStyle, useDT } from "./ui";
 
 const go = (path: string) => router.push(path as Href);
 const ltr = (v: string) => "⁦" + v + "⁩";
@@ -127,7 +129,8 @@ export function PartsShopsPage() {
                 const waiting = data!.pendingDocs.get(s.id) ?? 0;
                 const cats = labels(s);
                 return (
-                  <ItemCard key={s.id} label={s.shopName} onPress={() => go(`/dept/review/shop/${s.id}`)}>
+                  <ItemRow key={s.id} title={s.shopName} subtitle={[s.brandName, s.branchName].filter(Boolean).join(" · ") || undefined} box={{ ...cardStyle(d), padding: 14 }} style={{ marginBottom: 10 }} onPress={() => go(`/dept/review/shop/${s.id}`)}
+                    actions={providerActions(d.t, "PARTS", { id: s.id, status: s.verificationStatus === "DRAFT" ? "DRAFT" : s.verificationStatus, pendingDocuments: waiting }, () => state.reload())}>
                     <View style={{ flexDirection: d.row, alignItems: "flex-start", gap: 12 }}>
                       <Avatar name={s.shopName} />
                       <Names s={s} />
@@ -146,10 +149,7 @@ export function PartsShopsPage() {
                         {cats.length > 3 ? <Pill label={`+${cats.length - 3}`} /> : null}
                       </View>
                     ) : null}
-                    <View style={{ marginTop: 10 }}>
-                      <DButton variant="ghost" icon="eye-outline" label={d.t("View shop", "عرض المتجر")} onPress={() => go(`/dept/review/shop/${s.id}`)} />
-                    </View>
-                  </ItemCard>
+                  </ItemRow>
                 );
               })
             )

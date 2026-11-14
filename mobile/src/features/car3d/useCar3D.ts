@@ -8,7 +8,9 @@ import type { FitAdjust } from "./car3d";
 import type { AccessoryType, PartLabel, PartMap } from "./modelConfig";
 
 /** One shop accessory on the car (sceneHtml KIT): its published file, real size, paint-to-match and the customer's Adjust. */
-export type Kit = { type: AccessoryType; file: string; paintMatch: boolean; adj: FitAdjust; /** rims: the shop's finish (SILVER / BLACK / GUNMETAL / CHROME) */ finish?: string | null; size?: { widthMm?: number | null; lengthMm?: number | null; rimInches?: number | null };
+export type Kit = { type: AccessoryType; file: string; paintMatch: boolean; adj: FitAdjust; /** rims: the shop's finish (SILVER / BLACK / GUNMETAL / CHROME) */ finish?: string | null; size?: { widthMm?: number | null; lengthMm?: number | null; rimInches?: number | null; /** Parts Admin, failed fit: place it anyway (evidence) */ forceFit?: boolean };
+  /** Parts Admin, failed fit: measure but never refuse, so the part shows where the auto-fit put it */
+  qaEvidence?: boolean;
   /** Owner-only preview: authenticated loader, never placed in the public asset cache. */
   assetLoader?: () => Promise<string>;
   /** the stored auto-fit to replay (validated by the viewer; a stale one is ignored and the part is fitted live) */
