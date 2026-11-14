@@ -1,6 +1,7 @@
 import { Async, EmptyState, Notice } from "../../../components/ui/Feedback";
 import { Button } from "../../../components/ui/Button";
-import { Card } from "../../../components/ui/Card";
+import { ItemRow } from "../../../components/ItemActionsMenu";
+import { companyTruckActions } from "./companyActions";
 import { StatTiles } from "../../../components/blueprint";
 import { ProviderLayout as DashboardLayout } from "../../../components/layout/ProviderLayout";
 import { useL } from "../../../core/hooks/useL";
@@ -43,14 +44,14 @@ export default function MyFleet() {
               <EmptyState icon="car-sport-outline" text={t("No trucks yet. Add your first truck.", "لا توجد شاحنات بعد. أضف أول شاحنة.")} />
             ) : (
               trucks.map((tr) => (
-                <Card key={tr.id} label={tr.plate} onPress={() => router.push(`/provider/tow/${tr.id}`)}>
+                <ItemRow key={tr.id} title={tr.plate} onPress={() => router.push(`/provider/tow/${tr.id}`)} actions={companyTruckActions(t, tr, { reload: state.reload, edit: () => router.push(`/provider/tow/${tr.id}`) })} style={{ marginBottom: 10 }}>
                   <TruckSummary truck={tr} />
                   {tr.verification === "REJECTED" && tr.rejectionReason ? (
                     <View style={{ marginTop: 12 }}>
                       <Notice tone="danger" icon="close-circle-outline">{tr.rejectionReason}</Notice>
                     </View>
                   ) : null}
-                </Card>
+                </ItemRow>
               ))
             )}
           </>

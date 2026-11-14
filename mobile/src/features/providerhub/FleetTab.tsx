@@ -2,7 +2,9 @@ import { Image } from "expo-image";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
-import { Card, Chip, EmptyState, ErrorState, GButton, GText, ListRow, Note, SkeletonRows, StatusChip, Tone, Toggle } from "../../components/garage";
+import { Card, Chip, EmptyState, ErrorState, GButton, GText, ListRow, Note, SkeletonRows, StatusChip, Tone } from "../../components/garage";
+import { ItemRow } from "../../components/ItemActionsMenu";
+import { companyDriverActions, companyTruckActions } from "../tow/provider/companyActions";
 import { ProviderLayout } from "../../components/layout/ProviderLayout";
 import { publicImageUrl } from "../../core/constants/files";
 import { useL } from "../../core/hooks/useL";
@@ -31,7 +33,6 @@ export function FleetTab() {
   const [drivers, setDrivers] = useState<CompanyDriver[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [wizard, setWizard] = useState<Wizard>(null);
-  const [busy, setBusy] = useState(false);
   const load = useCallback(async () => {
     try {
       const [f, d] = await Promise.all([towFleetService.getMyFleet(asActor(user)), companyDispatch.drivers()]);
@@ -63,18 +64,6 @@ export function FleetTab() {
     setWizard(null);
     void load();
   };
-  const toggle = async (d: CompanyDriver, online: boolean) => {
-    setBusy(true);
-    try {
-      await companyDispatch.updateDriver(d.id, { offline: !online });
-      await load();
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <>
       <ProviderLayout title={t("Fleet", "الأسطول")} subtitle={drivers && trucks ? t(`${drivers.length} drivers · ${trucks.length} trucks`, `${drivers.length} سائقين · ${trucks.length} شاحنات`) : undefined} onRefresh={load}>
@@ -103,7 +92,7 @@ export function FleetTab() {
             const why = reason(d);
             const photo = publicImageUrl(d.photoUri);
             return (
-              <Card key={d.id}>
+              <ItemRow key={d.id} title={d.name} subtitle={d.truck ? d.truck.plate : undefined} actions={companyDriverActions(t, d, { reload: load, edit: () => setWizard({ kind: "driver", driver: d }) })}>
                 <View style={[row, { alignItems: "center", gap: 12 }]}>
                   {photo ? <Image source={{ uri: photo }} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: g.tint }} contentFit="cover" /> : <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: g.tint, alignItems: "center", justifyContent: "center" }}><GText style={[gType.title, { color: g.accentText }]}>{d.name.trim().charAt(0).toUpperCase()}</GText></View>}
                   <View style={{ flex: 1 }}>
@@ -114,12 +103,7 @@ export function FleetTab() {
                 </View>
                 {why ? <View style={{ marginTop: 8 }}><Note tone={d.approval === "PENDING" ? "neutral" : "danger"} icon="shield-checkmark-outline">{why}</Note></View> : null}
                 {d.job ? <ListRow divider icon="navigate-outline" title={`${t("On a job", "في مهمة")}: ${d.job.customerFirstName}`} onPress={() => router.push({ pathname: "/provider/tow/dispatch/[id]", params: { id: d.job!.id } })} /> : null}
-                <Toggle label={t("Online", "متصل")} value={!d.offline} onChange={(v) => !busy && void toggle(d, v)} />
-                <View style={[row, { gap: 10, marginTop: 6 }]}>
-                  <GButton flex variant="secondary" icon="create-outline" label={t("Edit", "تعديل")} onPress={() => setWizard({ kind: "driver", driver: d })} />
-                  {!d.isOwner ? <GButton flex variant="ghost" icon="mail-outline" label={t("Send code", "إرسال الرمز")} disabled={busy} onPress={() => void companyDispatch.invite(d.id).then(load).catch((e) => setError(e.message))} /> : null}
-                </View>
-              </Card>
+              </ItemRow>
             );
           }) : null}
 
@@ -128,7 +112,7 @@ export function FleetTab() {
             const c = truckChip(x);
             const photo = publicImageUrl(x.photoUri);
             return (
-              <Card key={x.id} onPress={() => router.push({ pathname: "/provider/tow/[id]", params: { id: x.id } })} label={x.plate}>
+              <ItemRow key={x.id} title={`${type[x.type]} · ${x.plate}`} onPress={() => router.push({ pathname: "/provider/tow/[id]", params: { id: x.id } })} actions={companyTruckActions(t, x, { reload: load, edit: () => setWizard({ kind: "truck", truck: x }) })}>
                 <View style={[row, { alignItems: "center", gap: 12 }]}>
                   {photo ? <Image source={{ uri: photo }} style={{ width: 72, height: 54, borderRadius: gShape.small, backgroundColor: g.tint }} contentFit="cover" /> : <View style={{ width: 72, height: 54, borderRadius: gShape.small, backgroundColor: g.tint }} />}
                   <View style={{ flex: 1 }}>
@@ -138,7 +122,7 @@ export function FleetTab() {
                   <StatusChip tone={c.tone} label={c.label} />
                 </View>
                 {x.expiredDocuments?.length ? <View style={{ marginTop: 8 }}><Note tone="danger" icon="alert-circle-outline">{t("A document expired: no new jobs until it is renewed.", "انتهت صلاحية مستند: لا مهام جديدة حتى يُجدَّد.")}</Note></View> : null}
-              </Card>
+              </ItemRow>
             );
           }) : null}
         </View>
