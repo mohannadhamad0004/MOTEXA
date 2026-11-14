@@ -59,6 +59,11 @@ export const PHOTO_KEYS = [
   "category.BULBS",
   "category.FOG_LIGHTS",
   "category.TAIL_LIGHTS",
+  "category.BUMPERS_BODY_KITS",
+  "category.BODY_OTHER",
+  "category.WINGS_SPOILERS",
+  "category.ROOF_RACKS",
+  "category.EXTERIOR_OTHER",
 ] as const;
 
 export type PhotoKey = (typeof PHOTO_KEYS)[number];
@@ -113,6 +118,11 @@ export const PHOTOS: Record<PhotoKey, ImageSourcePropType | null> = {
   "category.BULBS": null,
   "category.FOG_LIGHTS": null,
   "category.TAIL_LIGHTS": null,
+  "category.BUMPERS_BODY_KITS": null,
+  "category.BODY_OTHER": null,
+  "category.WINGS_SPOILERS": null,
+  "category.ROOF_RACKS": null,
+  "category.EXTERIOR_OTHER": null,
 };
 
 /** Placeholder icon per key (Ionicons outline name). */

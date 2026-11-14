@@ -282,7 +282,7 @@ export function ProductForm({ initial, product, isNew, onSubmit, onDone, admin =
           <Text style={[{ color: col.text, fontSize: 13, lineHeight: 20, marginBottom: 10 }, align]}>
             {typesForCategory(f.category).length
               ? product ? t("This part can be shown in 3D on customers' cars.", "يمكن عرض هذه القطعة ثلاثية الأبعاد على سيارات العملاء.") : t("Save the part first, then open it to add its 3D model. You can skip this step.", "احفظ القطعة أولًا ثم افتحها لإضافة نموذجها الثلاثي الأبعاد. يمكنك تخطي هذه الخطوة.")
-              : t("3D is for body kits, exterior accessories and rims. Nothing to do here: save the part.", "الثلاثي الأبعاد لأطقم الهيكل والإكسسوارات الخارجية والجنوط. لا شيء هنا: احفظ القطعة.")}
+              : t("3D preview isn't available for this kind of part yet (only bumpers & body kits, wings & spoilers and rims). Nothing to do here: save the part.", "المعاينة ثلاثية الأبعاد غير متاحة لهذا النوع من القطع بعد (فقط المصدات وأطقم الهيكل والأجنحة والسبويلرات والجنوط). لا شيء هنا: احفظ القطعة.")}
           </Text>
           {product && typesForCategory(f.category).length ? <Button variant="secondary" icon="cube-outline" disabled={busy} label={t("Save and request 3D", "حفظ وطلب نموذج ثلاثي الأبعاد")} onPress={() => void save(true)} /> : null}
         </Card>

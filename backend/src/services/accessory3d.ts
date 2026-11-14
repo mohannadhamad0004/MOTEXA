@@ -21,9 +21,10 @@ import { privatePath, storePrivate, removePrivate, PRIVATE_3D_DIR } from "./vehi
 import { ACCESSORY_TYPES, MAX_MODEL_BYTES, Vehicle3DError, digest, fail, normalizeAccessory, parseZone, readSafeGLB,parseCarModel } from "./vehicle3d-validation.js";
 
 export { ACCESSORY_TYPES } from "./vehicle3d-validation.js";
-/** Product categories that may carry a 3D accessory (rims only under WHEELS). */
-export const accessoryCategoriesFor = (type: string) => type === "RIMS" ? ["WHEELS"] : ["BODY", "EXTERIOR_ACCESSORIES"];
-export const ACCESSORY_CATEGORIES = ["BODY", "EXTERIOR_ACCESSORIES", "WHEELS"];
+/** The 3D parts each product category may carry (mirrored in mobile accessory3d/api.ts). Every other category: no 3D. */
+export const TYPES_FOR_CATEGORY: Record<string, string[]> = { BUMPERS_BODY_KITS: ["FRONT_BUMPER", "REAR_BUMPER"], WINGS_SPOILERS: ["WING"], WHEELS: ["RIMS"] };
+export const accessoryCategoriesFor = (type: string) => Object.keys(TYPES_FOR_CATEGORY).filter(c => TYPES_FOR_CATEGORY[c]!.includes(type));
+export const ACCESSORY_CATEGORIES = Object.keys(TYPES_FOR_CATEGORY);
 /** Add-ons that hide the car's own part (a "replace" zone) while they are on. */
 export const REPLACES_STOCK = ["WING", "SPOILER", "ROOF_RACK", "MIRROR_COVERS", "RIMS"];
 /** Which real size the fitter uses: rims = diameter in inches; skirts / flares = length along the car; the rest = width across it. */
@@ -348,7 +349,7 @@ export function createAccessory3DService(run: <T>(fn: (tx: Tx) => Promise<T>) =>
       const others = await tx.productAccessory3D.findMany({ where: { productId, kitPart: { not: part } }, select: { kitPart: true } });
       if (others.some(o => (part === "MAIN") !== (o.kitPart === "MAIN"))) return fail("KIT_MIXED", part === "MAIN" ? "This product is a body kit: edit its front or rear bumper." : "This product already has a single 3D part: delete it first to make it a body kit.", 409);
       if (isBumper(type) && product.isUniversal) return fail("BUMPER_NOT_UNIVERSAL", "Bumpers and body kits are made for specific cars: untick Universal on the product and choose the exact generations.");
-      if (!accessoryCategoriesFor(type).includes(product.category ?? "")) return fail("CATEGORY_MISMATCH", type === "RIMS" ? "Rims need the Wheels category." : "Body-kit and exterior parts need the Body or Exterior accessories category.");
+      if (!accessoryCategoriesFor(type).includes(product.category ?? "")) return fail("CATEGORY_MISMATCH", type === "RIMS" ? "Rims need the Wheels category." : type === "WING" ? "A rear wing needs the Wings & spoilers category." : "Bumpers and body kits need the Bumpers & body kits category.");
       const ids = input.fitsGenerationIds;
       if (!Array.isArray(ids) || ids.length > 60 || ids.some(i => typeof i !== "string")) return fail("INVALID_FITS", "Choose the generations this part fits.");
       const gens = await tx.vehicleGeneration.findMany({ where: { id: { in: ids as string[] }, isActive: true }, select: { id: true } });

@@ -21,6 +21,9 @@ export const SUBCATEGORIES: Record<string, readonly string[]> = {
   FILTERS: ["OIL_FILTERS", "AIR_FILTERS", "CABIN_FILTERS"],
   ELECTRICAL: ["BATTERIES", "ALTERNATORS_STARTERS", "WIRING_FUSES"],
   LIGHTING: ["HEADLIGHTS", "BULBS", "FOG_LIGHTS", "TAIL_LIGHTS"],
+  // the 3D wizard reads these: bumpers -> front / rear bumper, wings -> rear wing (WHEELS -> rims); the "other" ones get no 3D
+  BODY: ["BUMPERS_BODY_KITS", "BODY_OTHER"],
+  EXTERIOR_ACCESSORIES: ["WINGS_SPOILERS", "ROOF_RACKS", "EXTERIOR_OTHER"],
 };
 
 export type CategoryKey = (typeof CATALOG_GROUPS)[number]["categories"][number];

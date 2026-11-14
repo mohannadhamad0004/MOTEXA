@@ -27,7 +27,7 @@ async function main() {
   const shop = await prisma.partsShopProfile.findFirstOrThrow({ where: { user: { email: "demo.parts@motexa.test" } } });
   const gen = await prisma.vehicleGeneration.findFirstOrThrow({ where: { model3dKey: "bmw-3-series-e36" }, include: { vehicle: true } });
   const data = {
-    name: "BMW E36 M3 front bumper", category: "BODY", brand: "Demo", price: 950, stock: 3, reservedStock: 0, isHidden: false, isUniversal: false,
+    name: "BMW E36 M3 front bumper", category: "BUMPERS_BODY_KITS", brand: "Demo", price: 950, stock: 3, reservedStock: 0, isHidden: false, isUniversal: false,
     condition: "NEW" as const, description: "Demo product for the MOTEXA catalogue. Not real stock. Fits BMW 3 Series E36 only.",
     partNumber: PART_NO, partNumberNormalized: PART_NO.replace(/[^A-Z0-9]/g, ""),
   };

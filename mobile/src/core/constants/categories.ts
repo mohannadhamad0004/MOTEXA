@@ -53,7 +53,13 @@ export const CATALOG_GROUPS: (Named & { key: string; categories: Cat[] })[] = [
           { key: "TAIL_LIGHTS", en: "Tail lights", ar: "الأضواء الخلفية", icon: "bulb-outline" },
         ],
       },
-      { key: "BODY", en: "Body parts", ar: "قطع الهيكل", icon: "car-sport-outline" },
+      {
+        key: "BODY", en: "Body parts", ar: "قطع الهيكل", icon: "car-sport-outline",
+        children: [
+          { key: "BUMPERS_BODY_KITS", en: "Bumpers & body kits", ar: "المصدات وأطقم الهيكل", icon: "car-sport-outline" },
+          { key: "BODY_OTHER", en: "Other body parts", ar: "قطع هيكل أخرى", icon: "construct-outline" },
+        ],
+      },
       { key: "COOLING", en: "Cooling", ar: "التبريد", icon: "snow-outline" },
       { key: "TRANSMISSION", en: "Transmission & clutch", ar: "ناقل الحركة والقابض", icon: "cog-outline" },
     ],
@@ -77,7 +83,14 @@ export const CATALOG_GROUPS: (Named & { key: string; categories: Cat[] })[] = [
   {
     key: "ACCESSORIES", en: "Accessories & equipment", ar: "الإكسسوارات والمعدات", icon: "albums-outline",
     categories: [
-      { key: "EXTERIOR_ACCESSORIES", en: "Exterior accessories", ar: "إكسسوارات خارجية", icon: "sparkles-outline" },
+      {
+        key: "EXTERIOR_ACCESSORIES", en: "Exterior accessories", ar: "إكسسوارات خارجية", icon: "sparkles-outline",
+        children: [
+          { key: "WINGS_SPOILERS", en: "Wings & spoilers", ar: "الأجنحة والسبويلرات", icon: "airplane-outline" },
+          { key: "ROOF_RACKS", en: "Roof racks", ar: "حوامل السقف", icon: "albums-outline" },
+          { key: "EXTERIOR_OTHER", en: "Other exterior accessories", ar: "إكسسوارات خارجية أخرى", icon: "sparkles-outline" },
+        ],
+      },
       { key: "CAR_ELECTRONICS", en: "Car electronics", ar: "إلكترونيات السيارة", icon: "videocam-outline" },
       { key: "INTERIOR_ACCESSORIES", en: "Interior accessories", ar: "إكسسوارات داخلية", icon: "grid-outline" },
     ],
