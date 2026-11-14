@@ -14,11 +14,14 @@ import { api } from "../../core/config/api";
 import { cityLabel } from "../../core/constants/cities";
 import { useLoad } from "../../core/hooks/useLoad";
 import { useReduced } from "../../motion";
+import { ItemRow } from "../../components/ItemActionsMenu";
 import { review } from "../provider/api";
 import { fmtDay } from "../provider/labels";
 import { towAdminService } from "../tow/towService";
 import type { Truck } from "../tow/towService";
 import { truckTypeLabel } from "./departments";
+import { providerActions } from "./itemActions";
+import { truckActions } from "./towActions";
 import { Avatar, CountBadge, DeptPage, Empty, Pill, StatusChip, cardStyle, useDT } from "./ui";
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -200,7 +203,7 @@ export function TowAdminHome() {
             const st = truckState(t, d.t);
             return (
               <Rise key={t.id} i={4 + i}>
-                <Tap label={`${truckTypeLabel(d.t, t.type)} ${t.plate}`} onPress={() => go(`/dept/review/truck/${t.id}`)} style={{ ...cardStyle(d), padding: 14, marginBottom: 10 }}>
+                <ItemRow title={`${truckTypeLabel(d.t, t.type)} · ${t.plate}`} subtitle={companyName.get(t.companyId)} onPress={() => go(`/dept/review/truck/${t.id}`)} box={{ ...cardStyle(d), padding: 14 }} style={{ marginBottom: 10 }} actions={truckActions(d.t, t, () => fleet.reload())}>
                   <View style={{ flexDirection: d.row, alignItems: "center", gap: 12 }}>
                     <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: d.soft }}>
                       <Ionicons name="car-sport-outline" size={22} color={d.accent} />
@@ -213,7 +216,7 @@ export function TowAdminHome() {
                   <View style={{ flexDirection: d.row, marginTop: 10 }}>
                     <Pill tone={st.tone} icon={st.icon} label={st.label} />
                   </View>
-                </Tap>
+                </ItemRow>
               </Rise>
             );
           })
@@ -232,7 +235,7 @@ export function TowAdminHome() {
         ) : (
           recent.data.slice(0, 3).map((r, i) => (
             <Rise key={r.id} i={8 + i}>
-              <Tap label={r.name} onPress={() => go(`/dept/review/company/${r.id}`)} style={{ ...cardStyle(d), padding: 14, marginBottom: 10 }}>
+              <ItemRow title={r.name} subtitle={r.ownerName} onPress={() => go(`/dept/review/company/${r.id}`)} box={{ ...cardStyle(d), padding: 14 }} style={{ marginBottom: 10 }} actions={providerActions(d.t, "TOW", { id: r.id, status: r.status, pendingDocuments: r.pendingDocuments }, () => Promise.all([recent.reload(), fleet.reload(), stats.reload()]))}>
                 <View style={{ flexDirection: d.row, alignItems: "center", gap: 12 }}>
                   <Avatar name={r.name} />
                   <View style={{ flex: 1, minWidth: 0 }}>
@@ -246,7 +249,7 @@ export function TowAdminHome() {
                   {r.submittedAt ? <Pill icon="calendar-outline" label={fmtDay(r.submittedAt)} /> : null}
                   {r.pendingDocuments ? <Pill tone="amber" icon="document-text-outline" label={`${r.pendingDocuments} ${d.t("documents waiting", "مستندات بانتظار المراجعة")}`} /> : null}
                 </View>
-              </Tap>
+              </ItemRow>
             </Rise>
           ))
         )
@@ -264,7 +267,7 @@ export function TowAdminHome() {
         ) : (
           companies.map((c, i) => (
             <Rise key={c.id} i={11 + i}>
-              <Tap label={c.name} onPress={() => go(`/dept/review/company/${c.id}`)} style={{ ...cardStyle(d), padding: 14, marginBottom: 10 }}>
+              <ItemRow title={c.name} subtitle={cityLabel(c.city, d.ar)} onPress={() => go(`/dept/review/company/${c.id}`)} box={{ ...cardStyle(d), padding: 14 }} style={{ marginBottom: 10 }} actions={providerActions(d.t, "TOW", { id: c.id, status: c.verification }, () => Promise.all([fleet.reload(), recent.reload(), stats.reload()]))}>
                 <View style={{ flexDirection: d.row, alignItems: "center", gap: 12 }}>
                   <Avatar name={c.name} />
                   <View style={{ flex: 1, minWidth: 0 }}>
@@ -275,7 +278,7 @@ export function TowAdminHome() {
                   </View>
                   <StatusChip status={c.verification} />
                 </View>
-              </Tap>
+              </ItemRow>
             </Rise>
           ))
         )

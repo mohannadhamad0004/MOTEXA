@@ -5,7 +5,7 @@ import { gShape, gType, useGarageTheme } from "../../theme/garage";
 import { GIcon, GIconName, GText } from "./text";
 
 /** Pressable with a soft press state. Never put a Tap inside another Tap (web renders nested buttons). */
-export function Tap({ onPress, label, style, children, disabled, role = "button" }: { onPress?: () => void; label: string; style?: StyleProp<ViewStyle>; children: ReactNode; disabled?: boolean; role?: "button" | "link" | "tab" }) {
+export function Tap({ onPress, onLongPress, label, style, children, disabled, role = "button" }: { onPress?: () => void; onLongPress?: () => void; label: string; style?: StyleProp<ViewStyle>; children: ReactNode; disabled?: boolean; role?: "button" | "link" | "tab" }) {
   return (
     <Pressable
       accessibilityRole={role}
@@ -13,6 +13,7 @@ export function Tap({ onPress, label, style, children, disabled, role = "button"
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled || !onPress}
       onPress={onPress}
+      onLongPress={onLongPress}
       style={({ pressed }) => [style, pressed && { opacity: 0.86, transform: [{ scale: 0.985 }] }]}
     >
       {children}

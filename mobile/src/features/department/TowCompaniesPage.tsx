@@ -10,9 +10,11 @@ import InteractiveButton from "../../components/InteractiveButton";
 import { Text } from "../../components/MotexaVisual";
 import { cityLabel } from "../../core/constants/cities";
 import { useLoad } from "../../core/hooks/useLoad";
+import { ItemRow } from "../../components/ItemActionsMenu";
 import { review } from "../provider/api";
+import { providerActions } from "./itemActions";
 import { TowCompany, Truck, towAdminService } from "../tow/towService";
-import { Avatar, DButton, DeptPage, Empty, ItemCard, Load, Pill, Section, StatusChip, useDT } from "./ui";
+import { Avatar, DButton, DeptPage, Empty, Load, Pill, Section, StatusChip, cardStyle, useDT } from "./ui";
 
 const go = (path: string) => router.push(path as Href);
 const NOACTOR = { id: "", email: "", fullName: "", role: "ADMIN", permissions: [] as string[] };
@@ -95,7 +97,8 @@ export function TowCompaniesPage() {
                 const waiting = data!.pendingDocs.get(c.id) ?? 0;
                 const expired = trucks.reduce((n, t) => n + expiredDocs(t), 0);
                 return (
-                  <ItemCard key={c.id} label={c.name} onPress={() => go(`/dept/review/company/${c.id}`)}>
+                  <ItemRow key={c.id} title={c.name} subtitle={cityLabel(c.city, d.ar)} box={{ ...cardStyle(d), padding: 14 }} style={{ marginBottom: 10 }} onPress={() => go(`/dept/review/company/${c.id}`)}
+                    actions={providerActions(d.t, "TOW", { id: c.id, status: c.verification, pendingDocuments: waiting }, () => state.reload())}>
                     <View style={{ flexDirection: d.row, alignItems: "center", gap: 12 }}>
                       <Avatar name={c.name} />
                       <View style={{ flex: 1, minWidth: 0 }}>
@@ -111,10 +114,7 @@ export function TowCompaniesPage() {
                       {waiting ? <Pill tone="amber" icon="document-text-outline" label={`${waiting} ${d.t("documents to review", "مستندات للمراجعة")}`} /> : null}
                       {expired ? <Pill tone="bad" icon="alert-circle-outline" label={`${expired} ${d.t("expired", "منتهية")}`} /> : null}
                     </View>
-                    <View style={{ marginTop: 10 }}>
-                      <DButton variant="ghost" icon="eye-outline" label={d.t("View company", "عرض الشركة")} onPress={() => go(`/dept/review/company/${c.id}`)} />
-                    </View>
-                  </ItemCard>
+                  </ItemRow>
                 );
               })
             )
