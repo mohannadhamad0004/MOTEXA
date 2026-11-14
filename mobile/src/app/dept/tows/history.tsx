@@ -1,4 +1,6 @@
 import { router } from "expo-router";
+import { ItemRow } from "../../../components/ItemActionsMenu";
+import { towJobActions } from "../../../features/department/towActions";
 import { useMemo, useState } from "react";
 import { View } from "react-native";
 import { Card, Chip, EmptyState, ErrorState, Field, GarageHero, GaragePage, GText, ListRow, SkeletonRows, StatusChip } from "../../../components/garage";
@@ -57,14 +59,14 @@ export default function AdminTowHistory() {
       {state.data && !state.data.length ? <EmptyState photo="empty.requests" text={t("No jobs match.", "لا توجد مهام مطابقة.")} /> : null}
       <View style={{ gap: 10, marginTop: 8 }}>
         {state.data?.map((j) => (
-          <Card key={j.id} pad={12} onPress={() => router.push({ pathname: "/dept/tows/[id]", params: { id: j.id } })} label={j.company.name}>
+          <ItemRow key={j.id} title={`${j.company.name} · ${j.customer.firstName}`} onPress={() => router.push({ pathname: "/dept/tows/[id]", params: { id: j.id } })} actions={towJobActions(t, j, state.reload)}>
             <View style={[row, { alignItems: "center", justifyContent: "space-between", gap: 8 }]}>
               <GText numberOfLines={1} style={[gType.label, { fontWeight: "800", flex: 1 }, align]}>{`${j.company.name} · ${j.customer.firstName}`}</GText>
               <StatusChip tone={towTone(j.status)} label={L[j.status]} />
             </View>
             <ListRow icon="person-outline" title={j.driver?.name ?? t("No driver", "بلا سائق")} sub={`${j.vehicle.make} ${j.vehicle.model} · ${fmtDateTime(j.createdAt)}`} />
             {j.openReports ? <StatusChip tone="danger" icon="flag" label={t(`${j.openReports} open report`, `${j.openReports} بلاغ مفتوح`)} /> : null}
-          </Card>
+          </ItemRow>
         ))}
       </View>
     </GaragePage>

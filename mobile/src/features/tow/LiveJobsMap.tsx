@@ -4,6 +4,7 @@ import { towRoutePhase } from "../shared/locationPolicy";
 import { useState } from "react";
 import { View, useWindowDimensions } from "react-native";
 import { EmptyState, GIcon, GText, Note, StatusChip, Tap } from "../../components/garage";
+import { ActionsSheet, DotsButton, type ItemAction } from "../../components/ItemActionsMenu";
 import { useL } from "../../core/hooks/useL";
 import { gShape, gType, useGarageTheme } from "../../theme/garage";
 import { towTone } from "../requests/garageBits";
@@ -12,7 +13,14 @@ import { MAPS_AVAILABLE, ServiceMap, ServicePin } from "../shared/maps";
 import { RouteSummary, useRoute } from "../shared/useRoute";
 import { TowJob, liveLabel } from "./dispatchService";
 
-export function LiveJobsMap({ jobs, onOpen, showCompany = false }: { jobs: TowJob[]; onOpen: (id: string) => void; showCompany?: boolean }) {
+/** One job row's "⋮" (and long-press) sheet. */
+function JobMenu({ title, actions, children }: { title: string; actions: ItemAction[]; children: (openSheet: () => void) => React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (<>{children(() => setOpen(true))}<ActionsSheet visible={open} onClose={() => setOpen(false)} title={title} actions={actions} /></>);
+}
+
+/** actions = the "⋮" menu of each job in the list (the admin passes Open / Cancel); without it the row keeps its "Open" link. */
+export function LiveJobsMap({ jobs, onOpen, showCompany = false, actions }: { jobs: TowJob[]; onOpen: (id: string) => void; showCompany?: boolean; actions?: (j: TowJob) => ItemAction[] }) {
   const { g, shadow, row, align } = useGarageTheme();
   const { t } = useL();
   const L = useTowStatusLabels();
@@ -53,6 +61,22 @@ export function LiveJobsMap({ jobs, onOpen, showCompany = false }: { jobs: TowJo
       {chosen ? <RouteSummary route={route} loading={loading} /> : null}
       {jobs.map((j) => (
         <View key={j.id} style={[{ borderRadius: gShape.card, backgroundColor: j.id === sel ? g.tint : g.card, overflow: "hidden" }, shadow(1)]}>
+         {actions ? (
+          <JobMenu title={`${j.company.name} · ${j.customer.firstName}`} actions={actions(j)}>
+           {(openSheet) => (<View style={[row, { alignItems: "center", paddingEnd: 4, paddingBottom: 8 }]}>
+         <Tap label={j.customer.firstName} onPress={() => setSel(j.id === sel ? null : j.id)} style={[{ padding: 12, paddingBottom: 0, gap: 4 }, { flex: 1 }]} onLongPress={openSheet}>
+          <View style={[row, { alignItems: "center", gap: 8 }]}>
+            <GIcon name="car-outline" size={18} />
+            <GText numberOfLines={1} style={[gType.label, { fontWeight: "800", flex: 1 }, align]}>{showCompany ? `${j.company.name} · ${j.customer.firstName}` : `${j.customer.firstName} · ${j.vehicle.make} ${j.vehicle.model}`}</GText>
+            <StatusChip tone={towTone(j.status)} label={j.status === "EN_ROUTE" && j.arrivedAt ? L.ARRIVED : L[j.status]} />
+          </View>
+          <GText soft numberOfLines={1} style={[gType.caption, align]}>{j.driver ? `${j.driver.name} · ${liveLabel(j.driver.live, t)}` : t("No driver yet", "لا يوجد سائق بعد")}</GText>
+         </Tap>
+            <DotsButton title={`${j.company.name} · ${j.customer.firstName}`} onPress={openSheet} />
+           </View>)}
+          </JobMenu>
+         ) : (
+          <>
          <Tap label={j.customer.firstName} onPress={() => setSel(j.id === sel ? null : j.id)} style={{ padding: 12, paddingBottom: 0, gap: 4 }}>
           <View style={[row, { alignItems: "center", gap: 8 }]}>
             <GIcon name="car-outline" size={18} />
@@ -66,6 +90,8 @@ export function LiveJobsMap({ jobs, onOpen, showCompany = false }: { jobs: TowJo
             <GText style={[gType.caption, { color: g.accentText, fontWeight: "800" }]}>{t("Open", "فتح")}</GText>
             <GIcon name="chevron-forward" size={14} flip />
          </Tap>
+          </>
+         )}
         </View>
       ))}
     </View>

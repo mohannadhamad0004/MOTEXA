@@ -25,6 +25,8 @@ import { LocationRow } from "./LocationRow";
 import { ProductLine, TruckReview } from "./review";
 import { ItemRow } from "../../components/ItemActionsMenu";
 import { providerActions } from "./itemActions";
+import { truckActions } from "./towActions";
+import { towAdminService } from "../tow/towService";
 import { Avatar, Check, CountBadge, DButton, DeptPage, Empty, ItemCard, KV, Load, Panel, Pill, ReasonBox, Section, Sheet, StatusChip, cardStyle, useDT } from "./ui";
 
 const go = (path: string) => router.push(path as Href);
@@ -283,6 +285,8 @@ export function ApplicationReview({ kind, id }: { kind: Kind; id: string }) {
   const d = useDT();
   const state = useLoad(() => review.get(kind, id), [kind, id], 15000);
   const products = useLoad(async () => (kind === "PARTS" ? (await partsAdminService.getShop(NOACTOR, id)).products : []), [kind, id, state.data?.status]);
+  // out-of-service / on-a-job state of the company's trucks (the review payload does not carry it)
+  const fleet = useLoad(async () => (kind === "TOW" ? (await towAdminService.listTrucks(NOACTOR)).filter((x) => x.companyId === id) : []), [kind, id, state.data?.status]);
   const [mode, setMode] = useState<null | "changes" | "reject">(null);
   const [pq, setPq] = useState("");
   const [pf, setPf] = useState<"ALL" | "VISIBLE" | "HIDDEN" | "NOPHOTO">("ALL");
@@ -438,13 +442,14 @@ export function ApplicationReview({ kind, id }: { kind: Kind; id: string }) {
                   </View>
                   {a.trucks.length === 0 ? <Empty icon="car-sport-outline" text={d.t("This company has no trucks yet.", "لا توجد شاحنات لهذه الشركة بعد.")} /> : null}
                   {a.trucks.map((t) => (
-                    <ItemCard key={t.id} label={t.plate} onPress={() => go(`/dept/review/truck/${t.id}`)}>
+                    <ItemRow key={t.id} title={t.plate} subtitle={truckTypeLabel(d.t, t.type)} box={{ ...cardStyle(d), padding: 14 }} style={{ marginBottom: 10 }} onPress={() => go(`/dept/review/truck/${t.id}`)} actions={truckActions(d.t, { ...t, companyId: id, ...(fleet.data?.find((x) => x.id === t.id) ?? {}) }, () => Promise.all([state.reload(), fleet.reload()]), !!fleet.data)}>
                       <View style={{ flexDirection: d.row, alignItems: "center", gap: 10 }}>
                         <Ionicons name="car-sport-outline" size={24} color={d.accent} />
                         <Text numberOfLines={1} style={{ flex: 1, color: d.ink, fontSize: 14, fontWeight: "700", textAlign: d.align }}>{truckTypeLabel(d.t, t.type)} · {"⁦" + t.plate + "⁩"}</Text>
+                        {fleet.data?.find((x) => x.id === t.id)?.archivedAt ? <Pill tone="amber" icon="archive-outline" label={d.t("Out of service", "خارج الخدمة")} /> : null}
                         <StatusChip status={t.verification} />
                       </View>
-                    </ItemCard>
+                    </ItemRow>
                   ))}
                 </>
               ) : null}

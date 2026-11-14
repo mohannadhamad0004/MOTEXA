@@ -3,6 +3,7 @@ import { ErrorState, GarageHero, GaragePage, SkeletonBlock } from "../../../comp
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { adminTows } from "../../../features/tow/dispatchService";
+import { towJobActions } from "../../../features/department/towActions";
 import { LiveJobsMap } from "../../../features/tow/LiveJobsMap";
 import { gShape } from "../../../theme/garage";
 
@@ -17,7 +18,7 @@ export default function AdminActiveTows() {
     >
       {state.error && !state.data ? <ErrorState text={state.error} onRetry={state.reload} retryLabel={t("Retry", "إعادة المحاولة")} /> : null}
       {!state.data && !state.error ? <SkeletonBlock height={320} radius={gShape.card} /> : null}
-      {state.data ? <LiveJobsMap showCompany jobs={state.data} onOpen={(id) => router.push({ pathname: "/dept/tows/[id]", params: { id } })} /> : null}
+      {state.data ? <LiveJobsMap showCompany jobs={state.data} actions={(j) => towJobActions(t, j, state.reload)} onOpen={(id) => router.push({ pathname: "/dept/tows/[id]", params: { id } })} /> : null}
     </GaragePage>
   );
 }
