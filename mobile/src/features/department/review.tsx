@@ -17,7 +17,9 @@ import { Product, partsAdminService } from "../parts/partsService";
 import { privateImageSource } from "../shared/api";
 import { DocViewer, fmtDate, isExpired } from "../shared/blocks";
 import { TowCompany, Truck, towAdminService } from "../tow/towService";
-import { Check, DButton, Empty, KV, Load, Panel, Pill, ReasonBox, Section, StatusPill, DeptPage, useDT } from "./ui";
+import { ItemRow } from "../../components/ItemActionsMenu";
+import { productActions } from "./itemActions";
+import { Check, DButton, Empty, KV, Load, Panel, Pill, ReasonBox, Section, StatusPill, DeptPage, cardStyle, useDT } from "./ui";
 import { CheckItem, ReviewKind, Status, checklists, hasBlocking, truckTypeLabel } from "./departments";
 
 const NOACTOR = { id: "", email: "", fullName: "", role: "ADMIN", permissions: [] as string[] };
@@ -293,29 +295,12 @@ function ArchiveControl({ truck, onDone }: { truck: Truck; onDone: () => void })
 }
 
 // ---------------------------------------------------------------- parts: product moderation (hide / show)
+// One row per product: tap = details, "⋮" / long-press = Open details · Add photo · Edit · Hide / Show again (itemActions.productActions).
 export function ProductLine({ product: p, onDone }: { product: Product; onDone: () => void }) {
   const d = useDT();
-  const [hiding, setHiding] = useState(false);
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
   const cat = p.category ? CATEGORY_BY_KEY.get(p.category) : null;
   const condition = { NEW: d.t("New", "جديد"), USED: d.t("Used", "مستعمل"), REFURBISHED: d.t("Refurbished", "مجدّد") }[p.condition];
-  const change = async (c: { hidden: true; reason: string } | { hidden: false }) => {
-    setBusy(true);
-    setErr(null);
-    try {
-      await partsAdminService.setProductVisibility(NOACTOR, p.id, c);
-      hapticSuccess();
-      setHiding(false);
-      onDone();
-    } catch (e: any) {
-      hapticError();
-      setErr(e?.message ?? "Error");
-    } finally {
-      setBusy(false);
-    }
-  };
   // what a customer gets: only an approved shop's un-hidden product with a real photo. Every blocking reason is shown,
   // and "Customer visible" only when the server says so (a photo alone does not publish a product).
   const state = p.customerVisible ? (
@@ -328,8 +313,9 @@ export function ProductLine({ product: p, onDone }: { product: Product; onDone: 
     </>
   );
   return (
-    <Panel tone={p.hidden ? "bad" : undefined}>
-      <InteractiveButton accessibilityRole="button" accessibilityLabel={p.name} accessibilityState={{ expanded: open }} onPress={() => setOpen(!open)} style={{ flexDirection: d.row, gap: 12, alignItems: "flex-start" }}>
+    <ItemRow title={p.name} subtitle={p.partNumber} box={{ ...cardStyle(d, p.hidden ? "bad" : undefined), padding: 16 }} style={{ marginBottom: 14 }} onPress={() => setOpen(!open)}
+      actions={productActions(d.t, p, { toggleDetails: () => setOpen((o) => !o), open, reload: onDone })}>
+      <View style={{ flexDirection: d.row, gap: 12, alignItems: "flex-start" }}>
         <View style={{ width: 76, height: 76, borderRadius: 12, overflow: "hidden", backgroundColor: "#F4EFE8", alignItems: "center", justifyContent: "center" }}>
           {p.imageUri ? <Image source={{ uri: p.imageUri }} style={{ width: "100%", height: "100%" }} contentFit="scale-down" /> : <Ionicons name="image-outline" size={24} color="#B9AFA3" />}
         </View>
@@ -342,9 +328,8 @@ export function ProductLine({ product: p, onDone }: { product: Product; onDone: 
             <Pill label={`${d.t("Qty", "الكمية")} ${p.stock}`} />
           </View>
         </View>
-        <Ionicons name={open ? "chevron-up" : "chevron-down"} size={18} color={d.muted} />
-      </InteractiveButton>
-      <View style={{ flexDirection: d.row, flexWrap: "wrap", gap: 6, marginTop: 8 }}>{state}</View>
+      </View>
+      <View style={{ flexDirection: d.row, flexWrap: "wrap", gap: 6, marginTop: 2 }}>{state}</View>
       {open ? (
         <View style={{ marginTop: 10, gap: 6 }}>
           {p.description ? <Text style={{ color: d.ink, fontSize: 13, lineHeight: 20, textAlign: d.align }}>{p.description}</Text> : null}
@@ -363,23 +348,7 @@ export function ProductLine({ product: p, onDone }: { product: Product; onDone: 
         </View>
       ) : null}
       {p.hidden && p.hiddenReason ? <Text style={{ color: d.bad, fontSize: 12, lineHeight: 19, textAlign: d.align, marginTop: 6 }}>{p.hiddenReason}</Text> : null}
-      {err ? <Text accessibilityRole="alert" style={{ color: d.bad, fontSize: 12, textAlign: d.align }}>{err}</Text> : null}
-      <View style={{ marginTop: 8, gap: 8 }}>
-        {p.hasPhoto === false ? <DButton icon="camera-outline" label={d.t("Add product photo", "إضافة صورة المنتج")} onPress={() => router.push(`/dept/edit/product/${p.id}` as never)} /> : null}
-        <DButton variant="ghost" icon="create-outline" label={d.t("Edit product", "تعديل المنتج")} onPress={() => router.push(`/dept/edit/product/${p.id}` as never)} />
-        {!hiding && !p.hidden ? <DButton variant="ghost" icon="eye-off-outline" label={d.t("Hide", "إخفاء")} disabled={busy} onPress={() => setHiding(true)} /> : null}
-        {!hiding && p.hidden ? <DButton variant="ghost" icon="eye-outline" label={d.t("Show again", "إظهار مرة أخرى")} disabled={busy} onPress={() => change({ hidden: false })} /> : null}
-        {hiding ? (
-          <ReasonBox
-            title={d.t("Reason for hiding (required)", "سبب الإخفاء (مطلوب)")}
-            confirmLabel={d.t("Confirm hide", "تأكيد الإخفاء")}
-            busy={busy}
-            onCancel={() => setHiding(false)}
-            onConfirm={(reason) => change({ hidden: true, reason })}
-          />
-        ) : null}
-      </View>
-    </Panel>
+    </ItemRow>
   );
 }
 
