@@ -5,7 +5,7 @@ import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { router, useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
-import { Button } from "../../../components/ui/Button";
+import { Button } from "../../../features/provider/portal/ui";
 import { typesForCategory } from "../../../features/accessory3d/api";
 import { Product, partsShopService } from "../../../features/parts/partsService";
 import { ProductForm, blankProduct } from "../../../features/parts/ProductForm";

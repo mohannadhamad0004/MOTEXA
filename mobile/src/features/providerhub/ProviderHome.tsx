@@ -1,7 +1,6 @@
 import { router, useFocusEffect, type Href } from "expo-router";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
-import { SettingsSheet } from "../../components/blueprint";
 import { Card, EmptyState, ErrorState, GaragePage, GButton, GText, HeroLayout, ListRow, Section, SkeletonRows, StatusChip } from "../../components/garage";
 import { useL } from "../../core/hooks/useL";
 import { useLoad } from "../../core/hooks/useLoad";
@@ -132,7 +131,6 @@ export function ProviderHome({ area }: { area: ProviderArea }) {
   const { t } = useL();
   const user = useSessionUser();
   const state = useLoad(() => portalApi.summary(area), [user.id]);
-  const [settings, setSettings] = useState(false);
   const m = state.data?.metrics;
   return (
     <>
@@ -147,14 +145,13 @@ export function ProviderHome({ area }: { area: ProviderArea }) {
               tab: cfg.hero,
               title: state.data?.identity.name ?? t(cfg.eyebrow.en, cfg.eyebrow.ar),
               line: (m && cfg.line(m, t)) || undefined,
-              top: { label: t(cfg.eyebrow.en, cfg.eyebrow.ar), actions: [{ icon: "settings-outline", label: t("Settings", "الإعدادات"), onPress: () => setSettings(true) }] },
+              top: { label: t(cfg.eyebrow.en, cfg.eyebrow.ar), actions: [] },
             }}
           />
         }
       >
         {area === "tow" ? <TowBody /> : <PartsBody />}
       </GaragePage>
-      <SettingsSheet visible={settings} onClose={() => setSettings(false)} signOutButton />
     </>
   );
 }

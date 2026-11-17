@@ -1,7 +1,7 @@
 import { router, type Href } from "expo-router";
 import { useState } from "react";
+import { AppearanceSection } from "./AppearanceSection";
 import { View } from "react-native";
-import { SettingsSheet } from "../../components/blueprint";
 import { Card, ErrorState, GButton, GText, ListRow, Note, Section } from "../../components/garage";
 import { ProviderLayout } from "../../components/layout/ProviderLayout";
 import { useL } from "../../core/hooks/useL";
@@ -58,10 +58,9 @@ const GROUPS: Record<ProviderArea, { en: string; ar: string; rows: Row[] }[]> = 
  * (language and theme, log out with a confirmation). Every screen that used to be on Home is one row here.
  */
 export function ProfileHub({ area }: { area: ProviderArea }) {
-  const { t, isArabic } = useL();
+  const { t } = useL();
   const user = useSessionUser();
   const { align } = useGarageTheme();
-  const [settings, setSettings] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const where = useLoad(async () => {
     if (area === "tow") {
@@ -104,10 +103,11 @@ export function ProfileHub({ area }: { area: ProviderArea }) {
         </Card>
       </Section>
 
+      <AppearanceSection />
+
       <Section title={t("Preferences", "التفضيلات")}>
         <Card pad={8}>
-          <ListRow icon="color-palette-outline" title={t("Language and theme", "اللغة والمظهر")} sub={isArabic ? "العربية" : "English"} onPress={() => setSettings(true)} />
-          <ListRow divider icon="settings-outline" title={t("More settings", "المزيد من الإعدادات")} onPress={() => go(`/provider/${area}/settings`)} />
+          <ListRow icon="settings-outline" title={t("More settings", "المزيد من الإعدادات")} onPress={() => go(`/provider/${area}/settings`)} />
         </Card>
         <View style={{ marginTop: 12, gap: 8 }}>
           {!confirm ? (
@@ -123,7 +123,6 @@ export function ProfileHub({ area }: { area: ProviderArea }) {
           )}
         </View>
       </Section>
-      <SettingsSheet visible={settings} onClose={() => setSettings(false)} signOutButton />
     </ProviderLayout>
   );
 }

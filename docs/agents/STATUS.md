@@ -812,3 +812,11 @@
 - Test fixes: meshy guard ordered after the key check (KEY_MISSING test); autofit.test.ts waits for the background recompute its stale-fit case starts (it raced the next test and could write after cleanup).
 - Result: `npm test` 311/311 pass (accessory3d + lifecycle-3d included), 871 s. backend tsc 0.
 - Open: tests still read and write files in the shared backend/storage and backend/public/3d folders (fixtures remove only files they created). Separate test file roots would need the storage paths to follow NODE_ENV=test; not done. Diala's src/routes/admin.routes.ts builds its own Prisma client (no in-code guard; under npm test it gets the test DATABASE_URL).
+
+## 2026-11-17 - Claude Code - Part D role 1: parts shop on the shared layout (no commit)
+- ProviderLayout: removed the pill link row on sub-pages (second navigation); everything stays reachable from the tabs / Profile.
+- features/provider/portal/ui.tsx: Panel, ItemCard, Section, EmptyState and Button are now garage-kit components behind the old names (Card, gType title, garage EmptyState, GButton). Used by shop AND tow company pages (Analytics, Categories, Media, Settings, Profile, Customer preview, tow Dashboard/Availability/Service area).
+- Garage Chip minHeight 40 -> 44 (touch target; kit-wide, also the customer's filter chips).
+- Shop questions list: segmented control -> garage Tabs (same as Orders), garage EmptyState; question thread + product form use garage Card / GButton.
+- Checks: mobile tsc 0, mobile tests 80/80. Screenshots (Expo web 390 px, EN dark / AR light, before + after): .playwright-mcp/partD/shop-before, shop-after, sheet-shop-*.png.
+- Note: the Part C edits from earlier this session are still in the tree (AppearanceSection, header gear removed).

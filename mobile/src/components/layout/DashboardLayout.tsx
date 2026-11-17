@@ -1,5 +1,6 @@
 import { ReactNode, useState } from "react";
 import { DrawingKind, HeroIconButton, SettingsSheet, SimplePage } from "../blueprint";
+import { usePathname } from "expo-router";
 import { useL } from "../../core/hooks/useL";
 
 // Area of the app -> the drawing and the tag in the compact hero.
@@ -41,6 +42,7 @@ export function DashboardLayout({
 }) {
   const { t } = useL();
   const [open, setOpen] = useState(false);
+  const onProvider = usePathname().startsWith("/provider");
   const area = AREAS[brand] ?? AREAS.MOTEXA;
   return (
     <>
@@ -52,7 +54,7 @@ export function DashboardLayout({
         title={title}
         sub={subtitle}
         back={back ? "/" : undefined}
-        right={<HeroIconButton icon="settings" label={t("Settings", "الإعدادات")} onPress={() => setOpen(true)} />}
+        right={onProvider ? undefined : <HeroIconButton icon="settings" label={t("Settings", "الإعدادات")} onPress={() => setOpen(true)} />}
         onRefresh={onRefresh}
         refreshing={refreshing}
       >

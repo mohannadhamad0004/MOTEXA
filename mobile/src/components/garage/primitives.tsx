@@ -85,7 +85,7 @@ export function Chip({ label, on, icon, onPress, count }: { label: string; on?: 
     <Tap
       label={label}
       onPress={onPress}
-      style={[row, { minHeight: 40, alignItems: "center", gap: 6, paddingHorizontal: 14, borderRadius: gShape.pill, borderWidth: 1, borderColor: on ? g.accent : g.line, backgroundColor: on ? g.accent : g.card }]}
+      style={[row, { minHeight: 44, alignItems: "center", gap: 6, paddingHorizontal: 14, borderRadius: gShape.pill, borderWidth: 1, borderColor: on ? g.accent : g.line, backgroundColor: on ? g.accent : g.card }]}
     >
       {icon ? <GIcon name={icon} size={16} color={on ? g.onAccent : g.accentText} /> : null}
       <GText numberOfLines={1} style={[gType.caption, { fontWeight: "600", color: fg }]}>{label}</GText>

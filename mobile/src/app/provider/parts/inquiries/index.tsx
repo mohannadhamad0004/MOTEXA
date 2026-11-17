@@ -1,8 +1,8 @@
-import { Async, EmptyState } from "../../../../components/ui/Feedback";
+import { Async } from "../../../../components/ui/Feedback";
+import { EmptyState, Tabs } from "../../../../components/garage";
 import { ItemRow } from "../../../../components/ItemActionsMenu";
 import { shopInquiryActions } from "../../../../features/parts/provider/shopActions";
 import { ProviderLayout as DashboardLayout } from "../../../../components/layout/ProviderLayout";
-import { Segmented } from "../../../../components/ui/Chip";
 import { useL } from "../../../../core/hooks/useL";
 import { useLoad } from "../../../../core/hooks/useLoad";
 import { Text } from "../../../../components/ui/Text";
@@ -24,7 +24,8 @@ export default function ShopInquiries() {
 
   return (
     <DashboardLayout tag="QUESTIONS / P3" brand="MOTEXA PARTS" title={t("Customer questions", "أسئلة العملاء")} subtitle={t("Answer questions about your parts", "أجب عن الأسئلة حول قطعك")} back>
-      <Segmented
+      <View style={{ marginBottom: 14 }}>
+      <Tabs
         value={filter}
         onChange={setFilter}
         options={[
@@ -34,10 +35,11 @@ export default function ShopInquiries() {
           { key: "CLOSED", label: t("Closed", "مغلقة") },
         ]}
       />
+      </View>
       <Async state={state}>
         {(list) =>
           !list.length ? (
-            <EmptyState icon="chatbubbles-outline" text={t("No questions here.", "لا توجد أسئلة هنا.")} />
+            <EmptyState photo="empty.requests" text={t("No questions here.", "لا توجد أسئلة هنا.")} />
           ) : (
             list.map((q) => (
               <ItemRow key={q.id} title={q.product.name} subtitle={q.customerName} onPress={() => router.push(`/provider/parts/inquiries/${q.id}`)} actions={shopInquiryActions(t, q, state.reload)}>
