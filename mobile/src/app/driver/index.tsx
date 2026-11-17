@@ -9,6 +9,7 @@ import { fmtDateTime, useTowStatusLabels } from "../../features/requests/request
 import { towTone } from "../../features/requests/garageBits";
 import { signOut } from "../../features/shared/session";
 import { useTruckLabels } from "../../features/tow/truckBits";
+import { AppearanceSection } from "../../features/providerhub/AppearanceSection";
 import { gShape, gType, useGarageTheme } from "../../theme/garage";
 
 const WAITING = ["REQUESTED"];
@@ -108,6 +109,7 @@ export default function DriverHome() {
               <View style={{ gap: 10 }}>{past.map(row_)}</View>
             </Section>
           ) : null}
+          <AppearanceSection />
           <GButton variant="ghost" icon="log-out-outline" label={t("Sign out", "تسجيل الخروج")} onPress={() => void signOut()} style={{ marginTop: 20 }} />
         </>
       ) : null}

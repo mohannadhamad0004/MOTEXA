@@ -1,6 +1,6 @@
 import { Async } from "../../../../components/ui/Feedback";
-import { Button } from "../../../../components/ui/Button";
-import { Card } from "../../../../components/ui/Card";
+import { Button } from "../../../../features/provider/portal/ui";
+import { Card } from "../../../../components/garage";
 import { ProviderLayout as DashboardLayout } from "../../../../components/layout/ProviderLayout";
 import { KV } from "../../../../components/ui/Rows";
 import { useL } from "../../../../core/hooks/useL";
@@ -42,7 +42,7 @@ export default function ShopInquiryThread() {
       <Async state={state}>
         {(q) => (
           <>
-            <Card>
+            <Card style={{ marginBottom: 14, gap: 6 }}>
               <View style={[row, { justifyContent: "space-between", alignItems: "flex-start", gap: 10 }]}>
                 <View style={{ flex: 1 }}>
                   <Text numberOfLines={2} style={[{ color: col.text, fontSize: 15, fontWeight: "800" }, align]}>{q.product.name}</Text>

@@ -19,16 +19,12 @@ function RoundButton({ icon, label, onPress, flip }: { icon: keyof typeof Ionico
   );
 }
 
-/**
- * The ONE header row of every provider page (tow company and parts shop): a round back button (chevron mirrored in Arabic) when the
- * page has somewhere to go back to, and a round settings gear. 44 px targets, EN/AR accessibility labels.
- */
-export function ProviderHeader({ onBack, onSettings }: { onBack?: () => void; onSettings: () => void }) {
+/** The ONE header row of every provider page: a round back button (chevron mirrored in Arabic) when the page has somewhere to go back to. Language / theme live in Profile. */
+export function ProviderHeader({ onBack }: { onBack?: () => void }) {
   const d = useDT();
-  return (
-    <View style={{ flexDirection: d.row, alignItems: "center", justifyContent: "space-between", minHeight: SIZE, marginTop: 4 }}>
-      {onBack ? <RoundButton icon="chevron-back" flip label={d.t("Back", "رجوع")} onPress={onBack} /> : <View style={{ width: SIZE }} />}
-      <RoundButton icon="settings-outline" label={d.t("Settings", "الإعدادات")} onPress={onSettings} />
+  return onBack ? (
+    <View style={{ flexDirection: d.row, alignItems: "center", minHeight: SIZE, marginTop: 4 }}>
+      <RoundButton icon="chevron-back" flip label={d.t("Back", "رجوع")} onPress={onBack} />
     </View>
-  );
+  ) : null;
 }
