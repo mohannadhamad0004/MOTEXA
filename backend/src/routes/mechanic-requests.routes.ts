@@ -16,10 +16,10 @@ import { publicMechanic } from "./catalog-mechanics.routes.js";
 //   ACCEPTED    -> IN_PROGRESS  mechanic
 //   IN_PROGRESS -> COMPLETED    mechanic
 //   REQUESTED | ACCEPTED -> CANCELLED   customer
-// Privacy: the mechanic sees the customer's NAME, the car and the problem; never the email. The exact location (typed
-// address + pin) and the phone (only if the customer typed one) are sent ONLY once this mechanic has accepted
-// (ACCEPTED / IN_PROGRESS / COMPLETED). Before that (and for declined/cancelled requests): the nearest city and the pin
-// rounded to 0.01 deg (about 1 km), marked approximate. The customer never sees the mechanic's phone, email or credentials.
+// Privacy: the mechanic sees the customer's NAME, the car, the problem and the dates; never the email. The exact location
+// (typed address + pin) and the phone (only if the customer typed one) are sent ONLY during the active job (ACCEPTED /
+// IN_PROGRESS), same rule as tow. Before accepting and after the job (COMPLETED / DECLINED / CANCELLED): the nearest city and
+// the pin rounded to 0.01 deg (about 1 km), marked approximate. Mechanic requests have no chat, notifications or price. The customer never sees the mechanic's phone, email or credentials.
 const router = Router();
 
 const OPEN = ["REQUESTED", "ACCEPTED", "IN_PROGRESS"] as const;
@@ -91,7 +91,7 @@ const customerView = (r: Row) => ({
   mechanic: { id: r.mechanic.id, name: r.mechanic.fullName, workshopName: r.mechanic.mechanicApplication?.workshopName ?? null, city: r.mechanic.mechanicApplication?.city ?? null },
   canCancel: r.status === "REQUESTED" || r.status === "ACCEPTED",
 });
-const REVEALED = new Set(["ACCEPTED", "IN_PROGRESS", "COMPLETED"]);
+const REVEALED = new Set(["ACCEPTED", "IN_PROGRESS"]); // the active job only
 const round2 = (n: number) => Math.round(n * 100) / 100;
 /** Nearest service city to a point (within 30 km), for the "area" a mechanic sees before accepting. */
 const nearestCity = (p: { lat: number; lng: number }) => {

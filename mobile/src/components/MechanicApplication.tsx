@@ -257,8 +257,8 @@ export default function MechanicApplication({
           )}
         </MechanicNote>
       )}
-      {error && <MechanicNote error>{error}</MechanicNote>}
-      {message && <MechanicNote>{message}</MechanicNote>}
+      {!!error && <MechanicNote error>{error}</MechanicNote>}
+      {!!message && <MechanicNote>{message}</MechanicNote>}
       {!profile ? (
         <MechanicCard>
           <MechanicButton
@@ -493,7 +493,7 @@ export default function MechanicApplication({
                     editable={!busy}
                   />
                 )}
-                {form.offersOnSite && form.coverageAreas && (
+                {!!(form.offersOnSite && form.coverageAreas) && (
                   <View
                     style={{ flexDirection: m.row, gap: 6, flexWrap: "wrap" }}
                   >
@@ -912,7 +912,7 @@ export default function MechanicApplication({
                   })
                 }
               />
-            )}{" "}
+            )}
             {step > 0 && (
               <MechanicButton
                 secondary
@@ -985,7 +985,7 @@ export default function MechanicApplication({
                       "يمكنك متابعة حالتك ورسائلك هنا. استقبال الخدمات يبقى غير متاح حتى الاعتماد.",
                     )}
             </Text>
-            {profile.submittedAt && (
+            {!!profile.submittedAt && (
               <Text
                 style={{
                   fontSize: 11,
@@ -1000,13 +1000,13 @@ export default function MechanicApplication({
                   )}
               </Text>
             )}
-            {profile.reviewNotes && (
+            {!!profile.reviewNotes && (
               <MechanicNote>{profile.reviewNotes}</MechanicNote>
             )}
             {profile.verificationStatus === "DRAFT" && (
               <ApplicationChecklist profile={profile} />
             )}
-            {profile.submittedAt && <ApplicationTimeline profile={profile} />}
+            {!!profile.submittedAt && <ApplicationTimeline profile={profile} />}
             {editable && (
               <MechanicButton
                 label={

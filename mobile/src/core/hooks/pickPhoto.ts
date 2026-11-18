@@ -13,12 +13,14 @@ export class PhotoError extends Error {
 }
 
 /**
- * Pick a photo from the library, turn it into a JPEG no wider than 1600 px (quality 0.75) and return it as base64.
+ * Pick a photo from the library, turn it into a JPEG (quality 0.75), shrunk to 1600 px wide only when it is wider (never enlarged) and return it as base64.
  * Whatever the phone gives (JPEG, PNG, HEIC, WEBP) leaves here as JPEG, so the upload is always a type the server accepts and
  * well under its 5 MB limit. No storage permission is asked: the system picker needs none (Android 13+ photo picker, iOS PHPicker).
  * Returns null when cancelled; throws PhotoError(kind) otherwise. The converted photo is remembered by uri so the services
  * can send it without reading the file again.
  */
+const MAX_WIDTH = 1600;
+
 export async function pickPhoto(from: "library" | "camera" = "library"): Promise<PickedPhoto | null> {
   let asset: ImagePicker.ImagePickerAsset | undefined;
   try {
@@ -31,7 +33,10 @@ export async function pickPhoto(from: "library" | "camera" = "library"): Promise
   }
   if (!asset) throw new PhotoError("pick");
   try {
-    const out = await ImageManipulator.manipulateAsync(asset.uri, [{ resize: { width: 1600 } }], { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG, base64: true });
+    // Shrink only: wider than 1600 px -> 1600 px wide; smaller photos keep their size (still re-encoded as JPEG).
+    const width = asset.width || (await ImageManipulator.manipulateAsync(asset.uri, [])).width; // width unknown (rare): read it
+    const actions = width > MAX_WIDTH ? [{ resize: { width: MAX_WIDTH } }] : [];
+    const out = await ImageManipulator.manipulateAsync(asset.uri, actions, { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG, base64: true });
     if (!out.base64) throw new Error("empty");
     if (out.base64.length > 6_000_000) throw new PhotoError("big");
     rememberPhoto(out.uri, out.base64);

@@ -894,3 +894,10 @@
   - `mobile/src/app/admin/(tabs)/index.tsx` — tow/parts tiles (fix 3).
   - `mobile/src/app/admin/(tabs)/requests.tsx` — "Coming soon" replaced by the real overview (D-04).
   (The mechanics files changed above are no longer partner files after today's takeover.)
+
+- 2026-11-18 (follow-up) — Claude Code — mechanics privacy audit + text-node fix (all files below are mechanics area = Mohannad's since the takeover; no Diala files changed).
+  - Privacy audit: mechanic requests reach a mechanic only through `GET /api/mechanic/requests` (list/history, any status filter), `GET /api/requests/mechanic/:id` and the accept/decline/start/complete replies — all via `mechanicView`. There are NO notifications, push, sockets, chat or price for mechanic requests; audit rows carry no location/phone and are not readable by mechanics; no distance is shown to mechanics.
+  - Rule now (`mechanic-requests.routes.ts`): exact address/pin/phone ONLY during the active job (ACCEPTED / IN_PROGRESS); before accepting and after COMPLETED / DECLINED / CANCELLED: nearest city + pin rounded to 0.01°, no phone; name, car, problem and dates stay. Mechanic screen notice explains both cases. Test `backend/tests/mechanic-request-privacy.test.mjs` covers every state, list + detail + action replies.
+  - "Unexpected text node": cause = empty string rendered in a View by `{error && …}` (`error` starts as ''). Type-aware scan of all mechanics files found 11 string/number `&&` sites + one `{" "}`; all fixed (`!!x &&`, space removed) in `MechanicReviewScreen.tsx`, `MechanicApplication.tsx`, `MechanicRegistration.tsx`, `MechanicDocuments.tsx`. Live: 0 errors on the review screen (was 4).
+  - Signup photo (pickPhoto, web): 4000×3000 random-noise PNG (37 MB, worst case) → 1600×1200 JPEG 610 KB; photo-like 4000×3000 JPEG (760 KB) → 1600×1200 ≈ 116 KB (measured with the same canvas steps outside the form).
+  - Checks: backend tsc 0, npm test 321/321; mobile tsc 0, mobile tests 84/84. One revoked test sign-in row removed (+1 TEST_DATA_REMOVED audit row).
