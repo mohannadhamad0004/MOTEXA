@@ -35,7 +35,7 @@ export default function MechanicRegistration({previewOnly=false,onPreviewStep}:{
   </ImageBackground>
   <View style={{marginHorizontal:15,marginTop:-1,borderRadius:28,overflow:'hidden',borderWidth:1,borderColor:m.border,padding:18,backgroundColor:m.surface}}><PanelFill radius={28}/>
    <View style={{flexDirection:m.row,alignItems:'center',gap:7,marginBottom:5}}><Text accessibilityRole="header" style={{flex:1,fontSize:25,lineHeight:34,fontWeight:'600',color:m.ink,textAlign:m.align}}>{m.t('Create your account','إنشاء حسابك')}</Text><Ionicons name="construct-outline" size={21} color={m.muted}/></View><Text style={{fontSize:12,lineHeight:22,color:m.muted,textAlign:m.align,marginBottom:20}}>{m.t('Join MOTEXA as a mechanic.','انضم إلى MOTEXA كميكانيكي.')}</Text>
-   {error&&<MechanicNote error>{error}</MechanicNote>}
+   {!!error &&<MechanicNote error>{error}</MechanicNote>}
    <RegistrationField label={m.t('Full name','الاسم الكامل')} icon="person-outline" value={fullName} placeholder={m.t('Enter your full name','أدخل اسمك الكامل')} onChangeText={setName} maxLength={120} autoComplete="name" editable={!busy}/>
    <RegistrationField label={m.t('Email address','البريد الإلكتروني')} icon="mail-outline" value={email} placeholder={m.t('name@example.com','name@example.com')} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" editable={!busy}/>
    <RegistrationField label={m.t('Phone number','رقم الهاتف')} icon="call-outline" value={phoneNumber} placeholder="+970 59 123 4567" onChangeText={setPhone} keyboardType="phone-pad" maxLength={24} autoComplete="tel" editable={!busy}/>

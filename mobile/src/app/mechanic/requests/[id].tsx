@@ -110,9 +110,11 @@ export default function MechanicRequestDetail() {
               {r.contactPhone ? <KV k={t("Phone (added by the customer)", "الهاتف (أضافه العميل)")} v={r.contactPhone} /> : null}
             </Card>
 
-            {r.location.approximate && r.status === "REQUESTED" ? (
+            {r.location.approximate ? (
               <Notice tone="neutral" icon="lock-closed-outline">
-                {t("The exact address and the customer's phone are shared after you accept.", "يظهر العنوان الدقيق وهاتف العميل بعد قبولك الطلب.")}
+                {r.status === "REQUESTED"
+                  ? t("The exact address and the customer's phone are shared after you accept.", "يظهر العنوان الدقيق وهاتف العميل بعد قبولك الطلب.")
+                  : t("The exact address and phone are shown only during an active job.", "يظهر العنوان الدقيق والهاتف أثناء العمل النشط فقط.")}
               </Notice>
             ) : null}
 
