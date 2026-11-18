@@ -59,7 +59,8 @@ test('failure limiter: window and clear (unit)', async () => {
 test('admin.routes uses the shared prisma client: super-admin dashboard answers on the test database', async () => {
   const l = await post('/auth/login', { email: 'superadmin@motexa.test', password: PASS }); assert.equal(l.status, 200);
   const r = await fetch(API + '/admin-management/dashboard', { headers: { authorization: 'Bearer ' + l.data.accessToken } });
-  assert.equal(r.status, 200); assert.equal((await r.json()).success, true);
+  assert.equal(r.status, 200); const d = await r.json(); assert.equal(d.success, true);
+  for (const k of ['towCompanies', 'partsShops']) for (const f of ['pending', 'approved']) assert.ok(Number.isInteger(d.stats[k][f]), `${k}.${f}`);
   const src = (await import('node:fs')).readFileSync(new URL('../src/routes/admin.routes.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /new PrismaClient/);
 });

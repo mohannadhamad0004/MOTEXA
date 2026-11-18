@@ -1,7 +1,7 @@
 import { apiUrl } from "../../features/shared/api";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import * as ImagePicker from "expo-image-picker";
+import { pickPhoto, photoErrorText } from "../../core/hooks/pickPhoto";
 import { router } from "expo-router";
 import { ReactNode, useState } from "react";
 import {
@@ -79,16 +79,21 @@ export default function MechanicSignUpScreen() {
     m.descAccount, m.descProfile, m.descSkills, m.descWorkshop, m.descLicence, m.descAuthorization, m.descReview,
   ];
 
+  // Shared helper: any phone photo (JPEG/PNG/HEIC/WEBP, any size) becomes a JPEG at most 1600 px wide, so it can't fail the size check.
   const pick = async (): Promise<Img | null> => {
-    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.5, base64: true });
-    if (r.canceled) return null;
-    const a = r.assets[0];
-    if (!a.base64 || a.base64.length * 0.75 > MAX_BYTES) {
-      setError(m.errFileSize);
+    try {
+      const photo = await pickPhoto();
+      if (!photo) return null;
+      if (photo.base64.length * 0.75 > MAX_BYTES) {
+        setError(m.errFileSize);
+        return null;
+      }
+      setError(null);
+      return { mimeType: "image/jpeg", dataBase64: photo.base64, name: "photo.jpg" };
+    } catch (e) {
+      setError(photoErrorText(e, (en, ar) => (isArabic ? ar : en)));
       return null;
     }
-    setError(null);
-    return { mimeType: a.mimeType ?? "image/jpeg", dataBase64: a.base64, name: a.fileName ?? "image" };
   };
 
   // Returns an error message for the given step, or null when it is valid.

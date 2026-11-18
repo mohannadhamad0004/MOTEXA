@@ -2,7 +2,7 @@ import { Router } from "express";
 import express from "express";
 import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
-import { readPair } from "../geo.js";
+import { CITY_CENTRES, haversineKm, readPair } from "../geo.js";
 import { requireAuth, requireCustomer } from "../middleware/auth.middleware.js";
 import { publicMechanic } from "./catalog-mechanics.routes.js";
 
@@ -16,8 +16,10 @@ import { publicMechanic } from "./catalog-mechanics.routes.js";
 //   ACCEPTED    -> IN_PROGRESS  mechanic
 //   IN_PROGRESS -> COMPLETED    mechanic
 //   REQUESTED | ACCEPTED -> CANCELLED   customer
-// Privacy: the mechanic sees the customer's NAME, the car, the problem, the location and the phone only if the
-// customer typed one; never the email. The customer never sees the mechanic's phone, email or credentials.
+// Privacy: the mechanic sees the customer's NAME, the car and the problem; never the email. The exact location (typed
+// address + pin) and the phone (only if the customer typed one) are sent ONLY once this mechanic has accepted
+// (ACCEPTED / IN_PROGRESS / COMPLETED). Before that (and for declined/cancelled requests): the nearest city and the pin
+// rounded to 0.01 deg (about 1 km), marked approximate. The customer never sees the mechanic's phone, email or credentials.
 const router = Router();
 
 const OPEN = ["REQUESTED", "ACCEPTED", "IN_PROGRESS"] as const;
@@ -89,7 +91,24 @@ const customerView = (r: Row) => ({
   mechanic: { id: r.mechanic.id, name: r.mechanic.fullName, workshopName: r.mechanic.mechanicApplication?.workshopName ?? null, city: r.mechanic.mechanicApplication?.city ?? null },
   canCancel: r.status === "REQUESTED" || r.status === "ACCEPTED",
 });
-const mechanicView = (r: Row) => ({ ...common(r), customerName: r.customer.fullName });
+const REVEALED = new Set(["ACCEPTED", "IN_PROGRESS", "COMPLETED"]);
+const round2 = (n: number) => Math.round(n * 100) / 100;
+/** Nearest service city to a point (within 30 km), for the "area" a mechanic sees before accepting. */
+const nearestCity = (p: { lat: number; lng: number }) => {
+  let best: string | null = null, km = 30;
+  for (const [name, c] of Object.entries(CITY_CENTRES)) { const d = haversineKm(p, c); if (d < km) { km = d; best = name; } }
+  return best;
+};
+export const mechanicView = (r: Row) => {
+  const view = { ...common(r), customerName: r.customer.fullName };
+  if (REVEALED.has(r.status) && r.acceptedAt) return { ...view, location: { ...view.location, approximate: false } };
+  const p = view.location.point;
+  return {
+    ...view,
+    location: { text: null, area: p ? nearestCity(p) : null, point: p ? { lat: round2(p.lat), lng: round2(p.lng) } : null, approximate: true },
+    contactPhone: null,
+  };
+};
 
 const statusFilter = (q: unknown) => {
   if (q === undefined || q === "") return undefined;

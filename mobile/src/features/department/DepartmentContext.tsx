@@ -16,6 +16,10 @@ export function departmentsFor(u: SessionUser): Dept[] {
 export const canOpenDepartments = (u: SessionUser) => departmentsFor(u).length > 0;
 
 let remembered: DeptKey | null = null;
+/** Open /dept on this department next time (used by the super admin's Requests overview before navigating). */
+export const rememberDepartment = (k: DeptKey) => {
+  remembered = k;
+};
 
 export function DepartmentProvider({ children, force }: { children: ReactNode; force?: DeptKey }) {
   const user = useSessionUser();

@@ -14,6 +14,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Linking, View } from "react-native";
 import { mapsDirectionsUrl } from "../../../core/constants/geo";
+import { cityLabel } from "../../../core/constants/cities";
 import { MAPS_AVAILABLE, TripMap } from "../../../features/shared/maps";
 import { MechanicStatusBadge, MechanicTimeline, useSkillLabel } from "../../../features/mechanics/mechanicBits";
 import { REFRESH_MS, mechanicInbox } from "../../../features/mechanics/mechanicsService";
@@ -24,7 +25,7 @@ type Action = "accept" | "decline" | "start" | "complete";
 export default function MechanicRequestDetail() {
   const { c: col } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { t, row, align } = useL();
+  const { t, row, align, isArabic } = useL();
   const skillLabel = useSkillLabel();
   const state = useLoad(() => mechanicInbox.get(id), [id], REFRESH_MS);
   const [pulling, setPulling] = useState(false);
@@ -95,12 +96,27 @@ export default function MechanicRequestDetail() {
               {r.skill ? <KV k={t("Skill", "المهارة")} v={skillLabel(r.skill)} /> : null}
               <KV k={t("Car", "السيارة")} v={[r.vehicle.make, r.vehicle.model, r.vehicle.year].filter(Boolean).join(" ")} />
               <KV k={t("Problem", "المشكلة")} v={r.problemDescription} />
-              <KV k={t("Location", "الموقع")} v={r.location.text} />
+              <KV
+                k={t("Location", "الموقع")}
+                v={
+                  !r.location.approximate
+                    ? (r.location.text ?? "")
+                    : r.location.area
+                      ? t(`Near ${r.location.area} (approximate)`, `قرب ${cityLabel(r.location.area, isArabic)} (تقريبي)`)
+                      : t("Shared after you accept", "يظهر بعد قبول الطلب")
+                }
+              />
               {r.preferredTime ? <KV k={t("Preferred time", "الوقت المفضل")} v={r.preferredTime} /> : null}
               {r.contactPhone ? <KV k={t("Phone (added by the customer)", "الهاتف (أضافه العميل)")} v={r.contactPhone} /> : null}
             </Card>
 
-            {r.location.point ? (
+            {r.location.approximate && r.status === "REQUESTED" ? (
+              <Notice tone="neutral" icon="lock-closed-outline">
+                {t("The exact address and the customer's phone are shared after you accept.", "يظهر العنوان الدقيق وهاتف العميل بعد قبولك الطلب.")}
+              </Notice>
+            ) : null}
+
+            {r.location.point && !r.location.approximate ? (
               <>
                 {MAPS_AVAILABLE ? <TripMap pickup={r.location.point} height={170} /> : null}
                 <View style={{ height: 10 }} />

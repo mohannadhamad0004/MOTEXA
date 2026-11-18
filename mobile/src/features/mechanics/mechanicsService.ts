@@ -54,7 +54,8 @@ type Base = {
   vehicle: { make: string; model: string; year: number | null };
   problemDescription: string;
   preferredTime: string | null;
-  location: { text: string; point: { lat: number; lng: number } | null };
+  /** For a mechanic, until they accept: text = null, area = nearest city, point rounded to ~1 km, approximate = true. */
+  location: { text: string | null; point: { lat: number; lng: number } | null; area?: string | null; approximate?: boolean };
   /** typed by the customer; null unless they added one */
   contactPhone: string | null;
   declineReason: string | null;

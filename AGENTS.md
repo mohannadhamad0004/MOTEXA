@@ -20,8 +20,10 @@ Currency: ILS, shown as "₪ 120.00". Languages: English + Arabic (full RTL). Ci
 
 ## 3. Ownership
 Partner-owned files may be edited ONLY to fix listed bugs; keep changes minimal; list every changed partner file in STATUS.md under 'Changed in Diala's files' so she can review.
-- **Diala:** auth (login/signup/OTP/activation/forgot password), admin management, admin tabs, mechanics + mechanics admin, her design components.
-- **Mohannad:** tow, parts, catalog, files, requests, customer screens, provider screens, tow/parts admin screens, theme + shared UI kit.
+- **Diala:** auth (login/signup/OTP/activation/forgot password), admin management, admin tabs, her design components.
+- **Mohannad:** tow, parts, catalog, files, requests, customer screens, provider screens, tow/parts admin screens, theme + shared UI kit, and (since 2026-11-18, taken over from Diala) the whole **mechanics area**: mechanic, mechanics admin and the customer side of mechanics. Mechanics-area files are no longer partner-owned:
+  - mobile: `src/app/mechanic/`, `src/app/mechanics-admin/`, `src/app/auth/mechanic-signup.tsx`, `mechanic-pending.tsx`, `mechanic-preview.tsx`, `src/app/customer/(tabs)/mechanics.tsx`, `src/app/customer/mechanic/`, `mechanicrequest/`, `mechanics/`, `src/components/Mechanic*.tsx`, `src/components/mechanic-api.ts`, `src/features/mechanics/`, `src/features/mechanic-review/`
+  - backend: `routes/mechanic-*.routes.ts`, `routes/mechanics.routes.ts`, `routes/catalog-mechanics.routes.ts`, `services/mechanic-policy.ts`, `mechanicSkills.ts`
 - Shared files touched with agreement only: `auth.routes.ts` (/auth/me for all roles, login 403 returns role+status), `login.tsx` (landingFor per role), `Appearance.tsx` (dark default + remembered mode).
 
 ## 4. Hard rules

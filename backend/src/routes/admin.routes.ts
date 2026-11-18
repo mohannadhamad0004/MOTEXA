@@ -28,7 +28,12 @@ router.get("/", (_req, res) => {
 // Real dashboard statistics from PostgreSQL
 router.get("/dashboard", async (_req, res) => {
   try {
-    const [administrators, mechanics, pendingMechanics, pendingInvitations] =
+    // Providers by verification status (PENDING = waiting for review, APPROVED = live), from real rows.
+    const byStatus = (rows: { verificationStatus: string; _count: { _all: number } }[]) => {
+      const n = (st: string) => rows.find((r) => r.verificationStatus === st)?._count._all ?? 0;
+      return { pending: n("PENDING"), approved: n("APPROVED") };
+    };
+    const [administrators, mechanics, pendingMechanics, pendingInvitations, towRows, partsRows] =
       await Promise.all([
         prisma.user.count({
           where: { role: "ADMIN", status: "ACTIVE" },
@@ -45,6 +50,9 @@ router.get("/dashboard", async (_req, res) => {
         prisma.adminInvitation.count({
           where: { status: "PENDING" },
         }),
+
+        prisma.towCompanyProfile.groupBy({ by: ["verificationStatus"], _count: { _all: true } }),
+        prisma.partsShopProfile.groupBy({ by: ["verificationStatus"], _count: { _all: true } }),
       ]);
 
     res.status(200).json({
@@ -54,6 +62,8 @@ router.get("/dashboard", async (_req, res) => {
         mechanics,
         pendingMechanics,
         pendingInvitations,
+        towCompanies: byStatus(towRows),
+        partsShops: byStatus(partsRows),
       },
     });
   } catch (error) {
