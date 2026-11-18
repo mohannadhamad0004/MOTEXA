@@ -5,7 +5,7 @@ import {useBrandPalette} from "../../../components/BrandSurfaces";
 import {useCallback,useState} from "react";
 import {ActivityIndicator,RefreshControl,ScrollView,StyleSheet,TextInput,View} from "react-native";
 import {useFocusEffect,useLocalSearchParams} from "expo-router";
-import * as SecureStore from '../../../components/SessionStore';
+import { apiUrl, getAccessToken } from "../../../core/config/api";
 import {Ionicons} from "@expo/vector-icons";
 import {useSafeAreaInsets} from "react-native-safe-area-context";
 import {Heading,Text} from "../../../components/MotexaVisual";
@@ -26,9 +26,9 @@ export default function ProvidersScreen(){
  const text=(en:string,ar:string)=>isArabic?ar:en;
  const ink=dark?'#FFF1DE':'#35271D',muted=dark?'#CFB99D':'#735C45';
  const load=useCallback(async(signal:AbortSignal)=>{setLoading(true);setError('');try{
-  const token=await SecureStore.getItemAsync('motexa_access_token');const base=process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/,'');
+  const token=await getAccessToken();const base=apiUrl();
   if(!token||!base)throw Error('session');
-  const response=await fetch(`${base}/api/admin-management/providers`,{headers:{Authorization:`Bearer ${token}`},signal});
+  const response=await fetch(apiUrl('/admin-management/providers'),{headers:{Authorization:`Bearer ${token}`},signal});
   if(response.status===401)throw Error('session');if(!response.ok)throw Error('load');
   const data=await response.json();if(!data.success||!Array.isArray(data.providers))throw Error('load');setRows(data.providers);
  }catch(e){if(!signal.aborted)setError(e instanceof Error&&e.message==='session'?'session':'load');}finally{if(!signal.aborted)setLoading(false);}},[]);

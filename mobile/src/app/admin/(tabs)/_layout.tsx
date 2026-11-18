@@ -8,7 +8,7 @@ import { useLanguage } from "../../../i18n/LanguageContext";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Tabs, router } from "expo-router";
-import * as SecureStore from '../../../components/SessionStore';
+import { apiUrl, getAccessToken, clearSession } from "../../../core/config/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 type AuthStatus = "checking" | "authorized" | "unauthorized";
@@ -25,19 +25,16 @@ export default function AdminLayout() {
 
     const verifyAdmin = async () => {
       try {
-        const token = await SecureStore.getItemAsync(
-          "motexa_access_token"
-        );
+        const token = await getAccessToken();
 
-        const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+        const meUrl = apiUrl("/auth/me"); // D-05: shared helper, right with or without /api at the end of EXPO_PUBLIC_API_URL
 
-        if (!token || !apiUrl) {
+        if (!token || !meUrl) {
           if (mounted) setAuthStatus("unauthorized");
           return;
         }
 
-        const response = await fetch(
-`${apiUrl.replace(/\/$/, "")}/api/auth/me`,          {
+        const response = await fetch(meUrl, {
             method: "GET",
             headers: {
               Authorization: `Bearer ${token}`,
@@ -47,9 +44,7 @@ export default function AdminLayout() {
 
         if (!response.ok) {
           if (response.status === 401 || response.status === 403) {
-            await SecureStore.deleteItemAsync(
-              "motexa_access_token"
-            );
+            await clearSession();
           }
 
           if (mounted) setAuthStatus("unauthorized");

@@ -2,7 +2,7 @@ import {useCallback,useState} from 'react';
 import {View,ScrollView,Pressable} from 'react-native';
 import {router,useFocusEffect} from 'expo-router';
 import {Text} from './MotexaVisual';
-import * as Store from './SessionStore';
+import { clearSession } from "../core/config/api";
 import MotexaDialog from './MotexaDialog';
 import {MechanicPage,MechanicCard,MechanicField,MechanicButton,MechanicChoice,MechanicNote,useMechanicTheme} from './MechanicUI';
 import {mechanicApi,mechanicSpecializations,type MechanicProfile} from './mechanic-api';
@@ -19,7 +19,7 @@ export default function MechanicReviewScreen(){
  async function open(userId:string){const data=await mechanicApi<{profile:MechanicProfile}>('/api/mechanics/admin/'+userId);setDetail(data.profile);setNotes('');setInterviewNotes(data.profile.interviewNotes||'');setInterview(data.profile.interviewResult||'PASSED');}
  async function decide(){
   const action=confirm;setConfirm('');
-  await run(async()=>{if(action==='LOGOUT'){await Store.deleteItemAsync('motexa_access_token');router.replace('/');return;}if(!detail)return;
+  await run(async()=>{if(action==='LOGOUT'){await clearSession();router.replace('/');return;}if(!detail)return;
    const route='/api/mechanics/admin/'+detail.userId+'/decision';
    const data=await mechanicApi<{profile:MechanicProfile}>(route,'POST',{action,notes,submissionVersion:detail.submissionVersion});
    setDetail(data.profile);setNotes('');await list();

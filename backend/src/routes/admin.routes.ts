@@ -1,6 +1,5 @@
 import { Router } from "express";
-import { PrismaClient } from "../generated/prisma/client.js";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { prisma } from "../prisma.js"; // shared client: carries the *_test database guard
 
 import {
   requireAuth,
@@ -8,15 +7,6 @@ import {
 } from "../middleware/auth.middleware.js";
 
 const router = Router();
-
-const connectionString = process.env.DATABASE_URL;
-
-if (!connectionString) {
-  throw new Error("DATABASE_URL is missing");
-}
-
-const adapter = new PrismaPg({ connectionString });
-const prisma = new PrismaClient({ adapter });
 
 // All routes require Super Admin authentication
 router.use(requireAuth, requireSuperAdmin);

@@ -13,7 +13,7 @@ import LanguageSwitch from "../../components/LanguageSwitch";
 import { Heading, Text, VisualProvider, HeroReveal, DecorativeHalo } from "../../components/MotexaVisual";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import * as SecureStore from '../../components/SessionStore';
+import { apiUrl, getAccessToken } from "../../core/config/api";
 import { useCallback, useEffect } from "react";
 import * as Clipboard from "expo-clipboard";
 import { useMemo, useState } from "react";
@@ -32,7 +32,7 @@ type AdminAccount = {
   role: AdminRole;
   status: AdminStatus;
 };
-const API_URL = `${process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "")}/api`;
+const API_URL = apiUrl(); // "" when not configured (the checks below rely on that)
 type ApiAdmin = {
   id: string;
   fullName: string;
@@ -120,9 +120,7 @@ const [updatingStatus, setUpdatingStatus] = useState(false);
     setLoading(true);
     setLoadError(false);
 
-    const token = await SecureStore.getItemAsync(
-      "motexa_access_token"
-    );
+    const token = await getAccessToken();
 
     if (!token || !API_URL) {
       throw new Error("Missing authentication or API configuration.");
@@ -266,9 +264,7 @@ const addAdmin = async () => {
   try {
     setSaving(true);
 
-    const token = await SecureStore.getItemAsync(
-      "motexa_access_token"
-    );
+    const token = await getAccessToken();
 
     if (!token || !API_URL) {
       throw new Error(
@@ -352,9 +348,7 @@ const confirmRevoke = async () => {
   try {
     setRevoking(true);
 
-    const token = await SecureStore.getItemAsync(
-      "motexa_access_token"
-    );
+    const token = await getAccessToken();
 
     if (!token || !API_URL) {
       throw new Error("Missing authentication or API URL.");
@@ -398,9 +392,7 @@ const confirmRevoke = async () => {
   try {
     setUpdatingStatus(true);
 
-    const token = await SecureStore.getItemAsync(
-      "motexa_access_token"
-    );
+    const token = await getAccessToken();
 
     if (!token || !API_URL) {
       throw new Error("Missing authentication or API URL.");

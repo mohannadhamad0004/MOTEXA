@@ -3,7 +3,7 @@ import { View, Image, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { Text } from "./MotexaVisual";
-import * as Store from "./SessionStore";
+import { clearSession } from "../core/config/api";
 import MotexaDialog from "./MotexaDialog";
 import {
   MechanicPage,
@@ -1135,7 +1135,7 @@ export default function MechanicApplication({
             onCancel={() => setLogout(false)}
             onConfirm={() =>
               void run(async () => {
-                await Store.deleteItemAsync("motexa_access_token");
+                await clearSession();
                 router.replace("/");
               })
             }

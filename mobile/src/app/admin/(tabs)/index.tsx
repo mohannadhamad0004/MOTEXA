@@ -11,7 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import * as SecureStore from '../../../components/SessionStore';
+import { apiUrl, getAccessToken } from "../../../core/config/api";
 import { Alert, Image, ImageBackground, ScrollView, StatusBar, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLanguage } from "../../../i18n/LanguageContext";
@@ -41,18 +41,16 @@ useFocusEffect(
       setStatsError(false);
 
       try {
-        const token = await SecureStore.getItemAsync(
-          "motexa_access_token"
-        );
+        const token = await getAccessToken();
 
-        const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+        const dashboardUrl = apiUrl("/admin-management/dashboard");
 
-        if (!token || !apiUrl) {
+        if (!token || !dashboardUrl) {
           throw new Error("Missing authentication or API URL");
         }
 
        const response = await fetch(
-  `${apiUrl.replace(/\/$/, "")}/api/admin-management/dashboard`,
+  dashboardUrl,
   {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -263,7 +261,7 @@ useFocusEffect(
   return <VisualProvider><LinearGradient colors={dark?motexaTheme.canvasDark:motexaTheme.canvas} style={{flex:1}}>
     <StatusBar barStyle={dark?"light-content":"dark-content"} />
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}>
-      <View style={[s.topbar,{paddingTop:insets.top+7,backgroundColor:dark?'#291F19':'#FBF1E2'}]}>
+      <View style={[s.topbar,{direction:'ltr',paddingTop:insets.top+7,backgroundColor:dark?'#291F19':'#FBF1E2'}]}>
         <BrandWordmark size={20} style={{flex:1}} />
         <LanguageSwitch compact light unified/>
       </View>
@@ -336,7 +334,7 @@ const s=StyleSheet.create({
  smallArrow:{width:32,height:32,borderRadius:16,backgroundColor:'#704A2B',alignItems:'center',justifyContent:'center',marginHorizontal:2},
  content:{width:'100%',maxWidth:680,alignSelf:'center',paddingBottom:34},
  hero:{width:'100%',overflow:'hidden',height:258,paddingHorizontal:20,justifyContent:'flex-end',paddingTop:20,paddingBottom:48,backgroundColor:'#503522'},
- topbar:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8,paddingHorizontal:16,paddingBottom:8,direction:'ltr',flexWrap:'nowrap'},
+ topbar:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8,paddingHorizontal:16,paddingBottom:8,flexWrap:'nowrap'},
  wordmark:{fontSize:16,letterSpacing:2.5,fontWeight:'600'},
  profile:{width:42,height:42,borderRadius:21,backgroundColor:'#4E3526AA',borderWidth:1,borderColor:'#D0AB7B',alignItems:'center',justifyContent:'center'},
  controls:{alignItems:'flex-end',marginTop:10},

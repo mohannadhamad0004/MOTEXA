@@ -4,6 +4,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import {ActivityIndicator,Image,ImageBackground,KeyboardAvoidingView,Platform,Pressable,ScrollView,StatusBar,StyleSheet,TextInput,View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {LinearGradient} from 'expo-linear-gradient';
+import { apiUrl } from '../core/config/api';
 import {router} from 'expo-router';
 import * as SecureStore from './SessionStore';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -15,7 +16,7 @@ import LanguageSwitch from './LanguageSwitch';
 import {ManagementBanner} from './ManagementBanner';
 
 type Step='email'|'code'|'password'|'complete';
-const API=process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/,'');
+const API=apiUrl();
 export default function PasswordRecoveryScreen(){
  const {dark}=useAppearance();const {isArabic:ar}=useLanguage();const insets=useSafeAreaInsets();
  const [step,setStep]=useState<Step>('email'),[email,setEmail]=useState(''),[otp,setOtp]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState(''),[resetToken,setResetToken]=useState('');
@@ -42,7 +43,7 @@ export default function PasswordRecoveryScreen(){
  }[code]||t('Could not connect. Check your connection and try again.','تعذّر الاتصال. تحقق من الشبكة وحاول مجددًا.'));
  const post=async(endpoint:string,body:Record<string,string>)=>{
   if(!API)throw Error('NETWORK');controller.current=new AbortController();const timer=setTimeout(()=>controller.current?.abort(),20000);
-  try{const response=await fetch(`${API}/api/auth/password-reset/${endpoint}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.current.signal});let result;try{result=await response.json();}catch{throw Error('RECOVERY_BUSY');}if(!response.ok||!result.success)throw Error(result.code||'RECOVERY_BUSY');return result;}finally{clearTimeout(timer);}
+  try{const response=await fetch(`${API}/auth/password-reset/${endpoint}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.current.signal});let result;try{result=await response.json();}catch{throw Error('RECOVERY_BUSY');}if(!response.ok||!result.success)throw Error(result.code||'RECOVERY_BUSY');return result;}finally{clearTimeout(timer);}
  };
  const perform=async(work:()=>Promise<void>)=>{if(busy.current)return;busy.current=true;setLoading(true);setError('');try{await work();}catch(e){if(alive.current){const code=e instanceof Error?e.message:'NETWORK';setError(errorText(code));if(code==='RESET_TOKEN_INVALID'){setResetToken('');setPassword('');setConfirm('');setStep('code');}}}finally{busy.current=false;if(alive.current)setLoading(false);}};
  const request=()=>{if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)||cleanEmail.length>254){setError(errorText('INVALID_EMAIL'));return;}if(step==='code'&&cooldown>0)return;void perform(async()=>{await post('request-otp',{email:cleanEmail});if(!alive.current)return;resetInputs();setEmail(cleanEmail);setLastSent(Date.now());setNow(Date.now());setStep('code');});};

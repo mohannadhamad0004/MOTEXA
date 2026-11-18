@@ -18,7 +18,8 @@ Currency: ILS, shown as "₪ 120.00". Languages: English + Arabic (full RTL). Ci
   - `src/features/*` feature-specific code (catalog, requests, tow, parts, shared/maps = Leaflet/OSM WebView)
 - `apps/web/` — the web app (separate; React + Tailwind + shadcn). Not part of mobile work.
 
-## 3. Ownership (do not cross without the owner's OK)
+## 3. Ownership
+Partner-owned files may be edited ONLY to fix listed bugs; keep changes minimal; list every changed partner file in STATUS.md under 'Changed in Diala's files' so she can review.
 - **Diala:** auth (login/signup/OTP/activation/forgot password), admin management, admin tabs, mechanics + mechanics admin, her design components.
 - **Mohannad:** tow, parts, catalog, files, requests, customer screens, provider screens, tow/parts admin screens, theme + shared UI kit.
 - Shared files touched with agreement only: `auth.routes.ts` (/auth/me for all roles, login 403 returns role+status), `login.tsx` (landingFor per role), `Appearance.tsx` (dark default + remembered mode).

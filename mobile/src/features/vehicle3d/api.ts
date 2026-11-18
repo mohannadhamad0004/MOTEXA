@@ -1,5 +1,4 @@
-import { api, apiUrl } from "../../core/config/api";
-import * as SessionStore from "../../components/SessionStore";
+import { api, apiUrl, getAccessToken } from "../../core/config/api";
 import type { CarModel } from "../car3d/models";
 
 export const views = ["front", "rear", "left", "right"] as const;
@@ -34,7 +33,7 @@ export async function privateAssetBase64(id: string, asset: string, admin: boole
   return authenticatedBase64(`${submissionBase(admin)}/${id}/assets/${asset}`);
 }
 export async function authenticatedBase64(path:string){
-  const token = await SessionStore.getItemAsync("motexa_access_token");
+  const token = await getAccessToken();
   const response = await fetch(apiUrl(path), { headers: { Authorization: `Bearer ${token ?? ""}` }, cache: "no-store" });
   if (!response.ok) throw new Error("Private asset unavailable");
   const bytes = new Uint8Array(await response.arrayBuffer()); let raw = "";

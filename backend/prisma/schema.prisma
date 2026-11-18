@@ -80,6 +80,7 @@ model User {
 
   towDriver          TowDriver?
   partsOrders        PartsOrder[]
+  refreshTokens      RefreshToken[]
   partsOrderMessages PartsOrderMessage[]
 
   @@index([role, status])
@@ -1575,4 +1576,21 @@ model AccessoryFitAdjust {
   updatedAt DateTime @updatedAt
 
   @@id([userId, productId])
+}
+
+/// Long-lived sign-in (E-03). Only the SHA-256 of the token is stored. Each use rotates it (old row revoked, new row in the same
+/// family); presenting a revoked token again revokes the whole family. A password change (sessionVersion) also ends it.
+model RefreshToken {
+  id             String    @id @default(uuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash      String    @unique
+  familyId       String
+  sessionVersion Int
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([userId])
+  @@index([familyId])
 }
