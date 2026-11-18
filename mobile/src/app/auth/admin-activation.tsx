@@ -4,7 +4,8 @@ import {useLanguage} from '../../i18n/LanguageContext';
 import {useEffect,useState} from 'react';
 import {router,useLocalSearchParams} from 'expo-router';
 import MotexaDialog from '../../components/MotexaDialog';
-const API = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "");
+import { apiUrl } from '../../core/config/api';
+const API = apiUrl();
 
 type Invitation = {
   fullName: string;
@@ -68,7 +69,7 @@ export default function AdminActivationScreen() {
 
       try {
         const response = await fetch(
-          `${API}/api/auth/admin/verify-invitation`,
+          `${API}/auth/admin/verify-invitation`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -120,7 +121,7 @@ export default function AdminActivationScreen() {
   ) => {
     if (!API) throw new Error("API configuration is missing.");
 
-    const response = await fetch(`${API}/api/auth/admin/${endpoint}`, {
+    const response = await fetch(`${API}/auth/admin/${endpoint}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

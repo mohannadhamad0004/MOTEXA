@@ -4,7 +4,7 @@ import {Image,ImageBackground,Modal,Pressable,ScrollView,StyleSheet,View} from '
 import {Ionicons} from '@expo/vector-icons';
 import {LinearGradient} from 'expo-linear-gradient';
 import {router} from 'expo-router';
-import * as SecureStore from '../../../components/SessionStore';
+import { clearSession } from "../../../core/config/api";
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useAppearance} from '../../../components/Appearance';
 import {CanvasFill} from '../../../components/BrandSurfaces';
@@ -23,7 +23,7 @@ export default function MoreScreen(){
  const t=(en:string,arabic:string)=>ar?arabic:en;
  const ink=dark?'#FFF1DF':'#432D1E',muted=dark?'#D8BE9B':'#80664E',surface=dark?'#3A2A20':'#FFF9EF',border=dark?'#896544':'#E4CBAA';
  const row=ar?'row-reverse' as const:'row' as const,align=ar?'right' as const:'left' as const;
- const confirmLogout=async()=>{if(loggingOut)return;try{setLoggingOut(true);await SecureStore.deleteItemAsync('motexa_access_token');setLogoutVisible(false);router.dismissAll();router.replace('/');}catch{setLogoutVisible(false);}finally{setLoggingOut(false);}};
+ const confirmLogout=async()=>{if(loggingOut)return;try{setLoggingOut(true);await clearSession();setLogoutVisible(false);router.dismissAll();router.replace('/');}catch{setLogoutVisible(false);}finally{setLoggingOut(false);}};
  const items:[string,string,keyof typeof Ionicons.glyphMap,()=>void,number|null][]=[
   [t('My Profile','الملف الشخصي'),t('Your account details and access','بيانات حسابك وصلاحيات الوصول'),'person-outline',()=>router.push('/admin/profile'),0],
   [t('Admin Management','إدارة الأدمن'),t('Department accounts and invitations','حسابات الأقسام ودعوات الأدمن'),'people-outline',()=>router.push('/admin/admin-management'),1],

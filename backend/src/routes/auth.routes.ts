@@ -2,11 +2,19 @@ import {isCurrentSession} from "../services/session-version.service.js";
 
 import { Router } from "express";
 import argon2 from "argon2";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import jwt from "jsonwebtoken";
 import { prisma } from "../prisma.js";
+import { createFailureLimiter, issueSession, revokeSession, rotateSession } from "../services/auth-session.service.js";
 
 const router = Router();
+
+// Login security: failed attempts per email (5) and per IP (20) in 15 minutes; then 429 until the window ends.
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+export const loginLimits = { email: createFailureLimiter(5, LOGIN_WINDOW_MS), ip: createFailureLimiter(20, LOGIN_WINDOW_MS) };
+// Unknown email: verify against this so the reply takes as long as a wrong password (no account-existence timing leak).
+const dummyHash = argon2.hash(randomBytes(16).toString("hex"));
+const INVALID_LOGIN = { success: false, code: "INVALID_CREDENTIALS", message: "Invalid email or password." };
 
 router.post("/login", async (req, res) => {
   try {
@@ -24,8 +32,18 @@ router.post("/login", async (req, res) => {
       });
     }
 
+    const emailKey = email.trim().toLowerCase();
+    const ipKey = req.ip || req.socket.remoteAddress || "unknown";
+    if (loginLimits.email.blocked(emailKey) || loginLimits.ip.blocked(ipKey)) {
+      return res.status(429).json({
+        success: false,
+        code: "RATE_LIMITED",
+        message: "Too many sign-in attempts. Please wait 15 minutes and try again.",
+      });
+    }
+
    const user = await prisma.user.findUnique({
-  where: { email: email.trim().toLowerCase() },
+  where: { email: emailKey },
   include: {
     adminPermissions: {
       select: {
@@ -35,24 +53,16 @@ router.post("/login", async (req, res) => {
   },
 });
 
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or password.",
-      });
-    }
+    const validPassword = await argon2
+      .verify(user?.passwordHash ?? (await dummyHash), password)
+      .catch(() => false);
 
-    const validPassword = await argon2.verify(
-      user.passwordHash,
-      password
-    );
-
-    if (!validPassword) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or password.",
-      });
+    if (!user || !validPassword) {
+      loginLimits.email.fail(emailKey);
+      loginLimits.ip.fail(ipKey);
+      return res.status(401).json(INVALID_LOGIN);
     }
+    loginLimits.email.clear(emailKey);
 
     if (user.status !== "ACTIVE") {
       return res.status(403).json({
@@ -63,26 +73,13 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    const secret = process.env.JWT_SECRET;
-
-    if (!secret || secret.length < 32) {
-      throw new Error("JWT_SECRET is missing or too short.");
-    }
-
-    const token = jwt.sign(
-      { role: user.role, sessionVersion: user.sessionVersion },
-      secret,
-      {
-        subject: user.id,
-        expiresIn: "15m",
-        algorithm: "HS256",
-      }
-    );
+    const session = await issueSession(user);
 
     return res.status(200).json({
       success: true,
       message: "Login successful.",
-      accessToken: token,
+      accessToken: session.accessToken,
+      refreshToken: session.refreshToken,
      user: {
   id: user.id,
   fullName: user.fullName,
@@ -104,6 +101,29 @@ router.post("/login", async (req, res) => {
     });
   }
 });
+/** E-03: swap a refresh token for a new pair (the old one is revoked). 401 = sign in again. */
+router.post("/refresh", async (req, res) => {
+  try {
+    const session = await rotateSession(req.body?.refreshToken);
+    if (!session) return res.status(401).json({ success: false, message: "Session expired. Sign in again." });
+    return res.json({ success: true, ...session });
+  } catch (error) {
+    console.error("Refresh error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error." });
+  }
+});
+
+/** E-03: logout ends this device's sign-in on the server (works with an expired access token). */
+router.post("/logout", async (req, res) => {
+  try {
+    await revokeSession(req.body?.refreshToken);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("Logout error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error." });
+  }
+});
+
 router.get("/me", async (req, res) => {
   try {
     const authorization = req.headers.authorization;

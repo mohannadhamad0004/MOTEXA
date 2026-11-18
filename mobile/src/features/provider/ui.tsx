@@ -10,8 +10,7 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-g
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { MechanicNote, useMechanicTheme } from "../../components/MechanicUI";
 import { Text } from "../../components/MotexaVisual";
-import * as Store from "../../components/SessionStore";
-import { API_URL } from "../../core/config/api";
+import { API_URL, getAccessToken } from "../../core/config/api";
 import { privateImageSource } from "../shared/api";
 import { useDT } from "../department/ui";
 
@@ -118,7 +117,7 @@ function ZoomableImage({ source }: { source: { uri: string; headers?: Record<str
 
 /** Opens a private PDF with the system viewer: download with the bearer token, then hand the file to the OS. */
 async function openPdf(uri: string, t: (en: string, ar: string) => string) {
-  const token = (await Store.getItemAsync("motexa_access_token")) ?? "";
+  const token = (await getAccessToken()) ?? "";
   const url = `${API_URL}${uri}`;
   if (Platform.OS === "web") {
     const blob = await (await fetch(url, { headers: { Authorization: `Bearer ${token}` } })).blob();

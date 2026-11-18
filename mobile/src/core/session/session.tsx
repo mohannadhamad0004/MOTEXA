@@ -1,6 +1,5 @@
-import { apiUrl } from "../config/api";
+import { apiUrl, clearSession, getAccessToken, refreshSession } from "../config/api";
 import { router } from "expo-router";
-import * as SecureStore from "../../components/SessionStore"; // same token store as the login (SecureStore on a phone, session storage on web)
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 
 export type SessionUser = {
@@ -11,8 +10,6 @@ export type SessionUser = {
   status: string;
   adminPermissions: { permission: string }[];
 };
-
-const TOKEN_KEY = "motexa_access_token";
 
 // UX gating only. These are NOT security: real endpoints must enforce the same rules server-side.
 export const isPartsProvider = (u: SessionUser) => u.role === "PARTS_PROVIDER";
@@ -27,7 +24,7 @@ export const canManageMechanics = (u: SessionUser) => hasPerm(u, "MANAGE_MECHANI
 export const canManageTow = (u: SessionUser) => hasPerm(u, "MANAGE_TOWING");
 
 export async function signOut() {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
+  await clearSession();
   router.replace("/auth/login");
 }
 
@@ -35,13 +32,16 @@ type State = { status: "loading" } | { status: "none" } | { status: "ready"; use
 
 async function fetchSession(): Promise<State> {
   try {
-    const token = await SecureStore.getItemAsync(TOKEN_KEY);
+    const token = await getAccessToken();
     const api = apiUrl();
     if (!token || !api) return { status: "none" };
-    const res = await fetch(`${api.replace(/\/$/, "")}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.status === 401) await SecureStore.deleteItemAsync(TOKEN_KEY);
+    const me = (t: string) => fetch(`${api.replace(/\/$/, "")}/auth/me`, { headers: { Authorization: `Bearer ${t}` } });
+    let res = await me(token);
+    if (res.status === 401) {
+      const fresh = await refreshSession(); // a wrong phone clock can hide an expired token
+      if (fresh) res = await me(fresh);
+    }
+    if (res.status === 401) await clearSession();
     if (!res.ok) return { status: "none" };
     const data = await res.json();
     return data?.success && data.user?.status === "ACTIVE"

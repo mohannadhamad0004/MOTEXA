@@ -1,7 +1,7 @@
 import * as SecureStore from "../../components/SessionStore"; // same token store as the login (SecureStore on a phone, session storage on web)
 import { router } from "expo-router";
 import { Alert, Platform } from "react-native";
-import { expiredText, isSessionExpiry } from "../session/sessionExpiry";
+import { ACCESS_KEY, REFRESH_KEY, createRefresher, expiredText, expiresSoon, isSessionExpiry } from "../session/sessionExpiry";
 import { errorTextFor } from "../session/errorText";
 
 const API_ROOT = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/+$/, "").replace(/\/api$/, "");
@@ -47,14 +47,49 @@ function xhrJson(method: string, url: string, headers: Record<string, string>, b
   });
 }
 
-// 401 on an authenticated call = the 15-minute token ran out: clear it, say so once, go to login. (Refresh tokens: see STATUS.md, "For Diala".)
+// E-03: 15-minute access token + rotating refresh token (both in SecureStore on a phone, session storage on web).
+const postJson = async (path: string, body: unknown) => {
+  const r = await fetch(`${API_URL}${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  return { status: r.status, data: await r.json().catch(() => null) };
+};
+const store = { get: SecureStore.getItemAsync, set: SecureStore.setItemAsync, del: SecureStore.deleteItemAsync };
+/** New access token from the refresh token. null = signed out; throws when the server can't be reached (still signed in). */
+export const refreshSession = createRefresher(store, (refreshToken) => postJson("/auth/refresh", { refreshToken }));
+
+/** The access token to send, refreshed first when it has under a minute left. Use this instead of reading the store directly. */
+export async function getAccessToken() {
+  const token = await SecureStore.getItemAsync(ACCESS_KEY);
+  if (!token || !expiresSoon(token)) return token;
+  try {
+    return await refreshSession();
+  } catch {
+    return token; // offline: send the old one; a 401 is handled by api()
+  }
+}
+
+/** After a sign-in. */
+export async function saveSession(accessToken: string, refreshToken?: string) {
+  await SecureStore.setItemAsync(ACCESS_KEY, accessToken);
+  if (refreshToken) await SecureStore.setItemAsync(REFRESH_KEY, refreshToken);
+  else await SecureStore.deleteItemAsync(REFRESH_KEY);
+}
+
+/** Sign-out: clears both tokens here and revokes the refresh token on the server (best effort, never blocks). */
+export async function clearSession() {
+  const refreshToken = await SecureStore.getItemAsync(REFRESH_KEY).catch(() => null);
+  await SecureStore.deleteItemAsync(ACCESS_KEY);
+  await SecureStore.deleteItemAsync(REFRESH_KEY);
+  if (refreshToken) postJson("/auth/logout", { refreshToken }).catch(() => {});
+}
+
+// A 401 that a refresh could not fix = the session really ended: clear it, say so once, go to login.
 let expiring = false;
 async function sessionExpired() {
   if (expiring) return;
   expiring = true;
   try {
     const text = expiredText(await SecureStore.getItemAsync("motexa_language").catch(() => null));
-    await SecureStore.deleteItemAsync("motexa_access_token");
+    await clearSession();
     router.replace("/auth/login");
     if (Platform.OS === "web") globalThis.alert?.(text);
     else Alert.alert(text);
@@ -63,39 +98,42 @@ async function sessionExpired() {
   }
 }
 
-/** Authenticated JSON request to the real backend. Throws Error(message) on non-2xx (with `status` and `data`; no `status` = it never reached the server). */
-export async function api<T = any>(method: string, path: string, body?: unknown): Promise<T> {
-  const token = await SecureStore.getItemAsync("motexa_access_token");
-  if (token) expiring = false; // a new sign-in re-arms the handler
-  const json = body === undefined ? undefined : JSON.stringify(body);
+async function send(method: string, path: string, token: string | null, json: string | undefined) {
+  const headers = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
   if (json && json.length > BIG) {
     setProgress(0);
     try {
-      const r = await xhrJson(method, `${API_URL}${path}`, { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, json);
-      if (!r.ok && isSessionExpiry(r.status, !!token)) void sessionExpired();
-      if (!r.ok) throw await failure(r.status, r.data);
-      return r.data as T;
+      return await xhrJson(method, `${API_URL}${path}`, headers, json);
     } finally {
       setProgress(null);
     }
   }
-  const res = await fetch(`${API_URL}${path}`, {
-    method,
-    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const data = await res.json().catch(() => null);
-  if (!res.ok) {
-    if (isSessionExpiry(res.status, !!token)) void sessionExpired();
-    // Callers can read extra fields the server sent with an error, e.g. `existingInquiryId` on a 409.
-    throw await failure(res.status, data);
+  const res = await fetch(`${API_URL}${path}`, { method, headers, body: json });
+  return { ok: res.ok, status: res.status, data: await res.json().catch(() => null) };
+}
+
+/** Authenticated JSON request to the real backend. Throws Error(message) on non-2xx (with `status` and `data`; no `status` = it never reached the server). */
+export async function api<T = any>(method: string, path: string, body?: unknown): Promise<T> {
+  const token = await getAccessToken();
+  if (token) expiring = false; // a new sign-in re-arms the handler
+  const json = body === undefined ? undefined : JSON.stringify(body);
+  let r = await send(method, path, token, json);
+  if (r.status === 401 && token) {
+    // refreshed once, then the same request again (it was refused before doing anything)
+    const fresh = await refreshSession();
+    if (fresh) r = await send(method, path, fresh, json);
   }
-  return data as T;
+  if (!r.ok) {
+    if (isSessionExpiry(r.status, !!token)) void sessionExpired();
+    // Callers can read extra fields the server sent with an error, e.g. `existingInquiryId` on a 409.
+    throw await failure(r.status, r.data);
+  }
+  return r.data as T;
 }
 
 /** Image source for a private document: requires the admin's bearer token (never a public URL). */
 export async function privateImageSource(path: string) {
-  const token = await SecureStore.getItemAsync("motexa_access_token");
+  const token = await getAccessToken();
   return { uri: `${API_URL}${path}`, headers: { Authorization: `Bearer ${token ?? ""}` } };
 }
 

@@ -17,13 +17,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams, type Href } from "expo-router";
 import * as SecureStore from '../../components/SessionStore';
+import { apiUrl, saveSession } from '../../core/config/api';
 import MotexaDialog from "../../components/MotexaDialog";
 import { landingFor } from "../../core/session/landing";
 
-const API_BASE = (process.env.EXPO_PUBLIC_API_URL || "")
-  .replace(/\/+$/, "");
+const API_BASE = apiUrl();
 
-const AUTH_URL = `${API_BASE}/api/auth/login`;
+const AUTH_URL = apiUrl("/auth/login");
 const BG = "#17100C";
 const BRONZE = "#E0A36F";
 const WHITE = "#FFF5EA";
@@ -123,6 +123,17 @@ const response = await fetch(
 );
       const data = await response.json();
 
+      if (response.status === 429) {
+        error(t("Too many sign-in attempts. Please wait 15 minutes and try again.",
+          "محاولات تسجيل دخول كثيرة. يرجى الانتظار 15 دقيقة ثم المحاولة مجددًا."));
+        return;
+      }
+
+      if (response.status === 401) {
+        error(t("Invalid email or password.", "البريد الإلكتروني أو كلمة المرور غير صحيحة."));
+        return;
+      }
+
       if (!response.ok) {
         error(data.message || data.error ||
           t("Invalid credentials.", "بيانات الدخول غير صحيحة."));
@@ -191,7 +202,7 @@ if(user.role==="MECHANIC"){destination="/mechanic";} else if (user.role === "SUP
 
           console.log("LOGIN SUCCESS:", user.role, destination);
 
-      await SecureStore.setItemAsync("motexa_access_token", token);
+      await saveSession(token, data.refreshToken);
       try{await rememberEmail(remember?normalizedEmail:null);}catch{console.warn('Sign-in preference could not be saved.');}
 
       console.log("TOKEN SAVED - NAVIGATING TO:", destination);

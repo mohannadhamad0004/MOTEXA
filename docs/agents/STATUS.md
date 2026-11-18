@@ -856,3 +856,26 @@
 - Tests: backend tests/autofit.test.ts (+2: status rules, bulk rules + audit + customers), 27/27 with accessory3d + autofit-viewer; mobile 80/80; both tsc 0.
 - Live test (rims "Mesh rims 17" set of 4, 21 cars, admin.parts@): baseline = only BMW E36 approved (approvedAt 2026-11-13T07:20:44Z, adj null), 20 passed. Approved 20 in one step, unapproved 3 through the screen, then 17 through the bulk endpoint: back to baseline (E36 approved with the same approvedAt, 20 passed), 0 mismatches. The audit rows of this test stay (audit is append-only).
 - Follow-up (same day): bulk approval never drops a manual correction. A fit with a stored correction (adj) that is not approved is a new state "has_correction" (UI "Manual correction" + "Has a manual correction, review on its own."), not selectable; the server skips it with HAS_CORRECTION (state check + a re-read of the row right before each approve). Chosen over "approve with the correction" because that would publish an offset nobody re-checked on that car; the single approve re-runs the viewer clearance check with the correction. Approved fits with a correction can still be bulk-unapproved (the correction stays). Tests: autofit.test.ts 7/7 (status rule + bulk skip keeps adj), mobile 80/80, both tsc 0. Live rims grid unchanged (no rims fit has a correction).
+
+- 2026-11-18 — Claude Code — unattended run (branch ui/blueprint): E-03 refresh tokens, login security, D-05, admin.routes shared prisma, admin `direction` style warning. Backend: additive migration `20261118090000_refresh_tokens` (applied to motexa_dev with `migrate deploy`), new `services/auth-session.service.ts`, `POST /api/auth/refresh` + `/api/auth/logout`, login rate limit (5 failures/email, 20/IP per 15 min) + dummy-hash compare + identical 401, new `tests/auth-session.test.mjs` (7). Mobile: `core/config/api.ts` (getAccessToken / saveSession / clearSession, api() refresh-once-and-retry), `core/session/sessionExpiry.ts` (pure refresher), `core/session/session.tsx`, `features/provider/ui.tsx`, `features/vehicle3d/api.ts`, new `tests/session-refresh.test.mjs` (4). Checks: backend + mobile tsc 0, prisma validate ok, backend npm test all pass, mobile tests 84/84. Details + phone checklist: RUN-LOG.md (2026-11-18). Nothing committed.
+
+  **Changed in Diala's files** (only for the listed bugs; minimal):
+  - `mobile/src/app/auth/login.tsx` — E-03: saves the refresh token (`saveSession`); login security: localized 429 and 401 messages.
+  - `mobile/src/app/admin/(tabs)/_layout.tsx` — D-05: `apiUrl("/auth/me")`; E-03: `getAccessToken()`, `clearSession()` on 401/403.
+  - `mobile/src/app/admin/(tabs)/index.tsx` — `direction:'ltr'` moved from StyleSheet.create to the inline topbar style; E-03: `getAccessToken()`.
+  - `mobile/src/app/admin/(tabs)/more.tsx`, `mobile/src/app/admin/profile.tsx`, `mobile/src/components/MechanicApplication.tsx`, `mobile/src/components/MechanicReviewScreen.tsx` — E-03: sign-out uses `clearSession()` (also revokes on the server); profile also reads with `getAccessToken()`.
+  - `mobile/src/app/admin/(tabs)/providers.tsx`, `mobile/src/app/admin/admin-management.tsx` (4 places), `mobile/src/components/mechanic-api.ts` — E-03: token read via `getAccessToken()` (refreshes when it is about to expire).
+  - `backend/src/routes/auth.routes.ts` (shared) — E-03 refresh/logout + login security.
+  - `backend/src/routes/admin.routes.ts` — uses the shared `prisma` from `src/prisma.ts` (test-database guard).
+
+- 2026-11-18 (later) — Claude Code — live verification on your backend :5000 + Expo web :8081 (fresh bundle; :8090 is still stale): refresh 401→1 refresh→retry on the polling tow-status page; 14–15 parallel calls → exactly 1 refresh (both the expired-token and the 401 path); logout clears both tokens + server returns 401 for the old refresh token; rate limit EN + AR on a throwaway account, then unlocked; identical error for wrong email / wrong password; admin tabs without /api/api, no direction warning; customer@, shop@, tow@, admin.parts@, audit.tow@ homes load with no API errors. Then fixed the raw `EXPO_PUBLIC_API_URL + "/api"` URL building (D-05 pattern) with the shared `apiUrl()`. Checks: mobile tsc 0, mobile tests 84/84, live: dashboard, providers, profile, admin invitations, activation verify all hit `/api/...` once. Throwaway account deleted afterwards.
+
+  **Changed in Diala's files** (D-05 pattern → shared `apiUrl()`):
+  - `mobile/src/app/admin/(tabs)/index.tsx` — dashboard URL.
+  - `mobile/src/app/admin/(tabs)/providers.tsx` — providers URL.
+  - `mobile/src/app/admin/admin-management.tsx` — `API_URL = apiUrl()`.
+  - `mobile/src/app/admin/profile.tsx` — `/auth/me` URL.
+  - `mobile/src/app/auth/admin-activation.tsx` — verify-invitation / OTP / activate URLs.
+  - `mobile/src/components/mechanic-api.ts` — `apiUrl(route)` (routes keep their `/api/...` form; apiUrl drops the duplicate).
+  - `mobile/src/components/PasswordRecoveryScreen.tsx` — password-reset URLs.
+  - `mobile/src/app/auth/login.tsx` — login URL (same pattern; 8th file).
