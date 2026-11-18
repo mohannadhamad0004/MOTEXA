@@ -39,7 +39,8 @@ export default function MyCar3D() {
   const [off, setOff] = useState<Partial<Record<KitPart, boolean>>>({}), [paint, setPaint] = useState(false);
   const [fitErrors, setFitErrors] = useState<Record<string, string>>({});
   const [accessoryError,setAccessoryError]=useState(false),[poll,setPoll]=useState(0);
-  useEffect(()=>{const timer=setInterval(()=>setPoll(v=>v+1),6000);return()=>clearInterval(timer);},[]);
+  // the poll also re-reads the Garage: an active-car change made elsewhere reaches this open screen within one tick
+  useEffect(()=>{const timer=setInterval(()=>{setPoll(v=>v+1);void refreshGarage();},6000);return()=>clearInterval(timer);},[]);
   const genId = car?.generation?.id ?? null;
   const [loadedFor,setLoadedFor]=useState("");
   useEffect(()=>{setOff({});setFitErrors({});setPaint(false);},[product,genId]);

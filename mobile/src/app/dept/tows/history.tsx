@@ -3,7 +3,8 @@ import { ItemRow } from "../../../components/ItemActionsMenu";
 import { towJobActions } from "../../../features/department/towActions";
 import { useMemo, useState } from "react";
 import { View } from "react-native";
-import { Card, Chip, EmptyState, ErrorState, Field, GarageHero, GaragePage, GText, ListRow, SkeletonRows, StatusChip } from "../../../components/garage";
+import { Chip, EmptyState, ErrorState, Field, GText, ListRow, SkeletonRows, StatusChip } from "../../../components/garage";
+import { DeptHead, DeptPage } from "../../../features/department/ui";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { isRealDate } from "../../../core/constants/files";
@@ -30,7 +31,8 @@ export default function AdminTowHistory() {
   const drivers = (people.data ?? []).filter((d) => !companyId || d.company.id === companyId);
   const state = useLoad(() => (dateOk(from) && dateOk(to) ? adminHistory.list({ status, companyId, driverId, from, to }) : Promise.resolve(null)), [status, companyId, driverId, from, to]);
   return (
-    <GaragePage onRefresh={state.reload} hero={<GarageHero variant="detail" onBack={() => (router.canGoBack() ? router.back() : router.navigate("/dept"))} title={t("Tow history", "سجل السحب")} line={state.data ? `${state.data.length}` : undefined} />}>
+    <DeptPage back tabs={false} onRefresh={state.reload} refreshing={state.loading && !!state.data}>
+      <DeptHead title={t("Tow history", "سجل السحب")} caption={state.data ? `${state.data.length}` : undefined} />
       <GText style={[gType.label, { fontWeight: "800", marginBottom: 6 }, align]}>{t("Status", "الحالة")}</GText>
       <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
         <Chip label={t("All", "الكل")} on={!status} onPress={() => setStatus("")} />
@@ -69,6 +71,6 @@ export default function AdminTowHistory() {
           </ItemRow>
         ))}
       </View>
-    </GaragePage>
+    </DeptPage>
   );
 }

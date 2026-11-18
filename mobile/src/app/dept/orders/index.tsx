@@ -1,7 +1,8 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
-import { Chip, EmptyState, ErrorState, GarageHero, GaragePage, GIcon, GText, IconButton, Rail, SkeletonRows, StatusChip, Tap } from "../../../components/garage";
+import { Chip, EmptyState, ErrorState, GIcon, GText, IconButton, Rail, SkeletonRows, StatusChip, Tap } from "../../../components/garage";
+import { DeptHead, DeptPage } from "../../../features/department/ui";
 import { formatPrice } from "../../../core/constants/money";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
@@ -21,22 +22,20 @@ export default function AdminOrdersList() {
   const state = useLoad(() => adminOrders.list(status ?? undefined), [status], 15000);
 
   return (
-    <GaragePage
-      onRefresh={state.reload}
-      refreshing={state.loading && !!state.data}
-      hero={
-        <GarageHero variant="detail" onBack={() => (router.canGoBack() ? router.back() : router.navigate("/dept"))} title={t("Parts orders", "طلبات القطع")} line={state.data ? `${state.data.length} ${t("orders", "طلبات")}` : undefined}>
-          <View style={[row, { marginTop: 4 }]}>
-            <IconButton icon="map-outline" label={t("Active deliveries", "التوصيلات الجارية")} onPress={() => router.push("/dept/orders/map")} />
-          </View>
-        </GarageHero>
-      }
-    >
+    <DeptPage back tabs={false} onRefresh={state.reload} refreshing={state.loading && !!state.data}>
+      <DeptHead
+        title={t("Parts orders", "طلبات القطع")}
+        caption={state.data ? `${state.data.length} ${t("orders", "طلبات")}` : undefined}
+        end={<IconButton icon="map-outline" label={t("Active deliveries", "التوصيلات الجارية")} onPress={() => router.push("/dept/orders/map")} />}
+      />
+      {/* flexGrow 0: the rail must not absorb the free height of the page body; marginHorizontal 2 = the Rail's -20 gutter minus this page's 18 */}
+      <View style={{ flexGrow: 0, marginHorizontal: 2 }}>
       <Rail gap={8}>
         {FILTERS.map((s) => (
           <Chip key={s ?? "all"} label={s ? L.status[s] : t("All", "الكل")} on={status === s} onPress={() => setStatus(s)} />
         ))}
       </Rail>
+      </View>
       <View style={{ marginTop: 16, gap: 12 }}>
         {state.loading && !state.data ? (
           <SkeletonRows count={4} />
@@ -61,6 +60,6 @@ export default function AdminOrdersList() {
           ))
         )}
       </View>
-    </GaragePage>
+    </DeptPage>
   );
 }

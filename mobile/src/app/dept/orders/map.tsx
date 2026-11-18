@@ -1,7 +1,8 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { View, useWindowDimensions } from "react-native";
-import { Card, EmptyState, ErrorState, GarageHero, GaragePage, GIcon, GText, Note, SkeletonBlock, Tap } from "../../../components/garage";
+import { Card, EmptyState, ErrorState, GIcon, GText, Note, SkeletonBlock, Tap } from "../../../components/garage";
+import { DeptHead, DeptPage } from "../../../features/department/ui";
 import { cityLabel } from "../../../core/constants/cities";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
@@ -33,10 +34,8 @@ export default function AdminActiveDeliveries() {
   const fit: [number, number][] = route?.coords ?? pins.map((p) => [p.lat, p.lng] as [number, number]);
 
   return (
-    <GaragePage
-      onRefresh={state.reload}
-      hero={<GarageHero variant="detail" onBack={() => (router.canGoBack() ? router.back() : router.navigate("/dept/orders" as never))} title={t("Active deliveries", "التوصيلات الجارية")} line={state.data ? `${list.length} ${t("out for delivery", "قيد التوصيل")}` : undefined} />}
-    >
+    <DeptPage back tabs={false} onRefresh={state.reload} refreshing={state.loading && !!state.data}>
+      <DeptHead title={t("Active deliveries", "التوصيلات الجارية")} caption={state.data ? `${list.length} ${t("out for delivery", "قيد التوصيل")}` : undefined} />
       {state.error && !state.data ? <ErrorState text={state.error} onRetry={state.reload} retryLabel={t("Retry", "إعادة المحاولة")} /> : null}
       {!state.data && !state.error ? <SkeletonBlock height={Math.round(height * 0.45)} radius={gShape.card} /> : null}
       {state.data ? (
@@ -82,6 +81,6 @@ export default function AdminActiveDeliveries() {
           </Card>
         )
       ) : null}
-    </GaragePage>
+    </DeptPage>
   );
 }

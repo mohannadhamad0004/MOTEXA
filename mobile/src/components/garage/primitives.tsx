@@ -1,23 +1,28 @@
 // Garage building blocks: Tap, Card, Section, ListRow, Chip, StatusChip, Badge, GButton, IconButton, SearchBar, Toggle.
-import { ReactNode, useEffect, useRef } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleProp, Switch, TextInput, View, ViewStyle } from "react-native";
+import { createContext, ReactNode, useContext, useEffect, useRef } from "react";
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleProp, Switch, TextInput, View, ViewStyle } from "react-native";
 import { gShape, gType, useGarageTheme } from "../../theme/garage";
 import { GIcon, GIconName, GText } from "./text";
 
-/** Pressable with a soft press state. Never put a Tap inside another Tap (web renders nested buttons). */
+const InsideTap = createContext(false);
+
+/** Pressable with a soft press state. On web a Tap inside another Tap drops its button role (a <button> cannot contain a <button>); native is unchanged. */
 export function Tap({ onPress, onLongPress, label, style, children, disabled, role = "button" }: { onPress?: () => void; onLongPress?: () => void; label: string; style?: StyleProp<ViewStyle>; children: ReactNode; disabled?: boolean; role?: "button" | "link" | "tab" }) {
+  const nested = useContext(InsideTap) && Platform.OS === "web";
   return (
-    <Pressable
-      accessibilityRole={role}
-      accessibilityLabel={label}
-      accessibilityState={{ disabled: !!disabled }}
-      disabled={disabled || !onPress}
-      onPress={onPress}
-      onLongPress={onLongPress}
-      style={({ pressed }) => [style, pressed && { opacity: 0.86, transform: [{ scale: 0.985 }] }]}
-    >
-      {children}
-    </Pressable>
+    <InsideTap.Provider value>
+      <Pressable
+        accessibilityRole={nested ? undefined : role}
+        accessibilityLabel={label}
+        accessibilityState={{ disabled: !!disabled }}
+        disabled={disabled || !onPress}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        style={({ pressed }) => [style, pressed && { opacity: 0.86, transform: [{ scale: 0.985 }] }]}
+      >
+        {children}
+      </Pressable>
+    </InsideTap.Provider>
   );
 }
 

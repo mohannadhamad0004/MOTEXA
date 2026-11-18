@@ -3,7 +3,8 @@ import { ItemRow } from "../../../components/ItemActionsMenu";
 import { reportActions } from "../../../features/department/towActions";
 import { useState } from "react";
 import { View } from "react-native";
-import { Chip, EmptyState, ErrorState, GarageHero, GaragePage, GText, SkeletonRows, StatusChip } from "../../../components/garage";
+import { Chip, EmptyState, ErrorState, GText, SkeletonRows, StatusChip } from "../../../components/garage";
+import { DeptHead, DeptPage } from "../../../features/department/ui";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { fmtDateTime } from "../../../features/requests/requestBits";
@@ -17,7 +18,8 @@ export default function AdminTowReports() {
   const [open, setOpen] = useState(true);
   const state = useLoad(() => adminHistory.reports(open), [open]);
   return (
-    <GaragePage onRefresh={state.reload} hero={<GarageHero variant="detail" onBack={() => (router.canGoBack() ? router.back() : router.navigate("/dept"))} title={t("Problem reports", "بلاغات المشاكل")} line={state.data ? `${state.data.length}` : undefined} />}>
+    <DeptPage back tabs={false} onRefresh={state.reload} refreshing={state.loading && !!state.data}>
+      <DeptHead title={t("Problem reports", "بلاغات المشاكل")} caption={state.data ? `${state.data.length}` : undefined} />
       <View style={[row, { gap: 8, marginBottom: 12 }]}>
         <Chip label={t("Open", "مفتوحة")} on={open} onPress={() => setOpen(true)} />
         <Chip label={t("All", "الكل")} on={!open} onPress={() => setOpen(false)} />
@@ -37,6 +39,6 @@ export default function AdminTowReports() {
           </ItemRow>
         ))}
       </View>
-    </GaragePage>
+    </DeptPage>
   );
 }

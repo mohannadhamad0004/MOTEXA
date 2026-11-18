@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
-import { Card, ErrorState, Field, GButton, GarageHero, GaragePage, ListRow, Note, Section, SkeletonBlock, StatusChip, Timeline } from "../../../components/garage";
+import { Card, ErrorState, Field, GButton, ListRow, Note, Section, SkeletonBlock, StatusChip, Timeline } from "../../../components/garage";
+import { DeptHead, DeptPage } from "../../../features/department/ui";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { OrderMap } from "../../../features/orders/orderBits";
@@ -37,14 +38,12 @@ export default function AdminTowJob() {
   const j = state.data;
   const live = j?.driver?.live ?? null;
   return (
-    <GaragePage
-      onRefresh={state.reload}
-      hero={
-        <GarageHero variant="detail" onBack={() => (router.canGoBack() ? router.back() : router.navigate("/dept/tows" as never))} title={j ? j.company.name : t("Tow job", "مهمة سحب")} line={j ? `${j.customer.firstName} · ${j.vehicle.make} ${j.vehicle.model}` : undefined}>
-          {j ? <StatusChip tone={towTone(j.status)} label={j.status === "EN_ROUTE" && j.arrivedAt ? L.ARRIVED : L[j.status]} /> : null}
-        </GarageHero>
-      }
-    >
+    <DeptPage back tabs={false} onRefresh={state.reload} refreshing={state.loading && !!j}>
+      <DeptHead
+        title={j ? j.company.name : t("Tow job", "مهمة سحب")}
+        caption={j ? `${j.customer.firstName} · ${j.vehicle.make} ${j.vehicle.model}` : undefined}
+        end={j ? <StatusChip tone={towTone(j.status)} label={j.status === "EN_ROUTE" && j.arrivedAt ? L.ARRIVED : L[j.status]} /> : undefined}
+      />
       {state.error && !j ? <ErrorState text={state.error} onRetry={state.reload} retryLabel={t("Retry", "إعادة المحاولة")} /> : null}
       {!j && !state.error ? <SkeletonBlock height={240} radius={gShape.card} /> : null}
       {j ? (
@@ -95,6 +94,6 @@ export default function AdminTowJob() {
           ) : null}
         </View>
       ) : null}
-    </GaragePage>
+    </DeptPage>
   );
 }

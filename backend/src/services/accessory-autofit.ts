@@ -154,6 +154,23 @@ async function fittedOn<G extends Gen>(a: { accessoryType: string; product: { is
   return gens.map(g => ({ generationId: g.id, generation: g as unknown as G })); // findMany includes vehicle: a superset of every G used here
 }
 
+/** The review state of one stored fit, as the bulk screen shows it. "passed" = computed, current and it PASSED the automatic fit check
+ *  (not failed, info.qa.ok === true) and is not approved yet: the only state that can be bulk-approved. Pure (tested without a database). */
+export type FitStatus = "approved" | "passed" | "failed" | "not_computed" | "needs_correction" | "has_correction";
+export function fitStatus(input: { row: { fit: unknown; approvedAt: Date | null; adj?: unknown } | null; isCurrent: boolean; blockedCode?: string | null }): { status: FitStatus; reason: string | null } {
+  if (!input.row || !input.isCurrent) return { status: "not_computed", reason: "FIT_NOT_READY" };
+  if (input.blockedCode) return { status: "not_computed", reason: input.blockedCode }; // car / part map must be confirmed first: approve() refuses these too
+  const f = input.row.fit as { failed?: string; needsCorrection?: boolean; info?: { qa?: { ok?: boolean } } };
+  if (f.failed) return { status: "failed", reason: f.failed };
+  if (input.row.approvedAt) return { status: "approved", reason: null };
+  if (f.needsCorrection) return { status: "needs_correction", reason: "NEEDS_CORRECTION" }; // a human flagged it: never bulk-approved over that decision
+  // a stored manual correction (adj) that is not approved yet: bulk would either drop it (approve the pure auto-fit) or publish an offset
+  // nobody re-checked on this car. Neither is safe: it is reviewed on its own (the single approve re-runs the clearance check with it).
+  if (input.row.adj !== null && input.row.adj !== undefined) return { status: "has_correction", reason: "HAS_CORRECTION" };
+  if (f.info?.qa?.ok === true) return { status: "passed", reason: null };
+  return { status: "failed", reason: "FIT_CHECK_NOT_PASSED" };
+}
+
 const running = new Map<string, Promise<unknown>>();
 export const isAccessoryFitRunning = (accessoryId: string) => running.has(accessoryId);
 /** Reads only schedule work when a published fit really is stale; current approvals stay editable. */
@@ -196,7 +213,7 @@ export function autoFitAccessory(accessoryId: string) {
 }
 
 export function createAutoFitService(options:{compute?:typeof computeFit}={}) {
-  return {
+  const service = {
     /** Published and private review candidates on this car, with stored fits. Explicit rerun owns fit computation. */
     list: async (key: string) => {
       const rows = await prisma.productAccessory3D.findMany({ where: { ...(!testProviderRuntime()?{NOT:[{generationMode:"mock"},{provider:"MOCK"}]}:{}), status: { in: ["PUBLISHED", "READY_FOR_FINAL_REVIEW"] }, OR: [{ fits: { some: { generation: { model3dKey: key, isPublished: true } } } }, { accessoryType: "RIMS", product: { isUniversal: true } }] },
@@ -241,6 +258,61 @@ export function createAutoFitService(options:{compute?:typeof computeFit}={}) {
       });
       return { fit: u.fit, adj: u.adj, approvedAt: u.approvedAt };
     },
+    /** Every car this accessory is fitted on (a Universal-by-size rim: every published car with a 3D model) with its review state. */
+    fitsFor: async (accessoryId: string) => {
+      const a = await prisma.productAccessory3D.findUnique({ where: { id: accessoryId }, include: { product: { select: { name: true, isUniversal: true } }, autoFits: true } });
+      if (!a) return fail("NOT_FOUND", "Accessory not found.", 404);
+      if (!["PUBLISHED", "READY_FOR_FINAL_REVIEW"].includes(a.status)) return fail("FIT_NOT_READY", "Only a published or review-ready accessory has fits.", 409);
+      const targets = await accessoryTargets(accessoryId);
+      const cars = [];
+      let stale = false;
+      for (const g of targets) {
+        if (!g.isPublished || !g.model3dKey) continue;
+        const r = a.autoFits.find(x => x.generationId === g.id) ?? null;
+        const isCurrent = !!r && r.model3dKey === g.model3dKey && typeOf(r.fit) === a.accessoryType && validFit(r.fit) && await current(r, a.privateModelPath);
+        if (!isCurrent) stale = true;
+        let blockedCode: string | null = null;
+        if (isCurrent && !(r!.fit as { failed?: string }).failed) { const e = await fitEligibility(accessoryId, g.id, a.privateModelPath); if (e.code === "PART_MAP_STALE" || e.code === "NO_VEHICLE_3D") blockedCode = e.code; }
+        const st = fitStatus({ row: r, isCurrent, blockedCode });
+        cars.push({ generationId: g.id, name: `${g.vehicle.make} ${g.nameEn}`, nameAr: `${g.vehicle.makeAr ?? g.vehicle.make} ${g.nameAr}`, make: g.vehicle.make, model3dKey: g.model3dKey, photoUrl: g.photoUrl ?? null,
+          status: st.status, reason: st.reason, approvedAt: st.status === "approved" ? r!.approvedAt : null });
+      }
+      if (stale && a.status === "PUBLISHED") void autoFitAccessory(a.id);
+      cars.sort((x, y) => x.name.localeCompare(y.name));
+      return { accessory: { id: a.id, productId: a.productId, productName: a.product?.name ?? "", type: a.accessoryType, kitPart: a.kitPart, status: a.status, universal: a.accessoryType === "RIMS" && !!a.product?.isUniversal, computing: running.has(a.id) }, cars };
+    },
+    /** Take the approval off (customers stop seeing it). The correction (adj) stays as the suggestion. One audit row per car. */
+    unapprove: async (uid: string, accessoryId: string, generationId: string) => {
+      return prisma.$transaction(async tx => {
+        await tx.$queryRaw`SELECT "id" FROM "ProductAccessory3D" WHERE "id"=${accessoryId} FOR UPDATE`;
+        const now = await tx.accessoryAutoFit.findUnique({ where: { accessoryId_generationId: { accessoryId, generationId } } });
+        if (!now || !now.approvedAt) return fail("FIT_NOT_APPROVED", "This fit is not approved.", 409);
+        await tx.auditLog.create({ data: { actorId: uid, action: "ACCESSORY3D_FIT_UNAPPROVED", targetId: accessoryId, details: { generationId } } });
+        return tx.accessoryAutoFit.update({ where: { accessoryId_generationId: { accessoryId, generationId } }, data: { approvedAt: null, approvedByUserId: null } });
+      });
+    },
+    /** Bulk review on one accessory. "approve" only takes fits whose state is exactly "passed" (checked again here, whatever the client sent);
+     *  "unapprove" only takes "approved" ones. Each car goes through the same single approve / unapprove logic (so each writes its own audit row);
+     *  one summary row records who, how many and which cars. Returns what was done and what was skipped (with the reason). */
+    bulk: async (uid: string, accessoryId: string, action: string, generationIds: unknown) => {
+      if (action !== "approve" && action !== "unapprove") return fail("INVALID_ACTION", "action must be approve or unapprove.");
+      if (!Array.isArray(generationIds) || !generationIds.length || generationIds.length > 200 || generationIds.some(x => typeof x !== "string")) return fail("INVALID_SELECTION", "Choose between 1 and 200 cars.");
+      const ids = [...new Set(generationIds as string[])];
+      const state = await service.fitsFor(accessoryId);
+      const byId = new Map(state.cars.map(c => [c.generationId, c]));
+      const want: FitStatus = action === "approve" ? "passed" : "approved";
+      const done: { generationId: string; name: string }[] = [], skipped: { generationId: string; name: string; code: string }[] = [];
+      for (const gid of ids) {
+        const c = byId.get(gid);
+        if (!c) { skipped.push({ generationId: gid, name: gid, code: "NOT_A_TARGET" }); continue; }
+        if (c.status !== want) { skipped.push({ generationId: gid, name: c.name, code: c.status === "failed" ? "FIT_FAILED" : c.status === "not_computed" ? "FIT_NOT_READY" : c.status === "needs_correction" ? "NEEDS_CORRECTION" : c.status === "has_correction" ? "HAS_CORRECTION" : c.status === "approved" ? "ALREADY_APPROVED" : "FIT_NOT_APPROVED" }); continue; }
+        try { if (action === "approve") { const now = await prisma.accessoryAutoFit.findUnique({ where: { accessoryId_generationId: { accessoryId, generationId: gid } }, select: { adj: true } }); if (now?.adj !== null && now?.adj !== undefined) { skipped.push({ generationId: gid, name: c.name, code: "HAS_CORRECTION" }); continue; } await service.approve(uid, accessoryId, gid, {}); } else await service.unapprove(uid, accessoryId, gid); done.push({ generationId: gid, name: c.name }); }
+        catch (e) { skipped.push({ generationId: gid, name: c.name, code: (e as { code?: string })?.code ?? "FAILED" }); }
+      }
+      await prisma.auditLog.create({ data: { actorId: uid, action: action === "approve" ? "ACCESSORY3D_FITS_BULK_APPROVED" : "ACCESSORY3D_FITS_BULK_UNAPPROVED", targetId: accessoryId,
+        details: { count: done.length, requested: ids.length, generationIds: done.map(d => d.generationId), cars: done.map(d => d.name), skipped } as unknown as Prisma.InputJsonValue } });
+      return { action, done, skipped };
+    },
     /** For a customer's generation: the current stored fit + the admin's correction, or null (the app fits live). */
     forCustomer: async (accessoryId: string, generationId: string, privateModelPath: string | null) => {
       return (await fitEligibility(accessoryId,generationId,privateModelPath)).autoFit;
@@ -262,4 +334,5 @@ export function createAutoFitService(options:{compute?:typeof computeFit}={}) {
       try{await job;return {success:true};}finally{running.delete(accessoryId);}
     },
   };
+  return service;
 }

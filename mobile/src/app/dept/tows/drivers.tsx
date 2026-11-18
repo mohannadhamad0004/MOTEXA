@@ -2,7 +2,8 @@ import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
-import { Card, Chip, EmptyState, ErrorState, Field, GarageHero, GaragePage, GButton, GText, ListRow, Note, SkeletonRows, StatusChip, Tone } from "../../../components/garage";
+import { Card, Chip, EmptyState, ErrorState, Field, GButton, GText, ListRow, Note, SkeletonRows, StatusChip, Tone } from "../../../components/garage";
+import { DeptHead, DeptPage } from "../../../features/department/ui";
 import { privateImageSource } from "../../../core/config/api";
 import { publicImageUrl } from "../../../core/constants/files";
 import { useL } from "../../../core/hooks/useL";
@@ -52,7 +53,8 @@ export default function DriverReview() {
     }
   };
   return (
-    <GaragePage onRefresh={state.reload} hero={<GarageHero variant="detail" onBack={() => (router.canGoBack() ? router.back() : router.navigate("/dept"))} title={t("Drivers' licences", "رخص السائقين")} line={state.data ? `${state.data.length}` : undefined} />}>
+    <DeptPage back tabs={false} onRefresh={state.reload} refreshing={state.loading && !!state.data}>
+      <DeptHead title={t("Drivers' licences", "رخص السائقين")} caption={state.data ? `${state.data.length}` : undefined} />
       <View style={[row, { gap: 8, flexWrap: "wrap", marginBottom: 12 }]}>
         {FILTERS.map((f) => <Chip key={f} label={label[f]} on={filter === f} onPress={() => setFilter(f)} />)}
       </View>
@@ -86,6 +88,6 @@ export default function DriverReview() {
           </ItemRow>
         ))}
       </View>
-    </GaragePage>
+    </DeptPage>
   );
 }

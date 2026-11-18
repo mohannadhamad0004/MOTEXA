@@ -75,6 +75,9 @@ export function createAccessory3DRouter(service = createAccessory3DService(), pa
 
   // auto-fits on one car model: list (+ background computing), approve with an optional correction (adj null = reset to auto-fit)
   router.get("/admin/parts/auto-fits", ...admin, handle(async (req, res) => res.json({ fits: await autoFits.list(String(req.query.model3dKey ?? "")) })));
+  // bulk fit review on ONE accessory (all its cars): the grid, and approve / unapprove selected (only "passed" / "approved" fits are taken)
+  router.get(a + "/:id/fits", ...admin, handle(async (req, res) => res.json(await autoFits.fitsFor(p(req, "id")))));
+  router.post(a + "/:id/fits/bulk", ...admin, json, handle(async (req, res, uid) => res.json(await autoFits.bulk(uid, p(req, "id"), String(req.body?.action ?? ""), req.body?.generationIds))));
   router.put("/admin/parts/auto-fits/:accessoryId/:generationId", ...admin, json, handle(async (req, res, uid) => res.json({ fit: await autoFits.approve(uid, p(req, "accessoryId"), p(req, "generationId"), req.body ?? {}) })));
 
   const c = "/catalog/products/:productId/accessory-3d";

@@ -749,6 +749,7 @@ function AutoFitEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
     onRefresh={() => { void models.reload(); void fits.reload(); }} refreshing={(models.loading && !!models.data) || (fits.loading && !!fits.data)}>
     <View style={{ gap: 14 }}>
       <ModeSwitch mode={mode} setMode={setMode} />
+      <GButton variant="secondary" icon="albums-outline" label={t("Review one accessory on all its cars (bulk)", "مراجعة قطعة واحدة على كل سياراتها (دفعة واحدة)")} onPress={() => router.push("/dept/accessory-fits" as Href)} />
       {params.requestId?<GButton variant="secondary" label={t("Return to 3D request","العودة إلى طلب النموذج")} onPress={()=>router.replace(`/dept/accessory3d/${encodeURIComponent(params.requestId!)}` as Href)}/>:null}
       {models.error ? <Note tone="danger">{models.error}</Note> : null}
       <View style={[row, { flexWrap: "wrap", gap: 8 }]}>{(models.data ?? []).map(m => <Chip key={m.key} label={m.name} on={key === m.key} onPress={() => { setKey(m.key); setSel(null); }} />)}</View>
