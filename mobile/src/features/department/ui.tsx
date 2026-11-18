@@ -85,13 +85,27 @@ function TopBar({ back }: { back?: boolean }) {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={d.t("Back", "رجوع")}
-          onPress={() => router.back()}
+          onPress={() => (router.canGoBack() ? router.back() : router.navigate("/dept"))}
           hitSlop={4}
           style={({ pressed }) => ({ alignSelf: d.ar ? "flex-end" : "flex-start", width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: d.border, backgroundColor: d.surface, opacity: pressed ? 0.8 : 1 })}
         >
           <Ionicons name={d.ar ? "chevron-forward" : "chevron-back"} size={22} color={d.ink} />
         </Pressable>
       ) : null}
+    </View>
+  );
+}
+
+/** Page title block under the back button: title, optional caption (a count / a name) and an optional node on the end side (status chip, action). */
+export function DeptHead({ title, caption, end }: { title: string; caption?: string; end?: ReactNode }) {
+  const d = useDT();
+  return (
+    <View style={{ flexDirection: d.row, alignItems: "center", gap: 10, marginTop: 4, marginBottom: 14 }}>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text accessibilityRole="header" style={{ color: d.ink, fontSize: 24, lineHeight: d.ar ? 36 : 30, fontWeight: "800", textAlign: d.align }}>{title}</Text>
+        {caption ? <Text style={{ color: d.muted, fontSize: 13, lineHeight: 20, textAlign: d.align }}>{caption}</Text> : null}
+      </View>
+      {end}
     </View>
   );
 }
@@ -176,7 +190,7 @@ export function DeptPage({
         <ScrollView
           showsVerticalScrollIndicator={false}
           refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} /> : undefined}
-          contentContainerStyle={{ width: "100%", maxWidth: 680, alignSelf: "center", flexGrow: 1, paddingBottom: footer ? 170 : tabs ? 130 : 40 }}
+          contentContainerStyle={{ width: "100%", maxWidth: 680, alignSelf: "center", flexGrow: 1, paddingBottom: footer ? 230 : tabs ? 130 : 40 }}
         >
           <TopBar back={back} />
           <Switcher />

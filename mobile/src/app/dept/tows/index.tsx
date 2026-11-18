@@ -1,5 +1,6 @@
 import { router } from "expo-router";
-import { ErrorState, GarageHero, GaragePage, SkeletonBlock } from "../../../components/garage";
+import { ErrorState, SkeletonBlock } from "../../../components/garage";
+import { DeptHead, DeptPage } from "../../../features/department/ui";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { adminTows } from "../../../features/tow/dispatchService";
@@ -12,13 +13,11 @@ export default function AdminActiveTows() {
   const { t } = useL();
   const state = useLoad(() => adminTows.active(), [], 10_000);
   return (
-    <GaragePage
-      onRefresh={state.reload}
-      hero={<GarageHero variant="detail" onBack={() => (router.canGoBack() ? router.back() : router.navigate("/dept"))} title={t("Active tows", "عمليات السحب الجارية")} line={state.data ? `${state.data.length} ${t("active jobs", "مهام نشطة")}` : undefined} />}
-    >
+    <DeptPage back tabs={false} onRefresh={state.reload} refreshing={state.loading && !!state.data}>
+      <DeptHead title={t("Active tows", "عمليات السحب الجارية")} caption={state.data ? `${state.data.length} ${t("active jobs", "مهام نشطة")}` : undefined} />
       {state.error && !state.data ? <ErrorState text={state.error} onRetry={state.reload} retryLabel={t("Retry", "إعادة المحاولة")} /> : null}
       {!state.data && !state.error ? <SkeletonBlock height={320} radius={gShape.card} /> : null}
       {state.data ? <LiveJobsMap showCompany jobs={state.data} actions={(j) => towJobActions(t, j, state.reload)} onOpen={(id) => router.push({ pathname: "/dept/tows/[id]", params: { id } })} /> : null}
-    </GaragePage>
+    </DeptPage>
   );
 }

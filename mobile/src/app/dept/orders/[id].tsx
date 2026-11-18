@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
-import { Card, ErrorState, GarageHero, GaragePage, GText, ListRow, Note, Section, SkeletonBlock, StatusChip } from "../../../components/garage";
+import { Card, ErrorState, GText, ListRow, Note, Section, SkeletonBlock, StatusChip } from "../../../components/garage";
+import { DeptHead, DeptPage } from "../../../features/department/ui";
 import { cityLabel } from "../../../core/constants/cities";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
@@ -22,14 +23,12 @@ export default function AdminOrderDetail() {
   const shop = o?.shop.lat != null && o.shop.lng != null ? { lat: o.shop.lat, lng: o.shop.lng } : null;
 
   return (
-    <GaragePage
-      onRefresh={state.reload}
-      hero={
-        <GarageHero variant="detail" onBack={() => (router.canGoBack() ? router.back() : router.navigate("/dept/orders" as never))} title={o ? o.shop.name : t("Order", "الطلب")} line={o ? `${o.customer.firstName} · ${o.id.slice(0, 8).toUpperCase()}` : undefined}>
-          {o ? <StatusChip tone={orderTone(o.status)} label={L.status[o.status]} /> : null}
-        </GarageHero>
-      }
-    >
+    <DeptPage back tabs={false} onRefresh={state.reload} refreshing={state.loading && !!o}>
+      <DeptHead
+        title={o ? o.shop.name : t("Order", "الطلب")}
+        caption={o ? `${o.customer.firstName} · ${o.id.slice(0, 8).toUpperCase()}` : undefined}
+        end={o ? <StatusChip tone={orderTone(o.status)} label={L.status[o.status]} /> : undefined}
+      />
       {state.error && !o ? <ErrorState text={state.error} onRetry={state.reload} retryLabel={t("Retry", "إعادة المحاولة")} /> : null}
       {!o && !state.error ? <SkeletonBlock height={220} radius={gShape.card} /> : null}
       {o ? (
@@ -70,6 +69,6 @@ export default function AdminOrderDetail() {
           </Section>
         </>
       ) : null}
-    </GaragePage>
+    </DeptPage>
   );
 }

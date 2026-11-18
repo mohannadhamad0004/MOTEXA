@@ -63,6 +63,12 @@ export type AutoFitRow = { accessoryId: string; productId: string; productName: 
   hasModel: boolean; modelRevision: string | null;
   size: { widthMm: number | null; lengthMm: number | null; rimInches: number | null }; generation: { id: string; name: string }; finish?: RimFinish | null;
   fit: { fit: { info?: Record<string, unknown>; failed?: string } & Record<string, unknown>; adj: FitAdjust | null; approvedAt: string | null } | null; computing: boolean; kitPart?: KitPart };
+export type FitState = "approved" | "passed" | "failed" | "not_computed" | "needs_correction" | "has_correction";
+export type AccessoryFits = {
+  accessory: { id: string; productId: string; productName: string; type: AccessoryType; kitPart: KitPart; status: AccessoryStatus; universal: boolean; computing: boolean };
+  cars: { generationId: string; name: string; nameAr: string; make: string; model3dKey: string; photoUrl: string | null; status: FitState; reason: string | null; approvedAt: string | null }[];
+};
+export type BulkFitsResult = { action: "approve" | "unapprove"; done: { generationId: string; name: string }[]; skipped: { generationId: string; name: string; code: string }[] };
 export type { ZoneBox } from "../car3d/modelConfig";
 /** none = not split yet (running in the background), stale = the model file changed, single = one piece (zones only). */
 export type PartMapStatus = "none" | "stale" | "single" | "proposed" | "confirmed";
@@ -132,6 +138,9 @@ export const adminAccessoryApi = {
   /** approve the fit with a correction (null = the pure auto-fit: "Reset to auto-fit") */
   approveFit: (accessoryId: string, generationId: string, adj: FitAdjust | null) => api("PUT", `/admin/parts/auto-fits/${accessoryId}/${generationId}`, { adj }),
   needsCorrection: (accessoryId: string, generationId: string) => api("PUT", `/admin/parts/auto-fits/${accessoryId}/${generationId}`, { needsCorrection: true }),
+  /** bulk review: every car of one accessory with its state, then approve / unapprove a selection (the server re-checks every state) */
+  accessoryFits: (accessoryId: string) => api<AccessoryFits>("GET", `/admin/parts/accessory-3d/${accessoryId}/fits`),
+  bulkFits: (accessoryId: string, action: "approve" | "unapprove", generationIds: string[]) => api<BulkFitsResult>("POST", `/admin/parts/accessory-3d/${accessoryId}/fits/bulk`, { action, generationIds }),
   segment: async (key: string) => (await api<{ partMap: PartMapDetail }>("POST", `/admin/parts/part-maps/${key}/segment`)).partMap,
 };
 export const customerAccessoryApi = {

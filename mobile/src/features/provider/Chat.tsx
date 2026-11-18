@@ -2,15 +2,14 @@
 // an unread divider, an input bar pinned at the bottom and auto-scroll to the newest message. Polls every 15 s while open.
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { InTabs } from "../../components/layout/ProviderLayout";
-import { CanvasFill } from "../../components/BrandSurfaces";
+import { ProviderHeader } from "../../components/layout/ProviderHeader";
 import { pickMechanicDocument } from "../../components/MechanicDocuments";
 import { Text } from "../../components/MotexaVisual";
-import { BackButton } from "../department/MapPage";
 import { Avatar, cardStyle, useDT } from "../department/ui";
 import { privateImageSource } from "../shared/api";
 import type { Attachment, Message } from "./api";
@@ -240,16 +239,18 @@ export function ChatScreen({
   let lastDay = "";
   return (
     <View style={{ flex: 1 }}>
-      <CanvasFill />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: d.page }]} />
       {viewer.element}
-      <View style={{ paddingTop: insets.top + 8, paddingBottom: 10, paddingHorizontal: 14, flexDirection: d.row, alignItems: "center", gap: 10, backgroundColor: d.dark ? "#291F19" : "#FBF1E2", borderBottomWidth: 1, borderBottomColor: d.border }}>
-        <BackButton />
-        <Avatar name={title} size={42} />
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text numberOfLines={1} style={{ color: d.ink, fontSize: 16, lineHeight: 23, fontWeight: "800", textAlign: d.align }}>{title}</Text>
-          {subtitle ? <Text numberOfLines={1} style={{ color: d.muted, fontSize: 12, lineHeight: 17, textAlign: d.align }}>{subtitle}</Text> : null}
+      {/* the shared header (Part D): round 44 px back button when the page has somewhere to go back to, then title + subtitle */}
+      <View style={{ paddingTop: insets.top + 8, paddingBottom: 12, paddingHorizontal: 18, gap: 10, borderBottomWidth: 1, borderBottomColor: d.border }}>
+        {inTabs ? null : <ProviderHeader onBack={() => (router.canGoBack() ? router.back() : router.navigate((mine === "ADMIN" ? "/dept" : "/") as never))} />}
+        <View style={{ flexDirection: d.row, alignItems: "center", gap: 10 }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text numberOfLines={1} accessibilityRole="header" style={{ color: d.ink, fontSize: 24, lineHeight: d.ar ? 36 : 30, fontWeight: "800", textAlign: d.align }}>{title}</Text>
+            {subtitle ? <Text numberOfLines={2} style={{ color: d.muted, fontSize: 13, lineHeight: 20, textAlign: d.align }}>{subtitle}</Text> : null}
+          </View>
+          {badge}
         </View>
-        {badge}
       </View>
 
       <ScrollView
