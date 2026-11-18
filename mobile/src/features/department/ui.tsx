@@ -1,6 +1,5 @@
-// Department admin UI primitives. They are built FROM the super admin look (Diala's components and colours, imported, never copied):
-// BrandWordmark, LanguageSwitch, EditorialTitle, CanvasFill, LoadingState, InteractiveButton, DashboardPhotography, the photo hero with its
-// ivory curve, the stat tiles and the menu cards. Only the small compositions that her screens keep inline live here.
+// Department admin UI primitives on the shared garage layout (Part D): garage page colour, card look, section titles and empty state;
+// language and theme live in the admin Profile (Part C). Some of Diala's components are still imported (InteractiveButton, LoadingState, Text).
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -25,16 +24,14 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppearance } from "../../components/Appearance";
-import BrandWordmark from "../../components/BrandWordmark";
-import { CanvasFill } from "../../components/BrandSurfaces";
 import { DashboardPhotography } from "../../components/DashboardPhotography";
 import InteractiveButton from "../../components/InteractiveButton";
-import LanguageSwitch from "../../components/LanguageSwitch";
 import { LoadingState } from "../../components/LoadingState";
 import { Text, VisualProvider, useReducedMotion } from "../../components/MotexaVisual";
 import { EditorialTitle, SectionCaption } from "../../components/PremiumUI";
 import { useLanguage } from "../../i18n/LanguageContext";
-import { garageDark, garageLight } from "../../theme/garage";
+import { garageDark, garageLight, gShape, gType } from "../../theme/garage";
+import { EmptyState as GarageEmpty } from "../../components/garage/states";
 import { ToastHost } from "../../components/ItemActionsMenu";
 import { useDepartment } from "./DepartmentContext";
 
@@ -63,6 +60,8 @@ export function useDT() {
     soft: g.tint,
     accent: g.accentText,
     paper: g.cardSoft,
+    /** the garage page background (shell of every admin page) */
+    page: g.page,
     warn: g.warning,
     ok: g.success,
     bad: g.danger,
@@ -75,19 +74,24 @@ export function useDT() {
 export type Tone = "neutral" | "bronze" | "amber" | "ok" | "bad";
 type ChipColors = { fg: string; bg: string; border: string };
 
-/** Brand + department switcher + language/theme switch, as in the super admin top bar. */
+/** Top of every admin page (Part D): safe area + a round 44 px back button when the page has somewhere to go back to.
+ *  Language and theme live in Profile (Part C). */
 function TopBar({ back }: { back?: boolean }) {
   const insets = useSafeAreaInsets();
   const d = useDT();
   return (
-    <View style={[s.topbar, { paddingTop: insets.top + 7, backgroundColor: d.paper }]}>
+    <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 18, paddingBottom: back ? 8 : 0 }}>
       {back ? (
-        <InteractiveButton accessibilityRole="button" accessibilityLabel={d.t("Back", "رجوع")} onPress={() => router.back()} style={s.back}>
-          <Ionicons name={d.ar ? "arrow-forward" : "arrow-back"} size={22} color={d.ink} />
-        </InteractiveButton>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={d.t("Back", "رجوع")}
+          onPress={() => router.back()}
+          hitSlop={4}
+          style={({ pressed }) => ({ alignSelf: d.ar ? "flex-end" : "flex-start", width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: d.border, backgroundColor: d.surface, opacity: pressed ? 0.8 : 1 })}
+        >
+          <Ionicons name={d.ar ? "chevron-forward" : "chevron-back"} size={22} color={d.ink} />
+        </Pressable>
       ) : null}
-      <BrandWordmark size={20} style={{ flex: 1 }} />
-      <LanguageSwitch compact light unified />
     </View>
   );
 }
@@ -108,7 +112,7 @@ function Switcher() {
             accessibilityState={{ selected: on }}
             accessibilityLabel={d.t(dep.en, dep.ar)}
             onPress={() => setActive(dep.key)}
-            style={{ flex: 1, minWidth: 0, minHeight: 40, borderRadius: 20, flexDirection: d.row, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 8, borderWidth: 1, borderColor: on ? d.fill : d.border, backgroundColor: on ? d.fill : "transparent" }}
+            style={{ flex: 1, minWidth: 0, minHeight: 44, borderRadius: 22, flexDirection: d.row, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 8, borderWidth: 1, borderColor: on ? d.fill : d.border, backgroundColor: on ? d.fill : "transparent" }}
           >
             <Ionicons name={dep.icon} size={16} color={on ? d.fillInk : d.muted} />
             <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 12, fontWeight: "600", color: on ? d.fillInk : d.ink }}>{d.t(dep.en, dep.ar)}</Text>
@@ -167,19 +171,19 @@ export function DeptPage({
   return (
     <VisualProvider>
       <View style={{ flex: 1 }}>
-        <CanvasFill />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: d.page }]} />
         <StatusBar barStyle={d.dark ? "light-content" : "dark-content"} />
         <ScrollView
           showsVerticalScrollIndicator={false}
           refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} /> : undefined}
-          contentContainerStyle={{ width: "100%", maxWidth: 680, alignSelf: "center", flexGrow: 1, paddingBottom: footer ? 170 : tabs ? 120 : 40 }}
+          contentContainerStyle={{ width: "100%", maxWidth: 680, alignSelf: "center", flexGrow: 1, paddingBottom: footer ? 170 : tabs ? 130 : 40 }}
         >
           <TopBar back={back} />
           <Switcher />
           {hero}
-          <LinearGradient colors={[d.paper, d.surface, d.soft]} style={{ flexGrow: 1, paddingTop: hero ? 19 : 12, paddingHorizontal: 18, minHeight: Math.max(360, winH - 150) }}>
+          <View style={{ flexGrow: 1, paddingTop: hero ? 19 : 12, paddingHorizontal: 18, minHeight: Math.max(360, winH - 150) }}>
             {children}
-          </LinearGradient>
+          </View>
         </ScrollView>
         <ToastHost />
         {footer ? (
@@ -196,7 +200,7 @@ export function Section({ title, caption }: { title: string; caption?: string })
   const d = useDT();
   return (
     <View style={{ marginBottom: 12, marginTop: 4 }}>
-      <EditorialTitle accent={false} style={{ fontSize: 18, lineHeight: 27, fontWeight: "600", color: d.ink }}>{title}</EditorialTitle>
+      <Text accessibilityRole="header" style={[gType.title, { color: d.ink, textAlign: d.align }]}>{title}</Text>
       {caption ? <Text style={{ color: d.muted, fontSize: 12, lineHeight: 19, textAlign: d.align, marginTop: 2 }}>{caption}</Text> : null}
     </View>
   );
@@ -282,18 +286,14 @@ export function StatusChip({ status, kind = "app", size = "s" }: { status: strin
 }
 export const StatusPill = ({ value }: { value: string }) => <StatusChip status={value} />;
 
-/** The one card look: radius 22, subtle border, soft shadow. */
+/** The one card look = the garage Card: radius 22, card colour; light: soft warm shadow, dark: 1 px line. warn / bad tint the border. */
 export const cardStyle = (d: ReturnType<typeof useDT>, tone?: "warn" | "bad"): ViewStyle => ({
-  borderWidth: 1,
-  borderRadius: 22,
+  borderRadius: gShape.card,
   backgroundColor: d.surface,
+  borderWidth: d.dark || tone ? 1 : 0,
   borderColor: tone === "bad" ? d.bad : tone === "warn" ? d.warn : d.border,
-  shadowColor: "#4F2D17",
-  shadowOffset: { width: 0, height: 3 },
-  shadowOpacity: d.dark ? 0.35 : 0.1,
-  shadowRadius: 10,
-  elevation: 2,
-});
+  ...(d.dark ? null : { shadowColor: "#50321A", shadowOpacity: 0.08, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 2 }),
+})
 
 /** A tappable list card (request / directory row). */
 export function ItemCard({ children, onPress, label }: { children: ReactNode; onPress?: () => void; label: string }) {
@@ -420,15 +420,12 @@ export function ReasonBox({ title, confirmLabel, busy, onCancel, onConfirm }: { 
   );
 }
 
-export function Empty({ icon, text, hint }: { icon: IconName; text: string; hint?: string }) {
+export function Empty({ text, hint }: { icon?: IconName; text: string; hint?: string }) {
   const d = useDT();
   return (
-    <View style={{ ...cardStyle(d), alignItems: "center", gap: 10, padding: 28, marginTop: 4 }}>
-      <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: d.soft, alignItems: "center", justifyContent: "center" }}>
-        <Ionicons name={icon} size={28} color={d.accent} />
-      </View>
-      <Text style={{ color: d.ink, fontSize: 14, lineHeight: 22, fontWeight: "600", textAlign: "center" }}>{text}</Text>
-      {hint ? <Text style={{ color: d.muted, fontSize: 12, lineHeight: 19, textAlign: "center" }}>{hint}</Text> : null}
+    <View style={{ marginTop: 4 }}>
+      <GarageEmpty text={text} />
+      {hint ? <Text style={{ color: d.muted, fontSize: 12, lineHeight: 19, textAlign: "center", marginTop: -8, marginBottom: 12 }}>{hint}</Text> : null}
     </View>
   );
 }

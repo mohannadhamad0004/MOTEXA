@@ -53,6 +53,16 @@ export function Section({ title, caption }: { title: string; caption?: string })
   );
 }
 
+/** Garage Card behind the old ui Card API (11 px gap below, like before). */
+export function PCard({ children, onPress, label, style }: { children: ReactNode; onPress?: () => void; label?: string; style?: StyleProp<ViewStyle> }) {
+  return <Card onPress={onPress} label={label} style={[{ marginBottom: 11 }, style]}>{children}</Card>;
+}
+
+/** Section title between blocks of a long page (old ui SectionHeader API). */
+export function SectionHeader({ title }: { title: string }) {
+  return <View style={{ marginTop: 16 }}><Section title={title} /></View>;
+}
+
 /** The garage empty state (photo + one line); the icon of the old API is not needed any more. */
 export function EmptyState({ text }: { icon?: string; text: string }) {
   return <GarageEmpty text={text} />;

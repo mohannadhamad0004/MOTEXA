@@ -820,3 +820,18 @@
 - Shop questions list: segmented control -> garage Tabs (same as Orders), garage EmptyState; question thread + product form use garage Card / GButton.
 - Checks: mobile tsc 0, mobile tests 80/80. Screenshots (Expo web 390 px, EN dark / AR light, before + after): .playwright-mcp/partD/shop-before, shop-after, sheet-shop-*.png.
 - Note: the Part C edits from earlier this session are still in the tree (AppearanceSection, header gear removed).
+
+## 2026-11-17 - Claude Code - Part D role 2: tow company on the shared layout (no commit)
+- portal/ui.tsx: + PCard (garage Card behind the old ui Card API) and SectionHeader (garage section title).
+- Moved off the old ui / blueprint kits: app/provider/tow/company.tsx (Company profile), [id].tsx (truck), requests/index.tsx + requests/[id].tsx (classic request screens: Segmented -> garage Tabs, blueprint PrimaryButton/Tag -> GButton / Section), features/tow/provider/TrucksPage.tsx (StatTiles -> MetricGrid, EmptyState -> garage).
+- Checks: mobile tsc 0, backend tsc 0, mobile tests 80/80. Screenshots: .playwright-mcp/partD/tow-before, tow-after, sheet-tow-*.png (+ tow-after/*-9-truck*.png).
+- Not screenshotted: the classic request screens (no open job for tow@ to open them) and TrucksPage (no link in the tab layout; Fleet tab lists trucks itself).
+- Open: truck page "History" shows an empty card when there is no history (HistoryList, existing behaviour).
+
+## 2026-11-18 - Claude Code - Part D roles 3+4 (parts admin + tow admin, /dept shell) and Part C for the admins (no commit)
+- features/department/ui.tsx (dept shell + admin kit): top bar = safe area + round 44 px back button only (wordmark and Diala's LanguageSwitch removed); garage page colour (no CanvasFill / gradient); department switcher chips 44 px; cardStyle = the garage Card look (so Panel, ItemCard, ItemRow boxes, review pages follow); Section = garage title; Empty = garage EmptyState (+ hint); tab pages bottom padding 130.
+- app/dept/(tabs)/_layout.tsx: DeptTabBar -> GarageTabBar (same bar as shop / tow company); components/garage/TabBar.tsx: optional `badge` on GarageTabItem (Messages unread).
+- Part C for admins: new features/department/ProfilePage.tsx (account, departments, AppearanceSection, Log out with confirmation); app/dept/(tabs)/profile.tsx points to it. Diala's app/admin/profile.tsx is unchanged (still used by the super admin).
+- features/shared/blocks.tsx HistoryList: garage empty state when there is no history (truck page; also the mechanics application page that uses it).
+- Shared /dept shell: the mechanics department (MANAGE_MECHANICS) gets the same shell and tab bar.
+- Checks: mobile tsc 0, backend tsc 0, mobile tests 80/80. Screenshots: .playwright-mcp/partD/admin-{parts,tow}-{before,after}, sheet-admin-*.png, driver-*.png, tow-after/*truck-history.png.

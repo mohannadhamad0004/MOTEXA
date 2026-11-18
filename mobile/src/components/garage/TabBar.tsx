@@ -6,14 +6,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { gShape, useGarageTheme } from "../../theme/garage";
 import { GIcon, GIconName, GText } from "./text";
 
-export type GarageTabItem = { name: string; label: string; icon: GIconName; iconOn: GIconName };
+export type GarageTabItem = { name: string; label: string; icon: GIconName; iconOn: GIconName; /** unread count shown on the icon */ badge?: number };
 type BarProps = {
   state: { index: number; routes: { key: string; name: string; params?: object }[] };
   navigation: { emit: (e: { type: "tabPress"; target: string; canPreventDefault: true }) => { defaultPrevented: boolean }; navigate: (name: string, params?: object) => void };
 };
 
 export function GarageTabBar({ state, navigation, items }: BarProps & { items: GarageTabItem[] }) {
-  const { g, row, dark } = useGarageTheme();
+  const { g, row, dark, isArabic } = useGarageTheme();
   const insets = useSafeAreaInsets();
   const activeName = state.routes[state.index]?.name;
   return (
@@ -49,7 +49,7 @@ export function GarageTabBar({ state, navigation, items }: BarProps & { items: G
             key={it.name}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
-            accessibilityLabel={it.label}
+            accessibilityLabel={it.badge ? `${it.label} (${it.badge})` : it.label}
             onPress={() => {
               const e = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
               if (!on && !e.defaultPrevented) navigation.navigate(route.name, route.params);
@@ -70,7 +70,14 @@ export function GarageTabBar({ state, navigation, items }: BarProps & { items: G
               },
             ]}
           >
-            <GIcon name={on ? it.iconOn : it.icon} size={21} color={on ? g.barActiveInk : g.barInk} />
+            <View>
+              <GIcon name={on ? it.iconOn : it.icon} size={21} color={on ? g.barActiveInk : g.barInk} />
+              {it.badge ? (
+                <View style={{ position: "absolute", top: -6, [isArabic ? "left" : "right"]: -9, minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 4, backgroundColor: g.danger, alignItems: "center", justifyContent: "center" }}>
+                  <GText style={{ color: "#FFF", fontSize: 10, lineHeight: 14, fontWeight: "700" }}>{String(it.badge)}</GText>
+                </View>
+              ) : null}
+            </View>
             {on ? (
               <GText numberOfLines={1} style={{ fontSize: 13, lineHeight: 17, fontWeight: "800", color: g.barActiveInk, flexShrink: 1 }}>
                 {it.label}

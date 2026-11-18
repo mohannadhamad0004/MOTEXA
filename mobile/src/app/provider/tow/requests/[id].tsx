@@ -1,12 +1,9 @@
-import { PrimaryButton } from "../../../../components/blueprint";
 import { hapticError, hapticSuccess } from "../../../../motion";
 import { Async, Notice } from "../../../../components/ui/Feedback";
-import { Button } from "../../../../components/ui/Button";
-import { Card } from "../../../../components/ui/Card";
+import { Button, PCard as Card, SectionHeader } from "../../../../features/provider/portal/ui";
 import { ProviderLayout as DashboardLayout } from "../../../../components/layout/ProviderLayout";
 import { KV } from "../../../../components/ui/Rows";
 import { ReasonPanel } from "../../../../components/ui/ReasonPanel";
-import { SectionHeader } from "../../../../components/ui/SectionHeader";
 import { useL } from "../../../../core/hooks/useL";
 import { useLoad } from "../../../../core/hooks/useLoad";
 import { Text } from "../../../../components/ui/Text";
@@ -146,7 +143,7 @@ export default function CompanyRequestDetail() {
                     ))
                   )}
                   <View style={{ gap: 8, marginTop: 6 }}>
-                    <PrimaryButton label={t("Confirm and accept", "تأكيد والقبول")} disabled={!pickedId} road loading={busy} onPress={() => act(async () => {
+                    <Button label={t("Confirm and accept", "تأكيد والقبول")} disabled={!pickedId} loading={busy} onPress={() => act(async () => {
                       try {
                         const done = await companyTowRequests.accept(r.id, pickedId!);
                         hapticSuccess();
