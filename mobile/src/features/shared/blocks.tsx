@@ -12,6 +12,7 @@ import { IconButton } from "../../components/ui/IconButton";
 import { KV } from "../../components/ui/Rows";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { useL } from "../../core/hooks/useL";
+import { EmptyState } from "../../components/garage/states";
 
 type V = "PENDING" | "APPROVED" | "REJECTED" | "DRAFT" | "NEEDS_CHANGES";
 
@@ -45,6 +46,8 @@ export function HistoryList({ items }: { items: Entry[] }) {
     APPROVED: t("Approved", "تمت الموافقة"),
     REJECTED: t("Rejected", "تم الرفض"),
   };
+  // no history yet: the garage empty state instead of an empty card
+  if (!items.length) return <EmptyState photo="empty.requests" text={t("No history yet. Approvals and changes will show here.", "لا يوجد سجل بعد. ستظهر هنا الموافقات والتغييرات.")} />;
   return (
     <Card>
       {[...items].reverse().map((h, i) => (

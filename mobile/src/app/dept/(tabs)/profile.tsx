@@ -1,2 +1,2 @@
-// Diala's admin profile screen, imported as is.
-export { default } from "../../admin/profile";
+// Department admin profile (account, departments, Appearance & language, log out). Diala's app/admin/profile.tsx is unchanged.
+export { DeptProfile as default } from "../../../features/department/ProfilePage";

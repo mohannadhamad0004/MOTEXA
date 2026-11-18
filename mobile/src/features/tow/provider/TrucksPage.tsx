@@ -1,8 +1,7 @@
-import { Async, EmptyState, Notice } from "../../../components/ui/Feedback";
-import { Button } from "../../../components/ui/Button";
+import { Async, Notice } from "../../../components/ui/Feedback";
+import { Button, EmptyState, MetricGrid } from "../../provider/portal/ui";
 import { ItemRow } from "../../../components/ItemActionsMenu";
 import { companyTruckActions } from "./companyActions";
-import { StatTiles } from "../../../components/blueprint";
 import { ProviderLayout as DashboardLayout } from "../../../components/layout/ProviderLayout";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
@@ -31,10 +30,10 @@ export default function MyFleet() {
                 <VerificationBadge value={company.verification} prefix={t("Company", "الشركة")} />
               </View>
             )}
-            <StatTiles
+            <MetricGrid
               items={[
                 { label: t("Trucks", "الشاحنات"), value: trucks.length },
-                { label: t("Available now", "متاحة الآن"), value: trucks.filter((x) => x.operational === "AVAILABLE").length, tone: "success" },
+                { label: t("Available now", "متاحة الآن"), value: trucks.filter((x) => x.operational === "AVAILABLE").length },
                 { label: t("Approved", "معتمدة"), value: trucks.filter((x) => x.verification === "APPROVED").length },
               ]}
             />

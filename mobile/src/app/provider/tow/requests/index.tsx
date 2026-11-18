@@ -2,11 +2,11 @@ import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
-import { CrossFade, Flash, PrimaryButton, Tag } from "../../../../components/blueprint";
+import { CrossFade, Flash } from "../../../../components/blueprint";
 import { ProviderLayout as DashboardLayout } from "../../../../components/layout/ProviderLayout";
-import { Card } from "../../../../components/ui/Card";
-import { Segmented } from "../../../../components/ui/Chip";
-import { Async, EmptyState, Notice } from "../../../../components/ui/Feedback";
+import { Tabs as Segmented } from "../../../../components/garage";
+import { Async, Notice } from "../../../../components/ui/Feedback";
+import { Button, EmptyState, PCard as Card, Section } from "../../../../features/provider/portal/ui";
 import { Text } from "../../../../components/ui/Text";
 import { useL } from "../../../../core/hooks/useL";
 import { useLoad } from "../../../../core/hooks/useLoad";
@@ -17,7 +17,6 @@ import { towFleetService } from "../../../../features/tow/towService";
 import { useTruckLabels } from "../../../../features/tow/truckBits";
 import { M, closeMs, hapticError, hapticSuccess } from "../../../../motion";
 import { useTheme } from "../../../../theme/useTheme";
-import { Button } from "../../../../components/ui/Button";
 
 type Filter = "ALL" | "NEW" | "ACTIVE" | "DONE";
 // Filters group the statuses a company thinks in: waiting for an answer, on a job, finished.
@@ -130,7 +129,7 @@ export default function CompanyRequests() {
               {arrange(list).map((it) =>
                 it.kind === "head" ? (
                   <Animated.View key={it.key} layout={LinearTransition.duration(ms)} entering={FadeIn.duration(M.chip)} exiting={FadeOut.duration(closeMs(M.chip))} style={{ marginTop: 6, marginBottom: 8 }}>
-                    <Tag color={col.textMuted}>{sectionTitle[it.section]}</Tag>
+                    <Section title={sectionTitle[it.section]} />
                   </Animated.View>
                 ) : (
                   <Animated.View key={it.key} layout={LinearTransition.duration(ms)} entering={FadeIn.duration(M.chip)} exiting={FadeOut.duration(closeMs(M.chip))}>
@@ -150,7 +149,7 @@ export default function CompanyRequests() {
                       <Text style={[{ color: col.textDim, fontSize: 10, marginTop: 8 }, align]}>{fmtDateTime(it.r.updatedAt)}</Text>
                       {it.r.status === "REQUESTED" && picking !== it.r.id ? (
                         <View style={{ marginTop: 12 }}>
-                          <PrimaryButton label={t("Accept", "قبول")} icon="check" onPress={() => { setPicking(it.r.id); setTruckId(null); setErr(null); }} />
+                          <Button label={t("Accept", "قبول")} icon="checkmark" onPress={() => { setPicking(it.r.id); setTruckId(null); setErr(null); }} />
                         </View>
                       ) : null}
                       {it.r.status === "REQUESTED" && picking === it.r.id ? (
@@ -169,8 +168,8 @@ export default function CompanyRequests() {
                               />
                             ))
                           )}
-                          <PrimaryButton label={t("Confirm and accept", "تأكيد والقبول")} loading={busy === it.r.id} road disabled={!truckId} onPress={() => accept(it.r.id)} />
-                          <PrimaryButton variant="outline" label={t("Back", "رجوع")} disabled={busy === it.r.id} onPress={() => { setPicking(null); setTruckId(null); }} />
+                          <Button label={t("Confirm and accept", "تأكيد والقبول")} loading={busy === it.r.id} disabled={!truckId} onPress={() => accept(it.r.id)} />
+                          <Button variant="secondary" label={t("Back", "رجوع")} disabled={busy === it.r.id} onPress={() => { setPicking(null); setTruckId(null); }} />
                         </View>
                       ) : null}
                       <Flash active={flash === it.r.id} radius={16} />

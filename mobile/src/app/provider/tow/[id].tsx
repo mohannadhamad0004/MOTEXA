@@ -1,9 +1,7 @@
 import { Async, Notice } from "../../../components/ui/Feedback";
-import { Button } from "../../../components/ui/Button";
-import { Card } from "../../../components/ui/Card";
+import { Button, PCard as Card, SectionHeader } from "../../../features/provider/portal/ui";
 import { Input } from "../../../components/ui/Input";
 import { ProviderLayout as DashboardLayout } from "../../../components/layout/ProviderLayout";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { ImageTile } from "../../../components/ui/Rows";
 import { goBack } from "../../../core/hooks/nav";
 import { TruckWizard } from "../../../features/fleet/TruckWizard";
