@@ -879,3 +879,18 @@
   - `mobile/src/components/mechanic-api.ts` — `apiUrl(route)` (routes keep their `/api/...` form; apiUrl drops the duplicate).
   - `mobile/src/components/PasswordRecoveryScreen.tsx` — password-reset URLs.
   - `mobile/src/app/auth/login.tsx` — login URL (same pattern; 8th file).
+
+- 2026-11-18 (evening) — Claude Code — mechanics takeover + 5 fixes. AGENTS.md §3: the mechanics area (mechanic, mechanics admin, customer side of mechanics; file list in §3) now belongs to Mohannad; the rest of Diala's files stay "listed bugs only".
+  1. PRIVACY: `backend/src/routes/mechanic-requests.routes.ts` `mechanicView` — before ACCEPTED (and for declined/cancelled): `location = { text: null, area: <nearest city ≤ 30 km>, point: rounded to 0.01° (~1 km), approximate: true }`, `contactPhone: null`; exact address, pin and phone only for ACCEPTED / IN_PROGRESS / COMPLETED of that mechanic's own request (another mechanic gets 404). Mobile `app/mechanic/requests/[id].tsx` shows "Near Nablus (approximate)" + "shared after you accept" notice, no map/Maps button until accepted; type in `features/mechanics/mechanicsService.ts`; `app/customer/mechanicrequest/[id].tsx` type fix only. New test `backend/tests/mechanic-request-privacy.test.mjs`.
+  2. `app/auth/mechanic-signup.tsx`: photos via `pickPhoto()` (JPEG, 1600 px wide, q 0.75) + `photoErrorText`; a 4000×3000 / 38 MB photo now attaches.
+  3. Dashboard: `admin.routes.ts` `/dashboard` adds `towCompanies` / `partsShops` `{pending, approved}` (verificationStatus groupBy); admin home shows two tiles (approved + "N pending").
+  4. D-04: admin Requests tab = live overview (tow company applications, trucks, driver licences, parts shop applications, 3D requests, mechanic applications) from existing endpoints, each row opens the right /dept page (`rememberDepartment()` added to `features/department/DepartmentContext.tsx`). No backend change.
+  5. Cleanup (dev DB): deleted mechanic request b0387f39 (live privacy test) and 6 revoked test refresh tokens; throwaway.ratelimit.1118@motexa.test was deleted earlier; 3 `TEST_DATA_REMOVED` audit rows written (actorId null, details.by = Claude Code). The request's original CREATED/ACCEPTED audit rows are kept.
+  Checks: backend tsc 0, `npm test` 321/321 (after fix 1 and after fix 3), mobile tsc 0, mobile tests 84/84; live on :5000 + Expo web :8081 at 390 px, EN + AR, dark + light.
+  Open: the mechanics review screen (`MechanicReviewScreen`, now Mohannad's) logs "Unexpected text node: . A text node cannot be a child of a <View>" on web (old code, found while testing, not fixed).
+
+  **Changed in Diala's files** (listed bugs):
+  - `backend/src/routes/admin.routes.ts` — dashboard tow/parts counts (fix 3).
+  - `mobile/src/app/admin/(tabs)/index.tsx` — tow/parts tiles (fix 3).
+  - `mobile/src/app/admin/(tabs)/requests.tsx` — "Coming soon" replaced by the real overview (D-04).
+  (The mechanics files changed above are no longer partner files after today's takeover.)

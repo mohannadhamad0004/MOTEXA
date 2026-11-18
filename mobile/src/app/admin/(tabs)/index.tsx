@@ -27,6 +27,8 @@ const [dashboardStats, setDashboardStats] = useState<{
   mechanics: number;
   pendingMechanics: number;
   pendingInvitations: number;
+  towCompanies?: { pending: number; approved: number };
+  partsShops?: { pending: number; approved: number };
 } | null>(null);
 
 const [statsLoading, setStatsLoading] = useState(true);
@@ -173,9 +175,12 @@ useFocusEffect(
     Alert.alert(title, message);
   };
 
+ const providerStat = (p?: { pending: number; approved: number }) =>
+  statsLoading ? { value: "…" } : statsError || !p ? { value: "—" } : { value: String(p.approved), sub: isArabic ? `${p.pending} بانتظار المراجعة` : `${p.pending} pending` };
  const stats: {
   label: string;
   value: string;
+  sub?: string;
   icon: IconName;
 }[] = [
   {
@@ -197,13 +202,13 @@ useFocusEffect(
     icon: "construct-outline",
   },
   {
-    label: isArabic ? "مزودو قطع الغيار" : "Parts Providers",
-    value: "—",
+    label: isArabic ? "متاجر قطع معتمدة" : "Approved parts shops",
+    ...providerStat(dashboardStats?.partsShops),
     icon: "storefront-outline",
   },
   {
-    label: isArabic ? "مزودو السحب" : "Tow Providers",
-    value: "—",
+    label: isArabic ? "شركات سحب معتمدة" : "Approved tow companies",
+    ...providerStat(dashboardStats?.towCompanies),
     icon: "car-outline",
   },
   {
@@ -278,11 +283,19 @@ useFocusEffect(
       </View>
       <LinearGradient colors={dark?['#30231B','#33271E','#39281D']:['#FFF9EF','#FBF0E0','#F3DFC4']} style={s.body}>
         <EditorialTitle accent={false} style={s.section}>{t.overview}</EditorialTitle>
-        <View style={[s.metrics,{flexDirection:row}]}>
+        <View style={[s.metrics,{flexDirection:row,marginBottom:8}]}>
           {stats.filter((_,index)=>[0,1,5].includes(index)).map(stat=><View key={stat.label} accessible accessibilityLabel={stat.label+': '+stat.value} style={[s.metric,{flex:1,minWidth:0,backgroundColor:surface,borderColor:border}]}>
             <View style={[s.icon,{backgroundColor:dark?'#60432E':'#F3D8B7'}]}><Ionicons name={stat.icon} size={21} color={dark?'#F1C68F':'#80522F'}/></View>
             <Text style={[s.value,{color:ink}]}>{stat.value}</Text>
             <Text style={[s.metricLabel,{color:muted}]}>{stat.label}</Text>
+          </View>)}
+        </View>
+        <View style={[s.metrics,{flexDirection:row}]}>
+          {stats.filter((_,index)=>[3,2].includes(index)).map(stat=><View key={stat.label} accessible accessibilityLabel={stat.label+': '+stat.value+(stat.sub?', '+stat.sub:'')} style={[s.metric,{flex:1,minWidth:0,backgroundColor:surface,borderColor:border}]}>
+            <View style={[s.icon,{backgroundColor:dark?'#60432E':'#F3D8B7'}]}><Ionicons name={stat.icon} size={21} color={dark?'#F1C68F':'#80522F'}/></View>
+            <Text style={[s.value,{color:ink}]}>{stat.value}</Text>
+            <Text style={[s.metricLabel,{color:muted}]}>{stat.label}</Text>
+            {stat.sub?<Text style={[s.metricLabel,{color:dark?'#F1C68F':'#80522F',marginTop:2}]}>{stat.sub}</Text>:null}
           </View>)}
         </View>
         {statsError&&<Text accessibilityRole="alert" style={{color:muted,fontSize:12,lineHeight:20,marginBottom:14,textAlign:align}}>{isArabic?'تعذّر تحميل الإحصاءات. أعد فتح الصفحة للمحاولة مجددًا.':'Statistics could not load. Reopen this screen to try again.'}</Text>}

@@ -1,5 +1,13 @@
 # RUN-LOG — unattended run, 2026-11-18 (E-03 refresh tokens, login security, D-05, admin prisma, direction style)
 
+## EVENING FIXES (2026-11-18, 18:15–18:45 UTC, your backend :5000 + Expo web :8081)
+- Privacy: live as mechanic.nablus@ (EN + AR): before accepting, "Near Nablus (approximate)", no phone, API point 32.23/35.24, no exact text anywhere in the response or page. After accepting: exact address, pin and phone. Another mechanic gets 404. Test request deleted afterwards.
+- Signup photo: a 4000×3000 38 MB PNG attaches in the mechanic signup form (AR); not submitted.
+- Dashboard: tow 6 approved / 2 pending, parts 10 / 0, both match the DB; EN + AR.
+- Requests tab: 6 waiting (2 tow companies, 3 trucks, 0 drivers, 0 shops, 1 3D, 0 mechanics); rows open /dept/requests (right department), /dept/tows/drivers, /dept/requests?seg=3d.
+- Cleanup: see STATUS.md (3 TEST_DATA_REMOVED audit rows).
+- Found, not fixed: MechanicReviewScreen logs "Unexpected text node: ." on web.
+
 ## LIVE VERIFICATION (2026-11-18, 17:53–18:12 UTC, your backend :5000 + Expo web :8081)
 - :8081 had a fresh bundle; :8090 is still serving an old one (no `getAccessToken` in it). Tests used :8081.
 - Refresh: on the polling tow-status page (customer@, request c1a3da96, polls every 5 s) I replaced the access token with an invalid one. Result: 401 → 1 `POST /auth/refresh` 200 → same request retried 200; polling continued, no dialog, refresh token rotated.

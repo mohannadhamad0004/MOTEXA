@@ -126,7 +126,7 @@ export default function MechanicRequestScreen() {
               {r.skill ? <ListRow icon="construct-outline" title={t("Skill", "المهارة")} sub={skillLabel(r.skill)} /> : null}
               <ListRow divider={!!r.skill} icon="car-sport-outline" title={t("Car", "السيارة")} sub={[r.vehicle.make, r.vehicle.model, r.vehicle.year].filter(Boolean).join(" ")} />
               <ListRow divider icon="alert-circle-outline" title={t("Problem", "المشكلة")} sub={r.problemDescription} />
-              <ListRow divider icon="location-outline" title={t("Location", "الموقع")} sub={r.location.text} />
+              <ListRow divider icon="location-outline" title={t("Location", "الموقع")} sub={r.location.text ?? undefined} />
               {r.preferredTime ? <ListRow divider icon="time-outline" title={t("Preferred time", "الوقت المفضل")} sub={r.preferredTime} /> : null}
               {r.contactPhone ? <ListRow divider icon="call-outline" title={t("Your phone", "هاتفك")} sub={`${r.contactPhone} · ${t("Shared only with this mechanic.", "يُشارك مع هذا الميكانيكي فقط.")}`} /> : null}
             </Card>
