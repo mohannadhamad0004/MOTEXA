@@ -4,7 +4,8 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
 import { CITY_CENTRES, haversineKm, readPair } from "../geo.js";
 import { requireAuth, requireCustomer } from "../middleware/auth.middleware.js";
-import { publicMechanic } from "./catalog-mechanics.routes.js";
+import { errorBody } from "../services/error-codes.js";
+import { publicMechanic, skillsOf } from "./catalog-mechanics.routes.js";
 
 // Mechanic service requests: a customer asks one public mechanic for help; the mechanic accepts, starts and completes.
 //  - /api/requests/mechanic/*  CUSTOMER (GET /:id is also open to the receiving mechanic)
@@ -16,7 +17,7 @@ import { publicMechanic } from "./catalog-mechanics.routes.js";
 //   ACCEPTED    -> IN_PROGRESS  mechanic
 //   IN_PROGRESS -> COMPLETED    mechanic
 //   REQUESTED | ACCEPTED -> CANCELLED   customer
-// Privacy: the mechanic sees the customer's NAME, the car, the problem and the dates; never the email. The exact location
+// Privacy: the mechanic sees the customer's FIRST name until accepting (full name once accepted), the car, the problem and the dates; never the email. The exact location
 // (typed address + pin) and the phone (only if the customer typed one) are sent ONLY during the active job (ACCEPTED /
 // IN_PROGRESS), same rule as tow. Before accepting and after the job (COMPLETED / DECLINED / CANCELLED): the nearest city and
 // the pin rounded to 0.01 deg (about 1 km), marked approximate. Mechanic requests have no chat, notifications or price. The customer never sees the mechanic's phone, email or credentials.
@@ -35,9 +36,9 @@ class HttpError extends Error {
 const text = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 const optional = (v: unknown) => v === undefined || v === null || v === "";
 const send = (res: any, e: unknown, label: string) => {
-  if (e instanceof HttpError) return res.status(e.code).json({ success: false, message: e.message });
+  if (e instanceof HttpError) return res.status(e.code).json(errorBody(e.message));
   console.error(`${label}:`, e);
-  return res.status(500).json({ success: false, message: "Internal server error." });
+  return res.status(500).json(errorBody("Internal server error."));
 };
 const log = (tx: Prisma.TransactionClient, actorId: string, action: string, targetId: string, details: object = {}) =>
   tx.auditLog.create({ data: { actorId, action, targetId, details } });
@@ -53,7 +54,7 @@ const mechanicSide = [
 
 const include = {
   customer: { select: { id: true, fullName: true } }, // never the email
-  mechanic: { select: { id: true, fullName: true, mechanicApplication: { select: { workshopName: true, city: true } } } }, // never phone/email
+  mechanic: { select: { id: true, fullName: true, mechanicProfile: { select: { workshopName: true, city: true } } } }, // never phone/email
 };
 type Row = Prisma.MechanicRequestGetPayload<{ include: typeof include }>;
 
@@ -88,7 +89,7 @@ const common = (r: Row) => ({
 
 const customerView = (r: Row) => ({
   ...common(r),
-  mechanic: { id: r.mechanic.id, name: r.mechanic.fullName, workshopName: r.mechanic.mechanicApplication?.workshopName ?? null, city: r.mechanic.mechanicApplication?.city ?? null },
+  mechanic: { id: r.mechanic.id, name: r.mechanic.fullName, workshopName: r.mechanic.mechanicProfile?.workshopName || null, city: r.mechanic.mechanicProfile?.city ?? null },
   canCancel: r.status === "REQUESTED" || r.status === "ACCEPTED",
 });
 const REVEALED = new Set(["ACCEPTED", "IN_PROGRESS"]); // the active job only
@@ -100,7 +101,9 @@ const nearestCity = (p: { lat: number; lng: number }) => {
   return best;
 };
 export const mechanicView = (r: Row) => {
-  const view = { ...common(r), customerName: r.customer.fullName };
+  // Name: first name only until this mechanic accepts; full name from then on (kept in history after the job ends).
+  const customerName = r.acceptedAt ? r.customer.fullName : r.customer.fullName.trim().split(/\s+/)[0];
+  const view = { ...common(r), customerName };
   if (REVEALED.has(r.status) && r.acceptedAt) return { ...view, location: { ...view.location, approximate: false } };
   const p = view.location.point;
   return {
@@ -147,10 +150,10 @@ router.post("/requests/mechanic", ...customerSide, async (req, res) => {
     const id = await prisma.$transaction(async (tx) => {
       const mechanic = await tx.user.findFirst({
         where: { id: mechanicId, ...publicMechanic },
-        select: { id: true, mechanicApplication: { select: { skills: { where: { status: "APPROVED" }, select: { name: true } } } } },
+        select: { id: true, mechanicProfile: { select: { specializations: true } } },
       });
       if (!mechanic) throw new HttpError(404, "Mechanic not found.");
-      if (skill && !mechanic.mechanicApplication!.skills.some((s) => s.name === skill)) throw new HttpError(400, "This mechanic does not offer that skill.");
+      if (skill && !skillsOf(mechanic.mechanicProfile!.specializations).includes(skill as never)) throw new HttpError(400, "This mechanic does not offer that skill.");
       const open = await tx.mechanicRequest.count({ where: { customerId: me.id, mechanicUserId: mechanic.id, status: { in: [...OPEN] } } });
       if (open >= MAX_OPEN_PER_MECHANIC) throw new HttpError(409, `You already have ${MAX_OPEN_PER_MECHANIC} open requests with this mechanic. Wait for one to finish or cancel one.`);
       const created = await tx.mechanicRequest.create({
@@ -248,7 +251,7 @@ for (const [name, step] of Object.entries(STEPS)) {
       const id = String(req.params.id);
       const reason = name === "decline" ? (optional(req.body?.reason) ? null : text(req.body.reason, 500)) : null;
       if (!(await prisma.mechanicRequest.findFirst({ where: { id, mechanicUserId: me.id }, select: { id: true } }))) throw new HttpError(404, "Request not found.");
-      // A mechanic who is no longer public (suspended, rejected, no approved skill) cannot work on requests.
+      // A mechanic who is no longer public (suspended, account not active) cannot work on requests.
       if (!(await prisma.user.findFirst({ where: { id: me.id, ...publicMechanic }, select: { id: true } }))) throw new HttpError(403, "Your mechanic account is not active, so you cannot answer requests.");
       await prisma.$transaction(async (tx) => {
         const done = await tx.mechanicRequest.updateMany({

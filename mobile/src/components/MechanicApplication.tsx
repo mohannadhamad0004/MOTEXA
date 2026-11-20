@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { View, Image, Pressable } from "react-native";
+import { useCallback, useState } from "react";
+import { View, Image, Pressable, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { Text } from "./MotexaVisual";
@@ -21,6 +21,8 @@ import {
   type MechanicProfile,
 } from "./mechanic-api";
 import MechanicDocuments, { pickMechanicDocument } from "./MechanicDocuments";
+import { CITIES, cityLabel } from "../core/constants/cities";
+import { mechanicInbox } from "../features/mechanics/mechanicsService";
 type Form = {
   city: string;
   phoneNumber: string;
@@ -54,59 +56,30 @@ type Notice = {
   readAt: string | null;
   createdAt: string;
 };
-const previewProfile: MechanicProfile = {
-  id: "preview",
-  userId: "preview",
-  city: "",
-  phoneNumber: "",
-  specializations: [],
-  yearsOfExperience: null,
-  experienceSummary: "",
-  offersWorkshop: false,
-  offersOnSite: false,
-  offersOnline: false,
-  workshopName: "",
-  workshopAddress: "",
-  coverageAreas: [],
-  verificationStatus: "DRAFT",
-  submittedAt: null,
-  submissionVersion: 0,
-  reviewNotes: null,
-  interviewResult: null,
-  interviewNotes: null,
-  canReceiveServices: false,
-  documents: [],
-  user: { fullName: "", email: "", status: "ACTIVE" },
-  history: [],
+const SKILL_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
+  Engine: "cog-outline",
+  Brakes: "disc-outline",
+  Electrical: "flash-outline",
+  Diagnostics: "pulse-outline",
+  "Air conditioning": "snow-outline",
+  Transmission: "git-compare-outline",
+  "Suspension & steering": "car-sport-outline",
+  Bodywork: "hammer-outline",
 };
-export default function MechanicApplication({
-  previewOnly = false,
-  initialStep = 0,
-  onPreviewStep,
-}: {
-  previewOnly?: boolean;
-  initialStep?: number;
-  onPreviewStep?: (step: number) => void;
-} = {}) {
+/** The mechanic home (/mechanic): the request inbox first once approved, then the application and its status. */
+export default function MechanicApplication() {
   const m = useMechanicTheme(),
-    [profile, setProfile] = useState<MechanicProfile | null>(
-      previewOnly ? previewProfile : null,
-    ),
+    [profile, setProfile] = useState<MechanicProfile | null>(null),
     [form, setForm] = useState<Form>(initial),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [editing, setEditing] = useState(previewOnly),
-    [step, setStep] = useState(initialStep),
+    [editing, setEditing] = useState(false),
+    [step, setStep] = useState(0),
     [privacy, setPrivacy] = useState(false),
     [notices, setNotices] = useState<Notice[]>([]),
+    [inbox, setInbox] = useState<{ waiting: number; total: number } | null>(null),
     [logout, setLogout] = useState(false),
     [message, setMessage] = useState("");
-  useEffect(() => {
-    if (previewOnly) {
-      setStep(Math.max(0, Math.min(3, initialStep)));
-      setEditing(true);
-    }
-  }, [previewOnly, initialStep]);
   function apply(p: MechanicProfile) {
     setProfile(p);
     setForm({
@@ -124,8 +97,13 @@ export default function MechanicApplication({
       coverageAreas: p.coverageAreas.join(", "),
     });
   }
+  /** The inbox counts; a failure only hides the numbers (the inbox screen shows its own error). */
+  const loadInbox = () =>
+    mechanicInbox
+      .list()
+      .then((rows) => ({ waiting: rows.filter((r) => r.status === "REQUESTED").length, total: rows.length }))
+      .catch(() => null);
   async function refresh() {
-    if (previewOnly) return;
     const data = await mechanicApi<{ profile: MechanicProfile }>(
       "/api/mechanics/me",
     );
@@ -134,20 +112,24 @@ export default function MechanicApplication({
       "/api/mechanics/notifications",
     );
     setNotices(n.notifications);
+    setInbox(await loadInbox());
   }
   useFocusEffect(
     useCallback(() => {
-      if (previewOnly) return;
       let alive = true;
       setBusy(true);
       void mechanicApi<{ profile: MechanicProfile }>("/api/mechanics/me")
         .then(async (data) => {
           if (!alive) return;
           apply(data.profile);
-          const n = await mechanicApi<{ notifications: Notice[] }>(
-            "/api/mechanics/notifications",
-          );
-          if (alive) setNotices(n.notifications);
+          const [n, counts] = await Promise.all([
+            mechanicApi<{ notifications: Notice[] }>("/api/mechanics/notifications"),
+            loadInbox(),
+          ]);
+          if (alive) {
+            setNotices(n.notifications);
+            setInbox(counts);
+          }
         })
         .catch((e) => {
           if (alive) setError(e.message);
@@ -158,7 +140,7 @@ export default function MechanicApplication({
       return () => {
         alive = false;
       };
-    }, [previewOnly]),
+    }, []),
   );
   async function run(fn: () => Promise<void>) {
     if (busy) return;
@@ -177,25 +159,6 @@ export default function MechanicApplication({
     setForm((v) => ({ ...v, [key]: value }));
   }
   async function save() {
-    if (previewOnly) {
-      setProfile((p) =>
-        p
-          ? {
-              ...p,
-              ...form,
-              yearsOfExperience:
-                form.yearsOfExperience === ""
-                  ? null
-                  : Number(form.yearsOfExperience),
-              coverageAreas: form.coverageAreas
-                .split(/[,،]/)
-                .map((v) => v.trim())
-                .filter(Boolean),
-            }
-          : p,
-      );
-      return;
-    }
     const data = await mechanicApi<{ profile: MechanicProfile }>(
       "/api/mechanics/me",
       "PUT",
@@ -230,6 +193,7 @@ export default function MechanicApplication({
     const s = mechanicSpecializations.find((s) => s[0] === value);
     return s ? m.t(s[1], s[2]) : value;
   };
+  const approved = !!profile?.canReceiveServices;
   const title = editing
     ? [
         m.t("Professional profile", "الملف المهني"),
@@ -237,7 +201,53 @@ export default function MechanicApplication({
         m.t("Your documents", "وثائق التحقق"),
         m.t("Review and submit", "المراجعة والإرسال"),
       ][step]
-    : m.t(statusCopy[0], statusCopy[1]);
+    : approved
+      ? m.t("Welcome back", "أهلًا بعودتك")
+      : m.t(statusCopy[0], statusCopy[1]);
+  // Inbox entry: first once approved; for anyone else only when they still have requests (history).
+  const inboxCard = (
+    <MechanicCard>
+      <View style={{ flexDirection: m.row, alignItems: "center", gap: 12 }}>
+        <View
+          style={{
+            width: 46,
+            height: 46,
+            borderRadius: 23,
+            backgroundColor: m.soft,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Ionicons name="construct-outline" size={23} color={m.muted} />
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={{ fontSize: 16, lineHeight: 26, fontWeight: "600", color: m.ink, textAlign: m.align }}>
+            {m.t("Service requests", "طلبات الخدمة")}
+          </Text>
+          <Text style={{ fontSize: 12, lineHeight: 21, color: m.muted, textAlign: m.align }}>
+            {!approved
+              ? m.t(
+                  "New requests reach you only while your account is approved.",
+                  "تصلك طلبات جديدة فقط عندما يكون حسابك معتمدًا.",
+                )
+              : inbox?.waiting
+                ? m.t(
+                    `New requests waiting for your answer: ${inbox.waiting}`,
+                    `طلبات جديدة بانتظار ردّك: ${inbox.waiting}`,
+                  )
+                : m.t(
+                    "Requests from customers: accept, start and complete jobs.",
+                    "طلبات من العملاء: اقبل الأعمال وابدأها وأنهِها.",
+                  )}
+          </Text>
+        </View>
+      </View>
+      <MechanicButton
+        label={m.t("Open requests", "فتح الطلبات")}
+        onPress={() => router.push("/mechanic/requests")}
+      />
+    </MechanicCard>
+  );
   return (
     <MechanicPage
       title={title}
@@ -249,14 +259,6 @@ export default function MechanicApplication({
           : m.t("Your MOTEXA mechanic account", "حسابك كميكانيكي في MOTEXA")
       }
     >
-      {previewOnly && (
-        <MechanicNote>
-          {m.t(
-            "Preview mode · You can explore all steps. Nothing is sent to the database.",
-            "وضع المعاينة · تنقّل بين جميع الخطوات. لا تُرسل أي بيانات للداتا بيس.",
-          )}
-        </MechanicNote>
-      )}
       {!!error && <MechanicNote error>{error}</MechanicNote>}
       {!!message && <MechanicNote>{message}</MechanicNote>}
       {!profile ? (
@@ -296,12 +298,10 @@ export default function MechanicApplication({
           <MechanicCard>
             {step === 0 ? (
               <>
-                <MechanicField
-                  icon="location-outline"
-                  label={m.t("City", "المدينة")}
+                <CityPicker
                   value={form.city}
-                  onChangeText={(v) => change("city", v)}
-                  editable={!busy}
+                  disabled={busy}
+                  onChange={(v) => change("city", v)}
                 />
                 <MechanicField
                   icon="call-outline"
@@ -320,18 +320,7 @@ export default function MechanicApplication({
                 {mechanicSpecializations.map(([key, en, ar]) => (
                   <MechanicChoice
                     key={key}
-                    icon={
-                      (
-                        {
-                          PETROL_ENGINES: "cog-outline",
-                          DIESEL_ENGINES: "construct-outline",
-                          ELECTRIC_VEHICLES: "flash-outline",
-                          TRANSMISSION: "git-compare-outline",
-                          AUTO_ELECTRICAL: "battery-charging-outline",
-                          SUSPENSION: "car-sport-outline",
-                        } as const
-                      )[key]
-                    }
+                    icon={SKILL_ICON[key]}
                     label={m.t(en, ar)}
                     selected={form.specializations.includes(key)}
                     disabled={busy}
@@ -605,38 +594,11 @@ export default function MechanicApplication({
                   editable
                   requireCertificate
                   includeWorkshopProof={form.offersWorkshop}
-                  previewOnly={previewOnly}
                   documents={profile.documents}
                   onUpload={(kind) =>
                     void run(async () => {
                       const doc = await pickMechanicDocument(kind);
                       if (!doc) return;
-                      if (previewOnly) {
-                        setProfile((p) =>
-                          p
-                            ? {
-                                ...p,
-                                documents: [
-                                  ...p.documents.filter((d) => d.kind !== kind),
-                                  {
-                                    id: "preview-" + kind,
-                                    kind,
-                                    fileName: doc.fileName,
-                                    mimeType: doc.mimeType || "application/pdf",
-                                    size: 0,
-                                  },
-                                ],
-                              }
-                            : p,
-                        );
-                        setMessage(
-                          m.t(
-                            "Preview document selected locally only.",
-                            "تم اختيار المستند للمعاينة محليًا فقط.",
-                          ),
-                        );
-                        return;
-                      }
                       const data = await mechanicApi<{
                         profile: MechanicProfile;
                       }>("/api/mechanics/me/documents", "POST", doc);
@@ -689,7 +651,7 @@ export default function MechanicApplication({
                     lines: [
                       profile.user.fullName,
                       profile.user.email,
-                      form.city,
+                      cityLabel(form.city, m.ar),
                       form.phoneNumber,
                     ],
                   },
@@ -811,11 +773,7 @@ export default function MechanicApplication({
                           m.t("Edit ", "تعديل ") + section.title
                         }
                         disabled={busy}
-                        onPress={() =>
-                          previewOnly
-                            ? onPreviewStep?.(section.target + 2)
-                            : setStep(section.target)
-                        }
+                        onPress={() => setStep(section.target)}
                         style={{
                           minWidth: 36,
                           minHeight: 40,
@@ -875,15 +833,6 @@ export default function MechanicApplication({
                   busy={busy}
                   onPress={() =>
                     void run(async () => {
-                      if (previewOnly) {
-                        setMessage(
-                          m.t(
-                            "Preview only. No application has been submitted.",
-                            "معاينة فقط. لم يتم إرسال أي طلب.",
-                          ),
-                        );
-                        return;
-                      }
                       await save();
                       const data = await mechanicApi<{
                         profile: MechanicProfile;
@@ -907,8 +856,7 @@ export default function MechanicApplication({
                 onPress={() =>
                   void run(async () => {
                     await save();
-                    if (previewOnly) onPreviewStep?.(step + 3);
-                    else setStep((v) => v + 1);
+                    setStep((v) => v + 1);
                   })
                 }
               />
@@ -918,11 +866,7 @@ export default function MechanicApplication({
                 secondary
                 label={m.t("Previous step", "الخطوة السابقة")}
                 disabled={busy}
-                onPress={() =>
-                  previewOnly
-                    ? onPreviewStep?.(step + 1)
-                    : setStep((v) => v - 1)
-                }
+                onPress={() => setStep((v) => v - 1)}
               />
             )}
             <MechanicButton
@@ -931,15 +875,6 @@ export default function MechanicApplication({
               busy={busy}
               onPress={() =>
                 void run(async () => {
-                  if (previewOnly) {
-                    setMessage(
-                      m.t(
-                        "Preview only — changes stay on this screen and are not saved to the database.",
-                        "معاينة فقط — التغييرات محلية ولا تُحفظ في قاعدة البيانات.",
-                      ),
-                    );
-                    return;
-                  }
                   await save();
                   setEditing(false);
                   setMessage(m.t("Your progress is saved.", "تم حفظ تقدّمك."));
@@ -950,6 +885,7 @@ export default function MechanicApplication({
         </>
       ) : (
         <>
+          {approved && inboxCard}
           <MechanicCard>
             <Text
               style={{
@@ -1028,9 +964,10 @@ export default function MechanicApplication({
               onPress={() => void run(refresh)}
             />
           </MechanicCard>
+          {!approved && !!inbox?.total && inboxCard}
           {profile.verificationStatus === "VERIFIED" && (
             <MechanicCard>
-              <Text style={{ fontSize: 16, fontWeight: "600", color: m.ink }}>
+              <Text style={{ fontSize: 16, fontWeight: "600", color: m.ink, textAlign: m.align }}>
                 {m.t("Approved service modes", "طرق الخدمة المعتمدة")}
               </Text>
               {[
@@ -1063,7 +1000,7 @@ export default function MechanicApplication({
           )}
           {notices.length > 0 && (
             <MechanicCard>
-              <Text style={{ fontSize: 16, fontWeight: "600", color: m.ink }}>
+              <Text style={{ fontSize: 16, fontWeight: "600", color: m.ink, textAlign: m.align }}>
                 {m.t("Notifications", "الإشعارات")}
               </Text>
               {notices.map((n) => (
@@ -1107,41 +1044,37 @@ export default function MechanicApplication({
             </MechanicCard>
           )}
           <MechanicCard>
-            <Text style={{ fontSize: 15, fontWeight: "600", color: m.ink }}>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: m.ink, textAlign: m.align }}>
               {m.t("Your documents", "وثائقك")}
             </Text>
             <MechanicDocuments documents={profile.documents} />
           </MechanicCard>
         </>
       )}
-      {!previewOnly && (
-        <>
-          <View style={{ height: 18 }} />
-          <MechanicButton
-            secondary
-            label={m.t("Sign out", "تسجيل الخروج")}
-            onPress={() => setLogout(true)}
-          />
-          <MotexaDialog
-            icon="log-out-outline"
-            visible={logout}
-            title={m.t("Sign out?", "تسجيل الخروج؟")}
-            message={m.t(
-              "Saved progress will be here when you return.",
-              "ستجد تقدّمك المحفوظ عند العودة.",
-            )}
-            confirmText={m.t("Sign out", "تسجيل الخروج")}
-            cancelText={m.t("Stay here", "البقاء هنا")}
-            onCancel={() => setLogout(false)}
-            onConfirm={() =>
-              void run(async () => {
-                await clearSession();
-                router.replace("/");
-              })
-            }
-          />
-        </>
-      )}
+      <View style={{ height: 18 }} />
+      <MechanicButton
+        secondary
+        label={m.t("Sign out", "تسجيل الخروج")}
+        onPress={() => setLogout(true)}
+      />
+      <MotexaDialog
+        icon="log-out-outline"
+        visible={logout}
+        title={m.t("Sign out?", "تسجيل الخروج؟")}
+        message={m.t(
+          "Saved progress will be here when you return.",
+          "ستجد تقدّمك المحفوظ عند العودة.",
+        )}
+        confirmText={m.t("Sign out", "تسجيل الخروج")}
+        cancelText={m.t("Stay here", "البقاء هنا")}
+        onCancel={() => setLogout(false)}
+        onConfirm={() =>
+          void run(async () => {
+            await clearSession();
+            router.replace("/");
+          })
+        }
+      />
     </MechanicPage>
   );
 }
@@ -1354,6 +1287,36 @@ function ApplicationTimeline({ profile }: { profile: MechanicProfile }) {
           </View>
         </View>
       ))}
+    </View>
+  );
+}
+
+/** One city from the shared list (the English name is stored, the label follows the language); the current one comes first. */
+function CityPicker({ value, onChange, disabled = false }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
+  const m = useMechanicTheme();
+  const [order] = useState(() => [...CITIES].sort((a, b) => Number(b.name === value) - Number(a.name === value)));
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={{ fontSize: 12, lineHeight: 20, fontWeight: "600", color: m.ink, textAlign: m.align }}>{m.t("City", "المدينة")}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7, flexDirection: m.row }}>
+        {order.map((c) => {
+          const on = c.name === value;
+          return (
+            <Pressable
+              key={c.name}
+              accessibilityRole="radio"
+              accessibilityLabel={cityLabel(c.name, m.ar)}
+              accessibilityState={{ checked: on, disabled }}
+              aria-checked={on}
+              disabled={disabled}
+              onPress={() => onChange(c.name)}
+              style={{ minHeight: 44, paddingHorizontal: 15, justifyContent: "center", borderRadius: 22, borderWidth: 1, borderColor: on ? "#B18350" : m.border, backgroundColor: on ? m.soft : "transparent" }}
+            >
+              <Text style={{ fontSize: 13, lineHeight: 22, color: m.ink }}>{cityLabel(c.name, m.ar)}</Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }

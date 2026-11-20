@@ -38,6 +38,10 @@ export const ERROR_CODES: readonly [code: string, prefix: string][] = [
   ["ORDER_NOT_FOUND", "Order not found"],
   ["JOB_NOT_FOUND", "Job not found"],
   ["REQUEST_NOT_FOUND", "Request not found"],
+  ["MECHANIC_NOT_FOUND", "Mechanic not found"],
+  ["MECHANIC_PROFILE_NOT_FOUND", "Mechanic profile not found"],
+  ["MECHANIC_NOT_ACTIVE", "Your mechanic account is not active"],
+  ["CITY_NOT_IN_LIST", "Choose your city from the list"],
   ["SERVER_ERROR", "Internal server error"],
 ];
 export const errorCodeOf = (message: string): string | undefined => ERROR_CODES.find(([, prefix]) => message.startsWith(prefix))?.[0];

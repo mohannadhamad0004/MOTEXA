@@ -287,7 +287,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
       for (const x of mech) {
         const position = servicePosition((x as MechanicRow & PublicWorkshopLocation).publicLocation, cityCentre(x.city));
         const at = position.displayPosition;
-        if (at) out.push({ kind: "mech", id: x.id, name: x.name, city: x.city, ...at, routeDestination: position.routeDestination, approx: position.approx, distanceKm: x.distanceKm ?? null, mech: x, words: [x.name, x.workshopName, x.city, cityLabel(x.city, true)] });
+        if (at) out.push({ kind: "mech", id: x.id, name: x.name, city: x.city, ...at, routeDestination: position.routeDestination, approx: position.approx, distanceKm: x.distanceKm ?? null, mech: x, words: [x.name, x.workshopName ?? "", x.city, cityLabel(x.city, true)] });
       }
     if (kinds.includes("shop"))
       for (const x of shops) {
@@ -756,7 +756,7 @@ export function ServiceMapScreen({ mode }: { mode: Mode }) {
           </>
         ) : selected.mech ? (
           <>
-            <Text style={[{ color: c.soft, fontSize: 13 }, align]}>{selected.mech.workshopName}</Text>
+            {selected.mech.workshopName ? <Text style={[{ color: c.soft, fontSize: 13 }, align]}>{selected.mech.workshopName}</Text> : null}
             <SkillBadges skills={selected.mech.skills} max={4} />
           </>
         ) : selected.shop ? (

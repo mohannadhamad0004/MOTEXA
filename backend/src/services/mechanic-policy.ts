@@ -1,14 +1,9 @@
 import type { Request, Response, NextFunction } from "express";
 import { prisma } from "../prisma.js";
+import { MECHANIC_SKILLS } from "../mechanicSkills.js";
 
-export const SPECIALIZATIONS = [
-  "PETROL_ENGINES",
-  "DIESEL_ENGINES",
-  "ELECTRIC_VEHICLES",
-  "TRANSMISSION",
-  "AUTO_ELECTRICAL",
-  "SUSPENSION",
-] as const;
+// One skill list for the application form, the catalog and requests.
+export const SPECIALIZATIONS = MECHANIC_SKILLS;
 export class MechanicError extends Error {
   constructor(
     public status: number,

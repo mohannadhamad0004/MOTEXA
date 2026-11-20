@@ -14,17 +14,12 @@ Currency: ILS, shown as "₪ 120.00". Languages: English + Arabic (full RTL). Ci
   - `src/core/` config (`apiUrl`), session, landing per role, constants (cities, categories, money, geo, files), hooks
   - `src/components/ui/` shared UI kit (Text, Button, Card, Badge, Chip, Input/SearchBar, Skeleton, EmptyState, ErrorState, Price, SectionHeader, StatusTimeline, ListRow, ImageTile…)
   - `src/components/layout/` Screen (safe area), DashboardLayout, AuthLayout, RoleGate, tab bar options
-  - `src/components/*.tsx` (top level) = Diala's design components (Appearance, BrandSurfaces, EditorialUI, InteractiveButton, LanguageSwitch, MotexaVisual)
+  - `src/components/*.tsx` (top level) = the original design components (Appearance, BrandSurfaces, EditorialUI, InteractiveButton, LanguageSwitch, MotexaVisual)
   - `src/features/*` feature-specific code (catalog, requests, tow, parts, shared/maps = Leaflet/OSM WebView)
 - `apps/web/` — the web app (separate; React + Tailwind + shadcn). Not part of mobile work.
 
 ## 3. Ownership
-Partner-owned files may be edited ONLY to fix listed bugs; keep changes minimal; list every changed partner file in STATUS.md under 'Changed in Diala's files' so she can review.
-- **Diala:** auth (login/signup/OTP/activation/forgot password), admin management, admin tabs, her design components.
-- **Mohannad:** tow, parts, catalog, files, requests, customer screens, provider screens, tow/parts admin screens, theme + shared UI kit, and (since 2026-11-18, taken over from Diala) the whole **mechanics area**: mechanic, mechanics admin and the customer side of mechanics. Mechanics-area files are no longer partner-owned:
-  - mobile: `src/app/mechanic/`, `src/app/mechanics-admin/`, `src/app/auth/mechanic-signup.tsx`, `mechanic-pending.tsx`, `mechanic-preview.tsx`, `src/app/customer/(tabs)/mechanics.tsx`, `src/app/customer/mechanic/`, `mechanicrequest/`, `mechanics/`, `src/components/Mechanic*.tsx`, `src/components/mechanic-api.ts`, `src/features/mechanics/`, `src/features/mechanic-review/`
-  - backend: `routes/mechanic-*.routes.ts`, `routes/mechanics.routes.ts`, `routes/catalog-mechanics.routes.ts`, `services/mechanic-policy.ts`, `mechanicSkills.ts`
-- Shared files touched with agreement only: `auth.routes.ts` (/auth/me for all roles, login 403 returns role+status), `login.tsx` (landingFor per role), `Appearance.tsx` (dark default + remembered mode).
+Since 2026-11-18 Mohannad works on MOTEXA alone: every file in this repo is his to change. There is no partner-owned file list and no "listed bugs only" rule any more. The history of earlier partner changes stays in `docs/agents/STATUS.md`; new entries no longer need a "Changed in Diala's files" section.
 
 ## 4. Hard rules
 1. Work on the current branch (`feature/mohannad-mobile` unless told otherwise). Never push. Never commit — the human commits (no AI co-author lines).
@@ -73,7 +68,6 @@ Next: Emergency (one-tap tow request), ratings/reviews, orders (cash only), My C
    Ask again only if:
   - the scope must materially expand,
   - a destructive operation is required,
-  - another owner's files must be changed,
   - a new native dependency is required,
   - database/schema work not included in the proposal becomes necessary,
   - or a commit/push/deployment is requested.

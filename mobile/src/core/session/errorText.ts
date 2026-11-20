@@ -37,6 +37,10 @@ export const ERROR_TEXT: Record<string, readonly [string, string]> = {
   ORDER_NOT_FOUND: ["Order not found.", "الطلب غير موجود."],
   JOB_NOT_FOUND: ["Job not found.", "المهمة غير موجودة."],
   REQUEST_NOT_FOUND: ["Request not found.", "الطلب غير موجود."],
+  MECHANIC_NOT_FOUND: ["Mechanic not found.", "الميكانيكي غير موجود."],
+  MECHANIC_PROFILE_NOT_FOUND: ["Mechanic profile not found.", "ملف الميكانيكي غير موجود."],
+  MECHANIC_NOT_ACTIVE: ["Your mechanic account is not active, so you cannot answer requests.", "حسابك كميكانيكي غير مفعّل، لذلك لا يمكنك الرد على الطلبات."],
+  CITY_NOT_IN_LIST: ["Choose your city from the list.", "اختر مدينتك من القائمة."],
   SERVER_ERROR: ["Something went wrong on our side. Please try again.", "حدث خطأ من جهتنا. يرجى المحاولة مرة أخرى."],
 };
 /** The text for a server error in `language` ("ar" or anything else = English); `fallback` when the code is unknown. */
