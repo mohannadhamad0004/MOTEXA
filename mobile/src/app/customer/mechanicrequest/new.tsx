@@ -116,7 +116,7 @@ export default function NewMechanicRequest() {
           )}
           <View style={{ marginTop: 12 }}>
             {stepErr || form.err ? <Note tone="danger" icon="alert-circle-outline">{stepErr ?? form.err}</Note> : null}
-            <Note icon="lock-closed-outline">{t("The mechanic sees your name, your car, the problem and the location you wrote. Your email is never shared.", "يرى الميكانيكي اسمك وسيارتك والمشكلة والموقع الذي كتبته. لا تتم مشاركة بريدك الإلكتروني أبدًا.")}</Note>
+            <Note icon="lock-closed-outline">{t("Before accepting, the mechanic sees your first name, your car, the problem and your area. Once they accept, they see your full name; your exact location and phone are shared only while the job is active. Your email is never shared.", "قبل القبول يرى الميكانيكي اسمك الأول وسيارتك والمشكلة ومنطقتك فقط. بعد القبول يرى اسمك الكامل، أما موقعك الدقيق ورقم هاتفك فيُشاركان أثناء العمل النشط فقط. لا تتم مشاركة بريدك الإلكتروني أبدًا.")}</Note>
           </View>
         </View>
       )}

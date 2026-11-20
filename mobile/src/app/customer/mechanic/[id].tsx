@@ -32,7 +32,7 @@ export default function MechanicProfile() {
           variant="detail"
           onBack={() => (router.canGoBack() ? router.back() : router.navigate("/customer/mechanics"))}
           title={m?.name ?? t("Mechanic", "ميكانيكي")}
-          line={m ? `${m.workshopName} · ${cityLabel(m.city, isArabic)}` : undefined}
+          line={m ? [m.workshopName, cityLabel(m.city, isArabic)].filter(Boolean).join(" · ") : undefined}
           visual={m ? <InitialBubble name={m.name} size={72} /> : undefined}
         >
           {verified ? <StatusChip tone="success" icon="shield-checkmark" label={t("Verified by MOTEXA", "موثّق من موتكسا")} /> : null}
@@ -75,9 +75,9 @@ export default function MechanicProfile() {
 
           <Section title={t("Workshop", "الورشة")}>
             <Card pad={12}>
-              <ListRow icon="business-outline" title={t("Name", "الاسم")} sub={m.workshopName} />
-              <ListRow divider icon="location-outline" title={t("Address", "العنوان")} sub={m.workshopAddress} />
-              <ListRow divider icon="map-outline" title={t("City", "المدينة")} sub={cityLabel(m.city, isArabic)} />
+              {m.workshopName ? <ListRow icon="business-outline" title={t("Name", "الاسم")} sub={m.workshopName} /> : null}
+              {m.workshopAddress ? <ListRow divider icon="location-outline" title={t("Address", "العنوان")} sub={m.workshopAddress} /> : null}
+              <ListRow divider={!!m.workshopName} icon="map-outline" title={t("City", "المدينة")} sub={cityLabel(m.city, isArabic)} />
               {m.yearsOfExperience != null ? <ListRow divider icon="ribbon-outline" title={t("Experience", "الخبرة")} sub={`${m.yearsOfExperience} ${t("years", "سنة")}`} /> : null}
             </Card>
           </Section>

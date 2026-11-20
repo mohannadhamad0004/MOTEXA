@@ -19,12 +19,12 @@ function MechanicCard({ m }: { m: MechanicRow }) {
   const { t, isArabic } = useL();
   const skillLabel = useSkillLabel();
   return (
-    <Card onPress={() => router.push(`/customer/mechanic/${m.id}`)} label={`${m.name}, ${m.workshopName}`} pad={14}>
+    <Card onPress={() => router.push(`/customer/mechanic/${m.id}`)} label={[m.name, m.workshopName].filter(Boolean).join(", ")} pad={14}>
       <View style={[row, { gap: 12, alignItems: "flex-start" }]}>
         <InitialBubble name={m.name} />
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
           <GText numberOfLines={2} style={[gType.label, { fontWeight: "800", fontSize: 16 }, align]}>{m.name}</GText>
-          <GText soft numberOfLines={2} style={[gType.caption, align]}>{m.workshopName}</GText>
+          {m.workshopName ? <GText soft numberOfLines={2} style={[gType.caption, align]}>{m.workshopName}</GText> : null}
           <View style={[row, { alignItems: "center", gap: 4, flexWrap: "wrap" }]}>
             <GIcon name="location-outline" size={13} color={g.soft} />
             <GText soft numberOfLines={1} style={[gType.caption, { flexShrink: 1 }]}>{cityLabel(m.city, isArabic)}</GText>

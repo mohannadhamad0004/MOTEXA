@@ -10,6 +10,8 @@ import path from "node:path";
 import { prisma } from "../prisma.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
+import { canonicalCity } from "../cities.js";
+import { errorBody } from "../services/error-codes.js";
 import {
   SPECIALIZATIONS,
   completeProfile,
@@ -123,9 +125,17 @@ router.get("/options", (_req, res) =>
     documentMaxBytes: 5 * 1024 * 1024,
   }),
 );
-router.get("/me", async (_req, res) =>
-  res.json({ success: true, profile: await view(own(res)) }),
-);
+router.get("/me", async (_req, res) => {
+  const userId = own(res);
+  // Every mechanic account has a profile: one created without it (older dev accounts) starts as a draft application.
+  if (!(await prisma.mechanicProfile.findUnique({ where: { userId }, select: { id: true } })))
+    await prisma.mechanicProfile
+      .create({ data: { userId, specializations: [], verificationStatus: "DRAFT" } })
+      .catch((e) => {
+        if ((e as { code?: string }).code !== "P2002") throw e; // a parallel request created it
+      });
+  res.json({ success: true, profile: await view(userId) });
+});
 router.put("/me", async (req, res) => {
   const userId = own(res),
     b = req.body ?? {};
@@ -135,10 +145,12 @@ router.put("/me", async (req, res) => {
   if (
     specs.some(
       (s) => !SPECIALIZATIONS.includes(s as (typeof SPECIALIZATIONS)[number]),
-    ) ||
-    specs.length > 6
+    )
   )
     fail(400, "Choose valid specializations.");
+  const cityText = text(b.city, 80),
+    city = cityText ? canonicalCity(cityText) : null;
+  if (cityText && !city) fail(400, "Choose your city from the list.");
   const years =
     b.yearsOfExperience === null || b.yearsOfExperience === ""
       ? null
@@ -158,7 +170,7 @@ router.put("/me", async (req, res) => {
     await tx.mechanicProfile.update({
       where: { id: p.id },
       data: {
-        city: text(b.city, 80),
+        city,
         phoneNumber: text(b.phoneNumber, 24),
         specializations: specs as string[],
         yearsOfExperience: years,
@@ -511,7 +523,7 @@ router.post("/admin/:userId/decision", reviewer, async (req, res) => {
 router.use(
   (err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof MechanicError) {
-      res.status(err.status).json({ success: false, message: err.message });
+      res.status(err.status).json(errorBody(err.message));
       return;
     }
     console.error("Mechanic operation failed", {

@@ -7,6 +7,8 @@ import {
 import argon2 from "argon2";
 import { prisma } from "../prisma.js";
 import { fail, MechanicError, text } from "../services/mechanic-policy.js";
+import { canonicalCity } from "../cities.js";
+import { errorBody } from "../services/error-codes.js";
 
 // Independent self-registration. Administrator invitation/email services are not used here.
 const attempts = new Map<string, { start: number; count: number }>();
@@ -57,6 +59,9 @@ export function createMechanicRegistrationRouter() {
       );
     if (b.role && b.role !== "MECHANIC")
       fail(400, "This registration is for mechanics only.");
+    // stored as the canonical English name, so the catalog's city filter, distance and map pin work
+    const canonical = canonicalCity(city);
+    if (!canonical) fail(400, "Choose your city from the list.");
     const passwordHash = await argon2.hash(password);
     try {
       const user = await prisma.user.create({
@@ -69,7 +74,7 @@ export function createMechanicRegistrationRouter() {
           mechanicProfile: {
             create: {
               phoneNumber,
-              city,
+              city: canonical,
               specializations: [],
               verificationStatus: "DRAFT",
               termsAcceptedAt: new Date(),
@@ -96,7 +101,7 @@ export function createMechanicRegistrationRouter() {
   router.use(
     (err: unknown, _req: Request, res: Response, _next: NextFunction) => {
       if (err instanceof MechanicError) {
-        res.status(err.status).json({ success: false, message: err.message });
+        res.status(err.status).json(errorBody(err.message));
         return;
       }
       console.error("Mechanic registration failed", {

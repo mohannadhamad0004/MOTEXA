@@ -20,7 +20,7 @@ const {chromium}=require('@playwright/test');const backend=path.resolve(__dirnam
   await page.getByRole('textbox',{name:'Full name',exact:true}).fill('Browser Test Mechanic');
   await page.getByRole('textbox',{name:'Email address',exact:true}).fill(email);
   await page.getByRole('textbox',{name:'Phone number',exact:true}).fill('0598888888');
-  await page.getByRole('textbox',{name:'City',exact:true}).fill('Ramallah');
+  await page.getByRole('button',{name:'Choose city',exact:true}).click();await page.getByRole('button',{name:'Ramallah',exact:true}).click();
   await page.locator('input[aria-label="Password"]:visible').fill('Browser!Pass123');
   await page.getByLabel('Confirm password',{exact:true}).fill('Browser!Pass123');
   await page.getByRole('checkbox',{name:'I agree to these registration and document privacy terms.',exact:true}).click();
@@ -30,7 +30,7 @@ const {chromium}=require('@playwright/test');const backend=path.resolve(__dirnam
   await page.getByRole('button',{name:'Sign in and continue',exact:true}).click();
   await page.locator('input[aria-label="Email address"]:visible').fill(email);await page.locator('input[aria-label="Password"]:visible').fill('Browser!Pass123');await page.getByRole('button',{name:'Enter workspace',exact:true}).click();
   await page.getByRole('button',{name:'Continue verification',exact:true}).click();
-  await page.getByRole('checkbox',{name:'Petrol engines',exact:true}).click();
+  await page.getByRole('checkbox',{name:'Engine',exact:true}).click();
   await page.getByLabel('Years of experience',{exact:true}).fill('5');
   await page.getByLabel('Tell us about your experience',{exact:true}).fill('Five years diagnosing and safely repairing petrol engines.');
   await page.getByRole('button',{name:'Save and continue',exact:true}).click();

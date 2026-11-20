@@ -9,7 +9,7 @@ import { View } from "react-native";
 import { fmtDateTime } from "../requests/requestBits";
 import type { MechanicRequestStatus } from "./mechanicsService";
 
-const SKILL_AR: Record<string, string> = {
+export const SKILL_AR: Record<string, string> = {
   Engine: "المحرك",
   Brakes: "الفرامل",
   Electrical: "الكهرباء",

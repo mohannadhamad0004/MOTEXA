@@ -4,52 +4,53 @@ import { prisma } from "../prisma.js";
 import { canonicalCity } from "../cities.js";
 import { MECHANIC_SKILLS } from "../mechanicSkills.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
+import { errorBody } from "../services/error-codes.js";
 import { distanceTo, readPoint, text } from "./catalog.routes.js";
 
 // Customer catalog of mechanics. Mounted under /api/catalog (see server.ts).
 //
-// WHO IS PUBLIC: a MECHANIC whose account is ACTIVE, whose application was not REJECTED and who has at least one
-// skill an admin APPROVED. (The review pipeline has no "approved application" status yet; ACTIVE is only ever set
-// by an admin decision, and the approved skill proves an admin looked at the application.)
-// PRIVACY: responses are built from an explicit field list. Never returned: phone, email, national id, licence or
-// credential numbers, documents, review notes, pending/rejected skills.
+// WHO IS PUBLIC (one rule, `publicMechanic`, also used by mechanic requests): a MECHANIC whose account is ACTIVE and whose
+// MechanicProfile is VERIFIED (the mechanics admin approved it after the documents + interview review). Approval covers all of
+// the specializations the mechanic listed, so those are the skills customers see. Garages (later) add their mechanics here.
+// PRIVACY: responses are built from an explicit field list. Never returned: phone, email, national id, documents, review or
+// interview notes.
 const router = Router();
 router.use(requireAuth);
 
 const PAGE_SIZE = 20;
-const bad = (res: any, code: number, message: string) => res.status(code).json({ success: false, message });
+const bad = (res: any, code: number, message: string) => res.status(code).json(errorBody(message));
 const fail = (res: any, label: string, error: unknown) => {
   console.error(`${label}:`, error);
-  return res.status(500).json({ success: false, message: "Internal server error." });
+  return res.status(500).json(errorBody("Internal server error."));
 };
 
 /** The only mechanics a customer may ever see or send a request to. */
 export const publicMechanic: Prisma.UserWhereInput = {
   role: "MECHANIC",
   status: "ACTIVE",
-  mechanicApplication: { is: { reviewStatus: { not: "REJECTED" }, skills: { some: { status: "APPROVED" } } } },
+  mechanicProfile: { is: { verificationStatus: "VERIFIED" } },
 };
+
+/** The approved skills of a public mechanic, in the fixed catalog order (unknown names are never shown). */
+export const skillsOf = (specializations: string[]) => MECHANIC_SKILLS.filter((s) => specializations.includes(s));
 
 const select = {
   id: true,
   fullName: true,
-  mechanicProfile: { select: { yearsOfExperience: true } },
-  mechanicApplication: {
-    select: { workshopName: true, workshopAddress: true, city: true, skills: { where: { status: "APPROVED" as const }, select: { name: true }, orderBy: { name: "asc" as const } } },
-  },
+  mechanicProfile: { select: { workshopName: true, workshopAddress: true, city: true, specializations: true, yearsOfExperience: true } },
 } satisfies Prisma.UserSelect;
 type Row = Prisma.UserGetPayload<{ select: typeof select }>;
 
 const shape = (u: Row, detail = false) => {
-  const a = u.mechanicApplication!;
+  const p = u.mechanicProfile!;
   return {
     id: u.id,
     name: u.fullName,
-    workshopName: a.workshopName,
-    city: a.city,
-    skills: a.skills.map((s) => s.name),
-    yearsOfExperience: u.mechanicProfile?.yearsOfExperience ?? null,
-    ...(detail ? { workshopAddress: a.workshopAddress } : {}),
+    workshopName: p.workshopName || null,
+    city: p.city,
+    skills: skillsOf(p.specializations),
+    yearsOfExperience: p.yearsOfExperience,
+    ...(detail ? { workshopAddress: p.workshopAddress || null } : {}),
   };
 };
 
@@ -73,22 +74,22 @@ router.get("/mechanics", async (req, res) => {
     const page = Number(pageRaw);
     if (!/^\d+$/.test(pageRaw) || page < 1 || page > 10_000) return bad(res, 400, "page must be a positive whole number.");
 
-    const app: Prisma.MechanicApplicationWhereInput = {
-      reviewStatus: { not: "REJECTED" },
-      skills: { some: { status: "APPROVED", ...(skill ? { name: skill } : {}) } },
-      ...(city ? { city: { equals: city, mode: "insensitive" } } : {}),
-    };
     const rows = await prisma.user.findMany({
       where: {
-        role: "MECHANIC",
-        status: "ACTIVE",
-        mechanicApplication: { is: app },
-        ...(q ? { OR: [{ fullName: { contains: q, mode: "insensitive" } }, { mechanicApplication: { is: { workshopName: { contains: q, mode: "insensitive" } } } }] } : {}),
+        ...publicMechanic,
+        mechanicProfile: {
+          is: {
+            verificationStatus: "VERIFIED",
+            ...(skill ? { specializations: { has: skill } } : {}),
+            ...(city ? { city: { equals: city, mode: "insensitive" } } : {}),
+          },
+        },
+        ...(q ? { OR: [{ fullName: { contains: q, mode: "insensitive" } }, { mechanicProfile: { is: { workshopName: { contains: q, mode: "insensitive" } } } }] } : {}),
       },
       select,
     });
     const all = rows
-      .map((u) => ({ ...shape(u), ...(point ? distanceTo(point, { city: u.mechanicApplication!.city, baseLat: null, baseLng: null }) : {}) }))
+      .map((u) => ({ ...shape(u), ...(point ? distanceTo(point, { city: u.mechanicProfile!.city ?? "", baseLat: null, baseLng: null }) : {}) }))
       .sort((a, b) => {
         const km = (x: object) => (x as { distanceKm?: number | null }).distanceKm ?? Infinity;
         const byDistance = sort === "nearest" ? km(a) - km(b) : 0;
@@ -100,15 +101,12 @@ router.get("/mechanics", async (req, res) => {
   }
 });
 
-// The fixed skills, each with the number of public mechanics who hold it APPROVED (zero is listed too).
+// The fixed skills, each with the number of public mechanics who hold it (zero is listed too).
 router.get("/mechanic-skills", async (_req, res) => {
   try {
-    const rows = await prisma.mechanicSkillApplication.findMany({
-      where: { status: "APPROVED", application: { reviewStatus: { not: "REJECTED" }, user: { role: "MECHANIC", status: "ACTIVE" } } },
-      select: { name: true },
-    });
+    const rows = await prisma.mechanicProfile.findMany({ where: { verificationStatus: "VERIFIED", user: { role: "MECHANIC", status: "ACTIVE" } }, select: { specializations: true } });
     const count = new Map<string, number>();
-    for (const r of rows) count.set(r.name, (count.get(r.name) ?? 0) + 1);
+    for (const r of rows) for (const s of skillsOf(r.specializations)) count.set(s, (count.get(s) ?? 0) + 1);
     return res.json({ success: true, skills: MECHANIC_SKILLS.map((key) => ({ key, count: count.get(key) ?? 0 })) });
   } catch (e) {
     return fail(res, "Catalog mechanic skills error", e);
@@ -121,7 +119,7 @@ router.get("/mechanics/:id", async (req, res) => {
     if (typeof point === "string") return bad(res, 400, point);
     const u = await prisma.user.findFirst({ where: { id: String(req.params.id), ...publicMechanic }, select });
     if (!u) return bad(res, 404, "Mechanic not found.");
-    return res.json({ success: true, mechanic: { ...shape(u, true), ...(point ? distanceTo(point, { city: u.mechanicApplication!.city, baseLat: null, baseLng: null }) : {}) } });
+    return res.json({ success: true, mechanic: { ...shape(u, true), ...(point ? distanceTo(point, { city: u.mechanicProfile!.city ?? "", baseLat: null, baseLng: null }) : {}) } });
   } catch (e) {
     return fail(res, "Catalog mechanic error", e);
   }

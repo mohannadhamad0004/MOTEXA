@@ -10,7 +10,8 @@ export const MECHANIC_SKILLS = ["Engine", "Brakes", "Electrical", "Diagnostics",
 export type MechanicRow = {
   id: string;
   name: string;
-  workshopName: string;
+  /** null for a mechanic who works on-site / online only */
+  workshopName: string | null;
   city: string;
   /** approved skills only */
   skills: string[];
@@ -19,7 +20,7 @@ export type MechanicRow = {
   distanceKm?: number | null;
   distanceSource?: "base" | "city" | null;
 };
-export type MechanicDetail = MechanicRow & { workshopAddress: string };
+export type MechanicDetail = MechanicRow & { workshopAddress: string | null };
 export type MechanicsPage = { mechanics: MechanicRow[]; page: number; total: number; hasMore: boolean };
 export type MechanicFilters = { q?: string; city?: string; skill?: string; sort?: "nearest" | "name"; lat?: number; lng?: number; page?: number };
 

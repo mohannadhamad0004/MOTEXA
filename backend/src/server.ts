@@ -11,8 +11,6 @@ import mechanicsRoutes from './routes/mechanics.routes.js';
 import passwordResetRoutes from "./routes/password-reset.routes.js";
 import adminInvitationRoutes from "./routes/admin-invitations.routes.js";
 import authRoutes from "./routes/auth.routes.js";
-import mechanicApplicationRoutes from "./routes/mechanic-applications.routes.js";
-import mechanicReviewRoutes from "./routes/mechanic-review.routes.js";
 import towRoutes from "./routes/tow.routes.js";
 import partsRoutes from "./routes/parts.routes.js";
 import partsOrderRoutes from "./routes/parts-orders.routes.js";
@@ -56,8 +54,6 @@ app.use("/api/3d", async (req, res, next) => {
   } catch { res.status(503).end(); }
 }, express.static(fileURLToPath(new URL("../public/3d", import.meta.url)), { fallthrough: false,cacheControl:false }));
 app.use("/api/cars", express.static(fileURLToPath(new URL("../public/cars", import.meta.url)), { maxAge: "30d", fallthrough: false })); // generation photos (CC, credited)
-// Mounted before the global JSON parser: it carries larger (base64 image) bodies with its own limit.
-app.use("/api/mechanic-applications", mechanicApplicationRoutes);
 // Tow and parts providers upload base64 images: these routers parse their own body (after auth), so they sit above the global parser too.
 app.use("/api", towRoutes);
 app.use("/api", towDriverRoutes); // tow drivers, assignment, live jobs
@@ -93,7 +89,6 @@ app.use("/api/mechanics",mechanicsRoutes);
 app.use("/api/auth/password-reset", passwordResetRoutes);
 app.use("/api/admin-management", adminRoutes);
 app.use("/api/admin-invitations", adminInvitationRoutes);
-app.use("/api/mechanic-review", mechanicReviewRoutes);
 app.use("/api/auth/admin", adminOtpRoutes);
 app.use((err:unknown,_req:express.Request,res:express.Response,_next:express.NextFunction)=>{const status=(err as {status?:number}).status;res.status(status===413?413:status===400?400:500).json({success:false,message:status===413?"Document is too large (maximum 5 MB).":status===400?"Invalid request body.":"An unexpected server error occurred."});});
 app.listen(PORT, () => {
