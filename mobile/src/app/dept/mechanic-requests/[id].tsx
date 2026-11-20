@@ -47,14 +47,14 @@ export default function AdminMechanicRequest() {
           <Note icon="eye-outline">{t("The exact address and the phone are shown only while the job is active; otherwise only the city. You can cancel an open request with a reason (it is audited).", "يظهر العنوان الدقيق والهاتف أثناء العمل النشط فقط؛ وإلا تظهر المدينة فقط. يمكنك إلغاء طلب مفتوح مع سبب (يُسجَّل في السجل).")}</Note>
           <Card pad={12}>
             <ListRow icon="person-outline" title={t("Customer", "الزبون")} sub={r.customerName} />
-            <ListRow divider icon="construct-outline" title={t("Mechanic", "الميكانيكي")} sub={[r.mechanic.name, r.mechanic.workshopName].filter(Boolean).join(" · ")} />
+            <ListRow divider icon="construct-outline" title={t("Mechanic", "الميكانيكي")} sub={[r.mechanic.name, r.mechanic.workshopName, r.mechanic.city ? cityLabel(r.mechanic.city, isArabic) : null].filter(Boolean).join(" · ")} />
             <ListRow divider icon="car-outline" title={t("Car", "السيارة")} sub={`${r.vehicle.make} ${r.vehicle.model}${r.vehicle.year ? ` ${r.vehicle.year}` : ""}`} />
             {r.skill ? <ListRow divider icon="build-outline" title={t("Skill", "المهارة")} sub={skill(r.skill)} /> : null}
             <ListRow divider icon="alert-circle-outline" title={t("Problem", "المشكلة")} sub={r.problemDescription} />
             {r.preferredTime ? <ListRow divider icon="time-outline" title={t("Preferred time", "الوقت المفضل")} sub={r.preferredTime} /> : null}
           </Card>
           <Card pad={12}>
-            <ListRow icon="map-outline" title={t("City", "المدينة")} sub={r.city ? cityLabel(r.city, isArabic) : "—"} />
+            <ListRow icon="map-outline" title={t("Car area", "منطقة السيارة")} sub={r.city ? cityLabel(r.city, isArabic) : t("No pin", "لا يوجد دبوس")} />
             {r.location.approximate === false && r.location.text ? <ListRow divider icon="location-outline" title={t("Address", "العنوان")} sub={r.location.text} /> : null}
             {r.contactPhone ? <ListRow divider icon="call-outline" title={t("Phone", "الهاتف")} sub={r.contactPhone} /> : null}
             {r.declineReason ? <ListRow divider icon="close-circle-outline" title={t("Decline reason", "سبب الرفض")} sub={r.declineReason} /> : null}

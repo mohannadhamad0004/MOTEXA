@@ -42,8 +42,9 @@ const adminView = (r: Prisma.MechanicRequestGetPayload<{ include: typeof include
     customerName: r.customer.fullName,
     customerId: r.customer.id,
     mechanic: { id: r.mechanic.id, name: r.mechanic.fullName, workshopName: r.mechanic.mechanicProfile?.workshopName || null, city: r.mechanic.mechanicProfile?.city ?? null },
-    // where the car is, as a city: from the pin when there is one, else the mechanic's city
-    city: (v.location.point && nearestCity(v.location.point)) || r.mechanic.mechanicProfile?.city || null,
+    // where the CAR is: the nearest city (≤ 30 km) to the customer's pin; null without a pin (never guessed from the mechanic's city,
+    // which is mechanic.city). A customer may book a mechanic from another city, so the two can differ.
+    city: v.location.point ? nearestCity(v.location.point) : null,
     active: (ACTIVE as readonly string[]).includes(r.status),
   };
 };

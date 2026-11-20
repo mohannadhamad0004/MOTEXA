@@ -34,7 +34,8 @@ export function MechanicRequestsList() {
   const [q, setQ] = useState("");
   const state = useLoad(() => mechanicAdmin.list(scope, status, q), [scope, status, q], 15_000);
   const statuses = scope === "active" ? ACTIVE_STATUSES : HISTORY_STATUSES;
-  const place = (r: AdminRequestRow) => [r.mechanic.name, r.city ? cityLabel(r.city, isArabic) : null].filter(Boolean).join(" · ");
+  const mechanicLine = (r: AdminRequestRow) => [r.mechanic.name, r.mechanic.city ? cityLabel(r.mechanic.city, isArabic) : null].filter(Boolean).join(" · ");
+  const carLine = (r: AdminRequestRow) => [r.city ? t(`Car in ${cityLabel(r.city, false)}`, `السيارة في ${cityLabel(r.city, true)}`) : null, `${r.vehicle.make} ${r.vehicle.model}`, fmtDateTime(r.updatedAt)].filter(Boolean).join(" · ");
   return (
     <View>
       <View style={[row, { gap: 8, marginBottom: 12 }]}>
@@ -56,7 +57,7 @@ export function MechanicRequestsList() {
               <GText numberOfLines={1} style={[gType.label, { fontWeight: "800", flex: 1 }, align]}>{r.customerName}</GText>
               <StatusChip tone={mechTone(r.status)} label={L[r.status]} />
             </View>
-            <ListRow icon="construct-outline" title={place(r)} sub={`${r.vehicle.make} ${r.vehicle.model} · ${fmtDateTime(r.updatedAt)}`} />
+            <ListRow icon="construct-outline" title={mechanicLine(r)} sub={carLine(r)} />
           </ItemRow>
         ))}
       </View>
