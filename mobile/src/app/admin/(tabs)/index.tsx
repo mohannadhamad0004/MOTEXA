@@ -26,6 +26,7 @@ const [dashboardStats, setDashboardStats] = useState<{
   administrators: number;
   mechanics: number;
   pendingMechanics: number;
+  activeMechanicRequests?: number;
   pendingInvitations: number;
   towCompanies?: { pending: number; approved: number };
   partsShops?: { pending: number; approved: number };
@@ -199,6 +200,11 @@ useFocusEffect(
       : statsError
         ? "—"
         : String(dashboardStats?.mechanics ?? 0),
+    icon: "construct-outline",
+  },
+  {
+    label: isArabic ? "طلبات ميكانيكي نشطة" : "Active mechanic requests",
+    value: statsLoading ? "…" : statsError ? "—" : String(dashboardStats?.activeMechanicRequests ?? 0),
     icon: "construct-outline",
   },
   {

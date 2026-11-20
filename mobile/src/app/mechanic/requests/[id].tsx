@@ -86,7 +86,13 @@ export default function MechanicRequestDetail() {
                 {r.declineReason ? `\n${r.declineReason}` : ""}
               </Notice>
             ) : null}
-            {r.status === "CANCELLED" ? <Notice tone="danger" icon="close-circle-outline">{t("The customer cancelled this request.", "ألغى العميل هذا الطلب.")}</Notice> : null}
+            {r.status === "CANCELLED" ? (
+              <Notice tone="danger" icon="close-circle-outline">
+                {r.cancelledBy === "ADMIN" ? t("MOTEXA cancelled this request.", "ألغت موتكسا هذا الطلب.") : t("The customer cancelled this request.", "ألغى العميل هذا الطلب.")}
+                {r.cancelledBy === "ADMIN" && r.cancelReason ? `
+${r.cancelReason}` : ""}
+              </Notice>
+            ) : null}
 
             <SectionHeader title={t("Status", "الحالة")} />
             <MechanicTimeline items={r.timeline} />

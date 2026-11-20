@@ -33,7 +33,7 @@ router.get("/dashboard", async (_req, res) => {
       const n = (st: string) => rows.find((r) => r.verificationStatus === st)?._count._all ?? 0;
       return { pending: n("PENDING"), approved: n("APPROVED") };
     };
-    const [administrators, mechanics, pendingMechanics, pendingInvitations, towRows, partsRows] =
+    const [administrators, mechanics, pendingMechanics, pendingInvitations, towRows, partsRows, activeMechanicRequests] =
       await Promise.all([
         prisma.user.count({
           where: { role: "ADMIN", status: "ACTIVE" },
@@ -53,6 +53,7 @@ router.get("/dashboard", async (_req, res) => {
 
         prisma.towCompanyProfile.groupBy({ by: ["verificationStatus"], _count: { _all: true } }),
         prisma.partsShopProfile.groupBy({ by: ["verificationStatus"], _count: { _all: true } }),
+        prisma.mechanicRequest.count({ where: { status: { in: ["REQUESTED", "ACCEPTED", "IN_PROGRESS"] } } }),
       ]);
 
     res.status(200).json({
@@ -61,6 +62,7 @@ router.get("/dashboard", async (_req, res) => {
         administrators,
         mechanics,
         pendingMechanics,
+        activeMechanicRequests,
         pendingInvitations,
         towCompanies: byStatus(towRows),
         partsShops: byStatus(partsRows),
