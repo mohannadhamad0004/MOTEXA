@@ -12,7 +12,7 @@ import { SessionUser, useSessionUser } from "../../features/shared/session";
 // Landing screen for admins that hold more than one department permission.
 // Lists ONLY the areas the account is allowed to open. Each area re-checks access itself.
 const AREAS = [
-  { permission: "MANAGE_MECHANICS", href: "/mechanics-admin", icon: "build-outline", en: "Mechanics", ar: "الميكانيكيون" },
+  { permission: "MANAGE_MECHANICS", href: "/dept", icon: "build-outline", en: "Mechanics", ar: "الميكانيكيون" },
   { permission: "MANAGE_TOWING", href: "/admin/tow", icon: "car-outline", en: "Tow Companies", ar: "شركات السحب" },
   { permission: "MANAGE_SPARE_PARTS", href: "/admin/shops", icon: "storefront-outline", en: "Parts Shops", ar: "متاجر قطع الغيار" },
 ] as const;

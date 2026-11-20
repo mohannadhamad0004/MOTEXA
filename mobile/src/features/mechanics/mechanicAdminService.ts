@@ -11,7 +11,7 @@ export type AdminRequestRow = {
   vehicle: { make: string; model: string; year: number | null };
   customerName: string;
   mechanic: { id: string; name: string; workshopName: string | null; city: string | null };
-  /** the car's city (from the pin, else the mechanic's city) */
+  /** where the car is: nearest city to the customer's pin; null without a pin. The mechanic's own city is mechanic.city. */
   city: string | null;
   timeline: { status: MechanicRequestStatus; at: string }[];
   cancelReason: string | null;

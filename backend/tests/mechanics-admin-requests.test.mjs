@@ -14,7 +14,7 @@ test('mechanics admin: permissions, location rule, cancel with reason', async ()
   const tag = 'madmin-' + randomUUID();
   const mk = (role, name, extra = {}) => prisma.user.create({ data: { fullName: name, email: `${tag}-${name.split(' ')[0].toLowerCase()}@example.invalid`, passwordHash: 'unused', role, status: 'ACTIVE', ...extra } });
   const customer = await mk('CUSTOMER', 'Dana Admintest');
-  const mechanic = await mk('MECHANIC', 'Majed Admintest', { mechanicProfile: { create: { city: 'Nablus', specializations: ['Engine'], verificationStatus: 'VERIFIED', offersWorkshop: true, workshopName: 'Admintest Workshop', workshopAddress: 'x' } } });
+  const mechanic = await mk('MECHANIC', 'Majed Admintest', { mechanicProfile: { create: { city: 'Jenin', specializations: ['Engine'], verificationStatus: 'VERIFIED', offersWorkshop: true, workshopName: 'Admintest Workshop', workshopAddress: 'x' } } });
   const mAdmin = await mk('ADMIN', 'Mona Admintest', { adminPermissions: { create: { permission: 'MANAGE_MECHANICS' } } });
   const pAdmin = await mk('ADMIN', 'Parts Admintest', { adminPermissions: { create: { permission: 'MANAGE_SPARE_PARTS' } } });
   const superA = await mk('SUPER_ADMIN', 'Super Admintest');
@@ -38,8 +38,9 @@ test('mechanics admin: permissions, location rule, cancel with reason', async ()
     // ---- list: active scope, status filter, search by customer / mechanic / city; no address, phone or email in the list
     let r = await call(at, 'GET', '/admin/mechanics/requests?scope=active'); assert.equal(r.status, 200);
     const row = find(r.data); assert.ok(row, 'in the active list'); assert.equal(row.customerName, 'Dana Admintest');
+    assert.equal(row.city, 'Nablus', 'the car area comes from the pin'); assert.equal(row.mechanic.city, 'Jenin', 'the mechanic keeps their own city');
     assert.doesNotMatch(JSON.stringify(r.data), /Secret Street|599 765|32\.2267|35\.2434|example\.invalid/);
-    for (const q of ['dana', 'majed', 'admintest workshop', 'nablus']) assert.ok(find((await call(at, 'GET', `/admin/mechanics/requests?scope=active&q=${encodeURIComponent(q)}`)).data), `search ${q}`);
+    for (const q of ['dana', 'majed', 'admintest workshop', 'nablus', 'jenin']) assert.ok(find((await call(at, 'GET', `/admin/mechanics/requests?scope=active&q=${encodeURIComponent(q)}`)).data), `search ${q}`);
     assert.equal(find((await call(at, 'GET', '/admin/mechanics/requests?scope=active&q=zzzz-no-match')).data), undefined);
     assert.ok(find((await call(at, 'GET', '/admin/mechanics/requests?scope=active&status=REQUESTED')).data));
     assert.equal(find((await call(at, 'GET', '/admin/mechanics/requests?scope=history')).data), undefined);

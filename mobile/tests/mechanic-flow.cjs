@@ -45,7 +45,7 @@ const {chromium}=require('@playwright/test');const backend=path.resolve(__dirnam
   await page.getByRole('button',{name:'Refresh status',exact:true}).waitFor();await page.screenshot({path:output+'/mechanic-pending.png',fullPage:true});
   const admin=await context.newPage();admin.on('pageerror',e=>errors.push(e.message));const adminToken=jwt.sign({role:'ADMIN',sessionVersion:0},process.env.JWT_SECRET,{subject:reviewer.id,expiresIn:'10m'});
   await admin.addInitScript(v=>sessionStorage.setItem('motexa_access_token',v),adminToken);
-  await admin.goto(site+'/mechanics-admin');await admin.getByText('Browser Test Mechanic',{exact:true}).waitFor();await admin.getByRole('button',{name:'Review application',exact:true}).first().click();
+  await admin.goto(site+'/dept/requests?seg=apps');await admin.getByText('Browser Test Mechanic',{exact:true}).waitFor();await admin.getByRole('button',{name:'Review application',exact:true}).first().click();
   await admin.getByRole('button',{name:'View document',exact:true}).first().click();await admin.getByRole('button',{name:'Close preview',exact:true}).click();
   await admin.getByLabel('Interview notes',{exact:true}).fill('Passed practical diagnostics and described safe handling.');
   await admin.getByRole('button',{name:'Save interview result',exact:true}).click();
