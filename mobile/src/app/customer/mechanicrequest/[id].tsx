@@ -108,6 +108,12 @@ export default function MechanicRequestScreen() {
             </View>
           ) : null}
 
+          {r.status === "CANCELLED" && r.cancelledBy === "ADMIN" ? (
+            <View style={{ marginTop: 12 }}>
+              <Note tone="danger" icon="close-circle-outline">{`${t("Cancelled by MOTEXA", "ألغته موتكسا")}${r.cancelReason ? `
+${r.cancelReason}` : ""}`}</Note>
+            </View>
+          ) : null}
           {r.status === "DECLINED" ? (
             <View style={{ marginTop: 12 }}>
               <Note tone="danger" icon="close-circle-outline">{`${t("Declined by the mechanic", "رفضه الميكانيكي")}${r.declineReason ? `\n${r.declineReason}` : ""}`}</Note>

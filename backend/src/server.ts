@@ -23,6 +23,7 @@ import towJobExtrasRoutes from "./routes/tow-job-extras.routes.js";
 import { startOfferSweeper } from "./services/tow-offers.js";
 import catalogMechanicRoutes from "./routes/catalog-mechanics.routes.js";
 import mechanicRequestRoutes from "./routes/mechanic-requests.routes.js";
+import mechanicsAdminRoutes from "./routes/mechanics-admin.routes.js";
 import providerRegistrationRoutes from "./routes/provider-registration.routes.js";
 import providerSignupRoutes from "./routes/provider-signup.routes.js";
 import providerOnboardingRoutes, { notificationsRouter } from "./routes/provider-onboarding.routes.js";
@@ -67,6 +68,7 @@ app.use("/api", partInquiryRoutes);
 app.use("/api", towRequestRoutes);
 app.use("/api", towJobExtrasRoutes); // chat, review, report of a tow job
 app.use("/api", mechanicRequestRoutes);
+app.use("/api", mechanicsAdminRoutes); // mechanics admin: supervise requests
 // Provider onboarding (documents arrive as base64, so these routers parse their own body after authentication)
 app.use("/api/provider", providerOnboardingRoutes);
 app.use("/api/notifications", notificationsRouter);

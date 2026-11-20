@@ -60,6 +60,9 @@ type Base = {
   /** typed by the customer; null unless they added one */
   contactPhone: string | null;
   declineReason: string | null;
+  /** why MOTEXA (admin) cancelled the request; cancelledBy = "ADMIN" | "CUSTOMER" */
+  cancelReason: string | null;
+  cancelledBy: string | null;
   timeline: { status: MechanicRequestStatus; at: string }[];
   createdAt: string;
   updatedAt: string;

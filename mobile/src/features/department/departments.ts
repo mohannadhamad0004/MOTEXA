@@ -204,10 +204,11 @@ const mechanics: Dept = {
     { key: "PENDING", icon: "time-outline", en: "Pending", ar: "قيد المراجعة", warn: true },
     { key: "NEEDS_COMPLETION", icon: "document-text-outline", en: "Needs completion", ar: "تحتاج استكمالًا" },
     { key: "VERIFIED", icon: "shield-checkmark-outline", en: "Verified", ar: "موثّقون" },
+    { key: "ACTIVE_REQUESTS", icon: "construct-outline", en: "Active requests", ar: "طلبات نشطة" },
   ],
   loadStats: async () => {
-    const r = await api<{ counts: Record<string, number> }>("GET", "/mechanics/admin");
-    return { PENDING: r.counts.PENDING ?? 0, NEEDS_COMPLETION: r.counts.NEEDS_COMPLETION ?? 0, VERIFIED: r.counts.VERIFIED ?? 0 };
+    const [r, s] = await Promise.all([api<{ counts: Record<string, number> }>("GET", "/mechanics/admin"), api<{ stats: { activeRequests: number } }>("GET", "/admin/mechanics/stats")]);
+    return { PENDING: r.counts.PENDING ?? 0, NEEDS_COMPLETION: r.counts.NEEDS_COMPLETION ?? 0, VERIFIED: r.counts.VERIFIED ?? 0, ACTIVE_REQUESTS: s.stats.activeRequests };
   },
   provider: null,
   requests: { mode: "screen" },
@@ -225,7 +226,7 @@ const mechanics: Dept = {
   },
   review: { kinds: [] },
   shortcuts: [
-    { id: "requests", en: "Review applications", ar: "مراجعة الطلبات", descEn: "Professional applications and interviews", descAr: "طلبات الانضمام والمقابلات", icon: "clipboard-outline", photo: 1 },
+    { id: "requests", en: "Requests", ar: "الطلبات", descEn: "Customer requests and professional applications", descAr: "طلبات الزبائن وطلبات الانضمام", icon: "clipboard-outline", photo: 1 },
     { id: "directory", en: "Verified mechanics", ar: "الميكانيكيون الموثّقون", descEn: "Approved mechanics on the platform", descAr: "الميكانيكيون المعتمدون في المنصة", icon: "people-outline", photo: 2 },
   ],
 };

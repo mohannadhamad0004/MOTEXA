@@ -1123,6 +1123,8 @@ model MechanicRequest {
 
   status        MechanicRequestStatus @default(REQUESTED)
   declineReason String?
+  cancelReason  String? // why it was cancelled (admin cancel: required; shown to the customer and the mechanic)
+  cancelledBy   String? // CUSTOMER | ADMIN
 
   requestedAt DateTime  @default(now())
   acceptedAt  DateTime?

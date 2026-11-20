@@ -5,6 +5,7 @@ import { ReactNode, useMemo, useState } from "react";
 import { TextInput, View } from "react-native";
 import InteractiveButton from "../../components/InteractiveButton";
 import MechanicReviewScreen from "../../components/MechanicReviewScreen";
+import { MechanicRequestsList } from "./MechanicRequests";
 import { Text } from "../../components/MotexaVisual";
 import { useLoad } from "../../core/hooks/useLoad";
 import { useDepartment } from "./DepartmentContext";
@@ -129,8 +130,36 @@ function PartsRequests() {
   );
 }
 
+/** The Mechanics Admin's Requests: professional applications, and the customers' mechanic requests (Active / History), one switch apart. */
+function MechanicsRequests() {
+  const d = useDT();
+  const params = useLocalSearchParams<{ seg?: string }>();
+  const [seg, setSeg] = useState<"apps" | "requests">(params.seg === "apps" ? "apps" : "requests");
+  const header = (
+    <View style={{ flexDirection: d.row, gap: 8, marginBottom: 14 }}>
+      {([["requests", "Mechanic requests", "طلبات الخدمة"], ["apps", "Applications", "طلبات الانضمام"]] as const).map(([k, en, ar]) => {
+        const on = seg === k;
+        return (
+          <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={d.t(en, ar)} onPress={() => setSeg(k)}
+            style={{ paddingHorizontal: 16, minHeight: 44, justifyContent: "center", borderRadius: 22, borderWidth: 1.5, borderColor: on ? d.fill : d.border, backgroundColor: on ? d.fill : d.surface }}>
+            <Text style={{ color: on ? d.fillInk : d.ink, fontSize: 14, lineHeight: 20, fontWeight: "800" }}>{d.t(en, ar)}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+  if (seg === "apps") return <MechanicReviewScreen />;
+  return (
+    <DeptPage>
+      {header}
+      <MechanicRequestsList />
+    </DeptPage>
+  );
+}
+
 export function DeptRequests() {
   const { active } = useDepartment();
+  if (active.key === "MANAGE_MECHANICS") return <MechanicsRequests />;
   if (active.key === "MANAGE_SPARE_PARTS") return <PartsRequests />;
   // towing: the applications (New, Needs changes, Approved, Rejected); mechanics: Diala's review screen
   return active.provider && active.requests.mode === "applications" ? <ApplicationsList kind={active.provider} /> : <MechanicReviewScreen />;

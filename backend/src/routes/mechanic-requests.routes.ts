@@ -52,7 +52,7 @@ const mechanicSide = [
   express.json(),
 ];
 
-const include = {
+export const include = {
   customer: { select: { id: true, fullName: true } }, // never the email
   mechanic: { select: { id: true, fullName: true, mechanicProfile: { select: { workshopName: true, city: true } } } }, // never phone/email
 };
@@ -82,6 +82,8 @@ const common = (r: Row) => ({
   location: { text: r.locationText, point: r.locationLat !== null && r.locationLng !== null ? { lat: r.locationLat, lng: r.locationLng } : null },
   contactPhone: r.contactPhone, // null unless the customer typed one
   declineReason: r.declineReason,
+  cancelReason: r.cancelReason, // set when MOTEXA (admin) cancelled: both sides see why
+  cancelledBy: r.cancelledBy,
   timeline: timeline(r),
   createdAt: r.createdAt,
   updatedAt: r.updatedAt,
@@ -92,10 +94,10 @@ const customerView = (r: Row) => ({
   mechanic: { id: r.mechanic.id, name: r.mechanic.fullName, workshopName: r.mechanic.mechanicProfile?.workshopName || null, city: r.mechanic.mechanicProfile?.city ?? null },
   canCancel: r.status === "REQUESTED" || r.status === "ACCEPTED",
 });
-const REVEALED = new Set(["ACCEPTED", "IN_PROGRESS"]); // the active job only
+export const REVEALED = new Set(["ACCEPTED", "IN_PROGRESS"]); // the active job only
 const round2 = (n: number) => Math.round(n * 100) / 100;
 /** Nearest service city to a point (within 30 km), for the "area" a mechanic sees before accepting. */
-const nearestCity = (p: { lat: number; lng: number }) => {
+export const nearestCity = (p: { lat: number; lng: number }) => {
   let best: string | null = null, km = 30;
   for (const [name, c] of Object.entries(CITY_CENTRES)) { const d = haversineKm(p, c); if (d < km) { km = d; best = name; } }
   return best;
@@ -211,7 +213,7 @@ router.post("/requests/mechanic/:id/cancel", ...customerSide, async (req, res) =
     const id = String(req.params.id);
     if (!(await prisma.mechanicRequest.findFirst({ where: { id, customerId: me.id }, select: { id: true } }))) throw new HttpError(404, "Request not found.");
     await prisma.$transaction(async (tx) => {
-      const done = await tx.mechanicRequest.updateMany({ where: { id, customerId: me.id, status: { in: ["REQUESTED", "ACCEPTED"] } }, data: { status: "CANCELLED", cancelledAt: new Date() } });
+      const done = await tx.mechanicRequest.updateMany({ where: { id, customerId: me.id, status: { in: ["REQUESTED", "ACCEPTED"] } }, data: { status: "CANCELLED", cancelledAt: new Date(), cancelledBy: "CUSTOMER" } });
       if (!done.count) throw new HttpError(409, "This request can no longer be cancelled.");
       await log(tx, me.id, "MECHANIC_REQUEST_CANCELLED", id, { by: "CUSTOMER" });
     });

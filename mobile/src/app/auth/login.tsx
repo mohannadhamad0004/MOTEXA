@@ -180,16 +180,8 @@ if (
 
     
 
-let destination: "/admin/(tabs)" | "/mechanics-admin" | "/mechanic" | null = null;
-
-if(user.role==="MECHANIC"){destination="/mechanic";} else if (user.role === "SUPER_ADMIN") {
-  destination = "/admin/(tabs)";
-} else if (
-  user.role === "ADMIN" &&
-  permissions.includes("MANAGE_MECHANICS")
-) {
-  destination = "/mechanics-admin";
-}
+// MECHANIC, every admin and the rest land through landingFor(); the mechanics admin now works in the shared /dept area (Requests tab)
+let destination: "/admin/(tabs)" | null = user.role === "SUPER_ADMIN" ? "/admin/(tabs)" : null;
 
       const target = destination ?? landingFor(user.role, permissions);
       if (!target) {

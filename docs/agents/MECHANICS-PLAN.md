@@ -2,7 +2,8 @@
 
 Status: **approved 2026-11-20** (answers 1–7: garages SHOULD but designed for; `mechanicUserId` may become nullable; all listed skills approved at once; tow quote later; old tables stay; 30-min deadline as one config value; in-app inbox only. Quote rule: the mechanic may inspect/diagnose before quoting, an accepted quote is required before the repair starts, the invoice can't exceed the last accepted quote, a revised quote needs the customer's approval).
 - MUST 1 (one signup/review system): **done 2026-11-20** — see STATUS.md.
-- MUST 2–8: not started.
+- MUST 6 (mechanics admin supervision of requests): **done 2026-11-20** — see STATUS.md.
+- MUST 2–5, 7, 8: not started.
 
 (Original read-only step: no code changes, no migrations, no git; only AGENTS.md §3 and docs were edited.)
 
