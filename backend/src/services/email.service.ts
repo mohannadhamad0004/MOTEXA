@@ -209,3 +209,50 @@ export async function sendDriverInviteEmail({ to, fullName, otp, company }: OtpE
   if (error || !data?.id) throw new Error("Driver invitation email could not be delivered.");
   return { emailId: data.id };
 }
+
+// Customer signup: the code that confirms the email. Same delivery and wording rules as the other codes.
+export async function sendSignupCodeEmail({ to, fullName, otp }: OtpEmailInput) {
+  const { data, error } = await deliverEmail({
+    to: [to],
+    subject: "MOTEXA | Email verification code",
+    text: [
+      `Hello ${fullName},`,
+      "",
+      "Your MOTEXA email verification code is:",
+      "",
+      otp,
+      "",
+      "This code expires in 5 minutes. Never share it with anyone.",
+      "If you did not create a MOTEXA account, ignore this email.",
+      "",
+      "رمز تأكيد بريدك في MOTEXA أعلاه، وهو صالح لمدة 5 دقائق. لا تشاركه مع أي شخص.",
+      "إذا لم تنشئ حسابًا في MOTEXA، تجاهل هذه الرسالة.",
+      "",
+      "MOTEXA Team",
+    ].join("\n"),
+  });
+  if (error || !data?.id) throw new Error("Signup code email could not be delivered.");
+  return { emailId: data.id };
+}
+
+// Someone signed up with an email that already has an account: tell the owner (the app shows the same reply either way).
+export async function sendAccountExistsEmail({ to, fullName }: { to: string; fullName: string }) {
+  const { data, error } = await deliverEmail({
+    to: [to],
+    subject: "MOTEXA | You already have an account",
+    text: [
+      `Hello ${fullName},`,
+      "",
+      "Someone tried to create a MOTEXA account with this email, but you already have one.",
+      "Sign in with this email, or choose Forgot password if you do not remember it.",
+      "If this was not you, you can ignore this email. Nothing changed in your account.",
+      "",
+      "حاول أحدهم إنشاء حساب في MOTEXA بهذا البريد، ولديك حساب به بالفعل.",
+      "سجّل الدخول بهذا البريد، أو اختر \"نسيت كلمة المرور\" إذا لم تتذكرها. إذا لم تكن أنت، تجاهل هذه الرسالة؛ لم يتغير شيء في حسابك.",
+      "",
+      "MOTEXA Team",
+    ].join("\n"),
+  });
+  if (error || !data?.id) throw new Error("Account notice email could not be delivered.");
+  return { emailId: data.id };
+}

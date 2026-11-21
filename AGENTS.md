@@ -31,6 +31,7 @@ Since 2026-11-18 Mohannad works on MOTEXA alone: every file in this repo is his 
 7. Mobile: every new native package must work in Expo Go (`npx expo install <pkg>`); ask the human first. No NativeWind/Tailwind/CSS on mobile — StyleSheet + theme tokens + shared UI kit. Every screen: EN + AR, RTL, dark + light, 390px wide without overflow.
 8. Proposal first for anything non-trivial: read, propose (files, plan), STOP and wait for "approved".
 9. Finish with: mobile `npx tsc --noEmit` = 0, backend `npx tsc --noEmit` = 0, `npx prisma validate` when schema changed, plus `git status --short`.
+10. Test data cleanup: remove the test records you created, but ALWAYS keep their audit rows (the audit log is append-only); only add one `TEST_DATA_REMOVED` audit row per removal (`actorId` null, `details.by` = the agent). Never delete audit rows.
 
 ## 4a. 3D data rules
 - A 3D model either EXISTS (published, or hidden by the Parts Admin while it is being fixed) or is DELETED. There is no "removed", "archived", "retired" or kept-old-version state anywhere: not in `docs/3d/models.json`, not in the DB, not in files, not in the UI.
@@ -44,6 +45,7 @@ Since 2026-11-18 Mohannad works on MOTEXA alone: every file in this repo is his 
 - Backend: `cd backend; npm run dev` → health `http://<LAN-IP>:5000/api/health`
 - Mobile: `cd mobile; npx expo start -c --offline` → scan with Expo Go. `mobile/.env`: `EXPO_PUBLIC_API_URL=http://<LAN-IP>:5000/api` (the laptop IP changes; check `ipconfig`).
 - Dev seed: `cd backend; npx tsx src/seed/test-accounts.ts` (dev accounts `*@motexa.test`, password `Motexa-Dev-1234!`).
+- Customer signup codes (and every other OTP) need `OTP_HASH_SECRET` (64 hex) in `backend/.env`. With no SMTP_* / RESEND_* set (dev), emails are not sent: the backend terminal prints them as a `[DEV EMAIL] to=… subject=MOTEXA | Email verification code | …` line with the 6-digit code.
 
 ## 6. Working in tandem (Codex + Claude Code)
 - Only ONE agent edits a given file area at a time. Default split: **Claude Code builds, Codex reviews** (or the human assigns areas explicitly).

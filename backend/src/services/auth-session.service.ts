@@ -51,24 +51,29 @@ export async function revokeSession(token: unknown) {
 }
 
 /**
- * Failed-login limiter, in process (like the password-reset IP limiter). A key is blocked after `max` failures inside `windowMs`;
- * a success clears the email key. ponytail: per-process memory, resets on restart; move to PostgreSQL/Redis if several instances run.
+ * The one auth rate limiter (login failures, signup attempts), stored in the RateLimit table so it survives restarts and is shared by
+ * every backend process. Fixed window per key: blocked once `max` hits fall inside `windowMs`. `name` keeps the counters apart.
  */
-export function createFailureLimiter(max: number, windowMs: number, now = () => Date.now()) {
-  const windows = new Map<string, { start: number; count: number }>();
-  const live = (key: string) => {
-    const w = windows.get(key);
-    if (w && now() - w.start >= windowMs) windows.delete(key);
-    return windows.get(key);
-  };
+export function createLimiter(name: string, max: number, windowMs: number, now = () => Date.now()) {
+  const id = (key: string) => `${name}:${key}`;
   return {
-    blocked: (key: string) => (live(key)?.count ?? 0) >= max,
-    fail(key: string) {
-      if (windows.size >= 10000) for (const k of windows.keys()) live(k);
-      const w = live(key);
-      if (w) w.count++;
-      else if (windows.size < 10000) windows.set(key, { start: now(), count: 1 });
+    async blocked(key: string) {
+      const row = await prisma.rateLimit.findUnique({ where: { key: id(key) } });
+      return !!row && now() - row.windowStart.getTime() < windowMs && row.count >= max;
     },
-    clear: (key: string) => void windows.delete(key),
+    /** Counts one hit (atomic). true = this hit is still inside the limit. */
+    async hit(key: string) {
+      const at = new Date(now()), expired = new Date(now() - windowMs);
+      // cleanup on use: this limiter's rows whose window is over count nothing any more
+      await prisma.rateLimit.deleteMany({ where: { key: { startsWith: `${name}:` }, windowStart: { lte: expired } } });
+      const [row] = await prisma.$queryRaw<{ count: number }[]>`
+        INSERT INTO "RateLimit" ("key", "windowStart", "count") VALUES (${id(key)}, ${at}, 1)
+        ON CONFLICT ("key") DO UPDATE SET
+          "count" = CASE WHEN "RateLimit"."windowStart" <= ${expired} THEN 1 ELSE "RateLimit"."count" + 1 END,
+          "windowStart" = CASE WHEN "RateLimit"."windowStart" <= ${expired} THEN ${at} ELSE "RateLimit"."windowStart" END
+        RETURNING "count"`;
+      return row.count <= max;
+    },
+    clear: async (key: string) => void (await prisma.rateLimit.deleteMany({ where: { key: id(key) } })),
   };
 }

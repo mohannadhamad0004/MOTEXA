@@ -8,6 +8,7 @@ import {
   OTP_MAX_REQUESTS_PER_HOUR,
   OTP_RESEND_COOLDOWN_SECONDS,
 } from "./otp.service.js";
+import { canRecover } from "./password-reset-completion.service.js";
 
 export const RESET_TTL_MINUTES = OTP_EXPIRY_MINUTES;
 export const RESET_RESPONSE = {
@@ -36,12 +37,12 @@ export function createPasswordResetStore(db: PrismaClient): PasswordResetStore {
       return db.$transaction(async (tx) => {
         // Serialise requests for the same account, including requests from different server processes.
         const users = await tx.$queryRaw<
-          Array<{ id: string; email: string; fullName: string; status: string }>
+          Array<{ id: string; email: string; fullName: string; status: string; role: string; emailVerifiedAt: Date | null }>
         >`
-     SELECT "id", "email", "fullName", "status" FROM "User" WHERE "email" = ${email} FOR UPDATE
+     SELECT "id", "email", "fullName", "status", "role", "emailVerifiedAt" FROM "User" WHERE "email" = ${email} FOR UPDATE
     `;
         const user = users[0];
-        if (!user || user.status !== "ACTIVE") return null;
+        if (!user || !canRecover(user)) return null;
         const now = new Date();
         const latest = await tx.passwordResetRequest.findFirst({
           where: { userId: user.id },
