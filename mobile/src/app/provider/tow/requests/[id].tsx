@@ -58,7 +58,7 @@ export default function CompanyRequestDetail() {
   };
 
   return (
-    <DashboardLayout tag="REQUEST / T2" brand="MOTEXA TOW" title={t("Tow request", "طلب سحب")} back>
+    <DashboardLayout title={t("Tow request", "طلب سحب")} back>
       <Async state={state}>
         {(r) => {
           const available = (fleet.data?.trucks ?? []).filter((x) => x.verification === "APPROVED" && x.operational === "AVAILABLE");

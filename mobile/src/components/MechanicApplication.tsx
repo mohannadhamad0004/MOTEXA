@@ -24,6 +24,7 @@ import MechanicDocuments, { pickMechanicDocument } from "./MechanicDocuments";
 import { CITIES, cityLabel } from "../core/constants/cities";
 import { mechanicInbox } from "../features/mechanics/mechanicsService";
 import { useSessionUser } from "../core/session/session";
+import { AppearanceSection } from "../features/providerhub/AppearanceSection";
 import { ProviderAccountNote } from "../features/work/ProviderAccountNote";
 type Form = {
   city: string;
@@ -256,7 +257,7 @@ export default function MechanicApplication() {
     <MechanicPage
       title={title}
       progress={editing ? step + 2 : undefined}
-      photo={!editing && !!profile}
+      hero={!editing && !!profile ? "mechanic" : undefined}
       subtitle={
         profile
           ? profile.user.fullName
@@ -1051,6 +1052,7 @@ export default function MechanicApplication() {
           </MechanicCard>
         </>
       )}
+      {!customer && !editing ? <AppearanceSection /> : null}
       <View style={{ height: 18 }} />
       {customer ? (
         <MechanicButton secondary label={m.t("Back to my customer account", "العودة إلى حسابي كزبون")} onPress={() => router.replace("/customer/profile" as never)} />

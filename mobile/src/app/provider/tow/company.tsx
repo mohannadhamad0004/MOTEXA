@@ -147,7 +147,7 @@ export default function CompanyProfile() {
   const { t } = useL();
   const state = useLoad(() => towFleetService.getMyFleet(asActor(user)), [user.id]);
   return (
-    <DashboardLayout tag="COMPANY / T4" brand="MOTEXA TOW" title={t("Company profile", "ملف الشركة")} back>
+    <DashboardLayout title={t("Company profile", "ملف الشركة")} back>
       <Async state={state}>{({ company }) => <ProfileForm company={company} />}</Async>
     </DashboardLayout>
   );

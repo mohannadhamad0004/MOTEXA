@@ -18,10 +18,10 @@ export default function MyFleet() {
   const state = useLoad(() => towFleetService.getMyFleet(asActor(user)), [user.id]);
 
   return (
-    <DashboardLayout brand="MOTEXA TOW"
+    <DashboardLayout
         title={t("My Trucks", "شاحناتي")}
         subtitle={state.data ? state.data.company.name : undefined}
-        signOutButton>
+       >
       <Async state={state}>
         {({ company, trucks }) => (
           <>

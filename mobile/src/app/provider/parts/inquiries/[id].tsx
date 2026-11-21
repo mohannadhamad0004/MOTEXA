@@ -38,7 +38,7 @@ export default function ShopInquiryThread() {
   };
 
   return (
-    <DashboardLayout tag="QUESTION / P3" brand="MOTEXA PARTS" title={t("Customer question", "سؤال عميل")} back>
+    <DashboardLayout title={t("Customer question", "سؤال عميل")} back>
       <Async state={state}>
         {(q) => (
           <>

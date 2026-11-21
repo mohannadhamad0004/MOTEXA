@@ -23,7 +23,7 @@ export default function ShopInquiries() {
   const state = useLoad(() => shopInquiries.list(filter === "ALL" ? undefined : filter), [filter]);
 
   return (
-    <DashboardLayout tag="QUESTIONS / P3" brand="MOTEXA PARTS" title={t("Customer questions", "أسئلة العملاء")} subtitle={t("Answer questions about your parts", "أجب عن الأسئلة حول قطعك")} back>
+    <DashboardLayout title={t("Customer questions", "أسئلة العملاء")} subtitle={t("Answer questions about your parts", "أجب عن الأسئلة حول قطعك")} back>
       <View style={{ marginBottom: 14 }}>
       <Tabs
         value={filter}

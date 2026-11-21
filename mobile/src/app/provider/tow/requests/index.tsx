@@ -107,7 +107,7 @@ export default function CompanyRequests() {
 
   const ms = M.detail;
   return (
-    <DashboardLayout tag="REQUESTS / T2" brand="MOTEXA TOW" title={t("Tow requests", "طلبات السحب")} subtitle={t("Requests from customers", "طلبات من العملاء")} back>
+    <DashboardLayout title={t("Tow requests", "طلبات السحب")} subtitle={t("Requests from customers", "طلبات من العملاء")} back>
       <Segmented
         value={filter}
         onChange={setFilter}

@@ -33,13 +33,13 @@ export default function MechanicInbox() {
   const count = (g: Tab) => all.filter((r) => INBOX_GROUPS[g].includes(r.status)).length;
 
   return (
-    <DashboardLayout tag="SERVICE / M2" kind="wrench"
+    <DashboardLayout hero="mechanic"
       onRefresh={() => {
         setPulling(true);
         state.reload().finally(() => setPulling(false));
       }}
       refreshing={pulling}
-      brand="MOTEXA" title={t("Service requests", "طلبات الخدمة")} subtitle={t("Requests from customers", "طلبات من العملاء")} back
+      title={t("Service requests", "طلبات الخدمة")} subtitle={t("Requests from customers", "طلبات من العملاء")} back
     >
       <Segmented
         value={tab}

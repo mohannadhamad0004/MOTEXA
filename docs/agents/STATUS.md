@@ -972,3 +972,9 @@
   - **3D lifecycle flake**: not reproduced (3 runs of the file + the full run passed); likely cause and next step in `docs/agents/KNOWN-ISSUES.md` (Test suite).
   - **Checks**: backend tsc 0, full `npm test` 340/340; mobile tsc 0, mobile tests 86/86.
   - **Test records (dev DB)**: removed 14 seed sign-ins from the landing check, 2 rate-limit rows (one wrong-password try for driver@motexa.test, which is not on the seed password) and the empty DRAFT mechanic profile that opening /mechanic auto-created for mechanic@motexa.test (existing behaviour); 3 `TEST_DATA_REMOVED` rows; no other audit rows were written. No git.
+
+- 2026-11-21 — Claude Code — blueprint header style removed; Mo header video slots (`ui/blueprint`).
+  - `DashboardLayout` (used by 11 mechanic / tow / parts / admin screens) is now the garage kit: plain header (back, title, subtitle), no drawing, no code tag, no settings sheet. New `components/garage/MoHero.tsx`: drop `mechanic-hero|admin-hero|signin-hero` `.mp4` + `.jpg` (last frame) into `mobile/assets/mo/`; no files = plain header. `MoClip` takes a source object and `once` (plays once, then the poster; reduced motion / failure = poster only; muted).
+  - Mechanic home, inbox, request detail show `mechanic`; mechanics admin home + applications show `admin`; sign-in shows `signin` (photo and "01 / ACCESS" removed). Language / theme left the mechanic headers: Mechanic home has "Appearance & language" at the bottom (mechanics have no Profile screen). `MechanicPage` `photo` prop -> `hero`, `prefs` prop (provider onboarding keeps its switch).
+  - Moved `assets/meh/mechanic-hero.mp4` -> `assets/mo/`; made `mechanic-hero.jpg` from its last frame (1172x660). No super admin Mo video exists in code (only unused `assets/vedio/super admin.mp4`); reused garage `MoClip`.
+  - Checks: mobile tsc 0, tests 86/86. Live check done with the API mocked in the browser (backend was not running).

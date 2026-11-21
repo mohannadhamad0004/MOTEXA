@@ -110,10 +110,10 @@ export const HERO_BOX = { w: 148, h: 186 } as const;
  * `width` is the clip's outer width (in dark mode a blend clip's cream card takes 12 px of it on each side). With `box` the clip
  * fills exactly that box instead, framed by `framing` (default: whole clip, centred), whatever the source resolution.
  */
-export function MoClip({ clip, width = HERO_BOX.w, box, framing = { focusX: 0.5, focusY: 0.5, scale: 1 }, label, radius = gShape.cardLg }: { clip: MoClipKey; width?: number; box?: { w: number; h: number }; framing?: MoFraming; label: string; radius?: number }) {
+export function MoClip({ clip, width = HERO_BOX.w, box, framing = { focusX: 0.5, focusY: 0.5, scale: 1 }, label, radius = gShape.cardLg, once = false }: { clip: MoClipKey | MoClipSource; width?: number; box?: { w: number; h: number }; framing?: MoFraming; label: string; radius?: number; /** play one time per mount, no replay on focus or tap */ once?: boolean }) {
   const { dark } = useGarageTheme();
   const reduced = useReduced();
-  const src: MoClipSource = MO_CLIPS[clip];
+  const src: MoClipSource = typeof clip === "string" ? MO_CLIPS[clip] : clip;
   const spotlight = src.blend && dark && !box;
   const pad = 12;
   const outerW = box ? box.w : width;
@@ -136,12 +136,15 @@ export function MoClip({ clip, width = HERO_BOX.w, box, framing = { focusX: 0.5,
     player.pause();
     setShown(true);
   }, [player]);
+  const played = useRef(false);
   const replay = useCallback(() => {
     if (reduced) return toEnd();
+    if (once && played.current) return;
+    played.current = true;
     setEnded(false);
     player.currentTime = 0;
     player.play();
-  }, [player, reduced, toEnd]);
+  }, [player, reduced, toEnd, once]);
 
   // every focus plays from the start; losing focus pauses (it never loops by itself)
   useFocusEffect(
@@ -174,7 +177,7 @@ export function MoClip({ clip, width = HERO_BOX.w, box, framing = { focusX: 0.5,
     </View>
   );
   return (
-    <Pressable accessibilityRole="image" accessibilityLabel={label} accessibilityHint="Tap to replay" disabled={reduced || failed} onPress={replay} style={spotlight ? { padding: pad, borderRadius: gShape.spotlight, backgroundColor: SPOTLIGHT } : undefined}>
+    <Pressable accessibilityRole="image" accessibilityLabel={label} accessibilityHint="Tap to replay" disabled={reduced || failed || once} onPress={replay} style={spotlight ? { padding: pad, borderRadius: gShape.spotlight, backgroundColor: SPOTLIGHT } : undefined}>
       {view}
     </Pressable>
   );

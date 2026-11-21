@@ -620,7 +620,7 @@ export default function Onboarding() {
 
   if (!app)
     return (
-      <MechanicPage title={m.t("Your application", "طلبك")}>
+      <MechanicPage prefs title={m.t("Your application", "طلبك")}>
         {error ? <ProviderNote error>{error}</ProviderNote> : <Text style={{ color: m.muted, textAlign: "center" }}>{m.t("Loading…", "جارٍ التحميل…")}</Text>}
       </MechanicPage>
     );
@@ -632,7 +632,7 @@ export default function Onboarding() {
 
   if (!canEdit)
     return (
-      <MechanicPage title={title} subtitle={m.t("Follow your application here.", "تابع طلبك هنا.")}>
+      <MechanicPage prefs title={title} subtitle={m.t("Follow your application here.", "تابع طلبك هنا.")}>
         <StatusView
           app={app}
           onFix={() => {
@@ -645,7 +645,7 @@ export default function Onboarding() {
     );
 
   return (
-    <MechanicPage title={title} subtitle={m.t("Your progress is saved on the server after each step. You can come back any time.", "يُحفظ تقدمك على الخادم بعد كل خطوة. يمكنك العودة في أي وقت.")}>
+    <MechanicPage prefs title={title} subtitle={m.t("Your progress is saved on the server after each step. You can come back any time.", "يُحفظ تقدمك على الخادم بعد كل خطوة. يمكنك العودة في أي وقت.")}>
       {app.status === "NEEDS_CHANGES" ? <ProviderNote>{m.t("Items flagged by MOTEXA are marked in red.", "العناصر التي حددتها MOTEXA مُعلَّمة بالأحمر.")}</ProviderNote> : null}
       <View style={{ height: 12 }} />
       <VerticalStepper

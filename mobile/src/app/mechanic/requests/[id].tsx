@@ -57,13 +57,13 @@ export default function MechanicRequestDetail() {
   };
 
   return (
-    <DashboardLayout tag="SERVICE / M2" kind="wrench"
+    <DashboardLayout hero="mechanic"
       onRefresh={() => {
         setPulling(true);
         state.reload().finally(() => setPulling(false));
       }}
       refreshing={pulling}
-      brand="MOTEXA" title={t("Service request", "طلب الخدمة")} back
+      title={t("Service request", "طلب الخدمة")} back
     >
       <Async state={state}>
         {(r) => (

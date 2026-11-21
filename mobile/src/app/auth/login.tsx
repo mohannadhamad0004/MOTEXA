@@ -19,6 +19,7 @@ import { router, type Href } from "expo-router";
 import * as SecureStore from '../../components/SessionStore';
 import { apiUrl, saveSession } from '../../core/config/api';
 import MotexaDialog from "../../components/MotexaDialog";
+import { MoHero } from "../../components/garage/MoHero";
 import { landingFor } from "../../core/session/landing";
 import { holdPassword } from "../../core/session/pendingSignup";
 
@@ -178,14 +179,10 @@ const response = await fetch(
      </View>
      <View style={[s.preferences,{alignItems:'flex-end'}]}><LanguageSwitch light compact unified/></View>
      <View style={s.surface}>
-      <HeroReveal onLayout={event=>setPhotoFrame(Math.min(event.nativeEvent.layout.width||390,500))} style={{height:204,width:'100%',overflow:'hidden',backgroundColor:'#38291F'}}>
-       <Image accessible={false} source={require('../../../assets/images/motexa-mercedes-onboarding.png')} resizeMode="cover" style={{position:'absolute',top:-photoFrame*.4,left:'-50%',width:'165%',height:photoFrame*2.475}}/>
-       <LinearGradient pointerEvents="none" colors={['#2B1B0B22','transparent','#33200E33']} style={StyleSheet.absoluteFill}/>
-       <View pointerEvents="none" style={{position:'absolute',bottom:-1,left:0,width:0,height:0,borderLeftWidth:500,borderLeftColor:'transparent',borderBottomWidth:34,borderBottomColor:dark?'#38291F':'#FFF9EF'}}/>
-      </HeroReveal>
+      <View onLayout={event=>setPhotoFrame(Math.min(event.nativeEvent.layout.width||390,500))} style={{alignItems:'center',paddingTop:8}}><MoHero name="signin" width={photoFrame-32} label={t('Mo, the MOTEXA mascot','مو، تميمة موتيكسا')}/></View>
       <View style={s.form}>
        <View style={{alignItems:ar?'flex-end':'flex-start',marginBottom:12}}><View style={[s.roleBadge,{flexDirection:ar?'row-reverse':'row'}]}><Ionicons name="shield-checkmark-outline" size={13} color={dark?'#E2BD8F':'#80532D'}/><Text style={s.roleBadgeText}>{t('Welcome back','مرحبًا بعودتك')}</Text></View></View>
-       <View style={{flexDirection:ar?'row-reverse':'row',alignItems:'flex-start',justifyContent:'space-between',gap:16}}><EditorialTitle accent accessibilityRole="header" style={[s.formTitle,{fontSize:36,lineHeight:48,fontWeight:'400',textAlign:ar?'right':'left',flex:1}]}>{t('Sign in','تسجيل الدخول')}</EditorialTitle><Text style={{color:dark?'#C6A27A':'#97704D',fontSize:10,letterSpacing:1,lineHeight:20,paddingTop:13}}>{t('01 / ACCESS','01 / الدخول')}</Text></View>
+       <View style={{flexDirection:ar?'row-reverse':'row',alignItems:'flex-start',justifyContent:'space-between',gap:16}}><EditorialTitle accent accessibilityRole="header" style={[s.formTitle,{fontSize:36,lineHeight:48,fontWeight:'400',textAlign:ar?'right':'left',flex:1}]}>{t('Sign in','تسجيل الدخول')}</EditorialTitle></View>
        <Text style={[s.formSubtitle,{textAlign:ar?'right':'left',marginTop:9}]}>{t('Your world. Beautifully connected.','عالمك، بتواصل أجمل.')}</Text>
        <Text style={[s.label,{textAlign:ar?'right':'left',marginTop:25}]}>{t('Email address','البريد الإلكتروني')}</Text>
        <View style={[s.inputRow,focusedField==='email'&&{borderColor:dark?'#E2BA80':'#9D6530',backgroundColor:dark?'#3C2E22':'#FFFEFB'}]}><Ionicons name="mail-outline" size={20} color={dark?'#D1AD80':'#966B43'}/><TextInput accessibilityLabel={t('Email address','البريد الإلكتروني')} style={s.input} placeholder={t('Enter your email address','أدخل بريدك الإلكتروني')} placeholderTextColor={dark?'#BBA68C':'#95806A'} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoFocus={false} autoComplete={remember?"username":"off"} textContentType={remember?"username":"none"} importantForAutofill={remember?"yes":"no"} returnKeyType="next" blurOnSubmit={false} onSubmitEditing={()=>passwordInput.current?.focus()} value={email} onChangeText={value=>{emailTouched.current=true;setEmail(value);}} onFocus={()=>setFocusedField('email')} onBlur={()=>setFocusedField(null)}/></View>

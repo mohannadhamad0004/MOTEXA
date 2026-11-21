@@ -137,7 +137,7 @@ export default function TruckDetail() {
   );
 
   return (
-    <DashboardLayout tag="TRUCK / T3" brand="MOTEXA TOW" title={isNew ? t("Add truck", "إضافة شاحنة") : t("Truck", "الشاحنة")} back>
+    <DashboardLayout title={isNew ? t("Add truck", "إضافة شاحنة") : t("Truck", "الشاحنة")} back>
       {isNew ? (
         <TruckWizard onSaved={() => goBack("/provider/tow")} onClose={() => goBack("/provider/tow")} />
       ) : (

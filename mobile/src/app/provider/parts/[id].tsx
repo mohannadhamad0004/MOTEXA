@@ -22,7 +22,7 @@ export default function PartDetail() {
   );
 
   return (
-    <DashboardLayout tag="PART / P2" brand="MOTEXA PARTS" title={isNew ? t("Add part", "إضافة قطعة") : t("Edit part", "تعديل القطعة")} back>
+    <DashboardLayout title={isNew ? t("Add part", "إضافة قطعة") : t("Edit part", "تعديل القطعة")} back>
       {isNew ? (
         <ProductForm isNew initial={blankProduct} onSubmit={(i) => partsShopService.addProduct(asActor(user), i)} onDone={() => goBack("/provider/parts")} />
       ) : (

@@ -1,66 +1,49 @@
-import { ReactNode, useState } from "react";
-import { DrawingKind, HeroIconButton, SettingsSheet, SimplePage } from "../blueprint";
-import { usePathname } from "expo-router";
+import { ReactNode } from "react";
+import { router } from "expo-router";
+import { useWindowDimensions } from "react-native";
+import { GaragePage, GarageHero } from "../garage";
+import { MoHero, MoHeroName } from "../garage/MoHero";
 import { useL } from "../../core/hooks/useL";
 
-// Area of the app -> the drawing and the tag in the compact hero.
-const AREAS: Record<string, { kind: DrawingKind; tag: string }> = {
-  "MOTEXA TOW": { kind: "tow", tag: "FLEET / T1" },
-  "MOTEXA PARTS": { kind: "shop", tag: "INVENTORY / P1" },
-  "MOTEXA ADMIN": { kind: "toolbox", tag: "ADMIN / A1" },
-  MOTEXA: { kind: "toolbox", tag: "MOTEXA / M1" },
-};
-
 /**
- * The usual provider / admin / mechanic page: compact hero (150px, one drawing, a tag, a small settings icon that
- * opens language + appearance) and a dense sheet below with a 26px title. Replaces the old header with switches.
+ * The usual provider / admin / mechanic detail page on the garage kit: plain header (back button, title, subtitle) and,
+ * when `hero` is given and its files exist in assets/mo, Mo's header video under the title. Language and theme live in Profile.
  */
 export function DashboardLayout({
-  brand = "MOTEXA",
   title,
   subtitle,
   back,
-  signOutButton,
   onRefresh,
   refreshing,
-  kind,
-  tag,
-  tr,
+  hero,
   children,
 }: {
-  brand?: string;
   title: string;
   subtitle?: string;
   back?: boolean;
-  signOutButton?: boolean;
   onRefresh?: () => void;
   refreshing?: boolean;
-  kind?: DrawingKind;
-  tag?: string;
-  tr?: string;
+  hero?: MoHeroName;
   children: ReactNode;
 }) {
   const { t } = useL();
-  const [open, setOpen] = useState(false);
-  const onProvider = usePathname().startsWith("/provider");
-  const area = AREAS[brand] ?? AREAS.MOTEXA;
+  const { width } = useWindowDimensions();
   return (
-    <>
-      <SimplePage
-        dense
-        kind={kind ?? area.kind}
-        tl={tag ?? area.tag}
-        tr={tr}
-        title={title}
-        sub={subtitle}
-        back={back ? "/" : undefined}
-        right={onProvider ? undefined : <HeroIconButton icon="settings" label={t("Settings", "الإعدادات")} onPress={() => setOpen(true)} />}
-        onRefresh={onRefresh}
-        refreshing={refreshing}
-      >
-        {children}
-      </SimplePage>
-      <SettingsSheet visible={open} onClose={() => setOpen(false)} signOutButton={signOutButton} />
-    </>
+    <GaragePage
+      onRefresh={onRefresh}
+      refreshing={refreshing}
+      hero={
+        <GarageHero
+          variant="detail"
+          title={title}
+          line={subtitle}
+          onBack={back ? () => (router.canGoBack() ? router.back() : router.replace("/")) : undefined}
+          backLabel={t("Back", "رجوع")}
+          banner={hero ? <MoHero name={hero} width={Math.min(width, 680) - 40} label={t("Mo, the MOTEXA mascot", "مو، تميمة موتيكسا")} /> : undefined}
+        />
+      }
+    >
+      {children}
+    </GaragePage>
   );
 }
