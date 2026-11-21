@@ -1,5 +1,7 @@
 # Provider onboarding: end-to-end check (curl)
 
+> **Obsolete since 2026-11-21 (auth redesign stage C):** `POST /auth/provider/register` no longer exists. A provider now starts as a confirmed customer (`POST /auth/register` + `/auth/verify-email`) and applies with `POST /apply/tow|parts`; the onboarding steps below are unchanged. Kept as a record of the 2026-10 run.
+
 Script: `docs/agents/provider-onboarding-e2e.sh` (bash + curl + node). Last run: **69 checks, 0 failures**.
 
 ```

@@ -6,7 +6,6 @@ import vehicleModelRoutes from "./routes/vehicle3d-management.routes.js";
 import {isPublic3DAsset} from "./services/vehicle3d-public-assets.js";
 import providerPortalRoutes from "./routes/provider-portal.routes.js";
 import { startVehicle3DWorker } from "./services/vehicle3d-generation.js";
-import mechanicRegistrationRoutes from './routes/mechanic-registration.routes.js';
 import mechanicsRoutes from './routes/mechanics.routes.js';
 import passwordResetRoutes from "./routes/password-reset.routes.js";
 import adminInvitationRoutes from "./routes/admin-invitations.routes.js";
@@ -24,8 +23,6 @@ import { startOfferSweeper } from "./services/tow-offers.js";
 import catalogMechanicRoutes from "./routes/catalog-mechanics.routes.js";
 import mechanicRequestRoutes from "./routes/mechanic-requests.routes.js";
 import mechanicsAdminRoutes from "./routes/mechanics-admin.routes.js";
-import providerRegistrationRoutes from "./routes/provider-registration.routes.js";
-import providerSignupRoutes from "./routes/provider-signup.routes.js";
 import providerOnboardingRoutes, { notificationsRouter } from "./routes/provider-onboarding.routes.js";
 import { partsReviewRouter, towReviewRouter } from "./routes/provider-review.routes.js";
 import express from "express";
@@ -75,8 +72,6 @@ app.use("/api/provider", providerOnboardingRoutes);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/admin/providers/tow", towReviewRouter);
 app.use("/api/admin/providers/parts", partsReviewRouter);
-// Tow signup carries base64 files: it parses its own (larger) body after its rate limit
-app.use("/api/auth/provider", providerSignupRoutes);
 app.use(express.json({limit:'8mb'}));
 
 app.get("/api/health", (_req, res) => {
@@ -87,8 +82,6 @@ app.get("/api/health", (_req, res) => {
 });
 app.use("/api/auth", authRoutes);
 app.use("/api", applyRoutes); // Work with MOTEXA: POST /api/apply/:kind
-app.use("/api/auth/mechanic",mechanicRegistrationRoutes);
-app.use("/api/auth/provider", providerRegistrationRoutes);
 app.use("/api/mechanics",mechanicsRoutes);
 app.use("/api/auth/password-reset", passwordResetRoutes);
 app.use("/api/admin-management", adminRoutes);

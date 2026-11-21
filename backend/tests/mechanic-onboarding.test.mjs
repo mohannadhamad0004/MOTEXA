@@ -7,16 +7,17 @@ import {randomUUID} from 'node:crypto';
 import {unlink} from 'node:fs/promises';
 import path from 'node:path';
 import {prisma} from '../src/prisma.js';
-import {createMechanicRegistrationRouter} from '../src/routes/mechanic-registration.routes.js';
+import argon2 from 'argon2';
+import apply from '../src/routes/apply.routes.js';
 import mechanics from '../src/routes/mechanics.routes.js';
 import auth from '../src/routes/auth.routes.js';
 import catalogMechanics from '../src/routes/catalog-mechanics.routes.js';
 import mechanicRequests from '../src/routes/mechanic-requests.routes.js';
 
-test('mechanic registration without email, private documents, review, resubmission and live approval gating',async()=>{
+test('mechanic application from a customer account, private documents, review, resubmission and live approval gating',async()=>{
  const tag='onboarding-'+randomUUID(),email=tag+'@example.invalid',ids=[],profiles=[];
  const app=express();app.use(express.json({limit:'8mb'}));app.use('/api/auth',auth);
- app.use('/api/auth/mechanic',createMechanicRegistrationRouter());
+ app.use('/api',apply); // Work with MOTEXA: the only way to become a mechanic (the old /auth/mechanic/register is gone)
  app.use('/api/mechanics',mechanics);app.use('/api/catalog',catalogMechanics);app.use('/api',mechanicRequests);
  const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
  const base='http://127.0.0.1:'+server.address().port;
@@ -24,15 +25,14 @@ test('mechanic registration without email, private documents, review, resubmissi
  const token=u=>jwt.sign({role:u.role,sessionVersion:0},process.env.JWT_SECRET,{subject:u.id,expiresIn:'10m',algorithm:'HS256'});
  let fileKeys=[];
  try{
-  const input={fullName:'Test Mechanic',email,phoneNumber:'0599999999',city:'Ramallah',password:'Test!Pass1234',acceptTerms:true,role:'MECHANIC'};
-  assert.equal((await api('/api/auth/mechanic/register','POST',{...input,role:'SUPER_ADMIN'})).status,400);
-  const r0=await api('/api/auth/mechanic/register','POST',{...input,city:'نابلس'});assert.equal(r0.status,400);assert.equal(r0.body.errorCode,'CITY_NOT_IN_LIST'); // the city is stored as the list's English name
-  let r=await api('/api/auth/mechanic/register','POST',input);assert.equal(r.status,201);assert.equal(r.body.challengeId,undefined);
-  let mechanic=await prisma.user.findUnique({where:{email},include:{mechanicProfile:true}});ids.push(mechanic.id);profiles.push(mechanic.mechanicProfile.id);
-  assert.equal(mechanic.status,'ACTIVE');assert.equal(mechanic.emailVerifiedAt,null);assert.equal(await prisma.mechanicEmailCheck.count({where:{userId:mechanic.id}}),0);assert.equal(mechanic.mechanicProfile.verificationStatus,'DRAFT');
-  assert.notEqual(mechanic.passwordHash,input.password);
-  assert.equal((await api('/api/auth/mechanic/register','POST',input)).status,409);
-  r=await api('/api/auth/login','POST',{email,password:input.password});assert.equal(r.status,200);const mt=r.body.accessToken;
+  // a confirmed customer (signup + email code are covered by customer-signup.test.mjs) applies through Work with MOTEXA
+  const input={fullName:'Test Mechanic',email,password:'Test!Pass1234'};
+  let mechanic=await prisma.user.create({data:{fullName:input.fullName,email,passwordHash:await argon2.hash(input.password),role:'CUSTOMER',status:'ACTIVE',emailVerifiedAt:new Date()}});ids.push(mechanic.id);
+  let r=await api('/api/auth/login','POST',{email,password:input.password});assert.equal(r.status,200);let mt=r.body.accessToken;
+  assert.equal((await api('/api/mechanics/me','GET',undefined,mt)).status,404,'no application yet');
+  r=await api('/api/apply/mechanic','POST',{acknowledgeProviderAccount:true,acceptTerms:true,role:'SUPER_ADMIN'},mt);assert.equal(r.status,201);
+  mechanic=await prisma.user.findUnique({where:{email},include:{mechanicProfile:true}});profiles.push(mechanic.mechanicProfile.id);
+  assert.equal(mechanic.role,'CUSTOMER');assert.equal(mechanic.mechanicProfile.verificationStatus,'DRAFT');
   assert.equal((await api('/api/auth/me','GET',undefined,mt)).status,200);
   const reviewer=await prisma.user.create({data:{fullName:'Test Reviewer',email:tag+'-review@example.invalid',passwordHash:'unused',role:'ADMIN',status:'ACTIVE',adminPermissions:{create:{permission:'MANAGE_MECHANICS'}}}});
   const wrong=await prisma.user.create({data:{fullName:'Other Department',email:tag+'-parts@example.invalid',passwordHash:'unused',role:'ADMIN',status:'ACTIVE',adminPermissions:{create:{permission:'MANAGE_SPARE_PARTS'}}}});
@@ -67,6 +67,9 @@ test('mechanic registration without email, private documents, review, resubmissi
   assert.equal((await api('/api/mechanics/admin/'+mechanic.id+'/interview','POST',{result:'PASSED',notes:'Explained safe diagnostic procedures.',submissionVersion:version-1},rt)).status,409);
   assert.equal((await api('/api/mechanics/admin/'+mechanic.id+'/interview','POST',{result:'PASSED',notes:'Explained safe diagnostic procedures.',submissionVersion:version},rt)).status,200);
   r=await api('/api/mechanics/admin/'+mechanic.id+'/decision','POST',{action:'APPROVE',submissionVersion:version},rt);assert.equal(r.status,200);assert.equal(r.body.profile.canReceiveServices,true);
+  // the approval made the customer a MECHANIC and ended the customer session: sign in again
+  assert.equal((await api('/api/auth/me','GET',undefined,mt)).status,401);
+  r=await api('/api/auth/login','POST',{email,password:input.password});assert.equal(r.body.user.role,'MECHANIC');mt=r.body.accessToken;
   assert.equal((await api('/api/mechanics/me/service-access','GET',undefined,mt)).status,200);
   // approved = public with every listed skill: the customer finds them, sends a request, the mechanic accepts, starts, completes
   r=await api('/api/catalog/mechanics?skill=Brakes&city=Ramallah','GET',undefined,ct);assert.ok(r.body.mechanics.some(x=>x.id===mechanic.id),'listed in the catalog');

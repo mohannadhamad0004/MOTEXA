@@ -33,6 +33,13 @@ test('signup: always CUSTOMER + PENDING; role / status / permissions in the body
     assert.deepEqual([u.role, u.status, u.emailVerifiedAt, u.adminPermissions.length], ['CUSTOMER', 'PENDING', null, 0], JSON.stringify(role));
     assert.equal(await prisma.emailVerificationOtp.count({ where: { userId: u.id } }), 1, 'a code was made');
   }
+  // confirming the email changes the status only: still CUSTOMER, 0 permissions, a customer session
+  const u = await userOf(mail('role0'));
+  await plant(u.id, '424242');
+  const ok = await post('/auth/verify-email', { email: mail('role0'), password: PASS, code: '424242' });
+  assert.equal(ok.status, 200); assert.deepEqual([ok.data.user.role, ok.data.user.status, ok.data.user.adminPermissions], ['CUSTOMER', 'ACTIVE', []]);
+  const after = await userOf(mail('role0'));
+  assert.deepEqual([after.role, after.status, after.adminPermissions.length], ['CUSTOMER', 'ACTIVE', 0]);
 });
 
 test('signup: the same reply for a new, a waiting and a taken email; a taken account is not changed', async () => {

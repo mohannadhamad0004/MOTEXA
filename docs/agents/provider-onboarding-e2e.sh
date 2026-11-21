@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# OBSOLETE since 2026-11-21 (auth redesign stage C): /auth/provider/register was removed; see provider-onboarding-e2e.md.
 # End-to-end check of the provider onboarding with curl (see provider-onboarding-e2e.md).
 # Needs: backend running, the dev seed (audit.tow@ / audit.parts@ admins), node (for JSON). Creates two NEW owners per run.
 #   BASE=http://localhost:5055/api bash docs/agents/provider-onboarding-e2e.sh
