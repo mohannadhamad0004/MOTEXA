@@ -57,7 +57,7 @@ export default function MechanicRequestDetail() {
   };
 
   return (
-    <DashboardLayout hero="mechanic"
+    <DashboardLayout
       onRefresh={() => {
         setPulling(true);
         state.reload().finally(() => setPulling(false));

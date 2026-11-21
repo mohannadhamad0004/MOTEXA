@@ -1,9 +1,8 @@
 import { ReactNode } from "react";
 import { router } from "expo-router";
-import { useWindowDimensions } from "react-native";
-import { GaragePage, GarageHero } from "../garage";
+import { GaragePage, GarageHero, HeroLayout } from "../garage";
 import { ToastHost } from "../ItemActionsMenu";
-import { MoHero, MoHeroName } from "../garage/MoHero";
+import { moHeroMedia, MoHeroName } from "../garage/MoHero";
 import { useL } from "../../core/hooks/useL";
 
 /**
@@ -28,21 +27,26 @@ export function DashboardLayout({
   children: ReactNode;
 }) {
   const { t } = useL();
-  const { width } = useWindowDimensions();
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace("/"));
   return (
     <>
     <GaragePage
       onRefresh={onRefresh}
       refreshing={refreshing}
       hero={
-        <GarageHero
-          variant="detail"
-          title={title}
-          line={subtitle}
-          onBack={back ? () => (router.canGoBack() ? router.back() : router.replace("/")) : undefined}
-          backLabel={t("Back", "رجوع")}
-          banner={hero ? <MoHero name={hero} width={Math.min(width, 680) - 40} label={t("Mo, the MOTEXA mascot", "مو، تميمة موتيكسا")} /> : undefined}
-        />
+        hero ? (
+          <HeroLayout
+            config={{
+              tab: "mechanics",
+              title,
+              line: subtitle,
+              top: { label: t("Mechanic", "ميكانيكي"), back: back ? goBack : undefined, actions: [] },
+              media: moHeroMedia(hero, t("Mo, the MOTEXA mascot", "مو، تميمة موتيكسا")),
+            }}
+          />
+        ) : (
+          <GarageHero variant="detail" title={title} line={subtitle} onBack={back ? goBack : undefined} backLabel={t("Back", "رجوع")} />
+        )
       }
     >
       {children}

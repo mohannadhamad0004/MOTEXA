@@ -1,5 +1,5 @@
 // What a main tab may tell its hero: content only. Layout, sizes, the car chip, bell and map button all belong to HeroLayout.
-import type { HeroTab } from "../MoClip";
+import type { HeroTab, MoClipSource, MoFraming } from "../MoClip";
 import type { GIconName } from "../text";
 
 /** The one 52 px pill at the bottom of the text column. "toggle": on = filled accent with a check, off = outlined. */
@@ -16,7 +16,9 @@ export type HeroConfig = {
   /** omitted on screens whose one main action is in the page itself (provider Home) */
   action?: HeroAction;
   /** providers: replaces the customer's car chip / bell / map row with their own label (start) and round icon buttons (end) */
-  top?: { label: string; actions: { icon: GIconName; label: string; onPress: () => void; badge?: number }[] };
+  /** a role's own clip in the same box (admins, mechanic); null = that tab's photo placeholder. Left out = the tab's customer clip */
+  media?: { clip: MoClipSource | null; framing?: MoFraming; label: string };
+  top?: { label: string; /** back button before the label (screens reached from another one) */ back?: () => void; actions: { icon: GIconName; label: string; onPress: () => void; badge?: number }[] };
 };
 
 /** Per-tab fixed parts: the Map button's route and the media's accessibility label. */

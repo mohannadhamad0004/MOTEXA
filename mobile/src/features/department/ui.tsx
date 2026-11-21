@@ -163,6 +163,7 @@ export function DeptHero({ image, greeting, title, subtitle }: { image: ImageSou
 /** Page frame: canvas, top bar, optional hero, body. Tabs add bottom padding for the floating tab bar. */
 export function DeptPage({
   hero,
+  garageHero = false,
   back,
   children,
   refreshing,
@@ -171,6 +172,8 @@ export function DeptPage({
   footer,
 }: {
   hero?: ReactNode;
+  /** the hero is a garage HeroLayout (it brings its own safe-area top): no top bar, the department switcher goes under it */
+  garageHero?: boolean;
   back?: boolean;
   children: ReactNode;
   refreshing?: boolean;
@@ -179,6 +182,7 @@ export function DeptPage({
   /** sticky bar pinned to the bottom (for pages without the tab bar) */
   footer?: ReactNode;
 }) {
+  const { available } = useDepartment();
   const d = useDT();
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
@@ -192,10 +196,10 @@ export function DeptPage({
           refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} /> : undefined}
           contentContainerStyle={{ width: "100%", maxWidth: 680, alignSelf: "center", flexGrow: 1, paddingBottom: footer ? 230 : tabs ? 130 : 40 }}
         >
-          <TopBar back={back} />
+          {garageHero ? hero : <TopBar back={back} />}
           <Switcher />
-          {hero}
-          <View style={{ flexGrow: 1, paddingTop: hero ? 19 : 12, paddingHorizontal: 18, minHeight: Math.max(360, winH - 150) }}>
+          {garageHero ? null : hero}
+          <View style={{ flexGrow: 1, marginTop: garageHero && available.length < 2 ? -22 : 0, paddingTop: hero && !garageHero ? 19 : 12, paddingHorizontal: 18, minHeight: Math.max(360, winH - 150) }}>
             {children}
           </View>
         </ScrollView>

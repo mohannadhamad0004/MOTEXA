@@ -2,8 +2,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, router } from "expo-router";
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import { TextInput, View, useWindowDimensions } from "react-native";
-import { MoHero } from "../../components/garage/MoHero";
+import { TextInput, View } from "react-native";
+import { AdminHero } from "./adminHero";
 import InteractiveButton from "../../components/InteractiveButton";
 import MechanicReviewScreen from "../../components/MechanicReviewScreen";
 import { MechanicRequestsList } from "./MechanicRequests";
@@ -19,7 +19,7 @@ import { TowAdminHome } from "./TowAdminHome";
 import { PartsAdminHome } from "./PartsAdminHome";
 import { TowCompaniesPage } from "./TowCompaniesPage";
 import { PartsShopsPage } from "./PartsShopsPage";
-import { Avatar, DeptHead, DeptPage, Empty, ItemCard, Load, MenuCard, Pill, Section, StatRow, StatTile, StatusChip, useDT } from "./ui";
+import { Avatar, DeptPage, Empty, ItemCard, Load, MenuCard, Pill, Section, StatRow, StatTile, StatusChip, useDT } from "./ui";
 
 const go = (path: string) => router.push(path as Href);
 
@@ -35,7 +35,6 @@ export function DeptHome() {
 function DeptHomeDefault() {
   const { active } = useDepartment();
   const d = useDT();
-  const { width } = useWindowDimensions();
   const stats = useLoad(() => active.loadStats(), [active.key]);
   const value = (key: string) => (stats.loading && !stats.data ? "…" : stats.data ? String(stats.data[key] ?? 0) : "—");
   const pending = stats.data ? active.stats.filter((s) => s.warn).reduce((n, s) => n + (stats.data?.[s.key] ?? 0), 0) : 0;
@@ -43,9 +42,9 @@ function DeptHomeDefault() {
     <DeptPage
       onRefresh={() => void stats.reload()}
       refreshing={stats.loading && !!stats.data}
+      garageHero
+      hero={<AdminHero dept="mechanics" title={d.t(active.en, active.ar)} line={d.t(active.blurbEn, active.blurbAr)} />}
     >
-      <DeptHead title={d.t(active.en, active.ar)} caption={d.t(active.blurbEn, active.blurbAr)} />
-      {active.key === "MANAGE_MECHANICS" ? <View style={{ alignItems: "center", marginBottom: 14 }}><MoHero name="admin" width={Math.min(width, 680) - 36} label={d.t("Mo, the MOTEXA mascot", "مو، تميمة موتيكسا")} /></View> : null}
       <Section title={d.t("Overview", "نظرة عامة")} />
       <StatRow>
         {active.stats.map((s) => (

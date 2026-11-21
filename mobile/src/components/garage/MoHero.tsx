@@ -22,3 +22,10 @@ export function MoHero({ name, width, label }: { name: MoHeroName; width: number
   const src = moHeroSource(name);
   return src ? <MoClip clip={src} width={width} label={label} once radius={16} /> : null;
 }
+
+/** The role's own clip for HeroLayout's media box (`media` of a HeroConfig); undefined while its files are not in assets/mo yet. */
+export function moHeroMedia(name: MoHeroName, label: string) {
+  const clip = moHeroSource(name);
+  // the clip is landscape (1172 x 660): the portrait box shows its middle, Mo stands in the centre
+  return clip ? { clip, framing: { focusX: 0.5, focusY: 0.5, scale: 1 }, label } : undefined;
+}

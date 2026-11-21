@@ -5,7 +5,7 @@ import { Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
 import { Text } from "../../components/MotexaVisual";
-import { MoPartsAdminVideo, MOPARTS_ASPECT } from "../../components/blueprint/mascot/MoPartsAdminVideo";
+import { AdminHero } from "./adminHero";
 import { api } from "../../core/config/api";
 import { cityLabel } from "../../core/constants/cities";
 import { useLoad } from "../../core/hooks/useLoad";
@@ -20,32 +20,6 @@ import { useThreeDCount } from "./ThreeDRequests";
 const go = (path: string) => router.push(path as Href);
 
 type ShopRow = { id: string; shopName: string; ownerName: string; city: string; verificationStatus: Verification; productCount: number; hiddenProductCount: number };
-
-/** Dark in both themes. Mo plays on every real focus of the dashboard (not on rerenders or refreshes) and again when tapped. */
-function Hero() {
-  const d = useDT();
-  const { width } = useWindowDimensions();
-  const [playKey, setPlayKey] = useState(0);
-  useFocusEffect(useCallback(() => setPlayKey((k) => k + 1), []));
-  const moW = Math.round(Math.min(190, Math.max(150, width * 0.45)));
-  return (
-    <LinearGradient colors={["#1B130E", "#2B1E15", "#3A2818"]} style={{ borderBottomLeftRadius: 30, borderBottomRightRadius: 30, paddingHorizontal: 18, paddingTop: 14, paddingBottom: 24 }}>
-      <View style={{ flexDirection: d.row, alignItems: "center", gap: 10 }}>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <View style={{ flexDirection: d.row, alignItems: "center", gap: 6 }}>
-            <Ionicons name="search-outline" size={13} color="#E0A36F" />
-            <Text style={{ color: "#E0A36F", fontSize: 11, lineHeight: 16, fontWeight: "700", letterSpacing: d.ar ? 0 : 2 }}>{d.t("PARTS / ADMIN", "قطع الغيار / الإدارة")}</Text>
-          </View>
-          <Text style={{ color: "#FFF1DF", fontSize: 28, lineHeight: d.ar ? 44 : 34, fontWeight: "800", marginTop: 2, textAlign: d.align }}>{d.t("Marketplace review", "مراجعة السوق")}</Text>
-          <Text style={{ color: "#DCC7A8", fontSize: 13, lineHeight: 20, marginTop: 4, textAlign: d.align }}>{d.t("Review shops, products and marketplace submissions.", "راجِع المتاجر والمنتجات وطلبات السوق.")}</Text>
-        </View>
-        <Pressable accessibilityRole="button" accessibilityLabel={d.t("Replay Mo", "إعادة تشغيل مو")} onPress={() => setPlayKey((k) => k + 1)} style={{ width: moW, height: moW * MOPARTS_ASPECT }}>
-          <MoPartsAdminVideo width={moW} play={playKey > 0} playKey={playKey} />
-        </Pressable>
-      </View>
-    </LinearGradient>
-  );
-}
 
 /** One home card: a header (title, real count, badge) plus up to two action buttons. No other buttons for the same place on this screen. */
 function HomeCard({ icon, title, sub, count, badge, actions }: { icon: React.ComponentProps<typeof Ionicons>["name"]; title: string; sub: string; count?: number; badge?: number; actions: { label: string; onPress: () => void; ghost?: boolean }[] }) {
@@ -80,7 +54,7 @@ export function PartsAdminHome() {
   const reload = () => (void stats.reload(), void threeD.list.reload(), void unread.reload());
 
   return (
-    <DeptPage hero={<Hero />} onRefresh={reload} refreshing={stats.loading && !!stats.data}>
+    <DeptPage garageHero hero={<AdminHero dept="parts" title={d.t("Marketplace review", "مراجعة السوق")} line={d.t("Review shops, products and marketplace submissions.", "راجِع المتاجر والمنتجات وطلبات السوق.")} />} onRefresh={reload} refreshing={stats.loading && !!stats.data}>
       {/* five cards, each with a real count; a count that has not loaded is hidden, never faked */}
       <HomeCard icon="storefront-outline" title={d.t("Shops", "المتاجر")} sub={d.t("Applications and approved shops", "الطلبات والمتاجر المعتمدة")} count={stats.data?.shops} badge={pending}
         actions={[{ label: d.t("Review applications", "مراجعة الطلبات"), onPress: () => go("/dept/requests") }, { label: d.t("All shops", "كل المتاجر"), ghost: true, onPress: () => go("/dept/directory") }]} />

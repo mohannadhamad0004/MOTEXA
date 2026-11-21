@@ -51,13 +51,16 @@ function ActionPill({ a }: { a: HeroAction }) {
   );
 }
 
-function MediaBox({ tab }: { tab: HeroConfig["tab"] }) {
+function MediaBox({ tab, media }: { tab: HeroConfig["tab"]; media: HeroConfig["media"] }) {
   const { g } = useGarageTheme();
   const { t } = useL();
-  const clip = HERO_CLIPS[tab];
+  const clip = media === undefined ? HERO_CLIPS[tab] : null;
+  const own = media?.clip ?? null;
   return (
     <View style={{ width: HERO_BOX.w, height: HERO_BOX.h, borderRadius: HERO.mediaRadius, overflow: "hidden", backgroundColor: g.tint }}>
-      {clip ? (
+      {own ? (
+        <MoClip clip={own} box={HERO_BOX} framing={media?.framing} radius={0} label={media?.label ?? ""} />
+      ) : clip ? (
         <MoClip clip={clip.clip} box={HERO_BOX} framing={clip} radius={0} label={t(...HERO_TAB[tab].media)} />
       ) : (
         <Photo k={`hero.${tab}` as "hero.parts"} radius={0} style={{ width: HERO_BOX.w, height: HERO_BOX.h }} />
@@ -101,7 +104,8 @@ export function HeroLayout({ config }: { config: HeroConfig }) {
       <View style={[row, { height: HERO.topRow, alignItems: "center", gap: 10 }]}>
         {config.top ? (
           <>
-            <View style={[row, { flex: 1, minWidth: 0 }]}>
+            <View style={[row, { flex: 1, minWidth: 0, alignItems: "center", gap: 10 }]}>
+              {config.top.back ? <IconButton icon="arrow-back" label={t("Back", "رجوع")} onPress={config.top.back} flip /> : null}
               <View style={[row, { height: HERO.topRow, alignItems: "center", paddingHorizontal: 14, borderRadius: gShape.pill, backgroundColor: g.card, flexShrink: 1 }]}>
                 <GText numberOfLines={1} style={[gType.caption, { fontWeight: "700", flexShrink: 1 }]}>{config.top.label}</GText>
               </View>
@@ -122,7 +126,7 @@ export function HeroLayout({ config }: { config: HeroConfig }) {
           </View>
           {config.action ? <ActionPill a={config.action} /> : null}
         </View>
-        <MediaBox tab={config.tab} />
+        <MediaBox tab={config.tab} media={config.media} />
       </View>
     </View>
   );

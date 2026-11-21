@@ -28,7 +28,7 @@ export default function MechanicReviewScreen(){
   });
  }
  const spec=(v:string)=>{const row=mechanicSpecializations.find(s=>s[0]===v);return row?m.t(row[1],row[2]):v;};
- return <MechanicPage hero="admin" title={detail?detail.user.fullName:m.t('Mechanics administration','إدارة الميكانيكيين')} subtitle={detail?stateLabel(detail.verificationStatus):m.t('Review professional applications and manage approved mechanics.','مراجعة الطلبات المهنية ومتابعة حسابات الميكانيكيين المعتمدين.')}>
+ return <MechanicPage title={detail?detail.user.fullName:m.t('Mechanics administration','إدارة الميكانيكيين')} subtitle={detail?stateLabel(detail.verificationStatus):m.t('Review professional applications and manage approved mechanics.','مراجعة الطلبات المهنية ومتابعة حسابات الميكانيكيين المعتمدين.')}>
  {!!error &&<MechanicNote error>{error}</MechanicNote>}
  {!detail?<>
  <View style={{flexDirection:m.row,gap:8,marginBottom:14}}>{[['PENDING',m.t('Pending','قيد المراجعة')],['VERIFIED',m.t('Approved','معتمد')],['NEEDS_COMPLETION',m.t('Incomplete','استكمال')]].map(([key,label])=><View key={key} style={{flex:1,padding:10,borderRadius:19,backgroundColor:m.surface,borderWidth:1,borderColor:m.border,alignItems:'center',gap:4}}><Text style={{fontSize:24,color:m.ink}}>{counts[key]??0}</Text><Text style={{fontSize:10,lineHeight:18,color:m.muted,textAlign:'center'}}>{label}</Text></View>)}</View>

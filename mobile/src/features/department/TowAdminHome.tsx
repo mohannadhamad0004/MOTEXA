@@ -9,7 +9,7 @@ import { Pressable, View, useWindowDimensions } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import InteractiveButton from "../../components/InteractiveButton";
 import { Text } from "../../components/MotexaVisual";
-import { MoTowAdminVideo, MOTOW_ASPECT } from "../../components/blueprint/mascot/MoTowAdminVideo";
+import { AdminHero } from "./adminHero";
 import { api } from "../../core/config/api";
 import { cityLabel } from "../../core/constants/cities";
 import { useLoad } from "../../core/hooks/useLoad";
@@ -59,30 +59,6 @@ export function Tap({ label, onPress, style, children }: { label: string; onPres
         {children}
       </InteractiveButton>
     </Animated.View>
-  );
-}
-
-/** Dark in both themes: eyebrow, title and one line on the start side, Mo's desk on the end side (never mirrored). */
-function Hero() {
-  const d = useDT();
-  const { width } = useWindowDimensions();
-  // plays on every real focus of the dashboard (never on rerenders or refreshes) and again when Mo is tapped
-  const [playKey, setPlayKey] = useState(0);
-  useFocusEffect(useCallback(() => setPlayKey((k) => k + 1), []));
-  const moW = Math.round(Math.min(190, Math.max(150, width * 0.45)));
-  return (
-    <LinearGradient colors={["#1B130E", "#2B1E15", "#3A2818"]} style={{ borderBottomLeftRadius: 30, borderBottomRightRadius: 30, paddingHorizontal: 18, paddingTop: 14, paddingBottom: 24 }}>
-      <View style={{ flexDirection: d.row, alignItems: "center", gap: 10 }}>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ color: "#E0A36F", fontSize: 11, lineHeight: 16, fontWeight: "700", letterSpacing: d.ar ? 0 : 2, textAlign: d.align }}>{d.t("TOW TRUCKS", "شاحنات السحب")}</Text>
-          <Text style={{ color: "#FFF1DF", fontSize: 34, lineHeight: d.ar ? 52 : 42, fontWeight: "800", textAlign: d.align }}>{d.t("Admin", "الإدارة")}</Text>
-          <Text style={{ color: "#DCC7A8", fontSize: 13, lineHeight: 20, marginTop: 4, textAlign: d.align }}>{d.t("Manage fleet, requests and tow providers.", "أدِر الأسطول والطلبات ومزوّدي السحب.")}</Text>
-        </View>
-        <Pressable accessibilityRole="button" accessibilityLabel={d.t("Replay Mo", "إعادة تشغيل مو")} onPress={() => setPlayKey((k) => k + 1)} style={({ pressed }) => ({ width: moW, height: moW * MOTOW_ASPECT, opacity: pressed ? 0.92 : 1 })}>
-          <MoTowAdminVideo width={moW} play={playKey > 0} playKey={playKey} />
-        </Pressable>
-      </View>
-    </LinearGradient>
   );
 }
 
@@ -161,7 +137,7 @@ export function TowAdminHome() {
   const reload = () => (void stats.reload(), void fleet.reload(), void recent.reload());
 
   return (
-    <DeptPage hero={<Hero />} onRefresh={reload} refreshing={(stats.loading || fleet.loading || recent.loading) && !!(stats.data || fleet.data)}>
+    <DeptPage garageHero hero={<AdminHero dept="tow" title={d.t("Admin", "الإدارة")} line={d.t("Manage fleet, requests and tow providers.", "أدِر الأسطول والطلبات ومزوّدي السحب.")} />} onRefresh={reload} refreshing={(stats.loading || fleet.loading || recent.loading) && !!(stats.data || fleet.data)}>
       <View style={{ flexDirection: d.row, flexWrap: "wrap", justifyContent: "space-between", rowGap: 12, marginBottom: 22 }}>
         <Kpi i={0} icon="checkmark-circle-outline" value={num(approved.filter((t) => t.operational === "AVAILABLE" && !t.hasActiveJob).length, !!fleet.data)} label={d.t("Available trucks", "شاحنات متاحة")} onPress={() => go("/dept/directory")} />
         <Kpi i={1} icon="navigate-outline" value={num(approved.filter((t) => t.hasActiveJob).length, !!fleet.data)} label={d.t("Trucks on a job", "شاحنات في مهمة")} onPress={() => go("/dept/directory")} />
