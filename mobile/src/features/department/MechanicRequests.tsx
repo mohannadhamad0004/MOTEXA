@@ -1,5 +1,5 @@
 import { router, type Href } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { ItemRow, type ItemAction } from "../../components/ItemActionsMenu";
 import { Chip, EmptyState, ErrorState, GText, ListRow, SearchBar, SkeletonRows, StatusChip } from "../../components/garage";
@@ -25,13 +25,14 @@ export function mechanicRequestActions(t: (en: string, ar: string) => string, r:
 }
 
 /** Mechanics admin: every mechanic request. Active / History tabs, a status filter and a search by customer, mechanic or city. Newest activity first. */
-export function MechanicRequestsList() {
+export function MechanicRequestsList({ initialQ = "" }: { initialQ?: string }) {
   const { t, isArabic } = useL();
   const { row, align } = useGarageTheme();
   const L = useMechanicStatusLabels();
   const [scope, setScope] = useState<"active" | "history">("active");
   const [status, setStatus] = useState("");
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(initialQ);
+  useEffect(() => { setQ(initialQ); }, [initialQ]);
   const state = useLoad(() => mechanicAdmin.list(scope, status, q), [scope, status, q], 15_000);
   const statuses = scope === "active" ? ACTIVE_STATUSES : HISTORY_STATUSES;
   const mechanicLine = (r: AdminRequestRow) => [r.mechanic.name, r.mechanic.city ? cityLabel(r.mechanic.city, isArabic) : null].filter(Boolean).join(" · ");

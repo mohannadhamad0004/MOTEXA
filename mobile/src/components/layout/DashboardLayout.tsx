@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { router } from "expo-router";
 import { useWindowDimensions } from "react-native";
 import { GaragePage, GarageHero } from "../garage";
+import { ToastHost } from "../ItemActionsMenu";
 import { MoHero, MoHeroName } from "../garage/MoHero";
 import { useL } from "../../core/hooks/useL";
 
@@ -29,6 +30,7 @@ export function DashboardLayout({
   const { t } = useL();
   const { width } = useWindowDimensions();
   return (
+    <>
     <GaragePage
       onRefresh={onRefresh}
       refreshing={refreshing}
@@ -45,5 +47,7 @@ export function DashboardLayout({
     >
       {children}
     </GaragePage>
+    <ToastHost />
+    </>
   );
 }

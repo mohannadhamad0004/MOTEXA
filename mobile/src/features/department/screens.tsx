@@ -1,7 +1,7 @@
 // The four department tabs. They read the ACTIVE department's config (departments.ts) and nothing else.
 import { Ionicons } from "@expo/vector-icons";
 import { Href, router } from "expo-router";
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { TextInput, View, useWindowDimensions } from "react-native";
 import { MoHero } from "../../components/garage/MoHero";
 import InteractiveButton from "../../components/InteractiveButton";
@@ -136,8 +136,10 @@ function PartsRequests() {
 /** The Mechanics Admin's Requests: professional applications, and the customers' mechanic requests (Active / History), one switch apart. */
 function MechanicsRequests() {
   const d = useDT();
-  const params = useLocalSearchParams<{ seg?: string }>();
+  const params = useLocalSearchParams<{ seg?: string; q?: string }>();
   const [seg, setSeg] = useState<"apps" | "requests">(params.seg === "apps" ? "apps" : "requests");
+  // "View their requests" (⋮ menu of a mechanic) arrives with ?seg=requests&q=<name>, also when this screen is already open
+  useEffect(() => { if (params.seg === "apps" || params.seg === "requests") setSeg(params.seg); }, [params.seg, params.q]);
   const header = (
     <View style={{ flexDirection: d.row, gap: 8, marginBottom: 14 }}>
       {([["requests", "Mechanic requests", "طلبات الخدمة"], ["apps", "Applications", "طلبات الانضمام"]] as const).map(([k, en, ar]) => {
@@ -155,7 +157,7 @@ function MechanicsRequests() {
   return (
     <DeptPage>
       {header}
-      <MechanicRequestsList />
+      <MechanicRequestsList initialQ={params.q} />
     </DeptPage>
   );
 }

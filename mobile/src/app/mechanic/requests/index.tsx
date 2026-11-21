@@ -1,5 +1,6 @@
 import { Async, EmptyState } from "../../../components/ui/Feedback";
-import { Card } from "../../../components/ui/Card";
+import { ItemRow } from "../../../components/ItemActionsMenu";
+import { inboxActions } from "../../../features/mechanics/inboxActions";
 import { DashboardLayout } from "../../../components/layout/DashboardLayout";
 import { Segmented } from "../../../components/ui/Chip";
 import { useL } from "../../../core/hooks/useL";
@@ -60,7 +61,7 @@ export default function MechanicInbox() {
             />
           ) : (
             list.map((r) => (
-              <Card key={r.id} label={r.customerName} onPress={() => router.push(`/mechanic/requests/${r.id}`)}>
+              <ItemRow key={r.id} title={r.customerName} style={{ marginBottom: 10 }} onPress={() => router.push(`/mechanic/requests/${r.id}`)} actions={inboxActions(t, r, state.reload)}>
                 <View style={[row, { justifyContent: "space-between", alignItems: "flex-start", gap: 10 }]}>
                   <View style={{ flex: 1 }}>
                     <Text numberOfLines={1} style={[{ color: col.text, fontSize: 15, fontWeight: "800" }, align]}>{r.customerName}</Text>
@@ -73,7 +74,7 @@ export default function MechanicInbox() {
                 </View>
                 <Text numberOfLines={2} style={[{ color: col.textDim, fontSize: 12, marginTop: 10 }, align]}>{r.problemDescription}</Text>
                 <Text style={[{ color: col.textDim, fontSize: 10, marginTop: 8 }, align]}>{fmtDateTime(r.updatedAt)}</Text>
-              </Card>
+              </ItemRow>
             ))
           );
         }}
