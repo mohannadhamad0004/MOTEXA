@@ -49,7 +49,9 @@ model User {
   status              AccountStatus        @default(PENDING)
   mechanicProfile     MechanicProfile?
   emailVerifiedAt     DateTime?
+  phone               String? // optional, given at customer signup
   mechanicEmailChecks MechanicEmailCheck[]
+  emailCodes          EmailVerificationOtp[]
   notifications       Notification[]
 
   createdAt DateTime @default(now())
@@ -1595,4 +1597,29 @@ model RefreshToken {
 
   @@index([userId])
   @@index([familyId])
+}
+
+/// Customer signup email check. Same OTP rules as the admin invitation (otp.service: 6 digits, HMAC, 5 min, 5 tries, 60 s resend,
+/// 5 per hour); only the newest code of a user counts.
+model EmailVerificationOtp {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash    String
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5)
+  createdAt   DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// One fixed-window counter per key ("login-email:<email>", "signup-ip:<ip>", ...), shared by login and signup (auth-session.service).
+model RateLimit {
+  key         String   @id
+  windowStart DateTime
+  count       Int
+
+  @@index([windowStart])
 }

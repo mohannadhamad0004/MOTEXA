@@ -35,7 +35,8 @@ if (migrate.status !== 0) { console.error('prisma migrate deploy failed on the t
 const from = new pg.Client({ connectionString: dev.href }), to = new pg.Client({ connectionString: test.href });
 await from.connect(); await to.connect();
 await from.query('BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');
-const { rows: tables } = await from.query("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename <> '_prisma_migrations' ORDER BY tablename");
+// RateLimit = runtime counters (login / signup), not data: the tests start with none
+const { rows: tables } = await from.query("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename NOT IN ('_prisma_migrations', 'RateLimit') ORDER BY tablename");
 await to.query("SET session_replication_role = replica");
 // data migrations insert defaults (fit zones...): replace them with the dev rows
 await to.query(`TRUNCATE ${tables.map(t => 'public.' + q(t.tablename)).join(', ')} CASCADE`);

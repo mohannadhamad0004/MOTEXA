@@ -45,15 +45,30 @@ test('login: 5 failures for one email -> 429 (checked before the password), othe
   const blocked = await post('/auth/login', { email, password: 'x' });
   assert.equal(blocked.status, 429); assert.equal(blocked.data.code, 'RATE_LIMITED');
   assert.equal((await post('/auth/login', { email: email.toUpperCase(), password: 'x' })).status, 429, 'case-insensitive key');
+  const { prisma } = await import('../src/prisma.ts');
+  assert.equal((await prisma.rateLimit.findUnique({ where: { key: 'login-email:' + email } }))?.count, 5, 'counted in the database (survives a restart)');
   assert.equal((await login()).status, 200);
 });
 
-test('failure limiter: window and clear (unit)', async () => {
-  const { createFailureLimiter } = await import('../src/services/auth-session.service.ts');
-  let now = 0; const l = createFailureLimiter(2, 1000, () => now);
-  l.fail('a'); assert.equal(l.blocked('a'), false); l.fail('a'); assert.equal(l.blocked('a'), true); assert.equal(l.blocked('b'), false);
-  now = 1000; assert.equal(l.blocked('a'), false, 'window over');
-  l.fail('a'); l.fail('a'); l.clear('a'); assert.equal(l.blocked('a'), false);
+test('DB limiter: fixed window, separate names, clear (unit)', async () => {
+  const { createLimiter } = await import('../src/services/auth-session.service.ts');
+  const { prisma } = await import('../src/prisma.ts');
+  const name = 'unit-' + Date.now(); let now = Date.now();
+  const l = createLimiter(name, 2, 1000, () => now), other = createLimiter(name + '-b', 2, 1000, () => now);
+  try {
+    assert.equal(await l.hit('a'), true); assert.equal(await l.blocked('a'), false);
+    assert.equal(await l.hit('a'), true); assert.equal(await l.blocked('a'), true, '2 of 2 used');
+    assert.equal(await l.hit('a'), false, 'third hit is over the limit');
+    assert.equal(await l.blocked('b'), false); assert.equal(await other.blocked('a'), false, 'another name has its own counter');
+    assert.equal((await prisma.rateLimit.findUnique({ where: { key: name + ':a' } })).count, 3, 'stored in the database');
+    now += 1000; assert.equal(await l.blocked('a'), false, 'window over'); assert.equal(await l.hit('a'), true, 'a new window starts at 1');
+    await l.hit('a'); await l.clear('a'); assert.equal(await l.blocked('a'), false);
+    // cleanup on use: a hit removes this limiter's rows whose window is over (not other limiters' rows)
+    await prisma.rateLimit.createMany({ data: [{ key: name + ':old', windowStart: new Date(now - 5000), count: 9 }, { key: name + '-b:old', windowStart: new Date(now - 5000), count: 9 }] });
+    await l.hit('c');
+    assert.equal(await prisma.rateLimit.count({ where: { key: name + ':old' } }), 0, 'expired row removed');
+    assert.equal(await prisma.rateLimit.count({ where: { key: name + '-b:old' } }), 1, 'another limiter keeps its rows');
+  } finally { await prisma.rateLimit.deleteMany({ where: { key: { startsWith: name } } }); }
 });
 
 test('admin.routes uses the shared prisma client: super-admin dashboard answers on the test database', async () => {

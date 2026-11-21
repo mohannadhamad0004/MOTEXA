@@ -15,11 +15,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { View, Image, TextInput, Pressable, ScrollView, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, StatusBar } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, useLocalSearchParams, type Href } from "expo-router";
+import { router, type Href } from "expo-router";
 import * as SecureStore from '../../components/SessionStore';
 import { apiUrl, saveSession } from '../../core/config/api';
 import MotexaDialog from "../../components/MotexaDialog";
 import { landingFor } from "../../core/session/landing";
+import { holdPassword } from "../../core/session/pendingSignup";
 
 const API_BASE = apiUrl();
 
@@ -28,16 +29,6 @@ const BG = "#17100C";
 const BRONZE = "#E0A36F";
 const WHITE = "#FFF5EA";
 
-const roles: Record<string, [string, string]> = {
-  "super-admin": ["Super Admin", "المشرف العام"],
-  "mechanics-admin": ["Mechanics Admin", "مسؤول الميكانيكيين"],
-  "parts-admin": ["Spare Parts Admin", "مسؤول قطع الغيار"],
-  "towing-admin": ["Towing Admin", "مسؤول خدمات السحب"],
-  mechanic: ["Mechanic", "ميكانيكي"],
-  customer: ["Car Owner", "مالك المركبة"],
-  parts: ["Spare Parts Provider", "مزود قطع غيار"],
-  towing: ["Towing Provider", "مزود خدمة سحب"],
-};
 
 const REMEMBER_EMAIL_KEY='motexa_remembered_email';
 async function readRememberedEmail(){
@@ -54,9 +45,6 @@ export default function LoginScreen() {
   const [photoFrame,setPhotoFrame]=useState(390);
   const [focusedField,setFocusedField]=useState<"email"|"password"|null>(null);
   const { dark } = useAppearance();
-  const { selectedRole } = useLocalSearchParams<{
-    selectedRole?: string;
-  }>();
 
   const { isArabic: ar } = useLanguage();
   const [email, setEmail] = useState("");
@@ -73,13 +61,6 @@ export default function LoginScreen() {
   });
 
   const t = (en: string, arabic: string) => ar ? arabic : en;
-  const role = typeof selectedRole === "string"
-    ? selectedRole
-    : "";
-  const canCreateAccount=role===''||['customer','mechanic','parts','towing'].includes(role);
-  const [displayReady, setDisplayReady] = useState(false);
-  useEffect(() => { setDisplayReady(true); }, []);
-  const roleTitle = roles[displayReady ? role : ""] || ["Welcome Back", "مرحبًا بعودتك"];
 
   const error = (message: string) => {
     setDialog({
@@ -129,6 +110,13 @@ const response = await fetch(
         return;
       }
 
+      // signed up, email not confirmed yet: the code screen (the password stays in memory only, for the code check)
+      if (response.status === 403 && data?.code === "EMAIL_NOT_VERIFIED") {
+        holdPassword(normalizedEmail, password);
+        router.push({ pathname: "/auth/verify-email", params: { email: normalizedEmail, sent: data.codeSent ? "1" : "0" } });
+        return;
+      }
+
       if (response.status === 401) {
         error(t("Invalid email or password.", "البريد الإلكتروني أو كلمة المرور غير صحيحة."));
         return;
@@ -153,51 +141,18 @@ const response = await fetch(
         return;
       }
 
+      // where to go comes from the server's role only (one sign-in screen for everyone; every area checks access again)
       const permissions: string[] = Array.isArray(user.adminPermissions)
-  ? user.adminPermissions.map((item: string | { permission: string }) =>
-      typeof item === "string" ? item : item.permission
-    )
-  : [];
-
-const expectedPermission: Record<string, string> = {
-  "mechanics-admin": "MANAGE_MECHANICS",
-  "parts-admin": "MANAGE_SPARE_PARTS",
-  "towing-admin": "MANAGE_TOWING",
-};
-
-if (
-  (role === "super-admin" && user.role !== "SUPER_ADMIN") || (role==="mechanic"&&user.role!=="MECHANIC") ||
-  (expectedPermission[role] &&
-    (user.role !== "ADMIN" ||
-      !permissions.includes(expectedPermission[role])))
-) {
-  error(t(
-    "This account does not have access to the selected department.",
-    "هذا الحساب لا يملك صلاحية الدخول للقسم المحدد."
-  ));
-  return;
-}
-
-    
-
-// MECHANIC, every admin and the rest land through landingFor(); the mechanics admin now works in the shared /dept area (Requests tab)
-let destination: "/admin/(tabs)" | null = user.role === "SUPER_ADMIN" ? "/admin/(tabs)" : null;
-
-      const target = destination ?? landingFor(user.role, permissions);
+        ? user.adminPermissions.map((item: string | { permission: string }) => (typeof item === "string" ? item : item.permission))
+        : [];
+      const target = landingFor(user.role, permissions);
       if (!target) {
-        error(t(
-          "This account is not assigned to a department yet.",
-          "هذا الحساب غير مرتبط بأي قسم بعد."
-        ));
+        error(t("This account is not assigned to a department yet.", "هذا الحساب غير مرتبط بأي قسم بعد."));
         return;
       }
 
-          console.log("LOGIN SUCCESS:", user.role, destination);
-
       await saveSession(token, data.refreshToken);
       try{await rememberEmail(remember?normalizedEmail:null);}catch{console.warn('Sign-in preference could not be saved.');}
-
-      console.log("TOKEN SAVED - NAVIGATING TO:", destination);
 
       router.replace(target as Href);
     } catch (err) {
@@ -219,7 +174,6 @@ let destination: "/admin/(tabs)" | null = user.role === "SUPER_ADMIN" ? "/admin/
    <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==='ios'?'padding':undefined}>
     <ScrollView style={{flex:1}} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={true} contentContainerStyle={[s.content,{paddingTop:insets.top+2,paddingBottom:Math.max(insets.bottom,20)}]}>
      <View style={[s.navigation,{flexDirection:ar?'row-reverse':'row'}]}>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('Back to roles','العودة إلى الأدوار')} onPress={()=>router.replace('/choose-role')} style={({pressed})=>[s.back,{opacity:pressed?.7:1}]}><Ionicons name={ar?'arrow-forward':'arrow-back'} size={20} color={dark?'#E2BD8F':'#725134'}/></Pressable>
       <View style={[s.wordmarkRow,{flexDirection:ar?'row-reverse':'row'}]}><BrandWordmark style={s.wordmark} /></View>
      </View>
      <View style={[s.preferences,{alignItems:'flex-end'}]}><LanguageSwitch light compact unified/></View>
@@ -230,7 +184,7 @@ let destination: "/admin/(tabs)" | null = user.role === "SUPER_ADMIN" ? "/admin/
        <View pointerEvents="none" style={{position:'absolute',bottom:-1,left:0,width:0,height:0,borderLeftWidth:500,borderLeftColor:'transparent',borderBottomWidth:34,borderBottomColor:dark?'#38291F':'#FFF9EF'}}/>
       </HeroReveal>
       <View style={s.form}>
-       <View style={{alignItems:ar?'flex-end':'flex-start',marginBottom:12}}><View style={[s.roleBadge,{flexDirection:ar?'row-reverse':'row'}]}><Ionicons name="shield-checkmark-outline" size={13} color={dark?'#E2BD8F':'#80532D'}/><Text style={s.roleBadgeText}>{t(roleTitle[0],roleTitle[1])}</Text></View></View>
+       <View style={{alignItems:ar?'flex-end':'flex-start',marginBottom:12}}><View style={[s.roleBadge,{flexDirection:ar?'row-reverse':'row'}]}><Ionicons name="shield-checkmark-outline" size={13} color={dark?'#E2BD8F':'#80532D'}/><Text style={s.roleBadgeText}>{t('Welcome back','مرحبًا بعودتك')}</Text></View></View>
        <View style={{flexDirection:ar?'row-reverse':'row',alignItems:'flex-start',justifyContent:'space-between',gap:16}}><EditorialTitle accent accessibilityRole="header" style={[s.formTitle,{fontSize:36,lineHeight:48,fontWeight:'400',textAlign:ar?'right':'left',flex:1}]}>{t('Sign in','تسجيل الدخول')}</EditorialTitle><Text style={{color:dark?'#C6A27A':'#97704D',fontSize:10,letterSpacing:1,lineHeight:20,paddingTop:13}}>{t('01 / ACCESS','01 / الدخول')}</Text></View>
        <Text style={[s.formSubtitle,{textAlign:ar?'right':'left',marginTop:9}]}>{t('Your world. Beautifully connected.','عالمك، بتواصل أجمل.')}</Text>
        <Text style={[s.label,{textAlign:ar?'right':'left',marginTop:25}]}>{t('Email address','البريد الإلكتروني')}</Text>
@@ -243,7 +197,7 @@ let destination: "/admin/(tabs)" | null = user.role === "SUPER_ADMIN" ? "/admin/
        </Pressable>
        <Text style={{fontSize:10,lineHeight:17,color:dark?'#C8B18F':'#897056',textAlign:ar?'right':'left'}}>{t('Remembers your email. Your device password manager can save and fill your password.','يحفظ بريدك. يمكن لمدير كلمات المرور في جهازك حفظ كلمة السر وتعبئتها.')}</Text>
        <Pressable accessibilityRole="button" accessibilityLabel={t("Enter workspace","إلى مساحة عملك")} disabled={loading} onPress={signIn} style={({pressed,hovered})=>[s.submit,{flexDirection:ar?'row-reverse':'row',opacity:loading?.65:pressed?.82:hovered?.94:1}]}>{loading?<ActivityIndicator color={dark?'#302319':'#FFF8EE'}/>:<><Text style={s.submitText}>{t('Enter workspace','إلى مساحة عملك')}</Text><View style={s.submitArrow}><Ionicons name={ar?'arrow-back':'arrow-forward'} size={22} color="#3B281B"/></View></>}</Pressable>
-       {displayReady&&canCreateAccount&&<View style={{marginTop:20,paddingTop:15,borderTopWidth:1,borderTopColor:dark?'#654C34':'#E6D3B9',alignItems:'center',gap:3}}><Text style={{fontSize:12,lineHeight:21,color:dark?'#D9C1A0':'#80664C'}}>{t('New to MOTEXA?','جديد في MOTEXA؟')}</Text><Pressable accessibilityRole="button" accessibilityLabel={t('Create a new account','إنشاء حساب جديد')} disabled={loading} onPress={()=>router.push({pathname:'/auth/signup',params:{selectedRole:role}})} style={({pressed})=>({minHeight:44,paddingHorizontal:16,justifyContent:'center',opacity:pressed?.7:1})}><Text style={{fontSize:14,lineHeight:23,fontWeight:'600',color:dark?'#EDC697':'#704620'}}>{t('Create a new account','إنشاء حساب جديد')}</Text></Pressable></View>}
+       <View style={{marginTop:20,paddingTop:15,borderTopWidth:1,borderTopColor:dark?'#654C34':'#E6D3B9',alignItems:'center',gap:3}}><Text style={{fontSize:12,lineHeight:21,color:dark?'#D9C1A0':'#80664C'}}>{t('New to MOTEXA?','جديد في MOTEXA؟')}</Text><Pressable accessibilityRole="button" accessibilityLabel={t('Create a new account','إنشاء حساب جديد')} disabled={loading} onPress={()=>router.push('/auth/signup')} style={({pressed})=>({minHeight:44,paddingHorizontal:16,justifyContent:'center',opacity:pressed?.7:1})}><Text style={{fontSize:14,lineHeight:23,fontWeight:'600',color:dark?'#EDC697':'#704620'}}>{t('Create a new account','إنشاء حساب جديد')}</Text></Pressable></View>
        <View style={s.security}><View style={s.securityLine}/><Ionicons name="shield-checkmark-outline" size={14} color={dark?'#D1AD80':'#966B43'}/><Text style={s.securityText}>{t('SECURE BY DESIGN','الأمان أساس تجربتك')}</Text><View style={s.securityLine}/></View>
       </View>
      </View>

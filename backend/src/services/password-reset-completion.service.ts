@@ -14,6 +14,11 @@ export function meetsPasswordPolicy(password: string) {
     /[^A-Za-z0-9]/.test(password)
   );
 }
+type AccountState = { role: string; status: string; emailVerifiedAt: Date | null };
+/** A customer who signed up and has not entered the email code yet (PENDING until then: no login, no API). */
+export const awaitingEmail = (u: AccountState) => u.role === "CUSTOMER" && u.status === "PENDING" && !u.emailVerifiedAt;
+/** Password recovery: active accounts, and unconfirmed signups (the recovery code proves the email, so completing it confirms it). */
+export const canRecover = (u: AccountState) => u.status === "ACTIVE" || awaitingEmail(u);
 export function recoveryTokenHash(token: string) {
   return createHash("sha256")
     .update("password-reset-grant:" + token)
@@ -28,10 +33,10 @@ export async function verifyPasswordResetCode(
   if (!/^\d{6}$/.test(otp)) return null;
   return db.$transaction(async (tx) => {
     const users = await tx.$queryRaw<
-      Array<{ id: string; status: string }>
-    >`SELECT "id", "status" FROM "User" WHERE "email" = ${email} FOR UPDATE`;
+      Array<{ id: string; status: string; role: string; emailVerifiedAt: Date | null }>
+    >`SELECT "id", "status", "role", "emailVerifiedAt" FROM "User" WHERE "email" = ${email} FOR UPDATE`;
     const user = users[0];
-    if (!user || user.status !== "ACTIVE") return null;
+    if (!user || !canRecover(user)) return null;
     const request = await tx.passwordResetRequest.findFirst({
       where: { userId: user.id, consumedAt: null },
       orderBy: { createdAt: "desc" },
@@ -102,9 +107,10 @@ export async function completePasswordReset(
   const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
   return db.$transaction(async (tx) => {
     const users = await tx.$queryRaw<
-      Array<{ id: string; status: string }>
-    >`SELECT "id", "status" FROM "User" WHERE "id" = ${candidate.userId} FOR UPDATE`;
-    if (users[0]?.status !== "ACTIVE") return false;
+      Array<{ id: string; status: string; role: string; emailVerifiedAt: Date | null }>
+    >`SELECT "id", "status", "role", "emailVerifiedAt" FROM "User" WHERE "id" = ${candidate.userId} FOR UPDATE`;
+    if (!users[0] || !canRecover(users[0])) return false;
+    const confirmsEmail = awaitingEmail(users[0]);
     const request = await tx.passwordResetRequest.findUnique({
       where: { id: candidate.id },
     });
@@ -120,8 +126,13 @@ export async function completePasswordReset(
       return false;
     await tx.user.update({
       where: { id: candidate.userId },
-      data: { passwordHash, sessionVersion: { increment: 1 } },
+      data: { passwordHash, sessionVersion: { increment: 1 }, ...(confirmsEmail ? { status: "ACTIVE", emailVerifiedAt: now } : {}) },
     });
+    if (confirmsEmail) {
+      // an unconfirmed signup (maybe made by someone else with this email) now belongs to the inbox owner, with their password
+      await tx.emailVerificationOtp.deleteMany({ where: { userId: candidate.userId } });
+      await tx.auditLog.create({ data: { actorId: candidate.userId, action: "CUSTOMER_EMAIL_VERIFIED", targetId: candidate.userId, details: { via: "PASSWORD_RESET" } } });
+    }
     await tx.passwordResetRequest.updateMany({
       where: { userId: candidate.userId, consumedAt: null },
       data: { consumedAt: now, resetTokenHash: null, resetExpiresAt: null },

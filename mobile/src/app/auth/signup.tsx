@@ -1,714 +1,105 @@
-import {MechanicPage,MechanicCard,MechanicButton,useMechanicTheme} from '../../components/MechanicUI';
-import MechanicRegistration from '../../components/MechanicRegistration';
-import BrandWordmark from '../../components/BrandWordmark';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {EditorialTitle} from '../../components/PremiumUI';
-import {useAppearance,useAppearanceStyles} from "../../components/Appearance";
-import {useReducedMotion} from "../../components/MotexaVisual";
-import {palette} from "../../components/DesignTokens";
-import { PanelFill, CanvasFill } from "../../components/BrandSurfaces";
-import { Text } from "../../components/MotexaVisual";
-import LanguageSwitch from "../../components/LanguageSwitch";
-import { Redirect, router, useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
-
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
+import { useState } from "react";
+import { Pressable, View } from "react-native";
+import { AuthLayout } from "../../components/layout/AuthLayout";
+import { Button, Input, Notice, Text } from "../../components/ui";
+import { api } from "../../core/config/api";
+import { useL } from "../../core/hooks/useL";
+import { holdPassword } from "../../core/session/pendingSignup";
+import { useTheme } from "../../theme/useTheme";
 
-import { useLanguage } from "../../i18n/LanguageContext";
+type Field = "fullName" | "email" | "phone" | "password" | "confirm";
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE = (v: string) => /^[0-9+()\-\s]{6,20}$/.test(v) && v.replace(/\D/g, "").length >= 5;
+/** The server's rule (meetsPasswordPolicy), shown as a checklist while typing. */
+const RULES: [(p: string) => boolean, string, string][] = [
+  [(p) => p.length >= 12 && p.length <= 256, "12 to 256 characters", "من 12 إلى 256 حرفًا"],
+  [(p) => /[A-Z]/.test(p), "One uppercase letter", "حرف إنجليزي كبير"],
+  [(p) => /[a-z]/.test(p), "One lowercase letter", "حرف إنجليزي صغير"],
+  [(p) => /[0-9]/.test(p), "One number", "رقم واحد"],
+  [(p) => /[^A-Za-z0-9]/.test(p), "One symbol", "رمز خاص"],
+];
+const SERVER_FIELD: Record<string, Field> = { NAME_INVALID: "fullName", EMAIL_INVALID: "email", PHONE_INVALID: "phone", PASSWORD_POLICY: "password" };
 
-export default function SignUpScreen(){const {selectedRole}=useLocalSearchParams<{selectedRole?:string}>();const [ready,setReady]=useState(false);useEffect(()=>setReady(true),[]);if(!ready)return <View style={{flex:1}}><CanvasFill/></View>;if(!selectedRole)return <ChooseRegistrationRole/>;if(selectedRole==='towing')return <Redirect href={'/provider/tow-signup' as never}/>;if(selectedRole==='parts')return <Redirect href={'/provider/parts-signup' as never}/>;return selectedRole==='mechanic'?<MechanicRegistration/>:<ExistingSignUpScreen/>;}
-function ChooseRegistrationRole(){const m=useMechanicTheme();return <MechanicPage back title={m.t('Create an account','إنشاء حساب جديد')} subtitle={m.t('Choose the account you want to create.','اختر نوع الحساب الذي تريد إنشاءه.')}><MechanicCard>{[['customer','Car owner','مالك مركبة'],['mechanic','Mechanic','ميكانيكي'],['parts','Spare parts provider','مزود قطع غيار'],['towing','Towing provider','مزود سحب']].map(([role,en,ar])=><MechanicButton key={role} secondary label={m.t(en,ar)} onPress={()=>router.setParams({selectedRole:role})}/>)}</MechanicCard></MechanicPage>;}
-function ExistingSignUpScreen() {
- const {selectedRole}=useLocalSearchParams<{selectedRole?:string}>();
- const role=typeof selectedRole==='string'?selectedRole:'';
- const isAdminRole=['super-admin','mechanics-admin','parts-admin','towing-admin'].includes(role);
- useEffect(()=>{if(isAdminRole)router.replace({pathname:'/auth/login',params:{selectedRole:role}});},[isAdminRole,role]);
+/** Customer signup (the only account anyone can create here). The server always answers "check your email", then the code screen. */
+export default function SignUpScreen() {
+  const { c, row } = useTheme();
+  const { t } = useL();
+  const [form, setForm] = useState<Record<Field, string>>({ fullName: "", email: "", phone: "", password: "", confirm: "" });
+  const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
+  const [formError, setFormError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const set = (k: Field) => (v: string) => { setForm((f) => ({ ...f, [k]: v })); setErrors((e) => ({ ...e, [k]: undefined })); };
+  const email = form.email.trim().toLowerCase();
 
- const insets=useSafeAreaInsets();
- const [focusedField,setFocusedField]=useState<string|null>(null);
-  const styles=useAppearanceStyles(baseStyles);
-  const {dark}=useAppearance();
-  const reduced=useReducedMotion();
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const fieldText: Record<Field, string> = {
+    fullName: t("Enter your full name (2 to 80 characters).", "أدخل اسمك الكامل (من 2 إلى 80 حرفًا)."),
+    email: t("Enter a valid email address.", "أدخل بريدًا إلكترونيًا صحيحًا."),
+    phone: t("Enter a valid phone number, or leave it empty.", "أدخل رقم هاتف صحيحًا أو اتركه فارغًا."),
+    password: t("Your password must meet every rule below.", "يجب أن تحقق كلمة المرور كل الشروط أدناه."),
+    confirm: t("The two passwords are not the same.", "كلمتا المرور غير متطابقتين."),
+  };
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] =
-    useState(false);
-
-  const { language, toggleLanguage, t, isArabic } =
-    useLanguage();
-
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-
-  useEffect(() => {
-    if(reduced){fadeAnim.setValue(1);slideAnim.setValue(0);return;}
-    const animation=Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 700,
-        useNativeDriver: true,
-      }),
-
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 700,
-        useNativeDriver: true,
-      }),
-    ]);
-    animation.start();
-    return()=>animation.stop();
-  }, [reduced]);
+  const submit = async () => {
+    const name = form.fullName.trim();
+    const bad: Partial<Record<Field, string>> = {};
+    if (name.length < 2 || name.length > 80) bad.fullName = fieldText.fullName;
+    if (!EMAIL.test(email) || email.length > 254) bad.email = fieldText.email;
+    if (form.phone.trim() && !PHONE(form.phone.trim())) bad.phone = fieldText.phone;
+    if (!RULES.every(([ok]) => ok(form.password))) bad.password = fieldText.password;
+    else if (form.confirm !== form.password) bad.confirm = fieldText.confirm;
+    setErrors(bad);
+    setFormError("");
+    if (Object.keys(bad).length) return;
+    setBusy(true);
+    try {
+      await api("POST", "/auth/register", { fullName: name, email, phone: form.phone.trim() || undefined, password: form.password });
+      holdPassword(email, form.password);
+      router.replace({ pathname: "/auth/verify-email", params: { email, sent: "1" } });
+    } catch (e: any) {
+      const code = e?.data?.code;
+      if (SERVER_FIELD[code]) setErrors({ [SERVER_FIELD[code]]: fieldText[SERVER_FIELD[code]] });
+      else if (code === "RATE_LIMITED") setFormError(t("Too many sign-up attempts. Please wait an hour and try again.", "محاولات إنشاء حساب كثيرة. يرجى الانتظار ساعة ثم المحاولة مجددًا."));
+      else if (!e?.status) setFormError(t("Could not connect. Check your connection and try again.", "تعذّر الاتصال. تحقق من الشبكة وحاول مجددًا."));
+      else setFormError(t("Something went wrong on our side. Please try again.", "حدث خطأ من جهتنا. يرجى المحاولة مرة أخرى."));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
-    <LinearGradient
-      colors={dark?palette.canvasDark:palette.canvas}
-      style={[styles.background,{overflow:"hidden"}]}
+    <AuthLayout
+      title={t("Create your account", "أنشئ حسابك")}
+      subtitle={t("For car owners: book mechanics, tow trucks and parts.", "لأصحاب السيارات: احجز ميكانيكيين وشاحنات سحب وقطع غيار.")}
     >
-      <View style={styles.glowTop} />
-      <View style={styles.glowBottom} />
-
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={[styles.scrollContainer,{paddingTop:insets.top+14,paddingBottom:insets.bottom+24}]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <Animated.View
-            style={[
-              styles.content,
-              {
-                opacity: fadeAnim,
-
-              },
-            ]}
-          >
-            {/* Top Bar */}
-            <View style={styles.topBar}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => router.back()}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={
-                    isArabic
-                      ? "arrow-forward"
-                      : "arrow-back"
-                  }
-                  size={21}
-                  color="#A27140"
-                />
-              </TouchableOpacity>
-
-              <LanguageSwitch light compact unified/>
+      {!!formError && <Notice tone="danger" icon="alert-circle-outline">{formError}</Notice>}
+      <Input label={t("Full name", "الاسم الكامل")} value={form.fullName} onChangeText={set("fullName")} error={errors.fullName} autoComplete="name" textContentType="name" maxLength={80} />
+      <Input label={t("Email address", "البريد الإلكتروني")} value={form.email} onChangeText={set("email")} error={errors.email} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="emailAddress" />
+      <Input label={t("Phone (optional)", "الهاتف (اختياري)")} value={form.phone} onChangeText={set("phone")} error={errors.phone} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" maxLength={20} />
+      <Input label={t("Password", "كلمة المرور")} value={form.password} onChangeText={set("password")} error={errors.password} secureTextEntry autoCapitalize="none" autoCorrect={false} autoComplete="new-password" textContentType="newPassword" />
+      <View style={{ marginTop: -6, marginBottom: 14, gap: 4 }}>
+        {RULES.map(([ok, en, ar]) => {
+          const met = ok(form.password);
+          return (
+            <View key={en} style={[row, { alignItems: "center", gap: 7 }]}>
+              <Ionicons name={met ? "checkmark-circle" : "ellipse-outline"} size={15} color={met ? c.success : c.textDim} />
+              <Text style={{ color: met ? c.text : c.textMuted, fontSize: 12 }}>{t(en, ar)}</Text>
             </View>
-
-            {/* Logo */}
-            <View style={styles.logoContainer}>
-              <LinearGradient
-                colors={["#F0C49A", "#B87345", "#7C4528"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.logoCircle}
-              >
-                <Ionicons
-                  name="person-add-outline"
-                  size={31}
-                  color="#1B100B"
-                />
-              </LinearGradient>
-            </View>
-
-            <BrandWordmark style={styles.brandName} />
-
-            <Text
-              style={[
-                styles.tagline,
-                isArabic && styles.arabicTagline,
-              ]}
-            >
-              {t.signup.system}
-            </Text>
-
-            {/* Heading */}
-            <View style={styles.headingSection}>
-              <EditorialTitle
-                style={[
-                  styles.heading,
-                  isArabic && styles.arabicText,
-                ]}
-              >
-                {t.signup.title}
-              </EditorialTitle>
-
-              <Text
-                style={[
-                  styles.description,
-                  isArabic && styles.arabicText,
-                ]}
-              >
-                {t.signup.description}
-              </Text>
-            </View>
-
-            {/* Form */}
-            <View style={styles.card}>
-              {/* Full Name */}
-              <Text
-                style={[
-                  styles.label,
-                  isArabic && styles.arabicLabel,
-                ]}
-              >
-                {t.signup.fullName}
-              </Text>
-
-              <View
-                style={[[
-                  styles.inputContainer,
-                  isArabic && styles.inputContainerArabic,
-                ],focusedField==='fullName'&&{borderColor:dark?'#E2BA80':'#9D6530',backgroundColor:dark?'#423225':'#FFFCF6'}]}
-              >
-                <View style={styles.inputIcon}>
-                  <Ionicons
-                    name="person-outline"
-                    size={20}
-                    color="#A27140"
-                  />
-                </View>
-
-                <TextInput
-                  style={[
-                    styles.input,
-                    isArabic && styles.arabicInput,
-                  ]}
-                  placeholder={
-                    t.signup.fullNamePlaceholder
-                  }
-                  placeholderTextColor="#9C836B"
-                  value={fullName}
-                  onChangeText={setFullName}
-                 onFocus={()=>setFocusedField('fullName')} onBlur={()=>setFocusedField(null)} accessibilityLabel={isArabic?'الاسم الكامل':'Full name'} />
-              </View>
-
-              {/* Email */}
-              <Text
-                style={[
-                  styles.label,
-                  isArabic && styles.arabicLabel,
-                ]}
-              >
-                {t.common.email}
-              </Text>
-
-              <View
-                style={[[
-                  styles.inputContainer,
-                  isArabic && styles.inputContainerArabic,
-                ],focusedField==='email'&&{borderColor:dark?'#E2BA80':'#9D6530',backgroundColor:dark?'#423225':'#FFFCF6'}]}
-              >
-                <View style={styles.inputIcon}>
-                  <Ionicons
-                    name="mail-outline"
-                    size={20}
-                    color="#A27140"
-                  />
-                </View>
-
-                <TextInput
-                  style={[
-                    styles.input,
-                    isArabic && styles.arabicInput,
-                  ]}
-                  placeholder={t.common.emailPlaceholder}
-                  placeholderTextColor="#9C836B"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                 onFocus={()=>setFocusedField('email')} onBlur={()=>setFocusedField(null)} accessibilityLabel={isArabic?'البريد الإلكتروني':'Email address'} />
-              </View>
-
-              {/* Password */}
-              <Text
-                style={[
-                  styles.label,
-                  isArabic && styles.arabicLabel,
-                ]}
-              >
-                {t.common.password}
-              </Text>
-
-              <View
-                style={[[
-                  styles.inputContainer,
-                  isArabic && styles.inputContainerArabic,
-                ],focusedField==='password'&&{borderColor:dark?'#E2BA80':'#9D6530',backgroundColor:dark?'#423225':'#FFFCF6'}]}
-              >
-                <View style={styles.inputIcon}>
-                  <Ionicons
-                    name="lock-closed-outline"
-                    size={20}
-                    color="#A27140"
-                  />
-                </View>
-
-                <TextInput
-                  style={[
-                    styles.passwordInput,
-                    isArabic && styles.arabicInput,
-                  ]}
-                  placeholder={
-                    t.signup.passwordPlaceholder
-                  }
-                  placeholderTextColor="#9C836B"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                 onFocus={()=>setFocusedField('password')} onBlur={()=>setFocusedField(null)} accessibilityLabel={isArabic?'كلمة المرور':'Password'} />
-
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() =>
-                    setShowPassword(!showPassword)
-                  }
-                >
-                  <Ionicons
-                    name={
-                      showPassword
-                        ? "eye-outline"
-                        : "eye-off-outline"
-                    }
-                    size={21}
-                    color="#A27140"
-                  />
-                </TouchableOpacity>
-              </View>
-
-              {/* Confirm Password */}
-              <Text
-                style={[
-                  styles.label,
-                  isArabic && styles.arabicLabel,
-                ]}
-              >
-                {t.signup.confirmPassword}
-              </Text>
-
-              <View
-                style={[[
-                  styles.inputContainer,
-                  isArabic && styles.inputContainerArabic,
-                ],focusedField==='confirmPassword'&&{borderColor:dark?'#E2BA80':'#9D6530',backgroundColor:dark?'#423225':'#FFFCF6'}]}
-              >
-                <View style={styles.inputIcon}>
-                  <Ionicons
-                    name="shield-checkmark-outline"
-                    size={20}
-                    color="#A27140"
-                  />
-                </View>
-
-                <TextInput
-                  style={[
-                    styles.passwordInput,
-                    isArabic && styles.arabicInput,
-                  ]}
-                  placeholder={
-                    t.signup.confirmPasswordPlaceholder
-                  }
-                  placeholderTextColor="#9C836B"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!showConfirmPassword}
-                 onFocus={()=>setFocusedField('confirmPassword')} onBlur={()=>setFocusedField(null)} accessibilityLabel={isArabic?'تأكيد كلمة المرور':'Confirm password'} />
-
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() =>
-                    setShowConfirmPassword(
-                      !showConfirmPassword
-                    )
-                  }
-                >
-                  <Ionicons
-                    name={
-                      showConfirmPassword
-                        ? "eye-outline"
-                        : "eye-off-outline"
-                    }
-                    size={21}
-                    color="#A27140"
-                  />
-                </TouchableOpacity>
-              </View>
-
-              {/* Create Account */}
-              <TouchableOpacity
-                activeOpacity={0.85}
-                style={styles.buttonWrapper}
-              >
-                <LinearGradient
-                  colors={["#E3AD7A", "#C47A48", "#A95F34"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.createButton}
-                >
-                  <Text style={styles.buttonText}>
-                    {t.signup.createAccount}
-                  </Text>
-
-                  <View
-                    style={[
-                      styles.arrowCircle,
-                      isArabic &&
-                        styles.arrowCircleArabic,
-                    ]}
-                  >
-                    <Ionicons
-                      name={
-                        isArabic
-                          ? "arrow-back"
-                          : "arrow-forward"
-                      }
-                      size={18}
-                      color="#A27140"
-                    />
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-
-            {/* Login */}
-            <View
-              style={[
-                styles.loginContainer,
-                isArabic && styles.rowReverse,
-              ]}
-            >
-              <Text style={styles.loginQuestion}>
-                {t.signup.alreadyHaveAccount}
-              </Text>
-
-              <TouchableOpacity
-                onPress={() =>
-                  router.replace({pathname:'/auth/login',params:role?{selectedRole:role}:{}})
-                }
-              >
-                <Text style={styles.loginText}>
-                  {t.signup.signIn}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Footer */}
-            <View
-              style={[
-                styles.footer,
-                isArabic && styles.rowReverse,
-              ]}
-            >
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={14}
-                color="#A27140"
-              />
-
-              <Text
-                style={[
-                  styles.footerText,
-                  isArabic &&
-                    styles.arabicFooterText,
-                ]}
-              >
-                {t.signup.secureRegistration}
-              </Text>
-            </View>
-          </Animated.View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </LinearGradient>
+          );
+        })}
+      </View>
+      <Input label={t("Confirm password", "تأكيد كلمة المرور")} value={form.confirm} onChangeText={set("confirm")} error={errors.confirm} secureTextEntry autoCapitalize="none" autoCorrect={false} autoComplete="new-password" textContentType="newPassword" onSubmitEditing={() => void submit()} />
+      <Button label={t("Create account", "إنشاء الحساب")} onPress={() => void submit()} loading={busy} size="lg" icon="person-add-outline" style={{ marginTop: 4 }} />
+      <Text style={{ color: c.textMuted, fontSize: 12, lineHeight: 18, marginTop: 12, textAlign: "center" }}>
+        {t("We will email you a 6-digit code to confirm the address.", "سنرسل إلى بريدك رمزًا من 6 أرقام لتأكيده.")}
+      </Text>
+      <View style={[row, { justifyContent: "center", alignItems: "center", gap: 4, marginTop: 10, flexWrap: "wrap" }]}>
+        <Text style={{ color: c.textMuted, fontSize: 13 }}>{t("Already have an account?", "لديك حساب بالفعل؟")}</Text>
+        <Pressable accessibilityRole="link" onPress={() => router.replace("/auth/login")} hitSlop={8} style={{ minHeight: 44, justifyContent: "center", paddingHorizontal: 4 }}>
+          <Text style={{ color: c.accent, fontSize: 13, fontWeight: "700" }}>{t("Sign in", "تسجيل الدخول")}</Text>
+        </Pressable>
+      </View>
+    </AuthLayout>
   );
 }
-
-;const baseStyles = StyleSheet.create({
-  background: {
-    flex: 1,
-  },
-
-  keyboardView: {
-    flex: 1,
-  },
-
-  scrollContainer: {
-    flexGrow: 1,
-    paddingHorizontal: 25,
-    paddingTop: 45,
-    paddingBottom: 100,
-  },
-
-  content: {width:'100%',maxWidth:520,alignSelf:'center'},
-
-  glowTop: {
-    position: "absolute",
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: "rgba(198, 123, 72, 0.09)",
-    top: -90,
-    right: -90,
-  },
-
-  glowBottom: {
-    position: "absolute",
-    width: 230,
-    height: 230,
-    borderRadius: 115,
-    backgroundColor: "rgba(139, 79, 43, 0.08)",
-    bottom: -80,
-    left: -90,
-  },
-
-  /* Top Bar */
-
-  topBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-
-  backButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: "rgba(201,139,91,0.10)",
-    borderWidth: 1,
-    borderColor: "#D5BFA1",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  languageButton: {
-    height: 38,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 13,
-    borderRadius: 13,
-    backgroundColor: "rgba(201,139,91,0.09)",
-    borderWidth: 1,
-    borderColor: "#D5BFA1",
-  },
-
-  languageText: {
-    color: "#A27140",
-    fontSize: 12,
-    fontWeight: "700",
-    marginLeft: 7,
-  },
-
-  /* Logo */
-
-  logoContainer: {
-    alignItems: "center",
-    marginBottom: 12,
-  },
-
-  logoCircle: {width:48,height:48,borderRadius:16,justifyContent:"center",alignItems:"center",shadowColor:"#D28B57",shadowOffset:{
-      width: 0,
-      height: 7,
-    },shadowOpacity:0.25,shadowRadius:13,elevation:8},
-
-  brandName: {color:"#A27140",fontSize:14,fontWeight:"800",letterSpacing:3,textAlign:'left',marginLeft:7,lineHeight:24,alignSelf:'flex-start',marginBottom:4},
-
-  tagline: {color:"#493321",fontSize:11,fontWeight:"600",letterSpacing:2,textAlign:'left',marginTop:6,lineHeight:20,alignSelf:'flex-start'},
-
-  arabicTagline: {
-    letterSpacing: 0,
-    fontSize: 11,
-  },
-
-  /* Heading */
-
-  headingSection: {marginTop:18,marginBottom:22,alignItems:'stretch'},
-
-  heading: {color:"#493321",fontSize:28,fontWeight:'600',marginBottom:6,lineHeight:39,textAlign:'left'},
-
-  description: {color:"#92765B",fontSize:13,lineHeight:23,textAlign:'left'},
-
-  arabicText: {
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  /* Card */
-
-  card: {backgroundColor:'transparent',borderWidth:0,borderColor:"#D5BFA1",borderRadius:0,padding:22,shadowColor:"#000000",shadowOffset:{
-      width: 0,
-      height: 12,
-    },shadowOpacity:0,shadowRadius:20,elevation:0,paddingHorizontal:0,paddingTop:0,marginTop:0},
-
-  label: {
-    color: "#92765B",
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1.3,
-    marginBottom: 9,
-    marginLeft: 2,
-  },
-
-  arabicLabel: {
-    textAlign: "right",
-    writingDirection: "rtl",
-    letterSpacing: 0,
-    fontSize: 12,
-    marginLeft: 0,
-    marginRight: 2,
-  },
-
-  inputContainer: {height:58,flexDirection:"row",alignItems:"center",backgroundColor:"#F7EDDD",borderWidth:1,borderColor:'#D4BB99',borderRadius:29,marginBottom:17,borderBottomWidth:1,minHeight:58},
-
-  inputContainerArabic: {
-    flexDirection: "row-reverse",
-  },
-
-  inputIcon: {
-    width: 49,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  input: {
-    flex: 1,
-    height: "100%",
-    color: "#493321",
-    fontSize: 16,
-    paddingRight: 15,
-  },
-
-  passwordInput: {
-    flex: 1,
-    height: "100%",
-    color: "#493321",
-    fontSize: 14,
-  },
-
-  arabicInput: {
-    textAlign: "right",
-    writingDirection: "rtl",
-    paddingHorizontal: 5,
-  },
-
-  eyeButton: {
-    width: 48,
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  /* Button */
-
-  buttonWrapper: {
-    borderRadius: 15,
-    overflow: "hidden",
-    marginTop: 5,
-
-    shadowColor: "#C47A48",
-    shadowOffset: {
-      width: 0,
-      height: 7,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 7,
-  },
-
-  createButton: {
-    height: 56,
-    borderRadius: 15,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  buttonText: {
-    color: "#20120B",
-    fontSize: 15,
-    fontWeight: "800",
-  },
-
-  arrowCircle: {
-    position: "absolute",
-    right: 12,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "rgba(71, 36, 18, 0.28)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  arrowCircleArabic: {
-    right: undefined,
-    left: 12,
-  },
-
-  /* Bottom */
-
-  loginContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 25,
-  },
-
-  rowReverse: {
-    flexDirection: "row-reverse",
-  },
-
-  loginQuestion: {
-    color: "#493321",
-    fontSize: 13,
-    marginHorizontal: 3,
-  },
-
-  loginText: {
-    color: "#493321",
-    fontSize: 13,
-    fontWeight: "700",
-    marginHorizontal: 3,
-  },
-
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 27,
-    marginBottom: 10,
-  },
-
-  footerText: {
-    color: "#92765B",
-    fontSize: 8,
-    fontWeight: "600",
-    letterSpacing: 1.4,
-    marginLeft: 6,
-  },
-
-  arabicFooterText: {
-    letterSpacing: 0,
-    fontSize: 10,
-    marginLeft: 0,
-    marginRight: 6,
-  },
-});

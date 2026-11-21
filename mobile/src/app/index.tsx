@@ -13,7 +13,7 @@ const stories = [
  { label:'WELCOME TO MOTEXA', labelAr:'مرحبًا بك في MOTEXA', lead:'Your car.', accent:'Our priority.', leadAr:'سيارتك.', accentAr:'أولويتنا.', body:'A more considered way to care for your car. Designed around you.', bodyAr:'تجربة عناية بسيارتك، صُمّمت لتكون أقرب إليك.' },
  { label:'CARE, CONNECTED', labelAr:'عناية أقرب إليك', lead:'Every journey.', accent:'Better connected.', leadAr:'في كل رحلة.', accentAr:'ابقَ على تواصل.', body:'Your automotive world, brought together in one thoughtful experience.', bodyAr:'عالم خدمات السيارات في تجربة واحدة، بتفاصيل مدروسة.' },
  { label:'MADE FOR YOU', labelAr:'صُمّمت من أجلك', lead:'Less searching.', accent:'More living.', leadAr:'بحث أقل.', accentAr:'وقت أكثر لك.', body:'A clearer, simpler starting point for your automotive needs.', bodyAr:'بداية أوضح وأسهل للوصول إلى احتياجات سيارتك.' },
- { label:'YOUR NEXT CHAPTER', labelAr:'بداية رحلتك', lead:'Drive with', accent:'confidence.', leadAr:'انطلق.', accentAr:'بكل ثقة.', body:'Welcome to MOTEXA. Choose your role and make the experience yours.', bodyAr:'أهلًا بك في MOTEXA. اختر دورك وابدأ تجربتك.' },
+ { label:'YOUR NEXT CHAPTER', labelAr:'بداية رحلتك', lead:'Drive with', accent:'confidence.', leadAr:'انطلق.', accentAr:'بكل ثقة.', body:'Welcome to MOTEXA. Sign in or create your account to begin.', bodyAr:'أهلًا بك في MOTEXA. سجّل الدخول أو أنشئ حسابك لتبدأ.' },
 ];
 
 export default function Index() {
@@ -23,7 +23,7 @@ export default function Index() {
  const story=stories[step];const frameWidth=Math.min(width,560);const photoHeight=Math.min(Math.max(height*.46,260),440);const short=height<740;
  useEffect(()=>{let active=true;AccessibilityInfo.isReduceMotionEnabled().then(value=>{if(active)setReduced(value)}).catch(()=>{});const sub=AccessibilityInfo.addEventListener('reduceMotionChanged',setReduced);return()=>{active=false;sub.remove()}},[]);
  useEffect(()=>{if(reduced){reveal.setValue(1);return;}reveal.setValue(0);const animation=Animated.timing(reveal,{toValue:1,duration:420,useNativeDriver:true,isInteraction:false});animation.start();return()=>{animation.stop();reveal.setValue(1)}},[step,reduced,reveal]);
- const enter=()=>router.replace('/choose-role');
+ const enter=()=>router.replace('/auth/login');
  return <View style={{flex:1,backgroundColor:'#2D1D12',alignItems:'center'}}><StatusBar barStyle="light-content" backgroundColor="#2D1D12"/>
  <View onLayout={event=>{const {width,height}=event.nativeEvent.layout;if(width>0&&height>0)setScreenSize(previous=>previous.width===width&&previous.height===height?previous:{width,height});}} style={{width:'100%',maxWidth:560,flex:1,overflow:'hidden'}}>
   <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill,{transform:[{scale:reveal.interpolate({inputRange:[0,1],outputRange:[1.025,1]})}]}]}><Image accessible={false} source={require('../../assets/images/motexa-mercedes-coastal.png')} resizeMode="cover" style={{width:'100%',height:frameWidth*1.5}}/></Animated.View>

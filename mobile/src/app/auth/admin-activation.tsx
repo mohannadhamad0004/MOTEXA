@@ -265,7 +265,7 @@ export default function AdminActivationScreen() {
   return <VisualProvider>
     <ActivationExperience checking={checking} invitation={invitation} verifyError={verifyError} step={step} otp={otp} password={password} confirmPassword={confirmPassword} showPassword={showPassword} loading={loading} lastSentAt={lastSentAt} departmentLabel={invitation?department(invitation.permission):''}
       onOtpChange={setOtp} onPasswordChange={setPassword} onConfirmChange={setConfirmPassword} onTogglePassword={()=>setShowPassword(value=>!value)}
-      onRequestOtp={requestOtp} onVerifyOtp={verifyOtp} onActivate={activate} onBack={()=>router.replace('/choose-role')} onSignIn={()=>router.replace('/auth/login')}/>
+      onRequestOtp={requestOtp} onVerifyOtp={verifyOtp} onActivate={activate} onBack={()=>router.replace('/auth/login')} onSignIn={()=>router.replace('/auth/login')}/>
       <MotexaDialog
         visible={dialog.visible}
         type={dialog.success ? "success" : "error"}
