@@ -23,6 +23,8 @@ import {
 import MechanicDocuments, { pickMechanicDocument } from "./MechanicDocuments";
 import { CITIES, cityLabel } from "../core/constants/cities";
 import { mechanicInbox } from "../features/mechanics/mechanicsService";
+import { useSessionUser } from "../core/session/session";
+import { ProviderAccountNote } from "../features/work/ProviderAccountNote";
 type Form = {
   city: string;
   phoneNumber: string;
@@ -68,6 +70,7 @@ const SKILL_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 /** The mechanic home (/mechanic): the request inbox first once approved, then the application and its status. */
 export default function MechanicApplication() {
+  const customer = useSessionUser().role === "CUSTOMER"; // Work with MOTEXA applicant: still a customer account until approval
   const m = useMechanicTheme(),
     [profile, setProfile] = useState<MechanicProfile | null>(null),
     [form, setForm] = useState<Form>(initial),
@@ -99,6 +102,7 @@ export default function MechanicApplication() {
   }
   /** The inbox counts; a failure only hides the numbers (the inbox screen shows its own error). */
   const loadInbox = () =>
+    customer ? Promise.resolve(null) : // an applicant has no inbox before approval
     mechanicInbox
       .list()
       .then((rows) => ({ waiting: rows.filter((r) => r.status === "REQUESTED").length, total: rows.length }))
@@ -818,6 +822,7 @@ export default function MechanicApplication() {
                     </View>
                   </View>
                 ))}
+                <ProviderAccountNote kind="MECHANIC" />
                 <MechanicChoice
                   label={m.t(
                     "I confirm my information is accurate and consent to private document review by authorized MOTEXA administrators.",
@@ -1052,11 +1057,15 @@ export default function MechanicApplication() {
         </>
       )}
       <View style={{ height: 18 }} />
-      <MechanicButton
-        secondary
-        label={m.t("Sign out", "تسجيل الخروج")}
-        onPress={() => setLogout(true)}
-      />
+      {customer ? (
+        <MechanicButton secondary label={m.t("Back to my customer account", "العودة إلى حسابي كزبون")} onPress={() => router.replace("/customer/profile" as never)} />
+      ) : (
+        <MechanicButton
+          secondary
+          label={m.t("Sign out", "تسجيل الخروج")}
+          onPress={() => setLogout(true)}
+        />
+      )}
       <MotexaDialog
         icon="log-out-outline"
         visible={logout}

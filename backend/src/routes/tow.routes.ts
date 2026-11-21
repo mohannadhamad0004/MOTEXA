@@ -15,6 +15,7 @@ import {
   storeFile,
 } from "../uploads/providerFiles.js";
 import { requireApprovedProvider } from "../services/provider-onboarding.js";
+import { approvalBlocked, promoteApplicant } from "../services/applications.js";
 import { checklist, loadApp } from "../services/provider-onboarding.js";
 
 // Tow companies + trucks. Mounted at /api, BEFORE the global JSON parser: the provider routes carry base64
@@ -310,6 +311,17 @@ function parseFiles(body: any): FileInput | { error: string } {
 // Tow company (TOW_PROVIDER)
 // =====================================================================
 const provider = [requireAuth, requireTowProvider, express.json({ limit: "25mb" })];
+/** Trucks are part of the application: the tow company, or a customer whose tow application (POST /apply/tow) is in progress. */
+async function requireTowApplicant(_req: express.Request, res: express.Response, next: express.NextFunction) {
+  try {
+    const u = res.locals.authUser as { id: string; role: string } | undefined;
+    if (u?.role === "TOW_PROVIDER" || (u?.role === "CUSTOMER" && (await prisma.towCompanyProfile.count({ where: { userId: u.id } })))) return next();
+    res.status(403).json({ success: false, message: "Tow company access required." });
+  } catch (e) {
+    fail(res, "Tow applicant check error", e);
+  }
+}
+const fleet = [requireAuth, requireTowApplicant, express.json({ limit: "25mb" })];
 
 /** A rejected company can't create or edit trucks (a pending one can: it prepares its fleet before approval). */
 const REJECTED_MSG = "Your company application was rejected. You cannot add or edit trucks.";
@@ -395,7 +407,7 @@ router.patch("/tow/me/company", ...provider, async (req, res) => {
   }
 });
 
-router.get("/tow/me/trucks", ...provider, async (_req, res) => {
+router.get("/tow/me/trucks", ...fleet, async (_req, res) => {
   try {
     const c = await myCompany(res);
     if (!c) return;
@@ -426,7 +438,7 @@ async function ownTruck(req: any, res: any) {
   return { company: c, truck: t };
 }
 
-router.get("/tow/me/trucks/:id", ...provider, async (req, res) => {
+router.get("/tow/me/trucks/:id", ...fleet, async (req, res) => {
   try {
     const own = await ownTruck(req, res);
     if (!own) return;
@@ -495,7 +507,7 @@ const createTruck = async (req: any, res: any) => {
 };
 // INTENDED: a company that is still PENDING may add and edit trucks (onboarding collects them before approval). A truck is not offered
 // to customers or dispatch until the company AND the truck are APPROVED, so no approved-provider guard here.
-router.post("/tow/me/trucks", ...provider, createTruck);
+router.post("/tow/me/trucks", ...fleet, createTruck);
 
 const editTruck = async (req: any, res: any) => {
   const written: string[] = [];
@@ -611,7 +623,7 @@ const editTruck = async (req: any, res: any) => {
     return fail(res, "Tow truck update error", e);
   }
 };
-router.patch("/tow/me/trucks/:id", ...provider, editTruck);
+router.patch("/tow/me/trucks/:id", ...fleet, editTruck);
 
 router.patch("/tow/me/trucks/:id/status", ...provider, requireApprovedProvider, async (req, res) => {
   try {
@@ -636,7 +648,7 @@ router.patch("/tow/me/trucks/:id/status", ...provider, requireApprovedProvider, 
   }
 });
 
-router.delete("/tow/me/trucks/:id", ...provider, async (req, res) => {
+router.delete("/tow/me/trucks/:id", ...fleet, async (req, res) => {
   try {
     const actor = res.locals.authUser as { id: string };
     const own = await ownTruck(req, res);
@@ -756,22 +768,25 @@ router.patch("/admin/tow/companies/:id/decision", ...admin, async (req, res) => 
     const actor = res.locals.authUser as { id: string };
     const parsed = parseDecision(req.body);
     if ("error" in parsed) return bad(res, 400, parsed.error);
-    const c = await prisma.towCompanyProfile.findUnique({ where: { id: idParam(req.params.id) }, select: { id: true } });
+    const c = await prisma.towCompanyProfile.findUnique({ where: { id: idParam(req.params.id) }, select: { id: true, userId: true } });
     if (!c) return bad(res, 404, "Company not found.");
     if (parsed.decision === "APPROVED") {
+      const blocked = await approvalBlocked(c.userId);
+      if (blocked) return bad(res, 409, blocked);
       // same rule as the application review: the checklist must be complete
       const app = await loadApp("TOW", { id: c.id });
       const failing = app ? checklist(app).filter((x) => !x.ok) : [];
       if (failing.length) return res.status(409).json({ success: false, message: "The approval checklist is not complete.", failing: failing.map((x) => x.key) });
     }
 
-    await prisma.$transaction([
-      prisma.towCompanyProfile.update({
+    await prisma.$transaction(async (tx) => {
+      await tx.towCompanyProfile.update({
         where: { id: c.id },
         data: { verificationStatus: parsed.decision, rejectionReason: parsed.reason, reviewedById: actor.id, reviewedAt: new Date() },
-      }),
-      log(actor.id, `TOW_COMPANY_${parsed.decision}`, c.id, { reason: parsed.reason }),
-    ]);
+      });
+      await tx.auditLog.create({ data: { actorId: actor.id, action: `TOW_COMPANY_${parsed.decision}`, targetId: c.id, details: { reason: parsed.reason } } });
+      if (parsed.decision === "APPROVED") await promoteApplicant(tx, c.userId, "TOW", actor.id);
+    });
     const updated = await loadCompany({ id: c.id });
     return res.json({ success: true, company: shapeCompany(updated!) });
   } catch (e) {

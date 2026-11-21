@@ -11,6 +11,7 @@ import { checklist, loadApp } from "../services/provider-onboarding.js";
 import { strictNumber } from "../services/numbers.js";
 import { effectiveVehicleModels } from "../services/vehicle3d-revisions.js";
 import { errorBody } from "../services/error-codes.js";
+import { approvalBlocked, promoteApplicant } from "../services/applications.js";
 
 // Parts shops + products. Mounted at /api.
 //  - /api/parts/me/*       PARTS_PROVIDER, always scoped to the caller's own shop.
@@ -657,17 +658,19 @@ router.patch("/admin/parts/shops/:id/decision", ...admin, async (req, res) => {
     if (!DECISIONS.includes(decision)) return bad(res, 400, "Decision must be APPROVED or REJECTED.");
     const reason = text(req.body?.reason, 1000);
     if (decision === "REJECTED" && !reason) return bad(res, 400, "A rejection reason is required.");
-    const s = await prisma.partsShopProfile.findUnique({ where: { id: idParam(req.params.id) }, select: { id: true } });
+    const s = await prisma.partsShopProfile.findUnique({ where: { id: idParam(req.params.id) }, select: { id: true, userId: true } });
     if (!s) return bad(res, 404, "Shop not found.");
     if (decision === "APPROVED") {
+      const blocked = await approvalBlocked(s.userId);
+      if (blocked) return bad(res, 409, blocked);
       // same rule as the application review: the checklist must be complete
       const app = await loadApp("PARTS", { id: s.id });
       const failing = app ? checklist(app).filter((c) => !c.ok) : [];
       if (failing.length) return res.status(409).json({ success: false, message: "The approval checklist is not complete.", failing: failing.map((c) => c.key) });
     }
 
-    await prisma.$transaction([
-      prisma.partsShopProfile.update({
+    await prisma.$transaction(async (tx) => {
+      await tx.partsShopProfile.update({
         where: { id: s.id },
         data: {
           verificationStatus: decision,
@@ -675,9 +678,10 @@ router.patch("/admin/parts/shops/:id/decision", ...admin, async (req, res) => {
           reviewedById: actor.id,
           reviewedAt: new Date(),
         },
-      }),
-      log(actor.id, `PARTS_SHOP_${decision}`, s.id, { reason: decision === "REJECTED" ? reason : null }),
-    ]);
+      });
+      await tx.auditLog.create({ data: { actorId: actor.id, action: `PARTS_SHOP_${decision}`, targetId: s.id, details: { reason: decision === "REJECTED" ? reason : null } } });
+      if (decision === "APPROVED") await promoteApplicant(tx, s.userId, "PARTS", actor.id);
+    });
     const updated = (await loadShop({ id: s.id }))!;
     return res.json({ success: true, shop: shapeShop(updated, await shopHistory(updated)) });
   } catch (e) {

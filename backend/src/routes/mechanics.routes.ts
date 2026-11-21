@@ -20,6 +20,7 @@ import {
   text,
   requireVerifiedMechanic,
 } from "../services/mechanic-policy.js";
+import { approvalBlocked, promoteApplicant } from "../services/applications.js";
 
 const router = Router(),
   privateRoot = path.resolve(
@@ -40,7 +41,8 @@ const ownerSelect = {
   status: true,
 } as const;
 function own(res: Response) {
-  if (res.locals.authUser?.role !== "MECHANIC")
+  // a CUSTOMER reaches only their own application (made by POST /apply/mechanic; without one every /me route answers 404)
+  if (!["MECHANIC", "CUSTOMER"].includes(res.locals.authUser?.role))
     fail(403, "Mechanic access required.");
   return res.locals.authUser.id as string;
 }
@@ -128,7 +130,8 @@ router.get("/options", (_req, res) =>
 router.get("/me", async (_req, res) => {
   const userId = own(res);
   // Every mechanic account has a profile: one created without it (older dev accounts) starts as a draft application.
-  if (!(await prisma.mechanicProfile.findUnique({ where: { userId }, select: { id: true } })))
+  // Never for a customer: their application starts only through POST /apply/mechanic (active-work check, confirmation).
+  if (res.locals.authUser.role === "MECHANIC" && !(await prisma.mechanicProfile.findUnique({ where: { userId }, select: { id: true } })))
     await prisma.mechanicProfile
       .create({ data: { userId, specializations: [], verificationStatus: "DRAFT" } })
       .catch((e) => {
@@ -442,6 +445,10 @@ router.post("/admin/:userId/decision", reviewer, async (req, res) => {
     fail(400, "Invalid decision.");
   if (action !== "APPROVE" && action !== "REACTIVATE" && notes.length < 5)
     fail(400, "Explain the required changes or decision.");
+  if (action === "APPROVE") {
+    const blocked = await approvalBlocked(String(req.params.userId));
+    if (blocked) fail(409, blocked);
+  }
   await prisma.$transaction(async (tx) => {
     const p = await locked(tx, String(req.params.userId));
     if (req.body?.submissionVersion !== p.submissionVersion)
@@ -499,6 +506,7 @@ router.post("/admin/:userId/decision", reviewer, async (req, res) => {
       },
     });
     await event(tx, res.locals.authUser.id, p.id, "MECHANIC_" + action, notes);
+    if (action === "APPROVE") await promoteApplicant(tx, p.userId, "MECHANIC", res.locals.authUser.id);
     await tx.notification.create({
       data: {
         userId: p.userId,
