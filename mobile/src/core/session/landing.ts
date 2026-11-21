@@ -1,0 +1,28 @@
+import type { Href } from "expo-router";
+
+/**
+ * Where a user lands after a successful login, from the role and the admin permissions.
+ * Returns null when the account has no area in the app (shown as "not assigned to your department").
+ * UX routing only: every area and every API route enforces access again on its own.
+ */
+export function landingFor(role: string, permissions: string[]): Href | null {
+  switch (role) {
+    case "SUPER_ADMIN":
+      return "/admin/(tabs)";
+    case "ADMIN":
+      // every department admin (towing, parts, mechanics) works in the shared /dept area
+      return permissions.length ? ("/dept" as Href) : null;
+    case "TOW_PROVIDER":
+      return "/provider/tow";
+    case "TOW_DRIVER":
+      return "/driver" as Href;
+    case "PARTS_PROVIDER":
+      return "/provider/parts";
+    case "CUSTOMER":
+      return "/customer";
+    case "MECHANIC":
+      return "/mechanic";
+    default:
+      return null;
+  }
+}

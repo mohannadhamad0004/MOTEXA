@@ -1,0 +1,85 @@
+{
+  "valid": true,
+  "car": {
+    "dimensions": [
+      1.972522671149907,
+      1.362777228188965,
+      4.649999875966968
+    ],
+    "wheelsFound": true,
+    "mappedParts": [
+      "FRONT_BUMPER",
+      "REAR_BUMPER",
+      "MIRRORS",
+      "SPOILER",
+      "SIDE_SKIRTS",
+      "WHEELS"
+    ],
+    "partMapIn": [
+      "WHEELS",
+      "MIRRORS",
+      "SPOILER",
+      "REAR_BUMPER",
+      "SIDE_SKIRTS",
+      "FRONT_BUMPER"
+    ]
+  },
+  "fit": {
+    "type": "WING",
+    "replaces": {
+      "how": "part map",
+      "hidden": 2
+    },
+    "anchor": "part map",
+    "restDrop": -0.015,
+    "copies": 1,
+    "turnedDeg": 0,
+    "flipped180": false,
+    "partSize": [
+      1.903,
+      0.444,
+      0.553
+    ],
+    "scale": 0.683,
+    "nonUniform": [
+      1,
+      1
+    ]
+  },
+  "kit": {
+    "type": "WING",
+    "size": {
+      "widthMm": 1300
+    },
+    "paintMatch": false
+  },
+  "carSha256": "2f026865272597d4edb718be5c99e2bc74a790f98f53e06f45f33a177e55ab89",
+  "partSha256": "7e40b463d76777b8655d8c2198451d9bf0b1de6e30963a233c8c57c08225a958",
+  "viewerSha256": "9fbea380ff5e3b888489945db81b5cca875d138b2429b1a8689b5998be4b480e",
+  "screenshots": [
+    {
+      "name": "front",
+      "sha256": "a35a684a5ce7ea722e910d781964c84112333af8a0feb4b080ebd4f800b31904"
+    },
+    {
+      "name": "front-three-quarter",
+      "sha256": "1d1f59e3698c1604539cee5564c1e1a98a5425b08d04bddc760e13fa1a8b73d9"
+    },
+    {
+      "name": "left-side",
+      "sha256": "da72dc6a148e44b95af7c84183abdbcafa4e22064daeb016fabcd0085c7dcf5e"
+    },
+    {
+      "name": "rear-three-quarter",
+      "sha256": "01adf7ae200e2f8a9b6e1df8180b585b2cb79a4b0eafc1d922333ae4a97385e3"
+    },
+    {
+      "name": "rear",
+      "sha256": "387d830b37c1ee86388e3c9845b25e693fbdb2b89e3b133c56e6a341672bce00"
+    },
+    {
+      "name": "top-three-quarter",
+      "sha256": "01b62ace83c23a7eb227642e3806714eab15a092bf3629866cac756219ba153f"
+    }
+  ]
+}

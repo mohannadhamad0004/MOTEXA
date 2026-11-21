@@ -1,0 +1,57 @@
+node_modules/
+**/node_modules/
+
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+.expo/
+**/.expo/
+dist/
+web-build/
+
+backend/src/generated/
+**/generated/prisma/
+
+*.log
+build/
+coverage/
+
+*.db
+*.sqlite
+*.sqlite3
+
+Thumbs.db
+Desktop.ini
+# Local AI development tools
+**/.agents/
+**/.claude/
+**/.cursor/
+**/.codex/
+**/.windsurf/
+# Additional development tool files
+**/.devin/
+# Private uploads and local test artifacts
+**/.private/
+**/test-results/
+
+# IDE
+.idea/
+
+# Playwright / browser test artifacts
+.playwright-mcp/
+
+# Local test account notes
+TEST_ACCOUNTS.md
+
+# Local screenshots
+a-light-1280.png
+b-light-1280.png
+c-drawer.png
+d-dark-menu.png
+
+# Original 3D sources (large, never bundled or committed)
+3d-source/

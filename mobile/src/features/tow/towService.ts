@@ -1,0 +1,292 @@
+// Tow feature: types + REST client for the two service facades used by the screens.
+// Screens only call `towFleetService` (provider) and `towAdminService` (admin).
+// The backend (backend/src/routes/tow.routes.ts) enforces roles and ownership; the screen gates are UX only.
+// Photos and documents are stored by the server (ProviderFile). Only files the user just picked are uploaded;
+// files that already live on the server are never re-sent. Private document uris stay relative ("/files/private/<id>")
+// and are opened with the bearer token by the PrivateDocs viewer.
+
+import { api } from "../shared/api";
+import { fileNameOf, isServerFile, localFileToBase64, publicImageUrl } from "../../core/constants/files";
+
+export type Verification = "PENDING" | "APPROVED" | "REJECTED" | "DRAFT" | "NEEDS_CHANGES";
+export type Operational = "AVAILABLE" | "BUSY" | "OUT_OF_SERVICE";
+export type TruckType = "FLATBED" | "HOOK_CHAIN" | "WHEEL_LIFT" | "HEAVY_DUTY";
+export const TRUCK_TYPES: TruckType[] = ["FLATBED", "HOOK_CHAIN", "WHEEL_LIFT", "HEAVY_DUTY"];
+
+export type DocKind = "REGISTRATION" | "INSURANCE" | "OPERATING_LICENSE";
+export type TruckDocument = {
+  kind: DocKind;
+  fileName: string;
+  uri?: string | null;
+  expiresAt?: string | null; // ISO date
+};
+
+export type HistoryEntry = {
+  at: string; // ISO
+  actor: string;
+  action: "SUBMITTED" | "APPROVED" | "REJECTED";
+  reason?: string;
+};
+
+export type Truck = {
+  id: string;
+  companyId: string;
+  photoUri?: string | null;
+  type: TruckType;
+  plate: string;
+  make: string;
+  model: string;
+  year: number | null;
+  maxWeightKg: number | null;
+  /** the truck's own operating point (set at signup); null on older trucks */
+  baseLat?: number | null;
+  baseLng?: number | null;
+  locationAddress?: string | null;
+  verification: Verification;
+  operational: Operational;
+  hasActiveJob: boolean;
+  documents: TruckDocument[];
+  rejectionReason?: string | null;
+  /** required documents that have expired: this truck gets no NEW work (server rule); the company is not affected */
+  expiredDocuments?: { kind: DocKind; expiresAt: string }[];
+  canTakeNewWork?: boolean;
+  /** set when MOTEXA archived the truck (out of service until restored) */
+  archivedAt?: string | null;
+  archiveReason?: string | null;
+  history: HistoryEntry[];
+};
+
+export type TowCompany = {
+  id: string;
+  ownerEmail: string;
+  name: string;
+  contactName: string;
+  phone: string;
+  city: string;
+  address: string | null;
+  description: string | null;
+  serviceCities: string[];
+  workingHours: string | null;
+  baseLat: number | null; // exact; only the company itself and admins get this
+  baseLng: number | null;
+  verification: Verification;
+  rejectionReason?: string | null;
+  documents: { kind: string; fileName: string; uri?: string | null }[]; // private to admin + owner
+};
+
+export type Actor = { id: string; email: string; fullName: string };
+export type TruckInput = Pick<Truck, "type" | "plate" | "make" | "model" | "year" | "maxWeightKg" | "photoUri" | "documents">;
+export type CompanyProfileInput = { description: string; address: string; workingHours: string; serviceCities: string[]; baseLat: number | null; baseLng: number | null };
+
+/** Admin edit of a truck: the provider fields plus the truck's own operating point. */
+export type AdminTruckInput = TruckInput & { baseLat: number | null; baseLng: number | null; locationAddress: string | null };
+
+export type CompanyRow = TowCompany & { truckCount: number; pendingTruckCount: number };
+
+// ---- API shapes -> screen shapes ----
+
+type ApiTruck = {
+  id: string;
+  companyId: string;
+  plateNumber: string;
+  make: string;
+  model: string;
+  year: number | null;
+  maxWeightKg: number | null;
+  baseLat?: number | null;
+  baseLng?: number | null;
+  locationAddress?: string | null;
+  truckType: TruckType;
+  verificationStatus: Verification;
+  operationalStatus: Operational;
+  rejectionReason: string | null;
+  photoUri: string | null;
+  documents: (TruckDocument & { expired?: boolean })[];
+  hasActiveJob: boolean;
+  archivedAt?: string | null;
+  archiveReason?: string | null;
+  expiredDocuments?: { kind: DocKind; expiresAt: string }[];
+  canTakeNewWork?: boolean;
+  missingForApproval?: string[];
+  history: HistoryEntry[];
+};
+
+type ApiCompany = {
+  id: string;
+  companyName: string;
+  contactName: string;
+  ownerEmail: string;
+  phone: string;
+  city: string;
+  address: string | null;
+  description: string | null;
+  serviceCities: string[];
+  workingHours: string | null;
+  baseLat: number | null;
+  baseLng: number | null;
+  verificationStatus: Verification;
+  rejectionReason: string | null;
+  documents: { kind: string; fileName: string; uri?: string | null }[];
+};
+
+const toTruck = (t: ApiTruck): Truck => ({
+  expiredDocuments: t.expiredDocuments ?? [],
+  canTakeNewWork: t.canTakeNewWork,
+  archivedAt: t.archivedAt ?? null,
+  archiveReason: t.archiveReason ?? null,
+  id: t.id,
+  companyId: t.companyId,
+  photoUri: publicImageUrl(t.photoUri),
+  type: t.truckType,
+  plate: t.plateNumber,
+  make: t.make,
+  model: t.model,
+  year: t.year,
+  maxWeightKg: t.maxWeightKg ?? null,
+  baseLat: t.baseLat ?? null,
+  baseLng: t.baseLng ?? null,
+  locationAddress: t.locationAddress ?? null,
+  verification: t.verificationStatus,
+  operational: t.operationalStatus,
+  hasActiveJob: t.hasActiveJob,
+  documents: t.documents,
+  rejectionReason: t.rejectionReason,
+  history: t.history,
+});
+
+const toCompany = (c: ApiCompany): TowCompany => ({
+  id: c.id,
+  ownerEmail: c.ownerEmail,
+  name: c.companyName,
+  contactName: c.contactName,
+  phone: c.phone,
+  city: c.city,
+  address: c.address ?? null,
+  description: c.description ?? null,
+  serviceCities: c.serviceCities ?? [],
+  workingHours: c.workingHours ?? null,
+  baseLat: c.baseLat ?? null,
+  baseLng: c.baseLng ?? null,
+  verification: c.verificationStatus,
+  rejectionReason: c.rejectionReason,
+  documents: c.documents,
+});
+
+/**
+ * Vehicle fields plus files. Status/moderation fields can never be sent from here.
+ * A photo or document is uploaded only when it is a newly picked local file; documents that already exist on the
+ * server are sent without data (just their expiry date), so editing never forces a re-pick.
+ */
+async function toVehicleBody(i: TruckInput) {
+  const body: Record<string, unknown> = {
+    truckType: i.type,
+    plateNumber: i.plate.trim(),
+    make: i.make,
+    model: i.model,
+    year: i.year,
+    maxWeightKg: i.maxWeightKg,
+  };
+  if (i.photoUri && !isServerFile(i.photoUri) && !i.photoUri.startsWith("http")) {
+    body.photo = { name: fileNameOf(i.photoUri, "truck-photo.jpg"), dataBase64: await localFileToBase64(i.photoUri) };
+  }
+  body.documents = await Promise.all(
+    i.documents.map(async (d) => {
+      const expiresAt = d.expiresAt ? d.expiresAt.slice(0, 10) : null;
+      return d.uri && !isServerFile(d.uri)
+        ? { kind: d.kind, name: d.fileName || fileNameOf(d.uri, `${d.kind.toLowerCase()}.jpg`), dataBase64: await localFileToBase64(d.uri), expiresAt }
+        : { kind: d.kind, expiresAt };
+    })
+  );
+  return body;
+}
+
+// ---- Provider (TOW_PROVIDER). The actor argument is kept for the screens; the server uses the token. ----
+export const towFleetService = {
+  async getMyFleet(_actor: Actor) {
+    const [c, t] = await Promise.all([
+      api<{ company: ApiCompany }>("GET", "/tow/me/company"),
+      api<{ trucks: ApiTruck[] }>("GET", "/tow/me/trucks"),
+    ]);
+    return { company: toCompany(c.company), trucks: t.trucks.map(toTruck) };
+  },
+  /** Public profile text. Not a verification field: the approval status stays as it is. */
+  async updateMyCompany(_actor: Actor, input: CompanyProfileInput) {
+    const r = await api<{ company: ApiCompany }>("PATCH", "/tow/me/company", input);
+    return toCompany(r.company);
+  },
+  async getMyTruck(_actor: Actor, id: string) {
+    const r = await api<{ truck: ApiTruck }>("GET", `/tow/me/trucks/${id}`);
+    return toTruck(r.truck);
+  },
+  async addTruck(_actor: Actor, input: TruckInput) {
+    const r = await api<{ truck: ApiTruck }>("POST", "/tow/me/trucks", await toVehicleBody(input));
+    return toTruck(r.truck);
+  },
+  async updateTruck(_actor: Actor, id: string, input: TruckInput) {
+    const r = await api<{ truck: ApiTruck }>("PATCH", `/tow/me/trucks/${id}`, await toVehicleBody(input));
+    return toTruck(r.truck);
+  },
+  /** Company-controlled availability of an APPROVED truck. The server refuses it while the truck is on a job. */
+  async setOperational(_actor: Actor, id: string, value: "AVAILABLE" | "OUT_OF_SERVICE") {
+    const r = await api<{ truck: ApiTruck }>("PATCH", `/tow/me/trucks/${id}/status`, { operationalStatus: value });
+    return toTruck(r.truck);
+  },
+  async removeTruck(_actor: Actor, id: string) {
+    await api("DELETE", `/tow/me/trucks/${id}`);
+    return true;
+  },
+};
+
+// ---- Admin (SUPER_ADMIN or ADMIN + MANAGE_TOWING) ----
+type AdminActor = Actor & { role: string; permissions: string[] };
+
+export const towAdminService = {
+  async listCompanies(_a: AdminActor): Promise<CompanyRow[]> {
+    const r = await api<{ companies: (ApiCompany & { truckCount: number; pendingTruckCount: number })[] }>("GET", "/admin/tow/companies");
+    return r.companies.map((c) => ({ ...toCompany(c), truckCount: c.truckCount, pendingTruckCount: c.pendingTruckCount }));
+  },
+  /** Also returns trucks so the list screen can search by plate / type. */
+  async listTrucks(_a: AdminActor) {
+    const r = await api<{ trucks: ApiTruck[] }>("GET", "/admin/tow/trucks");
+    return r.trucks.map(toTruck);
+  },
+  /** `companyHistory` holds the company-level approve/reject decisions; truck events are on each truck. */
+  async getCompany(_a: AdminActor, id: string) {
+    const r = await api<{ company: ApiCompany; trucks: ApiTruck[]; companyHistory: HistoryEntry[] }>("GET", `/admin/tow/companies/${id}`);
+    return { company: toCompany(r.company), trucks: r.trucks.map(toTruck), companyHistory: r.companyHistory };
+  },
+  /** Approve or reject the company account (reason required to reject). Truck approvals are separate. */
+  async decideCompany(_a: AdminActor, companyId: string, decision: { approve: true } | { approve: false; reason: string }) {
+    const body = decision.approve ? { decision: "APPROVED" } : { decision: "REJECTED", reason: decision.reason.trim() };
+    const r = await api<{ company: ApiCompany }>("PATCH", `/admin/tow/companies/${companyId}/decision`, body);
+    return toCompany(r.company);
+  },
+  /** Company profile fields (never the approval status or the login account). */
+  async updateCompany(_a: AdminActor, id: string, patch: Record<string, unknown>) {
+    await api("PATCH", `/admin/tow/companies/${id}`, patch);
+  },
+  /** Add a truck on behalf of a company. It starts Pending like any new truck; approving it is a separate decision. */
+  async addTruck(_a: AdminActor, companyId: string, input: AdminTruckInput) {
+    const r = await api<{ truck: ApiTruck }>("POST", `/admin/tow/companies/${companyId}/trucks`, { ...(await toVehicleBody(input)), baseLat: input.baseLat, baseLng: input.baseLng, locationAddress: input.locationAddress });
+    return toTruck(r.truck);
+  },
+  async updateTruck(_a: AdminActor, id: string, input: AdminTruckInput) {
+    const r = await api<{ truck: ApiTruck }>("PATCH", `/admin/tow/trucks/${id}`, { ...(await toVehicleBody(input)), baseLat: input.baseLat, baseLng: input.baseLng, locationAddress: input.locationAddress });
+    return toTruck(r.truck);
+  },
+  /** Take a truck out of service (reason required) or lift that again. Documents and history are kept. */
+  async archiveTruck(_a: AdminActor, id: string, change: { archived: true; reason: string } | { archived: false }) {
+    const r = await api<{ truck: ApiTruck }>("PATCH", `/admin/tow/trucks/${id}/archive`, change);
+    return toTruck(r.truck);
+  },
+  async getTruck(_a: AdminActor, companyId: string, id: string) {
+    const r = await towAdminService.getCompany(_a, companyId);
+    return r.trucks.find((t) => t.id === id) ?? null;
+  },
+  /** Approve or reject a truck (reason required to reject). Its fields are edited with updateTruck. */
+  async decideTruck(_a: AdminActor, truckId: string, decision: { approve: true } | { approve: false; reason: string }) {
+    const body = decision.approve ? { decision: "APPROVED" } : { decision: "REJECTED", reason: decision.reason.trim() };
+    const r = await api<{ truck: ApiTruck }>("PATCH", `/admin/tow/trucks/${truckId}/decision`, body);
+    return toTruck(r.truck);
+  },
+};

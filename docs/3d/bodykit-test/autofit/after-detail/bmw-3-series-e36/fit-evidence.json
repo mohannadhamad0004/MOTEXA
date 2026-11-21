@@ -1,0 +1,225 @@
+{
+  "valid": true,
+  "car": {
+    "dimensions": [
+      1.972522671149907,
+      1.362777228188965,
+      4.649999875966968
+    ],
+    "wheelsFound": true,
+    "mappedParts": [
+      "FRONT_BUMPER",
+      "REAR_BUMPER",
+      "MIRRORS",
+      "SPOILER",
+      "SIDE_SKIRTS",
+      "WHEELS"
+    ],
+    "partMapIn": [
+      "WHEELS",
+      "MIRRORS",
+      "SPOILER",
+      "REAR_BUMPER",
+      "SIDE_SKIRTS",
+      "FRONT_BUMPER"
+    ]
+  },
+  "fit": {
+    "type": "WING",
+    "fitVersion": 2,
+    "replaces": {
+      "how": "part map",
+      "hidden": 2
+    },
+    "body": "sedan",
+    "movedForwardM": 0.088,
+    "mount": {
+      "body": "sedan",
+      "fromRearM": 0.277,
+      "widthM": 1.479,
+      "bodyWidthM": 1.627,
+      "scaleBy": "feet"
+    },
+    "feet": 2,
+    "feetGapMm": [
+      0,
+      0.6
+    ],
+    "pitchDeg": 4.87,
+    "rollDeg": 0,
+    "spanM": 1.258,
+    "heightAboveM": 0.258,
+    "overhangM": 0,
+    "copies": 1,
+    "turnedDeg": 0,
+    "flipped180": false,
+    "partSize": [
+      1.903,
+      0.444,
+      0.553
+    ],
+    "scale": 0.661,
+    "nonUniform": [
+      1,
+      1
+    ],
+    "stored": false,
+    "partBox": [
+      -0.6533,
+      0.9489,
+      -2.3456,
+      0.654,
+      1.2722,
+      -1.8848
+    ]
+  },
+  "autofit": {
+    "version": 2,
+    "type": "WING",
+    "orient": [
+      "x",
+      0,
+      "bottom"
+    ],
+    "placements": [
+      {
+        "pos": [
+          0.0001,
+          0.9644,
+          -2.1386
+        ],
+        "sc": [
+          0.6612,
+          0.6612,
+          0.6612
+        ],
+        "rot": [
+          -0.085,
+          0,
+          0
+        ],
+        "side": 1
+      }
+    ],
+    "shadows": [
+      {
+        "x": -0.9041,
+        "y": 0,
+        "z": 0.1367,
+        "w": 0.0934,
+        "d": 0.2764
+      },
+      {
+        "x": 0.9038,
+        "y": 0,
+        "z": 0.1378,
+        "w": 0.0946,
+        "d": 0.2739
+      }
+    ],
+    "info": {
+      "type": "WING",
+      "fitVersion": 2,
+      "replaces": {
+        "how": "part map",
+        "hidden": 2
+      },
+      "body": "sedan",
+      "movedForwardM": 0.088,
+      "mount": {
+        "body": "sedan",
+        "fromRearM": 0.277,
+        "widthM": 1.479,
+        "bodyWidthM": 1.627,
+        "scaleBy": "feet"
+      },
+      "feet": 2,
+      "feetGapMm": [
+        0,
+        0.6
+      ],
+      "pitchDeg": 4.87,
+      "rollDeg": 0,
+      "spanM": 1.258,
+      "heightAboveM": 0.258,
+      "overhangM": 0,
+      "copies": 1,
+      "turnedDeg": 0,
+      "flipped180": false,
+      "partSize": [
+        1.903,
+        0.444,
+        0.553
+      ],
+      "scale": 0.661,
+      "nonUniform": [
+        1,
+        1
+      ]
+    }
+  },
+  "kit": {
+    "type": "WING",
+    "size": {
+      "widthMm": 1300
+    },
+    "paintMatch": false
+  },
+  "carSha256": "2f026865272597d4edb718be5c99e2bc74a790f98f53e06f45f33a177e55ab89",
+  "partSha256": "7e40b463d76777b8655d8c2198451d9bf0b1de6e30963a233c8c57c08225a958",
+  "viewerSha256": "f1b1ef0d07fbb43da9e361a718d877f2168d1a9d4deaa396ad116afe1f6144db",
+  "screenshots": [
+    {
+      "name": "a-original-rear-34",
+      "sha256": "edd3ab258f19502beafb36b7067c0fe94a762bacd47bf8b3b08d59b217a47f6e"
+    },
+    {
+      "name": "b-part-on-rear-34",
+      "sha256": "8c4603ba32562a7ddc67425bffdca1c96ba9568f70be854dc2249ed36c3ef33e"
+    },
+    {
+      "name": "c-part-on-side",
+      "sha256": "b01d16bbadfb7de57673a05fa76a6e85e7d37eac9a271943dc1c8275f910aa80"
+    },
+    {
+      "name": "d-part-on-top",
+      "sha256": "32a323d268f4e9d8843959543b7146f62e746d8558908da689f28a8e8fc6bd68"
+    },
+    {
+      "name": "e-paint-to-match-rear-34",
+      "sha256": "4b33aaa263c5cf65cc5bd6f836781b664484de01e7a82fe8e904432ba6326913"
+    },
+    {
+      "name": "e2-paint-to-match-red-rear-34",
+      "sha256": "1d8301251a3cfd2b31fe690afc38320ca36164c1c4ae0616cbcb1756fd39ce91"
+    },
+    {
+      "name": "g-part-on-stock-hidden-close",
+      "sha256": "b2d055c1e961e95c2a1b8194f9bc7ace00d50ec4f5a75ead219b929dadbd9e9e"
+    },
+    {
+      "name": "g2-stock-hidden-part-invisible-close",
+      "sha256": "214e515541fbd04cc7e4049cd400b02f4c18878769e7f5111ff8c189690ca295"
+    },
+    {
+      "name": "h-part-off-stock-back-close",
+      "sha256": "16c1edc3d46faa16cdd9d2563d4e200994085fcbdb1ece6acf72281ab2ada083"
+    },
+    {
+      "name": "h2-part-off-rear-34",
+      "sha256": "edd3ab258f19502beafb36b7067c0fe94a762bacd47bf8b3b08d59b217a47f6e"
+    },
+    {
+      "name": "f-edge-closeup-foot",
+      "sha256": "39cb09b672ec11d01cba855e1202436f4cc526e2a4d0c4d9e23d2c11b6a7e9d5"
+    },
+    {
+      "name": "f2-edge-closeup-side",
+      "sha256": "a29273abdaef90ec98ba23b6a97a8cd5fb4d016f2692b416a7e12bf15d01c37e"
+    },
+    {
+      "name": "f3-edge-closeup-rear",
+      "sha256": "c6b1bd1aee936cac62db6bf1596d40d8cb9fd04ab33c6113ac968c8b7baf3b96"
+    }
+  ]
+}

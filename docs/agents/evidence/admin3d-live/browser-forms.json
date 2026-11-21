@@ -1,0 +1,72 @@
+{
+  "A02": {
+    "text": "\nVehicle catalog\nBrands, models, generations and verified 3D assets.\n3D workspace\nCustomer vehicle requests\nCatalog\n3D models\nNew record\nModel · Choose\nGeneration code\nDisplay name (optional)\nArabic display name (optional)\nProduction start year\nProduction end year\n☑\nActive\nSave",
+    "inputs": [
+      {
+        "value": "",
+        "placeholder": null,
+        "type": "text",
+        "label": "Generation code"
+      },
+      {
+        "value": "",
+        "placeholder": null,
+        "type": "text",
+        "label": "Display name (optional)"
+      },
+      {
+        "value": "",
+        "placeholder": null,
+        "type": "text",
+        "label": "Arabic display name (optional)"
+      },
+      {
+        "value": "",
+        "placeholder": null,
+        "type": "text",
+        "label": "Production start year"
+      },
+      {
+        "value": "",
+        "placeholder": null,
+        "type": "text",
+        "label": "Production end year"
+      }
+    ]
+  },
+  "D04": {
+    "text": "\nMOTEXA\nEN\nAR\n\n\n\n\nWelcome Back\nSign in\n01 / ACCESS\nYour world. Beautifully connected.\nEmail address\n\nPassword\nForgot password?\n\n\nSave sign-in details\nRemembers your email. Your device password manager can save and fill your password.\nEnter workspace\n\nNew to MOTEXA?\nCreate a new account\n\nSECURE BY DESIGN",
+    "inputs": [
+      {
+        "value": "",
+        "placeholder": "Enter your email address",
+        "type": "email",
+        "label": "Email address"
+      },
+      {
+        "value": "",
+        "placeholder": "Enter your password",
+        "type": "password",
+        "label": "Password"
+      }
+    ]
+  },
+  "B02": {
+    "text": "\nRear bumper\nAl-Mahaba Genuine & Aftermarket Auto Parts Trading Est. · AMG 33\n\n3D model ready · final review\nRear bumper\n\nno confirmed rear bumper in this car's part map: 3D preview not available for this car\nno confirmed rear bumper in this car's part map: 3D preview not available for this car\nSource bytes: 8681332 · Optimized bytes: 7290668 · Final limit: 8388608\n3D final review\nModel\nGenerated\nYes\nOptimized\nYes\nModel validation\nPassed\nPublication\nPrivate candidate\nPreview generated model\nMercedes C-Class W203\nPart map\nMissing\nFit\nFailed\n\nRear bumper stock-part mapping is not confirmed for this vehicle.\n\nno confirmed rear bumper in this car's part map: 3D preview not available for this car\nOpen part map\nFinal review & publication\n\nRear bumper stock-part mapping is not confirmed for this vehicle.\n\nReview and approve a current successful fit on the final-preview vehicle.\n\nRender the final preview after the latest fit review.\n\nApprove & Publish 3D Model\nMeshy task\n01a1bc0a-e5e5-71a7-8571-7e7075fa72d5\nDiscard private candidate (retain task history)\nReal size\nWidth across the car (mm): 1700\nHeight (mm): 400\nDepth (mm): 300\nLength along the car (mm): 350\nFits\nMercedes C-Class W203 (2000–2007) · in the installed photos · 3D\nLoose part photos (sent to the 3D provider)\n#1\n#2\nInstalled photos · 360°\nLoading…\n#1\nLoading…\n#2\nLoading…\n#3\nLoading…\n#4\n#5\nLoading…\n#6\nLoading…\n#7\nLoading…\n#8\nLoading…\n#9\nLoading…\n#10\nLoading…\n#11\nLoading…\n#12\nNotes to the shop\nReject (shop must change it)\nPaid 3D generations per month for this shop\nSave",
+    "inputs": [
+      {
+        "value": "",
+        "placeholder": null,
+        "type": "text",
+        "label": "Notes to the shop"
+      },
+      {
+        "value": "5",
+        "placeholder": null,
+        "type": "text",
+        "label": "Paid 3D generations per month for this shop"
+      }
+    ]
+  },
+  "error": "locator.waitFor: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('Save details', { exact: true }) to be visible\u001b[22m\n"
+}

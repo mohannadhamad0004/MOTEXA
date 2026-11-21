@@ -1,0 +1,418 @@
+{
+  "status": 200,
+  "body": {
+    "accessories": [
+      {
+        "id": "caeb5d60-6561-49e7-8770-2db3fabe4b4b",
+        "productId": "b87fb35c-df63-4a76-9dcd-afd4c20e4e78",
+        "kitPart": "MAIN",
+        "accessoryType": "REAR_BUMPER",
+        "status": "READY_FOR_FINAL_REVIEW",
+        "lifecycleState": "READY_FOR_FINAL_REVIEW",
+        "fitmentNotes": null,
+        "deactivatedAt": null,
+        "revision": 4,
+        "creditsUsed": 1,
+        "size": {
+          "widthMm": 1700,
+          "heightMm": 400,
+          "depthMm": 300,
+          "lengthMm": 350,
+          "rimInches": null
+        },
+        "rim": null,
+        "fitsGenerationIds": [
+          "bfc1c9ea-57fa-4f66-be9d-1a1dfc831c88"
+        ],
+        "installedGenerationId": "bfc1c9ea-57fa-4f66-be9d-1a1dfc831c88",
+        "installed360": true,
+        "installedApproved": true,
+        "partPhotos": [
+          {
+            "id": "8e684407-b8c1-4597-b3fd-3ef09dd4848e"
+          },
+          {
+            "id": "e52fd039-644f-4cd6-bc43-e66c23e4ec25"
+          }
+        ],
+        "installedPhotos": [
+          {
+            "id": "c10126d6-db35-4e16-9e4c-11c45259a979"
+          },
+          {
+            "id": "9c8025fc-b092-4f3f-9e94-a6b01aa303ca"
+          },
+          {
+            "id": "141aa036-31ae-4a1a-b2dd-46b93d416f89"
+          },
+          {
+            "id": "ca370da2-8d84-4872-92b4-9ec358275e84"
+          },
+          {
+            "id": "d18d1c81-afde-419a-ab8c-3692094496ae"
+          },
+          {
+            "id": "7cb75996-0e86-404f-8ef6-5b58ddad6dd8"
+          },
+          {
+            "id": "576c7c08-6513-4f8d-b1a7-25519a5e46d4"
+          },
+          {
+            "id": "634fc8cb-46be-49b8-928f-ac94935c9f48"
+          },
+          {
+            "id": "6b033083-1857-490e-b605-6c0dc5e1cc73"
+          },
+          {
+            "id": "72875b9e-a4bb-4bab-a773-40065d336b5d"
+          },
+          {
+            "id": "352059b0-fed1-4dcc-b049-268fd21121e7"
+          },
+          {
+            "id": "c10f3ec6-b59b-4f91-b515-724c3b7e69aa"
+          }
+        ],
+        "submittedAt": "2026-11-08T15:52:18.323Z",
+        "reviewNotes": null,
+        "reviewedAt": null,
+        "approvedAt": "2026-11-08T15:52:55.882Z",
+        "generationMode": "meshy",
+        "provider": "MESHY",
+        "providerState": "SUCCEEDED",
+        "providerProgress": 100,
+        "generationStage": "READY",
+        "generationErrorCode": null,
+        "failureReason": "no confirmed rear bumper in this car's part map: 3D preview not available for this car",
+        "hasModel": true,
+        "validation": {
+          "bytes": 7290668,
+          "valid": true,
+          "sha256": "f29eab9d6fd20135f17678b0e641d569502a20e3cb088792944411e729be25a2",
+          "textures": 3,
+          "warnings": [
+            "Part identity, shape, orientation and its fit on a matching car require visual verification in the six-view preview."
+          ],
+          "materials": 1,
+          "triangles": 49456,
+          "dimensions": [
+            1.9031409621238708,
+            0.4610540270805359,
+            0.7802159786224365
+          ],
+          "processing": {
+            "rawBytes": 8681332,
+            "rawMeshes": 1,
+            "qualityGate": "PASS",
+            "rawTextures": 3,
+            "textureSize": 2048,
+            "rawMaterials": 1,
+            "largestTexture": [
+              2048,
+              2048
+            ],
+            "optimizedBytes": 7290668,
+            "finalLimitBytes": 8388608,
+            "compressionRatio": 0.83981,
+            "geometrySimplified": false,
+            "providerDownloadLimitBytes": 134217728
+          },
+          "validatedAt": "2026-11-08T17:25:29.403Z",
+          "transparentMaterials": 0,
+          "visualVerificationRequired": true
+        },
+        "processing": {
+          "rawBytes": 8681332,
+          "rawMeshes": 1,
+          "qualityGate": "PASS",
+          "rawTextures": 3,
+          "textureSize": 2048,
+          "outputFormat": "glb",
+          "rawMaterials": 1,
+          "providerState": "SUCCEEDED",
+          "largestTexture": [
+            2048,
+            2048
+          ],
+          "optimizedBytes": 7290668,
+          "providerTaskId": "01a1bc0a-e5e5-71a7-8571-7e7075fa72d5",
+          "finalLimitBytes": 8388608,
+          "compressionRatio": 0.83981,
+          "geometrySimplified": false,
+          "providerDownloadLimitBytes": 134217728
+        },
+        "preview": null,
+        "modelRevision": "f29eab9d6fd20135",
+        "mock": false,
+        "published": false,
+        "publishedAt": null,
+        "updatedAt": "2026-11-08T17:25:29.405Z",
+        "resumable": false,
+        "productName": "Rear bumper",
+        "productBrand": "AMG",
+        "shopName": "Al-Mahaba Genuine & Aftermarket Auto Parts Trading Est.",
+        "shopId": "78adcb02-ae76-40fb-a9c8-7e4ee78a42d7",
+        "productImageId": "d47b2822-6e0e-4546-8635-70a4c6292856",
+        "firstPartPhotoId": "8e684407-b8c1-4597-b3fd-3ef09dd4848e",
+        "cars": [
+          {
+            "id": "bfc1c9ea-57fa-4f66-be9d-1a1dfc831c88",
+            "name": "Mercedes C-Class W203",
+            "nameAr": "مرسيدس الفئة C W203"
+          }
+        ]
+      },
+      {
+        "id": "9359edf8-428c-4f32-9d6c-b248eee6b139",
+        "productId": "b1247609-0613-4d17-b605-3f5f826580bd",
+        "kitPart": "MAIN",
+        "accessoryType": "RIMS",
+        "status": "PUBLISHED",
+        "lifecycleState": "PUBLISHED",
+        "fitmentNotes": null,
+        "deactivatedAt": null,
+        "revision": 0,
+        "creditsUsed": 0,
+        "size": {
+          "widthMm": null,
+          "heightMm": null,
+          "depthMm": null,
+          "lengthMm": null,
+          "rimInches": 17
+        },
+        "rim": {
+          "inches": 17,
+          "widthIn": 8,
+          "pcd": "5x112",
+          "offsetMm": 35,
+          "finish": "SILVER"
+        },
+        "fitsGenerationIds": [],
+        "installedGenerationId": null,
+        "installed360": false,
+        "installedApproved": false,
+        "partPhotos": [],
+        "installedPhotos": [],
+        "submittedAt": null,
+        "reviewNotes": null,
+        "reviewedAt": null,
+        "approvedAt": null,
+        "generationMode": "manual",
+        "provider": "MANUAL",
+        "providerState": null,
+        "providerProgress": null,
+        "generationStage": "READY",
+        "generationErrorCode": null,
+        "failureReason": null,
+        "hasModel": true,
+        "validation": null,
+        "processing": null,
+        "preview": null,
+        "modelRevision": "512a47b76cd1b556",
+        "mock": false,
+        "published": true,
+        "publishedAt": "2026-11-06T13:06:52.097Z",
+        "updatedAt": "2026-11-06T13:06:52.099Z",
+        "resumable": false,
+        "productName": "Mesh rims 17″ (set of 4)",
+        "productBrand": "Demo",
+        "shopName": "MOTEXA Demo Parts",
+        "shopId": "1583d0d9-6be3-4476-a46a-84205f6ac4c2",
+        "productImageId": "5c1d8ad7-3c6d-4b01-9b32-0a75f89eba8a",
+        "firstPartPhotoId": null,
+        "cars": []
+      },
+      {
+        "id": "3329a3e2-8d10-482a-bcc4-9e60eb17c4c8",
+        "productId": "7a9aac54-fe4b-4167-a967-373cae968ae1",
+        "kitPart": "MAIN",
+        "accessoryType": "FRONT_BUMPER",
+        "status": "PUBLISHED",
+        "lifecycleState": "PUBLISHED",
+        "fitmentNotes": null,
+        "deactivatedAt": null,
+        "revision": 0,
+        "creditsUsed": 0,
+        "size": {
+          "widthMm": 1700,
+          "heightMm": null,
+          "depthMm": null,
+          "lengthMm": null,
+          "rimInches": null
+        },
+        "rim": null,
+        "fitsGenerationIds": [
+          "6e4a77ca-cd14-47fb-b468-99792a911b72"
+        ],
+        "installedGenerationId": null,
+        "installed360": false,
+        "installedApproved": false,
+        "partPhotos": [],
+        "installedPhotos": [],
+        "submittedAt": null,
+        "reviewNotes": null,
+        "reviewedAt": null,
+        "approvedAt": null,
+        "generationMode": "manual",
+        "provider": "MANUAL",
+        "providerState": null,
+        "providerProgress": null,
+        "generationStage": "READY",
+        "generationErrorCode": null,
+        "failureReason": null,
+        "hasModel": true,
+        "validation": null,
+        "processing": null,
+        "preview": null,
+        "modelRevision": "bf0a205cb346f907",
+        "mock": false,
+        "published": true,
+        "publishedAt": "2026-11-06T11:23:11.663Z",
+        "updatedAt": "2026-11-06T11:23:11.665Z",
+        "resumable": false,
+        "productName": "BMW E36 M3 front bumper",
+        "productBrand": "Demo",
+        "shopName": "MOTEXA Demo Parts",
+        "shopId": "1583d0d9-6be3-4476-a46a-84205f6ac4c2",
+        "productImageId": "2c6953a0-a600-438d-aad3-f8855b762b92",
+        "firstPartPhotoId": null,
+        "cars": [
+          {
+            "id": "6e4a77ca-cd14-47fb-b468-99792a911b72",
+            "name": "BMW 3 Series E36",
+            "nameAr": "بي إم دبليو الفئة الثالثة E36"
+          }
+        ]
+      },
+      {
+        "id": "e6fefd78-d536-4bc0-820f-2dec96c7f444",
+        "productId": "b79d66c1-f153-478f-86e4-5d9a954707ac",
+        "kitPart": "MAIN",
+        "accessoryType": "WING",
+        "status": "PUBLISHED",
+        "lifecycleState": "PUBLISHED",
+        "fitmentNotes": null,
+        "deactivatedAt": null,
+        "revision": 1,
+        "creditsUsed": 1,
+        "size": {
+          "widthMm": 1300,
+          "heightMm": null,
+          "depthMm": null,
+          "lengthMm": null,
+          "rimInches": null
+        },
+        "rim": null,
+        "fitsGenerationIds": [
+          "6e4a77ca-cd14-47fb-b468-99792a911b72"
+        ],
+        "installedGenerationId": "6e4a77ca-cd14-47fb-b468-99792a911b72",
+        "installed360": false,
+        "installedApproved": true,
+        "partPhotos": [
+          {
+            "id": "afa09b0f-12d1-49b8-9e7b-cf125cc74efd"
+          },
+          {
+            "id": "bf2244b8-aa22-431c-9d0e-29ef5ac464a4"
+          }
+        ],
+        "installedPhotos": [
+          {
+            "id": "7dd07625-7489-47e6-ba0a-32de97aad714"
+          },
+          {
+            "id": "e888c2db-e5ec-4ad0-8e28-39c33e739590"
+          },
+          {
+            "id": "5bda645d-c7bd-4a1b-b8f5-e4dab063e245"
+          }
+        ],
+        "submittedAt": "2026-11-05T10:14:17.062Z",
+        "reviewNotes": "Live Meshy wing test (vendor photos, test only). Tuned WING zone z 0.04-0.10 on the E36.",
+        "reviewedAt": "2026-11-05T10:21:48.351Z",
+        "approvedAt": "2026-11-05T10:14:17.155Z",
+        "generationMode": "meshy",
+        "provider": "MESHY",
+        "providerState": "SUCCEEDED",
+        "providerProgress": 100,
+        "generationStage": "READY",
+        "generationErrorCode": null,
+        "failureReason": null,
+        "hasModel": true,
+        "validation": {
+          "bytes": 8595472,
+          "valid": true,
+          "sha256": "7e40b463d76777b8655d8c2198451d9bf0b1de6e30963a233c8c57c08225a958",
+          "textures": 3,
+          "warnings": [
+            "Part identity, shape, orientation and its fit on a matching car require visual verification in the six-view preview."
+          ],
+          "materials": 1,
+          "triangles": 130820,
+          "dimensions": [
+            1.902983009815216,
+            0.4437029957771301,
+            0.5526739954948425
+          ],
+          "validatedAt": "2026-11-05T10:19:56.788Z",
+          "transparentMaterials": 0,
+          "visualVerificationRequired": true
+        },
+        "processing": null,
+        "preview": {
+          "fit": {
+            "type": "WING",
+            "scale": 0.683,
+            "anchor": "tuned box",
+            "copies": 1,
+            "partSize": [
+              1.903,
+              0.444,
+              0.553
+            ],
+            "restDrop": 0.019,
+            "turnedDeg": 0,
+            "flipped180": false,
+            "nonUniform": [
+              1,
+              1
+            ]
+          },
+          "views": {
+            "rear": "6cdf3e2a-1b71-40f8-a736-1d2c10346476.jpg",
+            "front": "92d6efa4-0001-4256-b7ec-a894f84f1093.jpg",
+            "left-side": "1653f6a8-1e67-4606-883b-cbcd694c8460.jpg",
+            "top-three-quarter": "150108f6-0f33-419b-b2fb-39d214cbe3f5.jpg",
+            "rear-three-quarter": "14f967de-987e-496c-a0f6-e4e1896ae21e.jpg",
+            "front-three-quarter": "95f35560-8074-41f3-9a68-a83cc11b2f1c.jpg"
+          },
+          "model3dKey": "bmw-3-series-e36",
+          "renderedAt": "2026-11-05T10:21:48.118Z",
+          "generationId": "6e4a77ca-cd14-47fb-b468-99792a911b72",
+          "modelRevision": "12b68d69ee8ba8bc",
+          "generationName": "BMW 3 Series E36"
+        },
+        "modelRevision": "7e40b463d76777b8",
+        "mock": false,
+        "published": true,
+        "publishedAt": "2026-11-05T10:21:48.351Z",
+        "updatedAt": "2026-11-05T10:21:48.353Z",
+        "resumable": false,
+        "productName": "Rear wing for BMW E36",
+        "productBrand": "Garagistic-style LTW",
+        "shopName": "Al-Mahaba Genuine & Aftermarket Auto Parts Trading Est.",
+        "shopId": "78adcb02-ae76-40fb-a9c8-7e4ee78a42d7",
+        "productImageId": "db40b665-d480-40cb-93e6-7d2c15778a65",
+        "firstPartPhotoId": "afa09b0f-12d1-49b8-9e7b-cf125cc74efd",
+        "cars": [
+          {
+            "id": "6e4a77ca-cd14-47fb-b468-99792a911b72",
+            "name": "BMW 3 Series E36",
+            "nameAr": "بي إم دبليو الفئة الثالثة E36"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,250 @@
+{
+  "checkedAt": "2026-11-07T18:58:48.833Z",
+  "branch": "ui/blueprint",
+  "publication": {
+    "publishedAt": "2026-11-07T18:35:09.971Z",
+    "id": "32b36fb3-25fa-4e6f-922d-b153ed3c0ffe",
+    "status": "PUBLISHED",
+    "key": "manual-19febfb9-3b4a-4a5f-b2c0-ce33547da350-ad65d3b3205c45de",
+    "generationId": "19febfb9-3b4a-4a5f-b2c0-ce33547da350",
+    "make": "Volkswagen",
+    "model": "Beetle",
+    "generation": "Type 1",
+    "years": [
+      1945,
+      2003
+    ],
+    "bytes": 6396332,
+    "sha256": "ad65d3b3205c45de56ab9b2ff4b50f66d960737793950d6b67aa4920bad6e1dd",
+    "creator": "Angelos Gkanias",
+    "license": "CC Attribution",
+    "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+    "qualityGate": "FULL",
+    "partMapStatus": "PROPOSED",
+    "beforeHadKey": false,
+    "revisionBefore": "1b56d6222a226d8c8030fd51983dc6a207717d147d1dd8290c9844a321581e47",
+    "revisionAfter": "f837365d68bc7ad52624f7c183b566f0069409275d5baa57e19aad9bdbb27922",
+    "modelsBefore": 21,
+    "modelsAfter": 22,
+    "stableRevision": true,
+    "cache": "no-store"
+  },
+  "backend": {
+    "prismaValidation": {
+      "exitCode": 0
+    },
+    "typeScript": {
+      "exitCode": 0
+    },
+    "groups": [
+      {
+        "name": "sketchfab",
+        "code": 0,
+        "durationMs": 9845,
+        "tests": 13,
+        "pass": 13,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "log": ".private/step3d-checks/sketchfab.log"
+      },
+      {
+        "name": "vehicle3d-catalog-partmap-auth",
+        "code": 1,
+        "durationMs": 33363,
+        "tests": 90,
+        "pass": 89,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "log": ".private/step3d-checks/vehicle3d-catalog-partmap-auth.log"
+      },
+      {
+        "name": "full-backend",
+        "code": 1,
+        "durationMs": 846331,
+        "tests": 285,
+        "pass": 284,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "log": ".private/step3d-checks/full-backend.log"
+      }
+    ],
+    "soleFailure": {
+      "file": "backend/tests/vehicle3d.test.ts",
+      "line": 36,
+      "reason": "Six historical fixture generation pointers absent from the published catalog; unchanged from before this import.",
+      "pointers": [
+        {
+          "id": "dfc4397f-79f2-48ac-8423-8a2ffd4c0036",
+          "code": "D4",
+          "model3dKey": "manual-dfc4397f-79f2-48ac-8423-8a2ffd4c0036-367a81bd2cfb914f",
+          "isActive": true,
+          "isPublished": true,
+          "createdAt": "2026-11-06T10:39:43.527Z",
+          "vehicle": {
+            "make": "Fixturec1b46f9b",
+            "model": "A8",
+            "createdAt": "2026-11-06T10:39:43.519Z"
+          }
+        },
+        {
+          "id": "da12fc91-2797-4f88-acd0-57e00bc83039",
+          "code": "Test",
+          "model3dKey": "generated-da12fc91-2797-4f88-acd0-57e00bc83039-2634a9808ed914b3",
+          "isActive": true,
+          "isPublished": true,
+          "createdAt": "2026-11-06T10:40:01.205Z",
+          "vehicle": {
+            "make": "f4cce803-7f13-454c-a875-2a461fb20c28",
+            "model": "Test",
+            "createdAt": "2026-11-06T10:40:01.201Z"
+          }
+        },
+        {
+          "id": "346bda61-0b58-453d-9f68-9b18e7eb3c5f",
+          "code": "D4",
+          "model3dKey": "manual-346bda61-0b58-453d-9f68-9b18e7eb3c5f-367a81bd2cfb914f",
+          "isActive": true,
+          "isPublished": true,
+          "createdAt": "2026-11-06T12:51:17.005Z",
+          "vehicle": {
+            "make": "Fixture7ab18db7",
+            "model": "A8",
+            "createdAt": "2026-11-06T12:51:16.997Z"
+          }
+        },
+        {
+          "id": "af15d664-e802-4836-8146-9194345cb1ed",
+          "code": "Test",
+          "model3dKey": "generated-af15d664-e802-4836-8146-9194345cb1ed-2634a9808ed914b3",
+          "isActive": true,
+          "isPublished": true,
+          "createdAt": "2026-11-06T12:51:34.043Z",
+          "vehicle": {
+            "make": "b8ee5c9d-08b5-426b-a728-940fa388bec8",
+            "model": "Test",
+            "createdAt": "2026-11-06T12:51:34.040Z"
+          }
+        },
+        {
+          "id": "205d9e64-5634-47b1-8844-29b1ba197aae",
+          "code": "D4",
+          "model3dKey": "manual-205d9e64-5634-47b1-8844-29b1ba197aae-367a81bd2cfb914f",
+          "isActive": true,
+          "isPublished": true,
+          "createdAt": "2026-11-06T12:52:58.980Z",
+          "vehicle": {
+            "make": "Fixture16f88017",
+            "model": "A8",
+            "createdAt": "2026-11-06T12:52:58.971Z"
+          }
+        },
+        {
+          "id": "1007b6b9-de57-49e4-aea7-1d441b255a52",
+          "code": "Test",
+          "model3dKey": "generated-1007b6b9-de57-49e4-aea7-1d441b255a52-2634a9808ed914b3",
+          "isActive": true,
+          "isPublished": true,
+          "createdAt": "2026-11-06T12:53:15.068Z",
+          "vehicle": {
+            "make": "767b8c37-f260-4b04-888b-87e5179faf92",
+            "model": "Test",
+            "createdAt": "2026-11-06T12:53:15.064Z"
+          }
+        }
+      ]
+    }
+  },
+  "mobile": {
+    "typeScript": {
+      "exitCode": 0
+    },
+    "tests": {
+      "total": 53,
+      "pass": 53,
+      "fail": 0
+    },
+    "scopedLint": {
+      "exitCode": 0,
+      "warnings": 0,
+      "config": "eslint-config-expo/flat"
+    },
+    "androidExport": {
+      "exitCode": 0,
+      "modules": 2387,
+      "assets": 100,
+      "path": ".private/step3d-android-export"
+    }
+  },
+  "screenshots": {
+    "importUi": {
+      "total": 28,
+      "pass": 28,
+      "evidence": "Isolated mocked UI states using retained E36 GLB"
+    },
+    "liveGarageAndPublishedTask": {
+      "total": 8,
+      "pass": 8,
+      "evidence": "Real local backend and published Beetle"
+    },
+    "savedProductionRenderer": [
+      {
+        "variant": "original",
+        "screenshots": 6,
+        "currentViewerHashMatches": true,
+        "currentHookHashMatches": true,
+        "currentSerializerHashMatches": true,
+        "currentRendererHashMatches": true,
+        "assetHashMatches": true,
+        "screenshotHashesMatch": true
+      },
+      {
+        "variant": "red",
+        "screenshots": 6,
+        "currentViewerHashMatches": true,
+        "currentHookHashMatches": true,
+        "currentSerializerHashMatches": true,
+        "currentRendererHashMatches": true,
+        "assetHashMatches": true,
+        "screenshotHashesMatch": true
+      }
+    ]
+  },
+  "catalogConsistency": [
+    {
+      "file": "docs/3d/models.json",
+      "matches": true
+    },
+    {
+      "file": "mobile/src/features/car3d/models.ts",
+      "matches": true
+    },
+    {
+      "file": "docs/3d/CREDITS.md",
+      "matches": true
+    }
+  ],
+  "remaining": [
+    "Semantic part-map confirmation",
+    "Original finish retained; complete safe paint segmentation unverified",
+    "Physical Android/Expo Go lifecycle, gestures and performance not tested",
+    "Local publication only; no hosting deployment"
+  ],
+  "constraints": {
+    "sourceRedownloaded": false,
+    "meshyCreditsSpent": 0,
+    "committedByCodex": false,
+    "pushed": false,
+    "dialaOwnedFilesEdited": false,
+    "graphifyOutTouched": false
+  },
+  "diffCheck": {
+    "exitCode": 0
+  },
+  "gitStatusFile": "docs/3d/sketchfab-import/FINAL-GIT-STATUS.txt"
+}

@@ -1,0 +1,151 @@
+﻿ M backend/package-lock.json
+ M backend/package.json
+ M backend/prisma/schema.prisma
+ D backend/public/3d/audi-a3-8v.glb
+ D backend/public/3d/audi-a4-b6.glb
+ D backend/public/3d/audi-a4-b8.glb
+ D backend/public/3d/audi-a4-b9.glb
+ D backend/public/3d/audi-a6-c6.glb
+ D backend/public/3d/audi-a6-c7.glb
+ D backend/public/3d/audi-q5-8r.glb
+ D backend/public/3d/audi-q7-4l.glb
+ D backend/public/3d/bmw-3-series-e46.glb
+ D backend/public/3d/bmw-5-series-e34.glb
+ D backend/public/3d/bmw-5-series-e39.glb
+ D backend/public/3d/bmw-5-series-g30-g31.glb
+ D backend/public/3d/bmw-x3-e83.glb
+ D backend/public/3d/bmw-x3-g01.glb
+ D backend/public/3d/bmw-x5-e70.glb
+ D backend/public/3d/bmw-x5-g05.glb
+ D backend/public/3d/ford-fiesta-mk6.glb
+ D backend/public/3d/ford-focus-mk1.glb
+ D backend/public/3d/ford-focus-mk3.glb
+ D backend/public/3d/ford-focus-mk4.glb
+ D backend/public/3d/ford-kuga-mk2.glb
+ D backend/public/3d/ford-ranger-t6.glb
+ D backend/public/3d/hyundai-i10-ac3-ai3.glb
+ D backend/public/3d/hyundai-i20-pb.glb
+ D backend/public/3d/hyundai-i30-fd.glb
+ D backend/public/3d/hyundai-kona-os.glb
+ D backend/public/3d/hyundai-santa-fe-mx5.glb
+ D backend/public/3d/hyundai-tucson-lm-ix35.glb
+ D backend/public/3d/kia-cerato-yd.glb
+ D backend/public/3d/kia-rio-yb-sc.glb
+ D backend/public/3d/kia-sorento-um.glb
+ D backend/public/3d/kia-sportage-sl.glb
+ D backend/public/3d/mercedes-a-class-w169.glb
+ D backend/public/3d/mercedes-a-class-w176.glb
+ D backend/public/3d/mercedes-c-class-w202.glb
+ D backend/public/3d/mercedes-c-class-w204.glb
+ D backend/public/3d/mercedes-vito-w638.glb
+ D backend/public/3d/mitsubishi-l200-3rd-gen-k60-k70.glb
+ D backend/public/3d/mitsubishi-l200-4th-gen-ka-kb.glb
+ D backend/public/3d/mitsubishi-outlander-4th-gen-gm-gn.glb
+ D backend/public/3d/mitsubishi-pajero-2nd-gen-v20.glb
+ D backend/public/3d/mitsubishi-pajero-4th-gen-v80.glb
+ D backend/public/3d/nissan-juke-f15.glb
+ D backend/public/3d/nissan-micra-k13.glb
+ D backend/public/3d/nissan-navara-d22.glb
+ D backend/public/3d/nissan-x-trail-t32.glb
+ D backend/public/3d/opel-astra-f.glb
+ D backend/public/3d/opel-astra-g.glb
+ D backend/public/3d/opel-astra-h.glb
+ D backend/public/3d/opel-astra-k.glb
+ D backend/public/3d/opel-corsa-c.glb
+ D backend/public/3d/opel-corsa-e.glb
+ D backend/public/3d/opel-insignia-a.glb
+ D backend/public/3d/opel-mokka-b.glb
+ D backend/public/3d/opel-vectra-c.glb
+ D backend/public/3d/peugeot-2008-1st-gen-a94.glb
+ D backend/public/3d/peugeot-207-207.glb
+ D backend/public/3d/peugeot-208-1st-gen-a9.glb
+ D backend/public/3d/peugeot-301-m3.glb
+ D backend/public/3d/peugeot-308-1st-gen-t7.glb
+ D backend/public/3d/renault-captur-2nd-gen-jb-je.glb
+ D backend/public/3d/renault-kangoo-2nd-gen-x61.glb
+ D backend/public/3d/renault-megane-mk2.glb
+ D backend/public/3d/seat-ibiza-mk4-6j.glb
+ D backend/public/3d/skoda-octavia-mk4-nx.glb
+ D backend/public/3d/toyota-camry-xv40.glb
+ D backend/public/3d/toyota-corolla-e100.glb
+ D backend/public/3d/toyota-land-cruiser-j100.glb
+ D backend/public/3d/toyota-land-cruiser-j200.glb
+ D backend/public/3d/toyota-prius-xw30.glb
+ D backend/public/3d/toyota-yaris-xp130.glb
+ D backend/public/3d/toyota-yaris-xp90.glb
+ D backend/public/3d/volkswagen-golf-mk7.glb
+ D backend/public/3d/volkswagen-transporter-t4.glb
+ M backend/scripts/optimize-3d.ts
+ M backend/scripts/vehicle-audit-render.mjs
+ M backend/src/routes/catalog.routes.ts
+ M backend/src/seed/generations.ts
+ M backend/src/seed/vehicles.ts
+ M backend/src/server.ts
+ M backend/src/services/garage.ts
+ M backend/tests/config-fixes.test.mjs
+ M backend/tests/garage.test.ts
+ M backend/tests/vehicle-audit.test.mjs
+ M docs/3d/CREDITS.md
+ M docs/3d/STAGE-A-CONFIG-FIXES.md
+ M docs/3d/VEHICLE-3D-AUDIT.md
+ M docs/3d/models.json
+ M docs/agents/STATUS.md
+ M mobile/src/app/customer/car3d.tsx
+ M mobile/src/app/customer/garage.tsx
+ M mobile/src/features/car3d/CarPreview.tsx
+ M mobile/src/features/car3d/models.ts
+ M mobile/src/features/car3d/useCar3D.ts
+ M mobile/src/features/catalog/VehiclePicker.tsx
+ M mobile/src/features/catalog/catalogService.ts
+ M mobile/src/features/catalog/myCar.ts
+ M mobile/src/features/department/PartsAdminHome.tsx
+ M mobile/src/features/parts/ProductForm.tsx
+?? backend/prisma/migrations/20261104190000_vehicle_3d_submissions/
+?? backend/prisma/migrations/20261104210000_vehicle3d_provider_lifecycle/
+?? backend/prisma/migrations/20261105010000_managed_vehicle_catalog/
+?? backend/scripts/manual3d-import.ts
+?? backend/scripts/meshy-live-report.ts
+?? backend/scripts/register-typescript.mjs
+?? backend/scripts/test-vehicle3d-suite.mjs
+?? backend/scripts/vehicle3d-catalog-check.mjs
+?? backend/scripts/vehicle3d-cleanup.ts
+?? backend/scripts/vehicle3d-sync-generations.ts
+?? backend/scripts/vehicle3d-viewer-check.mjs
+?? backend/src/routes/vehicle-catalog.routes.ts
+?? backend/src/routes/vehicle3d.routes.ts
+?? backend/src/services/meshy-client.ts
+?? backend/src/services/vehicle-catalog-requests.ts
+?? backend/src/services/vehicle-taxonomy.ts
+?? backend/src/services/vehicle3d-catalog.ts
+?? backend/src/services/vehicle3d-generation.ts
+?? backend/src/services/vehicle3d-imports.ts
+?? backend/src/services/vehicle3d-private-assets.ts
+?? backend/src/services/vehicle3d-promotion.ts
+?? backend/src/services/vehicle3d-submissions.ts
+?? backend/src/services/vehicle3d-validation.ts
+?? backend/tests/managed-vehicle-catalog.test.ts
+?? backend/tests/meshy-generation.test.ts
+?? backend/tests/vehicle3d.test.ts
+?? docs/3d/C63-AUDIT.md
+?? docs/3d/CUSTOMER-3D-WORKFLOW.md
+?? docs/3d/FINAL-3D-CLEANUP.md
+?? docs/3d/FINAL-GIT-STATUS.txt
+?? docs/3d/IMPLEMENTATION-REPORT.md
+?? docs/3d/LIVE-VERIFICATION.md
+?? docs/3d/MESHY-INTEGRATION.md
+?? docs/3d/c63-audit.json
+?? docs/3d/cleanup-decisions.json
+?? docs/3d/cleanup-overrides.json
+?? graphify-out/
+?? mobile/src/app/customer/vehicle-requests/
+?? mobile/src/app/customer/vehicle3d/
+?? mobile/src/app/dept/3d-submissions/
+?? mobile/src/app/dept/vehicle3d/
+?? mobile/src/app/dept/vehicles/
+?? mobile/src/features/car3d/modelConfig.ts
+?? mobile/src/features/car3d/runtimeCatalog.ts
+?? mobile/src/features/car3d/runtimeModels.ts
+?? mobile/src/features/vehicle3d/
+?? mobile/src/features/vehicleCatalog/
+?? mobile/src/features/vehicleRequests/
+?? mobile/tests/car3d-runtime.test.mjs

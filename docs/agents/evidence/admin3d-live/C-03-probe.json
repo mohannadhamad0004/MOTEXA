@@ -1,0 +1,54 @@
+{
+  "url": "http://127.0.0.1:8085/provider/parts/accessory-3d/40c385e7-9e22-447c-98ba-d3427347b7ab",
+  "text": "\n\nPARTS / SHOP\nShow it in 3D\nCustomers see this part on their own car.\nDashboard\nProducts\nOrders\n3D Parts\n3D submissions\nInventory\nFitment\nCategories\nQuestions\nShop profile\nMedia\nCustomer preview\nPerformance\nDelivery\nSettings\nOne part or a body kit?\nOne part\nBody kit (front + rear bumper)\n1. What is it?\nFront bumper\nRear bumper\nSide skirts\nFront lip\nRear diffuser\nFender flares\nRear wing\nSpoiler\nRoof rack\nMirror covers\n2. Which cars does it fit?\n\nBumpers are car-specific: choose the exact generation(s). Customers see \"View on my car\" only for those cars.\nSearch a car generation\n3. Real size\nUsed to scale the part on the customer's car. The first field is required. Expected: 1200–2100 mm.\nWidth across the car (mm) *\nHeight (mm)\nDepth (mm)\nLength along the car (mm)\n4. Car shown in the installed photos\nChoose the cars it fits first.\n☐\nThe installed photos are a 360° set (12 or more, taken all around the car, in order)\nCreate 3D request",
+  "inputs": [
+    {
+      "value": "",
+      "label": "Search a car generation",
+      "placeholder": "e.g. E36, Corolla",
+      "inputmode": null
+    },
+    {
+      "value": "",
+      "label": "Width across the car (mm) *",
+      "placeholder": null,
+      "inputmode": "decimal"
+    },
+    {
+      "value": "",
+      "label": "Height (mm)",
+      "placeholder": null,
+      "inputmode": "decimal"
+    },
+    {
+      "value": "",
+      "label": "Depth (mm)",
+      "placeholder": null,
+      "inputmode": "decimal"
+    },
+    {
+      "value": "",
+      "label": "Length along the car (mm)",
+      "placeholder": null,
+      "inputmode": "decimal"
+    }
+  ],
+  "events": [
+    {
+      "path": "/api/auth/me",
+      "status": 200
+    },
+    {
+      "path": "/api/provider/onboarding/status",
+      "status": 200
+    },
+    {
+      "path": "/api/catalog/vehicle-list",
+      "status": 200
+    },
+    {
+      "path": "/api/parts/me/products/40c385e7-9e22-447c-98ba-d3427347b7ab/accessory-3d",
+      "status": 200
+    }
+  ]
+}

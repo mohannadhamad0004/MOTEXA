@@ -1,0 +1,1313 @@
+{
+  "toyota-corolla-e170-e180": {
+    "key": "toyota-corolla-e170-e180",
+    "file": "toyota-corolla-e170-e180",
+    "make": "Toyota",
+    "model": "Corolla",
+    "code": "E170/E180",
+    "title": "2014 Toyota Corolla E180 EU (with interior)",
+    "author": "Armored Wave",
+    "authorUrl": "https://sketchfab.com/armoredwave",
+    "url": "https://sketchfab.com/3d-models/2014-toyota-corolla-e180-eu-with-interior-36f95efb0585464cae43a25a3b3392e8",
+    "license": "CC BY 4.0",
+    "bytesBefore": 78601236,
+    "bytesAfter": 746092,
+    "textures": 8,
+    "lengthM": 4.6,
+    "rotateY": 0,
+    "paintMaterials": [
+      "main_paint",
+      "main_paint.001"
+    ],
+    "rimsSwappable": false,
+    "removed": 7,
+    "flags": [],
+    "check": [],
+    "manual": true,
+    "viewerConfig": {
+      "key": "toyota-corolla-e170-e180",
+      "generation": "Toyota Corolla E170/E180",
+      "lengthM": 4.6,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [
+        "corolla_e180_body"
+      ],
+      "paintMaterials": [
+        "main_paint",
+        "main_paint.001"
+      ],
+      "rimsSwappable": false,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "2014 Toyota Corolla E180 EU (with interior)",
+        "author": "Armored Wave",
+        "url": "https://sketchfab.com/3d-models/2014-toyota-corolla-e180-eu-with-interior-36f95efb0585464cae43a25a3b3392e8",
+        "license": "CC BY 4.0"
+      }
+    },
+    "inApp": true,
+    "finalStatus": "PASS",
+    "cleanupReason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation."
+  },
+  "bmw-3-series-e36": {
+    "key": "bmw-3-series-e36",
+    "file": "bmw-3-series-e36",
+    "make": "BMW",
+    "model": "3 Series",
+    "code": "E36",
+    "title": "BMW 3-Series e36 [Street]",
+    "author": "Black Snow",
+    "authorUrl": "https://sketchfab.com/BlackSnow02",
+    "url": "https://sketchfab.com/3d-models/bmw-3-series-e36-street-13d0a12ecda04317b96ce1e618300412",
+    "license": "CC BY 4.0",
+    "bytesBefore": 28474648,
+    "bytesAfter": 3246180,
+    "textures": 10,
+    "lengthM": 4.65,
+    "rotateY": 0,
+    "paintMaterials": [
+      "BMWE36_paint",
+      "BMWE36_paint.002",
+      "BMWE36_paint.004",
+      "BMWE36_paint.001"
+    ],
+    "rimsSwappable": true,
+    "removed": 62,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true,
+    "viewerConfig": {
+      "key": "bmw-3-series-e36",
+      "generation": "BMW 3 Series E36",
+      "lengthM": 4.65,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "BMWE36_paint",
+        "BMWE36_paint.002",
+        "BMWE36_paint.004",
+        "BMWE36_paint.001"
+      ],
+      "rimsSwappable": true,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "BMW 3-Series e36 [Street]",
+        "author": "Black Snow",
+        "url": "https://sketchfab.com/3d-models/bmw-3-series-e36-street-13d0a12ecda04317b96ce1e618300412",
+        "license": "CC BY 4.0"
+      }
+    },
+    "finalStatus": "PASS_VARIANT",
+    "cleanupReason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation. Verified variant: Street-modified E36."
+  },
+  "bmw-x5-e53": {
+    "key": "bmw-x5-e53",
+    "file": "bmw-x5-e53",
+    "make": "BMW",
+    "model": "X5",
+    "code": "E53",
+    "title": "BMW X5 E53 RESTYLING | High Quality",
+    "author": "takeover",
+    "authorUrl": "https://sketchfab.com/takeoverteam",
+    "url": "https://sketchfab.com/3d-models/bmw-x5-e53-restyling-high-quality-1dfdb422f05d44b287e332bec4311c50",
+    "license": "CC BY 4.0",
+    "bytesBefore": 29224656,
+    "bytesAfter": 4414956,
+    "textures": 20,
+    "lengthM": 4.9,
+    "rotateY": 0,
+    "paintMaterials": [
+      "paint"
+    ],
+    "rimsSwappable": true,
+    "removed": 34,
+    "flags": [],
+    "check": [],
+    "review": [],
+    "inApp": true,
+    "viewerConfig": {
+      "key": "bmw-x5-e53",
+      "generation": "BMW X5 E53",
+      "lengthM": 4.9,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "paint"
+      ],
+      "rimsSwappable": true,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "BMW X5 E53 RESTYLING | High Quality",
+        "author": "takeover",
+        "url": "https://sketchfab.com/3d-models/bmw-x5-e53-restyling-high-quality-1dfdb422f05d44b287e332bec4311c50",
+        "license": "CC BY 4.0"
+      }
+    },
+    "finalStatus": "PASS_VARIANT",
+    "cleanupReason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation. Verified variant: Restyled/facelift E53."
+  },
+  "hyundai-accent-lc": {
+    "key": "hyundai-accent-lc",
+    "file": "hyundai-accent-lc",
+    "make": "Hyundai",
+    "model": "Accent",
+    "code": "LC",
+    "title": "Hyundai Accent (TaGAZ) 2004",
+    "author": "panderlaike_design",
+    "authorUrl": "https://sketchfab.com/panderlaike_design",
+    "url": "https://sketchfab.com/3d-models/hyundai-accent-tagaz-2004-b00b5faebc314e54aef423e46230e963",
+    "license": "CC BY 4.0",
+    "bytesBefore": 31480984,
+    "bytesAfter": 3525040,
+    "textures": 3,
+    "lengthM": 4.3,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Kuzov"
+    ],
+    "rimsSwappable": false,
+    "removed": 20,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "viewerConfig": {
+      "key": "hyundai-accent-lc",
+      "generation": "Hyundai Accent LC",
+      "lengthM": 4.3,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "Kuzov"
+      ],
+      "rimsSwappable": false,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "Hyundai Accent (TaGAZ) 2004",
+        "author": "panderlaike_design",
+        "url": "https://sketchfab.com/3d-models/hyundai-accent-tagaz-2004-b00b5faebc314e54aef423e46230e963",
+        "license": "CC BY 4.0"
+      }
+    },
+    "finalStatus": "PASS",
+    "cleanupReason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation."
+  },
+  "mercedes-c-class-w203": {
+    "key": "mercedes-c-class-w203",
+    "file": "mercedes-c-class-w203",
+    "make": "Mercedes-Benz",
+    "model": "C-Class",
+    "code": "W203",
+    "title": "Mercedes- Benz C-class W203 sedan",
+    "author": "Nieve5677",
+    "authorUrl": "https://sketchfab.com/niev",
+    "url": "https://sketchfab.com/3d-models/mercedes-benz-c-class-w203-sedan-ff9ba755fc884fb88b5e73c3df1296e1",
+    "license": "CC BY 4.0",
+    "bytesBefore": 21008124,
+    "bytesAfter": 4097140,
+    "textures": 0,
+    "lengthM": 4.7,
+    "rotateY": -1.5708,
+    "paintMaterials": [
+      "carpaint"
+    ],
+    "rimsSwappable": false,
+    "removed": 2,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "configurationOverride": {
+      "preRotateX": -1.5707963267948966,
+      "rotateY": 0
+    },
+    "viewerConfig": {
+      "key": "mercedes-c-class-w203",
+      "generation": "Mercedes-Benz C-Class W203",
+      "lengthM": 4.7,
+      "preRotateX": -1.5707963267948966,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "carpaint"
+      ],
+      "rimsSwappable": false,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "Mercedes- Benz C-class W203 sedan",
+        "author": "Nieve5677",
+        "url": "https://sketchfab.com/3d-models/mercedes-benz-c-class-w203-sedan-ff9ba755fc884fb88b5e73c3df1296e1",
+        "license": "CC BY 4.0"
+      }
+    },
+    "finalStatus": "PASS_AFTER_FIX",
+    "cleanupReason": "Upright, assembled, grounded, front heading and framing verified improved in front-three-quarter, left-side and rear-three-quarter comparisons."
+  },
+  "mercedes-e-class-w212": {
+    "key": "mercedes-e-class-w212",
+    "file": "mercedes-e-class-w212",
+    "make": "Mercedes-Benz",
+    "model": "E-Class",
+    "code": "W212",
+    "title": "Mercedes E Class W212",
+    "author": "Peter_D",
+    "authorUrl": "https://sketchfab.com/better_peter",
+    "url": "https://sketchfab.com/3d-models/mercedes-e-class-w212-119c5e10733142b197aa53b86f6aeb04",
+    "license": "CC BY 4.0",
+    "bytesBefore": 37334564,
+    "bytesAfter": 6793852,
+    "textures": 39,
+    "lengthM": 4.9,
+    "rotateY": 0,
+    "paintMaterials": [
+      "mat_body"
+    ],
+    "rimsSwappable": true,
+    "removed": 14,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "configurationOverride": {
+      "rotateY": 3.141592653589793
+    },
+    "viewerConfig": {
+      "key": "mercedes-e-class-w212",
+      "generation": "Mercedes-Benz E-Class W212",
+      "lengthM": 4.9,
+      "rotateY": 3.141592653589793,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "mat_body"
+      ],
+      "rimsSwappable": true,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "Mercedes E Class W212",
+        "author": "Peter_D",
+        "url": "https://sketchfab.com/3d-models/mercedes-e-class-w212-119c5e10733142b197aa53b86f6aeb04",
+        "license": "CC BY 4.0"
+      }
+    },
+    "finalStatus": "PASS_AFTER_FIX",
+    "cleanupReason": "Upright, assembled, grounded, front heading and framing verified improved in front-three-quarter, left-side and rear-three-quarter comparisons."
+  },
+  "mercedes-vito-w447": {
+    "key": "mercedes-vito-w447",
+    "file": "mercedes-vito-w447",
+    "make": "Mercedes-Benz",
+    "model": "Vito",
+    "code": "W447",
+    "title": "Mercedes Vito Utility Car",
+    "author": "solid3DDD",
+    "authorUrl": "https://sketchfab.com/solid3ddd",
+    "url": "https://sketchfab.com/3d-models/mercedes-vito-utility-car-fe704a2aa87a4921990d4973a6eef36d",
+    "license": "CC BY 4.0",
+    "bytesBefore": 42008148,
+    "bytesAfter": 5711740,
+    "textures": 25,
+    "lengthM": 5,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Body"
+    ],
+    "rimsSwappable": false,
+    "removed": 12,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "viewerConfig": {
+      "key": "mercedes-vito-w447",
+      "generation": "Mercedes-Benz Vito W447",
+      "lengthM": 5,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "Body"
+      ],
+      "rimsSwappable": false,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "Mercedes Vito Utility Car",
+        "author": "solid3DDD",
+        "url": "https://sketchfab.com/3d-models/mercedes-vito-utility-car-fe704a2aa87a4921990d4973a6eef36d",
+        "license": "CC BY 4.0"
+      }
+    },
+    "finalStatus": "PASS",
+    "cleanupReason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation."
+  },
+  "peugeot-208-2nd-gen-p21": {
+    "key": "peugeot-208-2nd-gen-p21",
+    "file": "peugeot-208-2nd-gen-p21",
+    "make": "Peugeot",
+    "model": "208",
+    "code": "2nd gen / P21",
+    "title": "2021 Peugeot 208",
+    "author": "tonielpro520",
+    "authorUrl": "https://sketchfab.com/tonielpro520",
+    "url": "https://sketchfab.com/3d-models/2021-peugeot-208-c3a458884cf7434fa99b2172c96061a4",
+    "license": "CC BY 4.0",
+    "bytesBefore": 54386072,
+    "bytesAfter": 5497264,
+    "textures": 3,
+    "lengthM": 4.05,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Carro_Pintura"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "viewerConfig": {
+      "key": "peugeot-208-2nd-gen-p21",
+      "generation": "Peugeot 208 2nd gen / P21",
+      "lengthM": 4.05,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "Carro_Pintura"
+      ],
+      "rimsSwappable": false,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "2021 Peugeot 208",
+        "author": "tonielpro520",
+        "url": "https://sketchfab.com/3d-models/2021-peugeot-208-c3a458884cf7434fa99b2172c96061a4",
+        "license": "CC BY 4.0"
+      }
+    },
+    "finalStatus": "PASS",
+    "cleanupReason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation."
+  },
+  "peugeot-308-2nd-gen-t9": {
+    "key": "peugeot-308-2nd-gen-t9",
+    "file": "peugeot-308-2nd-gen-t9",
+    "make": "Peugeot",
+    "model": "308",
+    "code": "2nd gen / T9",
+    "title": "2018 Peugeot 308",
+    "author": "tonielpro520",
+    "authorUrl": "https://sketchfab.com/tonielpro520",
+    "url": "https://sketchfab.com/3d-models/2018-peugeot-308-4676332e370b4333b76ddc9910ceae7e",
+    "license": "CC BY 4.0",
+    "bytesBefore": 4794004,
+    "bytesAfter": 533056,
+    "textures": 1,
+    "lengthM": 4.3,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Carro_Pintura",
+      "FrontColor"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "viewerConfig": {
+      "key": "peugeot-308-2nd-gen-t9",
+      "generation": "Peugeot 308 2nd gen / T9",
+      "lengthM": 4.3,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "Carro_Pintura",
+        "FrontColor"
+      ],
+      "rimsSwappable": false,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "2018 Peugeot 308",
+        "author": "tonielpro520",
+        "url": "https://sketchfab.com/3d-models/2018-peugeot-308-4676332e370b4333b76ddc9910ceae7e",
+        "license": "CC BY 4.0"
+      }
+    },
+    "finalStatus": "PASS",
+    "cleanupReason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation."
+  },
+  "renault-fluence-l38": {
+    "key": "renault-fluence-l38",
+    "file": "renault-fluence-l38",
+    "make": "Renault",
+    "model": "Fluence",
+    "code": "L38",
+    "title": "Renault Fluence",
+    "author": "Nieve5677",
+    "authorUrl": "https://sketchfab.com/niev",
+    "url": "https://sketchfab.com/3d-models/renault-fluence-473adbb15922457bb9fa247bc89c4cb9",
+    "license": "CC BY 4.0",
+    "bytesBefore": 25767012,
+    "bytesAfter": 4549784,
+    "textures": 0,
+    "lengthM": 4.5,
+    "rotateY": -1.5708,
+    "paintMaterials": [
+      "carpaint"
+    ],
+    "rimsSwappable": false,
+    "removed": 3,
+    "flags": [],
+    "check": [
+      "front",
+      "length"
+    ],
+    "review": [],
+    "inApp": true,
+    "configurationOverride": {
+      "preRotateX": -1.5707963267948966,
+      "rotateY": 0
+    },
+    "viewerConfig": {
+      "key": "renault-fluence-l38",
+      "generation": "Renault Fluence L38",
+      "lengthM": 4.5,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "carpaint"
+      ],
+      "rimsSwappable": false,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "Renault Fluence",
+        "author": "Nieve5677",
+        "url": "https://sketchfab.com/3d-models/renault-fluence-473adbb15922457bb9fa247bc89c4cb9",
+        "license": "CC BY 4.0"
+      },
+      "preRotateX": -1.5707963267948966
+    },
+    "finalStatus": "PASS_AFTER_FIX",
+    "cleanupReason": "Upright, assembled, grounded, front heading and framing verified improved in front-three-quarter, left-side and rear-three-quarter comparisons.",
+    "geometryReviewRequired": false
+  },
+  "skoda-fabia-mk2-5j": {
+    "key": "skoda-fabia-mk2-5j",
+    "file": "skoda-fabia-mk2-5j",
+    "make": "Skoda",
+    "model": "Fabia",
+    "code": "Mk2 / 5J",
+    "title": "Skoda Fabia Mk.2",
+    "author": "barking_dogo",
+    "authorUrl": "https://sketchfab.com/barking_dogo",
+    "url": "https://sketchfab.com/3d-models/skoda-fabia-mk2-e2e0be2c52994e3bb6cae225f3e7482d",
+    "license": "CC BY 4.0",
+    "bytesBefore": 21347388,
+    "bytesAfter": 3991588,
+    "textures": 3,
+    "lengthM": 4,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Blue_Car_Paint"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "viewerConfig": {
+      "key": "skoda-fabia-mk2-5j",
+      "generation": "Skoda Fabia Mk2 / 5J",
+      "lengthM": 4,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "Blue_Car_Paint"
+      ],
+      "rimsSwappable": false,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "Skoda Fabia Mk.2",
+        "author": "barking_dogo",
+        "url": "https://sketchfab.com/3d-models/skoda-fabia-mk2-e2e0be2c52994e3bb6cae225f3e7482d",
+        "license": "CC BY 4.0"
+      }
+    },
+    "finalStatus": "PASS",
+    "cleanupReason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation."
+  },
+  "skoda-octavia-mk2-1z": {
+    "key": "skoda-octavia-mk2-1z",
+    "file": "skoda-octavia-mk2-1z",
+    "make": "Skoda",
+    "model": "Octavia",
+    "code": "Mk2 / 1Z",
+    "title": "2005 Skoda Octavia",
+    "author": "tonielpro520",
+    "authorUrl": "https://sketchfab.com/tonielpro520",
+    "url": "https://sketchfab.com/3d-models/2005-skoda-octavia-c31169ccfd354b6c9b6f09964c113ae3",
+    "license": "CC BY 4.0",
+    "bytesBefore": 14261492,
+    "bytesAfter": 3096288,
+    "textures": 1,
+    "lengthM": 4.65,
+    "rotateY": 0,
+    "paintMaterials": [
+      "car_paint"
+    ],
+    "rimsSwappable": false,
+    "removed": 1,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "viewerConfig": {
+      "key": "skoda-octavia-mk2-1z",
+      "generation": "Skoda Octavia Mk2 / 1Z",
+      "lengthM": 4.65,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "car_paint"
+      ],
+      "rimsSwappable": false,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "2005 Skoda Octavia",
+        "author": "tonielpro520",
+        "url": "https://sketchfab.com/3d-models/2005-skoda-octavia-c31169ccfd354b6c9b6f09964c113ae3",
+        "license": "CC BY 4.0"
+      }
+    },
+    "finalStatus": "PASS",
+    "cleanupReason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation."
+  },
+  "toyota-c-hr-1st-gen": {
+    "key": "toyota-c-hr-1st-gen",
+    "file": "toyota-c-hr-1st-gen",
+    "make": "Toyota",
+    "model": "C-HR",
+    "code": "1st gen",
+    "title": "2022_Toyota_C-HR_3D_model",
+    "author": "Xeeter",
+    "authorUrl": "https://sketchfab.com/Xeetert",
+    "url": "https://sketchfab.com/3d-models/2022-toyota-c-hr-3d-model-1f66a3fdb7da421cafb089467b5a6140",
+    "license": "CC BY 4.0",
+    "bytesBefore": 10253524,
+    "bytesAfter": 2255816,
+    "textures": 5,
+    "lengthM": 4.36,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Paint_Color"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "viewerConfig": {
+      "key": "toyota-c-hr-1st-gen",
+      "generation": "Toyota C-HR 1st gen",
+      "lengthM": 4.36,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "Paint_Color"
+      ],
+      "rimsSwappable": false,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "2022_Toyota_C-HR_3D_model",
+        "author": "Xeeter",
+        "url": "https://sketchfab.com/3d-models/2022-toyota-c-hr-3d-model-1f66a3fdb7da421cafb089467b5a6140",
+        "license": "CC BY 4.0"
+      }
+    },
+    "finalStatus": "PASS",
+    "cleanupReason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation."
+  },
+  "toyota-camry-xv20": {
+    "key": "toyota-camry-xv20",
+    "file": "toyota-camry-xv20",
+    "make": "Toyota",
+    "model": "Camry",
+    "code": "XV20",
+    "title": "Toyota Camry (Mk4)(XV20) 1997",
+    "author": "Nieve5677",
+    "authorUrl": "https://sketchfab.com/niev",
+    "url": "https://sketchfab.com/3d-models/toyota-camry-mk4xv20-1997-196829bf4cbc4b8cb26c50964f35ff27",
+    "license": "CC BY 4.0",
+    "bytesBefore": 36967316,
+    "bytesAfter": 7113560,
+    "textures": 0,
+    "lengthM": 4.85,
+    "rotateY": -1.5708,
+    "paintMaterials": [
+      "carpaint"
+    ],
+    "rimsSwappable": false,
+    "removed": 1,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "configurationOverride": {
+      "preRotateX": -1.5707963267948966,
+      "rotateY": 0
+    },
+    "viewerConfig": {
+      "key": "toyota-camry-xv20",
+      "generation": "Toyota Camry XV20",
+      "lengthM": 4.85,
+      "preRotateX": -1.5707963267948966,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "carpaint"
+      ],
+      "rimsSwappable": false,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "Toyota Camry (Mk4)(XV20) 1997",
+        "author": "Nieve5677",
+        "url": "https://sketchfab.com/3d-models/toyota-camry-mk4xv20-1997-196829bf4cbc4b8cb26c50964f35ff27",
+        "license": "CC BY 4.0"
+      }
+    },
+    "finalStatus": "PASS_AFTER_FIX",
+    "cleanupReason": "Upright, assembled, grounded, front heading and framing verified improved in front-three-quarter, left-side and rear-three-quarter comparisons."
+  },
+  "toyota-camry-xv70": {
+    "key": "toyota-camry-xv70",
+    "file": "toyota-camry-xv70",
+    "make": "Toyota",
+    "model": "Camry",
+    "code": "XV70",
+    "title": "Toyota Camry 2020",
+    "author": "ItsDiyor",
+    "authorUrl": "https://sketchfab.com/ItsDiyor",
+    "url": "https://sketchfab.com/3d-models/toyota-camry-2020-236a5a6e2fa6420fbdf641f4800cd544",
+    "license": "CC BY 4.0",
+    "bytesBefore": 14050228,
+    "bytesAfter": 2704936,
+    "textures": 8,
+    "lengthM": 4.85,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Paint_Color"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "viewerConfig": {
+      "key": "toyota-camry-xv70",
+      "generation": "Toyota Camry XV70",
+      "lengthM": 4.85,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "Paint_Color"
+      ],
+      "rimsSwappable": false,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "Toyota Camry 2020",
+        "author": "ItsDiyor",
+        "url": "https://sketchfab.com/3d-models/toyota-camry-2020-236a5a6e2fa6420fbdf641f4800cd544",
+        "license": "CC BY 4.0"
+      }
+    },
+    "finalStatus": "PASS",
+    "cleanupReason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation."
+  },
+  "toyota-corolla-e210": {
+    "key": "toyota-corolla-e210",
+    "file": "toyota-corolla-e210",
+    "make": "Toyota",
+    "model": "Corolla",
+    "code": "E210",
+    "title": "Toyota Corolla 2020",
+    "author": "ItsDiyor",
+    "authorUrl": "https://sketchfab.com/ItsDiyor",
+    "url": "https://sketchfab.com/3d-models/toyota-corolla-2020-6d7d34ee42734d1ab28a6b1f1c5fc4fc",
+    "license": "CC BY 4.0",
+    "bytesBefore": 17243928,
+    "bytesAfter": 2736980,
+    "textures": 10,
+    "lengthM": 4.6,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Paint_Color"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "viewerConfig": {
+      "key": "toyota-corolla-e210",
+      "generation": "Toyota Corolla E210",
+      "lengthM": 4.6,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "Paint_Color"
+      ],
+      "rimsSwappable": false,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "Toyota Corolla 2020",
+        "author": "ItsDiyor",
+        "url": "https://sketchfab.com/3d-models/toyota-corolla-2020-6d7d34ee42734d1ab28a6b1f1c5fc4fc",
+        "license": "CC BY 4.0"
+      }
+    },
+    "finalStatus": "PASS",
+    "cleanupReason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation."
+  },
+  "volkswagen-caddy-sb-latest": {
+    "key": "volkswagen-caddy-sb-latest",
+    "file": "volkswagen-caddy-sb-latest",
+    "make": "Volkswagen",
+    "model": "Caddy",
+    "code": "SB / latest",
+    "title": "2022 Volkswagen Caddy",
+    "author": "tonielpro520",
+    "authorUrl": "https://sketchfab.com/tonielpro520",
+    "url": "https://sketchfab.com/3d-models/2022-volkswagen-caddy-b737cd468d114792aaee9e68480adfbb",
+    "license": "CC BY 4.0",
+    "bytesBefore": 39056672,
+    "bytesAfter": 3549960,
+    "textures": 5,
+    "lengthM": 4.4,
+    "rotateY": 0,
+    "paintMaterials": [
+      "M_2022_Volkswagen_Caddy_Copper_Bronze_Metallic"
+    ],
+    "rimsSwappable": false,
+    "removed": 4,
+    "flags": [],
+    "check": [
+      "paint",
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "viewerConfig": {
+      "key": "volkswagen-caddy-sb-latest",
+      "generation": "Volkswagen Caddy SB / latest",
+      "lengthM": 4.4,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "M_2022_Volkswagen_Caddy_Copper_Bronze_Metallic"
+      ],
+      "rimsSwappable": false,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "2022 Volkswagen Caddy",
+        "author": "tonielpro520",
+        "url": "https://sketchfab.com/3d-models/2022-volkswagen-caddy-b737cd468d114792aaee9e68480adfbb",
+        "license": "CC BY 4.0"
+      }
+    },
+    "finalStatus": "PASS",
+    "cleanupReason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation."
+  },
+  "volkswagen-polo-mk4-9n": {
+    "key": "volkswagen-polo-mk4-9n",
+    "file": "volkswagen-polo-mk4-9n",
+    "make": "Volkswagen",
+    "model": "Polo",
+    "code": "Mk4 / 9N",
+    "title": "Volkswagen Polo 3-door MK4 2001 – 2009",
+    "author": "Merc_TV",
+    "authorUrl": "https://sketchfab.com/szymonpasterczyk",
+    "url": "https://sketchfab.com/3d-models/volkswagen-polo-3-door-mk4-2001-2009-6fd9f1259b8248059e32f983cf5b0cf7",
+    "license": "CC BY 4.0",
+    "bytesBefore": 20707236,
+    "bytesAfter": 4019636,
+    "textures": 0,
+    "lengthM": 4,
+    "rotateY": -1.5708,
+    "paintMaterials": [
+      "carpaint"
+    ],
+    "rimsSwappable": true,
+    "removed": 3,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "configurationOverride": {
+      "preRotateX": -1.5707963267948966,
+      "rotateY": 0
+    },
+    "viewerConfig": {
+      "key": "volkswagen-polo-mk4-9n",
+      "generation": "Volkswagen Polo Mk4 / 9N",
+      "lengthM": 4,
+      "preRotateX": -1.5707963267948966,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "carpaint"
+      ],
+      "rimsSwappable": true,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "Volkswagen Polo 3-door MK4 2001 – 2009",
+        "author": "Merc_TV",
+        "url": "https://sketchfab.com/3d-models/volkswagen-polo-3-door-mk4-2001-2009-6fd9f1259b8248059e32f983cf5b0cf7",
+        "license": "CC BY 4.0"
+      }
+    },
+    "finalStatus": "PASS_VARIANT",
+    "cleanupReason": "Upright, assembled, grounded, front heading and framing verified improved in front-three-quarter, left-side and rear-three-quarter comparisons. Verified variant: Three-door Polo 9N."
+  },
+  "audi-a4-b5": {
+    "key": "audi-a4-b5",
+    "file": "audi-a4-b5",
+    "make": "Audi",
+    "model": "A4",
+    "code": "B5",
+    "title": "Audi A4 (B5)",
+    "author": "MMC Works",
+    "authorUrl": "https://sketchfab.com/mmcworks",
+    "url": "https://sketchfab.com/3d-models/audi-a4-b5-b5861ddefcb8478b858b3150aa44cd7f",
+    "license": "CC BY 4.0",
+    "bytesBefore": 12336688,
+    "bytesAfter": 1476844,
+    "textures": 7,
+    "lengthM": 4.75,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Car_Paint_-_All_Colors"
+    ],
+    "rimsSwappable": false,
+    "removed": 8,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "viewerConfig": {
+      "key": "audi-a4-b5",
+      "generation": "Audi A4 B5",
+      "lengthM": 4.75,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "Car_Paint_-_All_Colors"
+      ],
+      "rimsSwappable": false,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "Audi A4 (B5)",
+        "author": "MMC Works",
+        "url": "https://sketchfab.com/3d-models/audi-a4-b5-b5861ddefcb8478b858b3150aa44cd7f",
+        "license": "CC BY 4.0"
+      }
+    },
+    "finalStatus": "PASS",
+    "cleanupReason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation."
+  },
+  "audi-q3-8u": {
+    "key": "audi-q3-8u",
+    "file": "audi-q3-8u",
+    "make": "Audi",
+    "model": "Q3",
+    "code": "8U",
+    "title": "2014 Audi Q3",
+    "author": "tonielpro520",
+    "authorUrl": "https://sketchfab.com/tonielpro520",
+    "url": "https://sketchfab.com/3d-models/2014-audi-q3-d95e025603c9449997be95048d10af68",
+    "license": "CC BY 4.0",
+    "bytesBefore": 53650588,
+    "bytesAfter": 5926508,
+    "textures": 4,
+    "lengthM": 4.4,
+    "rotateY": 0,
+    "paintMaterials": [
+      "Carro_Pintura"
+    ],
+    "rimsSwappable": false,
+    "removed": 0,
+    "flags": [],
+    "check": [
+      "front"
+    ],
+    "review": [],
+    "inApp": true,
+    "viewerConfig": {
+      "key": "audi-q3-8u",
+      "generation": "Audi Q3 8U",
+      "lengthM": 4.4,
+      "rotateY": 0,
+      "groundOffset": 0,
+      "paintNodes": [],
+      "paintMaterials": [
+        "Carro_Pintura"
+      ],
+      "rimsSwappable": false,
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "title": "2014 Audi Q3",
+        "author": "tonielpro520",
+        "url": "https://sketchfab.com/3d-models/2014-audi-q3-d95e025603c9449997be95048d10af68",
+        "license": "CC BY 4.0"
+      }
+    },
+    "finalStatus": "PASS",
+    "cleanupReason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation."
+  },
+  "volkswagen-beetle-type-1": {
+    "key": "manual-19febfb9-3b4a-4a5f-b2c0-ce33547da350-ad65d3b3205c45de",
+    "file": "manual-19febfb9-3b4a-4a5f-b2c0-ce33547da350-ad65d3b3205c45de",
+    "make": "Volkswagen",
+    "model": "Beetle",
+    "code": "Type 1",
+    "url": "https://sketchfab.com/3d-models/volkswagen-beetle-83276f21bd9c41e196c474350b43efb0",
+    "title": "Volkswagen beetle",
+    "author": "Angelos Gkanias",
+    "license": "CC Attribution",
+    "inApp": true,
+    "finalStatus": "PASS_VARIANT",
+    "source": "Sketchfab",
+    "viewerConfig": {
+      "key": "manual-19febfb9-3b4a-4a5f-b2c0-ce33547da350-ad65d3b3205c45de",
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "url": "https://sketchfab.com/3d-models/volkswagen-beetle-83276f21bd9c41e196c474350b43efb0",
+        "title": "Volkswagen beetle",
+        "author": "Angelos Gkanias",
+        "license": "CC Attribution"
+      },
+      "lengthM": 4.5,
+      "rotateY": 0,
+      "generation": "Volkswagen Beetle Type 1",
+      "paintNodes": [],
+      "preRotateX": 0,
+      "groundOffset": 0,
+      "rimsSwappable": false,
+      "paintMaterials": []
+    },
+    "sourceUid": "83276f21bd9c41e196c474350b43efb0",
+    "authorUrl": "https://sketchfab.com/gkaniasag",
+    "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+    "sourceMetadata": {
+      "uid": "83276f21bd9c41e196c474350b43efb0",
+      "url": "https://sketchfab.com/3d-models/volkswagen-beetle-83276f21bd9c41e196c474350b43efb0",
+      "title": "Volkswagen beetle",
+      "author": "Angelos Gkanias",
+      "format": "glb",
+      "allowed": true,
+      "license": "CC Attribution",
+      "authorUrl": "https://sketchfab.com/gkaniasag",
+      "thumbnail": "https://media.sketchfab.com/models/83276f21bd9c41e196c474350b43efb0/thumbnails/248167a884d54a839118b6e06aa6b457/578306b51d8f4256b9585ce15c5b2fdf.jpeg",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "inspectedAt": "2026-11-07T18:03:42.100Z",
+      "refusalCode": null,
+      "downloadable": true,
+      "downloadedAt": "2026-11-07T18:03:51.193Z",
+      "licenseClass": "CC BY",
+      "optimization": {
+        "removed": 0,
+        "textures": 44,
+        "warnings": [
+          "Paint segmentation requires review; automatic recoloring is disabled.",
+          "Front direction requires visual confirmation."
+        ],
+        "bytesAfter": 6396020,
+        "bytesBefore": 36230220
+      },
+      "sourceSha256": "7a8b8aa9b6adc2b25b8af31c10d75fd4900e29385ee32f719e31e3312a13765a",
+      "downloadSource": "https://api.sketchfab.com/v3/models/83276f21bd9c41e196c474350b43efb0/download",
+      "pendingRawPath": null,
+      "pendingPreparedPath": null,
+      "originalDownloadedBytes": 36230220
+    },
+    "preparedSha256": "ad65d3b3205c45de56ab9b2ff4b50f66d960737793950d6b67aa4920bad6e1dd"
+  }
+}

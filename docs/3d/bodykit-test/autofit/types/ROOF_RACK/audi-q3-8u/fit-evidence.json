@@ -1,0 +1,167 @@
+{
+  "valid": true,
+  "car": {
+    "dimensions": [
+      1.9607815272923412,
+      1.6174023521764989,
+      4.4
+    ],
+    "wheelsFound": false,
+    "mappedParts": [],
+    "partMapIn": []
+  },
+  "fit": {
+    "type": "ROOF_RACK",
+    "fitVersion": 2,
+    "mount": {
+      "body": "roof",
+      "fromRearM": 1.87,
+      "widthM": 1.127,
+      "bodyWidthM": 1.716,
+      "scaleBy": "feet"
+    },
+    "feet": 2,
+    "feetGapMm": [
+      0.1,
+      0
+    ],
+    "pitchDeg": -1.116,
+    "rollDeg": 0,
+    "spanM": 0.959,
+    "heightAboveM": 0.212,
+    "overhangM": 0,
+    "copies": 1,
+    "turnedDeg": 0,
+    "flipped180": false,
+    "partSize": [
+      1.903,
+      0.444,
+      0.553
+    ],
+    "scale": 0.504,
+    "nonUniform": [
+      1,
+      1
+    ],
+    "stored": false,
+    "partBox": [
+      -0.4978,
+      1.5864,
+      -0.5383,
+      0.4984,
+      1.8154,
+      -0.2049
+    ]
+  },
+  "autofit": {
+    "version": 2,
+    "type": "ROOF_RACK",
+    "orient": [
+      "x",
+      0,
+      "bottom"
+    ],
+    "placements": [
+      {
+        "pos": [
+          0.0001,
+          1.5891,
+          -0.3991
+        ],
+        "sc": [
+          0.5039,
+          0.5039,
+          0.5039
+        ],
+        "rot": [
+          0.0195,
+          0,
+          0
+        ],
+        "side": 1
+      }
+    ],
+    "shadows": [
+      {
+        "x": -0.9041,
+        "y": 0,
+        "z": 0.1367,
+        "w": 0.0934,
+        "d": 0.2764
+      },
+      {
+        "x": 0.9038,
+        "y": 0,
+        "z": 0.1378,
+        "w": 0.0946,
+        "d": 0.2739
+      }
+    ],
+    "info": {
+      "type": "ROOF_RACK",
+      "fitVersion": 2,
+      "mount": {
+        "body": "roof",
+        "fromRearM": 1.87,
+        "widthM": 1.127,
+        "bodyWidthM": 1.716,
+        "scaleBy": "feet"
+      },
+      "feet": 2,
+      "feetGapMm": [
+        0.1,
+        0
+      ],
+      "pitchDeg": -1.116,
+      "rollDeg": 0,
+      "spanM": 0.959,
+      "heightAboveM": 0.212,
+      "overhangM": 0,
+      "copies": 1,
+      "turnedDeg": 0,
+      "flipped180": false,
+      "partSize": [
+        1.903,
+        0.444,
+        0.553
+      ],
+      "scale": 0.504,
+      "nonUniform": [
+        1,
+        1
+      ]
+    }
+  },
+  "kit": {
+    "type": "ROOF_RACK"
+  },
+  "carSha256": "8314b563cc0ede1fd5169dc20bae4ca7375d28b725f0629d1e8a8bffed4a4e83",
+  "partSha256": "7e40b463d76777b8655d8c2198451d9bf0b1de6e30963a233c8c57c08225a958",
+  "viewerSha256": "f1b1ef0d07fbb43da9e361a718d877f2168d1a9d4deaa396ad116afe1f6144db",
+  "screenshots": [
+    {
+      "name": "front",
+      "sha256": "e8b4a8624236ed67708f70faa1b0cf41640a850ee17b23ce3734a5ffdd25d52c"
+    },
+    {
+      "name": "front-three-quarter",
+      "sha256": "7db5efea8c4bd767245d1ace74b40e1c0a6fd8a1ca048667d46a72aeece5edca"
+    },
+    {
+      "name": "left-side",
+      "sha256": "84b6d608b8b71985240167901085b3f392b0bb330d3fcd888f8eecfbdd7e1916"
+    },
+    {
+      "name": "rear-three-quarter",
+      "sha256": "878648f239109c38b6dc4c97b854fcd8458e0d9d4f966794ba05b7c0723098f9"
+    },
+    {
+      "name": "rear",
+      "sha256": "1597a52d5e22a449281274d74778a437d9ca8c0a2f351fcd11793f8a3c64c0ac"
+    },
+    {
+      "name": "top-three-quarter",
+      "sha256": "9633102f67ebaf9d605edf510d7525913acccf8633f1595a944794d91225b4db"
+    }
+  ]
+}

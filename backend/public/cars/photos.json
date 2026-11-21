@@ -1,0 +1,1784 @@
+{
+  "hyundai-accent-hc-yc": {
+    "url": "/api/cars/hyundai-accent-hc-yc.webp",
+    "credit": "Damian B Oh",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hyundai_Accent_1.6_HC_Forge_Gray_(3).jpg"
+  },
+  "hyundai-i10-pa": {
+    "url": "/api/cars/hyundai-i10-pa.webp",
+    "credit": "Damian B Oh",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hyundai_i10_PA_Electric_Red_(3).jpg"
+  },
+  "hyundai-i10-ia-ba": {
+    "url": "/api/cars/hyundai-i10-ia-ba.webp",
+    "credit": "Damian B Oh",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hyundai_i10_IA_PE_Polar_White_(7).jpg"
+  },
+  "hyundai-i10-ac3-ai3": {
+    "url": "/api/cars/hyundai-i10-ac3-ai3.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2023_Hyundai_i10_(AC3)_Autofr%C3%BChling_Ulm_IMG_9349.jpg"
+  },
+  "hyundai-i20-pb": {
+    "url": "/api/cars/hyundai-i20-pb.webp",
+    "credit": "EurovisionNim",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2014_Hyundai_i20_(PB_MY15)_Active_5-door_hatchback_(2015-09-04).jpg"
+  },
+  "hyundai-i20-gb-ib": {
+    "url": "/api/cars/hyundai-i20-gb-ib.webp",
+    "credit": "Damian B Oh",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hyundai_i20_GB_Black_Diamond_(4).jpg"
+  },
+  "hyundai-i20-bc3-bi3": {
+    "url": "/api/cars/hyundai-i20-bc3-bi3.webp",
+    "credit": "DriveSpark",
+    "license": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2021_Hyundai_i20_N_Line_(BI3;_India)_front_view.png"
+  },
+  "hyundai-i30-fd": {
+    "url": "/api/cars/hyundai-i30-fd.webp",
+    "credit": "Maksim Sidorov",
+    "license": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hyundai_i30_FD_02.jpg"
+  },
+  "hyundai-i30-gd": {
+    "url": "/api/cars/hyundai-i30-gd.webp",
+    "credit": "Thesupermat",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hyundai_-_i30_-_Mondial_de_l%27Automobile_de_Paris_2012_-_001.jpg"
+  },
+  "mercedes-c-class-w203": {
+    "url": "/api/cars/mercedes-c-class-w203.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:MERCEDES_BENZ_C-CLASS_(W203)_China.jpg"
+  },
+  "mercedes-c-class-w206": {
+    "url": "/api/cars/mercedes-c-class-w206.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:MERCEDES-BENZ_C-CLASS_LWB_(W206)_China_(17).jpg"
+  },
+  "mercedes-e-class-w210": {
+    "url": "/api/cars/mercedes-e-class-w210.webp",
+    "credit": "Vajotwo and Luc106 This image was created with PhotoScape.",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mercedes-Benz_E-Class_timeline.jpg"
+  },
+  "mercedes-e-class-w211": {
+    "url": "/api/cars/mercedes-e-class-w211.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:MERCEDES-BENZ_E-CLASS_(W211)_China.jpg"
+  },
+  "mercedes-e-class-w212": {
+    "url": "/api/cars/mercedes-e-class-w212.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:MERCEDES-BENZ_E-CLASS_(W212)_HONG_KONG.jpg"
+  },
+  "mercedes-s-class-w140": {
+    "url": "/api/cars/mercedes-s-class-w140.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:MERCEDES-BENZ_S-CLASS_(W140)_China.jpg"
+  },
+  "nissan-micra-k12": {
+    "url": "/api/cars/nissan-micra-k12.webp",
+    "credit": "Trop86",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Nissan_Micra_(K12)_180452.jpg"
+  },
+  "nissan-micra-k13": {
+    "url": "/api/cars/nissan-micra-k13.webp",
+    "credit": "Supporterhéninois",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Nissan_Micra_K13_Connect_edition_noir.jpg"
+  },
+  "nissan-micra-k14": {
+    "url": "/api/cars/nissan-micra-k14.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Nissan_Micra_(K14)_DSC_7790_(cropped).jpg"
+  },
+  "nissan-qashqai-j10": {
+    "url": "/api/cars/nissan-qashqai-j10.webp",
+    "credit": "Spurzem - Lothar Spurzem",
+    "license": "CC BY-SA 2.0 de",
+    "source": "https://commons.wikimedia.org/wiki/File:Nissan_Qashqai,_Bj._2008_-_Front_(2008-09-21_ret).jpg"
+  },
+  "nissan-qashqai-j11": {
+    "url": "/api/cars/nissan-qashqai-j11.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:NISSAN_QASHQAI_(J11)_China.jpg"
+  },
+  "nissan-qashqai-j12": {
+    "url": "/api/cars/nissan-qashqai-j12.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2024_Nissan_Qashqai_(J12)_IMG_1831.jpg"
+  },
+  "nissan-x-trail-t30": {
+    "url": "/api/cars/nissan-x-trail-t30.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:NISSAN_X-TRAIL_T30_China_(2).jpg"
+  },
+  "nissan-x-trail-t31": {
+    "url": "/api/cars/nissan-x-trail-t31.webp",
+    "credit": "Damian B Oh",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Nissan_X-Trail_T31_Ebisu_Black_(7).jpg"
+  },
+  "nissan-x-trail-t32": {
+    "url": "/api/cars/nissan-x-trail-t32.webp",
+    "credit": "TTTNIS",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Nissan_X-Trail_T32_hybrid_powertrain_01.jpg"
+  },
+  "toyota-corolla-e100": {
+    "url": "/api/cars/toyota-corolla-e100.webp",
+    "credit": "Throwawayacc222",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:1991_Toyota_Corolla_E100_sedan_white_front.jpg"
+  },
+  "toyota-corolla-e110": {
+    "url": "/api/cars/toyota-corolla-e110.webp",
+    "credit": "Ethan Llamas",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Toyota_Corolla_(E110)_1.3_LE_2003.jpg"
+  },
+  "toyota-corolla-e170-e180": {
+    "url": "/api/cars/toyota-corolla-e170-e180.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Toyota_Corolla_(E170,_North_America)_1X7A5749.jpg"
+  },
+  "toyota-corolla-e210": {
+    "url": "/api/cars/toyota-corolla-e210.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2023_Toyota_Corolla_Touring_Sports_Hybrid_(E210)_IMG_7679.jpg"
+  },
+  "toyota-yaris-xp10": {
+    "url": "/api/cars/toyota-yaris-xp10.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:TOYOTA_YARIS_(XP10)_5_DOOR_China.jpg"
+  },
+  "toyota-yaris-xp90": {
+    "url": "/api/cars/toyota-yaris-xp90.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Toyota_Yaris_(XP90)_sedan_1X7A1814.jpg"
+  },
+  "toyota-yaris-xp130": {
+    "url": "/api/cars/toyota-yaris-xp130.webp",
+    "credit": "OWS Photography",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Toyota_Yaris_Hatch_(XP130)_Washington_DC_Metro_Area,_USA.jpg"
+  },
+  "toyota-yaris-xp210": {
+    "url": "/api/cars/toyota-yaris-xp210.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Toyota_Yaris_Cross_Hybrid_(XP210)_1X7A1848.jpg"
+  },
+  "toyota-camry-xv20": {
+    "url": "/api/cars/toyota-camry-xv20.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:TOYOTA_CAMRY_(XV20)_China.jpg"
+  },
+  "toyota-camry-xv30": {
+    "url": "/api/cars/toyota-camry-xv30.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:TOYOTA_CAMRY_(XV30)_China_(28).jpg"
+  },
+  "toyota-camry-xv40": {
+    "url": "/api/cars/toyota-camry-xv40.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:TOYOTA_CAMRY_(XV40,_ASIA)_China_(4).jpg"
+  },
+  "toyota-camry-xv70": {
+    "url": "/api/cars/toyota-camry-xv70.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Toyota_Camry_(XV70)_IMG_9081.jpg"
+  },
+  "toyota-rav4-xa20": {
+    "url": "/api/cars/toyota-rav4-xa20.webp",
+    "credit": "OWS Photography",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Toyota_RAV4_(XA20)_Washington_DC_Metro_Area,_USA.jpg"
+  },
+  "toyota-rav4-xa30": {
+    "url": "/api/cars/toyota-rav4-xa30.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:TOYOTA_RAV4_(XA30)_China.jpg"
+  },
+  "toyota-rav4-xa40": {
+    "url": "/api/cars/toyota-rav4-xa40.webp",
+    "credit": "SSJF01",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Toyota_RAV4_(XA40,_2015).png"
+  },
+  "toyota-rav4-xa50": {
+    "url": "/api/cars/toyota-rav4-xa50.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Toyota_RAV4_Hybrid_(XA50)_DSC_2709.jpg"
+  },
+  "toyota-hilux-6th-gen": {
+    "url": "/api/cars/toyota-hilux-6th-gen.webp",
+    "credit": "3reim",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Toyota_hilux_1988.jpg"
+  },
+  "toyota-hilux-7th-gen": {
+    "url": "/api/cars/toyota-hilux-7th-gen.webp",
+    "credit": "Shadman Samee from Dhaka, Bangladesh",
+    "license": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Bangladesh_Air_Force_Toyota_Hilux_7th_gen._(26291493397).jpg"
+  },
+  "toyota-hilux-8th-gen": {
+    "url": "/api/cars/toyota-hilux-8th-gen.webp",
+    "credit": "الدعوة السلفية في السعودية 2025",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Toyota_Hilux_2022.jpg"
+  },
+  "toyota-land-cruiser-j80": {
+    "url": "/api/cars/toyota-land-cruiser-j80.webp",
+    "credit": "JamesYoung8167",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Toyota_Land_Cruiser_J80_Longyan_01_2022-08-06.jpg"
+  },
+  "toyota-land-cruiser-j100": {
+    "url": "/api/cars/toyota-land-cruiser-j100.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:TOYOTA_LAND_CRUISER_(J100)_China.jpg"
+  },
+  "toyota-land-cruiser-j200": {
+    "url": "/api/cars/toyota-land-cruiser-j200.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:TOYOTA_LAND_CRUISER_(J200)_China_(12).jpg"
+  },
+  "toyota-land-cruiser-j300": {
+    "url": "/api/cars/toyota-land-cruiser-j300.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:TOYOTA_LAND_CRUISER_(J300)_China.jpg"
+  },
+  "toyota-prius-xw20": {
+    "url": "/api/cars/toyota-prius-xw20.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:TOYOTA_PRIUS_(XW20)_China.jpg"
+  },
+  "toyota-prius-xw30": {
+    "url": "/api/cars/toyota-prius-xw30.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:TOYOTA_PRIUS_(XW30)_China_(4).jpg"
+  },
+  "toyota-prius-xw50": {
+    "url": "/api/cars/toyota-prius-xw50.webp",
+    "credit": "OWS Photography",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Toyota_Prius_(XW50)_Washington_DC_Metro_Area,_USA.jpg"
+  },
+  "toyota-prius-xw60": {
+    "url": "/api/cars/toyota-prius-xw60.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Toyota_Prius_(XW60)_Plug-in_Hybrid_Automesse_Ludwigsburg_2023_1X7A0004.jpg"
+  },
+  "toyota-c-hr-1st-gen": {
+    "url": "/api/cars/toyota-c-hr-1st-gen.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Toyota_C-HR_Hybrid_(AX20)_DSC_7239.jpg"
+  },
+  "toyota-c-hr-2nd-gen": {
+    "url": "/api/cars/toyota-c-hr-2nd-gen.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Toyota_C-HR_hybrid_(FL)_1X7A6305.jpg"
+  },
+  "hyundai-elantra-j2-rd": {
+    "url": "/api/cars/hyundai-elantra-j2-rd.webp",
+    "credit": "Matio",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hyundai_Elantra_J2_Filip_Jakov_prz%C3%B3d.JPG"
+  },
+  "hyundai-elantra-md-ud": {
+    "url": "/api/cars/hyundai-elantra-md-ud.webp",
+    "credit": "OWS Photography",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hyundai_Elantra_(MD)_Washington_DC_Metro_Area,_USA.jpg"
+  },
+  "hyundai-elantra-ad": {
+    "url": "/api/cars/hyundai-elantra-ad.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hyundai_Elantra_(AD)_Motorworld_Munich_1X7A0069.jpg"
+  },
+  "hyundai-elantra-cn7": {
+    "url": "/api/cars/hyundai-elantra-cn7.webp",
+    "credit": "Avante2025",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2020_Hyundai_Avante_(Elantra)_CN7.jpg"
+  },
+  "hyundai-accent-x3": {
+    "url": "/api/cars/hyundai-accent-x3.webp",
+    "credit": "Damian B Oh",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hyundai_Euro_Accent_5-Door_X3_Sahara_Red_(9).jpg"
+  },
+  "hyundai-accent-lc": {
+    "url": "/api/cars/hyundai-accent-lc.webp",
+    "credit": "OWS Photography",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hyundai_Accent_(LC)_Washington_DC_Metro_Area,_USA.jpg"
+  },
+  "hyundai-accent-rb-rc": {
+    "url": "/api/cars/hyundai-accent-rb-rc.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:HYUNDAI_VERNA_(HYUNDAI_ACCENT)_(RB,RC)_China_(9).jpg"
+  },
+  "hyundai-i30-pd": {
+    "url": "/api/cars/hyundai-i30-pd.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2024_Hyundai_i30_(PD)_DSC_8543.jpg"
+  },
+  "hyundai-tucson-jm": {
+    "url": "/api/cars/hyundai-tucson-jm.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:HYUNDAI_TUCSON_(JM)_China_(3).jpg"
+  },
+  "hyundai-tucson-lm-ix35": {
+    "url": "/api/cars/hyundai-tucson-lm-ix35.webp",
+    "credit": "Benespit",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:0_Hyundai_Tucson_(LM)_3.jpg"
+  },
+  "hyundai-tucson-tl": {
+    "url": "/api/cars/hyundai-tucson-tl.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:HYUNDAI_TUCSON_(TL)_China.jpg"
+  },
+  "hyundai-tucson-nx4": {
+    "url": "/api/cars/hyundai-tucson-nx4.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hyundai_Tucson_(NX4,_SWB)_PHEV_1X7A1858.jpg"
+  },
+  "hyundai-santa-fe-sm": {
+    "url": "/api/cars/hyundai-santa-fe-sm.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:HYUNDAI_SANTA_FE_(SM)_China.jpg"
+  },
+  "hyundai-santa-fe-cm": {
+    "url": "/api/cars/hyundai-santa-fe-cm.webp",
+    "credit": "Benespit",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:0_Hyundai_Santa_Fe_(CM).jpg"
+  },
+  "hyundai-santa-fe-dm-nc": {
+    "url": "/api/cars/hyundai-santa-fe-dm-nc.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:HYUNDAI_GRAND_SANTA_FE_(NC)_China.jpg"
+  },
+  "hyundai-santa-fe-mx5": {
+    "url": "/api/cars/hyundai-santa-fe-mx5.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2024_Hyundai_Santa_Fe_(MX5)_IMG_5309.jpg"
+  },
+  "hyundai-sonata-nf": {
+    "url": "/api/cars/hyundai-sonata-nf.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:HYUNDAI_SONATA_(NF)_China_(2).jpg"
+  },
+  "hyundai-sonata-yf": {
+    "url": "/api/cars/hyundai-sonata-yf.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:HYUNDAI_SONATA_YF_China_(4).jpg"
+  },
+  "hyundai-sonata-lf": {
+    "url": "/api/cars/hyundai-sonata-lf.webp",
+    "credit": "Benespit",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:0_Hyundai_Sonata_(LF)_3.jpg"
+  },
+  "hyundai-sonata-dn8": {
+    "url": "/api/cars/hyundai-sonata-dn8.webp",
+    "credit": "Benespit",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:0_Hyundai_Sonata_(DN8)fl_1.jpg"
+  },
+  "hyundai-kona-os": {
+    "url": "/api/cars/hyundai-kona-os.webp",
+    "credit": "Damian B Oh",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hyundai_Kona_OS_FL_(5).jpg"
+  },
+  "hyundai-kona-sx2": {
+    "url": "/api/cars/hyundai-kona-sx2.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hyundai_Kona_(SX2)_1X7A1646.jpg"
+  },
+  "kia-picanto-sa": {
+    "url": "/api/cars/kia-picanto-sa.webp",
+    "credit": "Charles from Port Chester, New York",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Kia_Picanto_1.0_GT_Line_(2020)_(55076659778).jpg"
+  },
+  "kia-picanto-ta": {
+    "url": "/api/cars/kia-picanto-ta.webp",
+    "credit": "Thomas doerfer",
+    "license": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Kia_Picanto_F%C3%BCnft%C3%BCrer_Vision_1.0_CVVT_Schneewei%C3%9F.JPG"
+  },
+  "kia-picanto-ja": {
+    "url": "/api/cars/kia-picanto-ja.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2024_Kia_Picanto_(JA)_Rutesheimer_Autoschau_2025_DSC_9198.jpg"
+  },
+  "kia-rio-jb": {
+    "url": "/api/cars/kia-rio-jb.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:KIA_RIO_SEDAN_(JB)_China.jpg"
+  },
+  "kia-rio-ub": {
+    "url": "/api/cars/kia-rio-ub.webp",
+    "credit": "OWS Photography",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Kia_Rio_(UB)_Washington_DC_Metro_Area,_USA.jpg"
+  },
+  "kia-rio-yb-sc": {
+    "url": "/api/cars/kia-rio-yb-sc.webp",
+    "credit": "Jakub CA",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Kia_Rio_(YB,SC;_2020)_rear.jpg"
+  },
+  "kia-cerato-td-forte": {
+    "url": "/api/cars/kia-cerato-td-forte.webp",
+    "credit": "Cekli829",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:KIA_Cerato_motoru.jpg"
+  },
+  "kia-cerato-yd": {
+    "url": "/api/cars/kia-cerato-yd.webp",
+    "credit": "EurovisionNim",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2018_Kia_Cerato_(YD_MY18)_Sport_sedan_(2018-11-22)_01.jpg"
+  },
+  "kia-cerato-bd": {
+    "url": "/api/cars/kia-cerato-bd.webp",
+    "credit": "Avante2025",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Kia_K3_BD_(Cerato-Forte)_(2).jpg"
+  },
+  "kia-sportage-je-km": {
+    "url": "/api/cars/kia-sportage-je-km.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:KIA_SPORTAGE_(JE,KM)_China.jpg"
+  },
+  "kia-sportage-sl": {
+    "url": "/api/cars/kia-sportage-sl.webp",
+    "credit": "Benespit",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:0_Kia_Sportage_(SL)_2.jpg"
+  },
+  "kia-sportage-ql": {
+    "url": "/api/cars/kia-sportage-ql.webp",
+    "credit": "Benespit",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:0_Kia_Sportage_(QL)_1.jpg"
+  },
+  "kia-sportage-nq5": {
+    "url": "/api/cars/kia-sportage-nq5.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Kia_Sportage_Plug-in-Hybrid_(NQ5)_1X7A0317.jpg"
+  },
+  "kia-sorento-bl": {
+    "url": "/api/cars/kia-sorento-bl.webp",
+    "credit": "Benespit",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:0_Kia_Sorento_(BL)_2.jpg"
+  },
+  "kia-sorento-xm": {
+    "url": "/api/cars/kia-sorento-xm.webp",
+    "credit": "Benespit",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:0_Kia_Sorento_(XM)_5.jpg"
+  },
+  "kia-sorento-um": {
+    "url": "/api/cars/kia-sorento-um.webp",
+    "credit": "Benespit",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:0_Kia_Sorento_(UM)_5.jpg"
+  },
+  "kia-sorento-mq4": {
+    "url": "/api/cars/kia-sorento-mq4.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2024_Kia_Sorento_(MQ4)_Ditzingen_Mobil_IMG_9803.jpg"
+  },
+  "kia-optima-mg": {
+    "url": "/api/cars/kia-optima-mg.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:KIA_OPTIMA_(MG)_MACAU.jpg"
+  },
+  "kia-optima-tf": {
+    "url": "/api/cars/kia-optima-tf.webp",
+    "credit": "Dmitry Valberg",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Kia_Optima_2010.jpg"
+  },
+  "kia-optima-jf": {
+    "url": "/api/cars/kia-optima-jf.webp",
+    "credit": "OWS Photography",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Kia_Optima_(JF)_Washington_DC_Metro_Area,_USA_(1).jpg"
+  },
+  "kia-niro-de": {
+    "url": "/api/cars/kia-niro-de.webp",
+    "credit": "Benespit",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:00_Kia_Niro_(DE).jpg"
+  },
+  "kia-niro-sg2": {
+    "url": "/api/cars/kia-niro-sg2.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Kia_Niro_(SG2)_PHEV_1X7A6012.jpg"
+  },
+  "kia-stonic-yb-cuv": {
+    "url": "/api/cars/kia-stonic-yb-cuv.webp",
+    "credit": "Damian B Oh",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Kia_Stonic_YB_CUV_blue_white_(2).jpg"
+  },
+  "volkswagen-golf-mk3": {
+    "url": "/api/cars/volkswagen-golf-mk3.webp",
+    "credit": "WaddlesJP13",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Volkswagen_Golf_Mk3_3-Door_-_W001.jpg"
+  },
+  "volkswagen-golf-mk4": {
+    "url": "/api/cars/volkswagen-golf-mk4.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:VOLKSWAGEN_GOLF_5_DOOR_Mk4_China.jpg"
+  },
+  "volkswagen-golf-mk5": {
+    "url": "/api/cars/volkswagen-golf-mk5.webp",
+    "credit": "Jengtingchen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Volkswagen_Golf_MK5_3-door_Taiwan_002.jpg"
+  },
+  "volkswagen-golf-mk7": {
+    "url": "/api/cars/volkswagen-golf-mk7.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:VOLKSWAGEN_GOLF_(Mk7,_Typ_5G)_China_(38).jpg"
+  },
+  "volkswagen-polo-mk4-9n": {
+    "url": "/api/cars/volkswagen-polo-mk4-9n.webp",
+    "credit": "Thomas doerfer",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:VW_Polo_IV_9N_3-T%C3%BCrer.jpg"
+  },
+  "volkswagen-polo-mk5-6r": {
+    "url": "/api/cars/volkswagen-polo-mk5-6r.webp",
+    "credit": "David Kernan",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Volkswagen_Polo_Mk5.jpg"
+  },
+  "volkswagen-polo-mk6-aw": {
+    "url": "/api/cars/volkswagen-polo-mk6-aw.webp",
+    "credit": "Vauxford",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2018_Volkswagen_Polo_SE_1.0_Front.jpg"
+  },
+  "volkswagen-passat-b5": {
+    "url": "/api/cars/volkswagen-passat-b5.webp",
+    "credit": "Luisthekat",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Passat_B5.png"
+  },
+  "volkswagen-passat-b6": {
+    "url": "/api/cars/volkswagen-passat-b6.webp",
+    "credit": "Mateusmatsuda",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Volkswagen_Passat_(B6)_20241113_114717.jpg"
+  },
+  "volkswagen-passat-b8": {
+    "url": "/api/cars/volkswagen-passat-b8.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Volkswagen_Passat_B8_(2019)_IMG_1992.jpg"
+  },
+  "volkswagen-passat-b9": {
+    "url": "/api/cars/volkswagen-passat-b9.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Volkswagen_Passat_Variant_B9_IAA_2023_1X7A0654.jpg"
+  },
+  "volkswagen-jetta-a5-mk5": {
+    "url": "/api/cars/volkswagen-jetta-a5-mk5.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:VOLKSWAGEN_JETTA_(A5)_China_(5).jpg"
+  },
+  "volkswagen-jetta-a6-mk6": {
+    "url": "/api/cars/volkswagen-jetta-a6-mk6.webp",
+    "credit": "OWS Photography",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Volkswagen_Jetta_(A6)_Washington_DC_Metro_Area,_USA_(3).jpg"
+  },
+  "volkswagen-jetta-a7-mk7": {
+    "url": "/api/cars/volkswagen-jetta-a7-mk7.webp",
+    "credit": "Kevauto",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2018_Volkswagen_Jetta_Mk7_rear_9.20.18.jpg"
+  },
+  "volkswagen-tiguan-1st-gen-5n": {
+    "url": "/api/cars/volkswagen-tiguan-1st-gen-5n.webp",
+    "credit": "Mateusmatsuda",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Volkswagen_Tiguan_(5N)_rear.jpg"
+  },
+  "volkswagen-tiguan-2nd-gen-ad-bw": {
+    "url": "/api/cars/volkswagen-tiguan-2nd-gen-ad-bw.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:VOLKSWAGEN_TIGUAN_(AD,BW)_China.jpg"
+  },
+  "volkswagen-tiguan-3rd-gen": {
+    "url": "/api/cars/volkswagen-tiguan-3rd-gen.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Volkswagen_Tiguan_III_IMG_8388.jpg"
+  },
+  "volkswagen-caddy-2k-mk3": {
+    "url": "/api/cars/volkswagen-caddy-2k-mk3.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:VOLKSWAGEN_CADDY_(2K)_China.jpg"
+  },
+  "volkswagen-caddy-sb-latest": {
+    "url": "/api/cars/volkswagen-caddy-sb-latest.webp",
+    "credit": "Retired electrician",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Moscow,_Volkswagen_Caddy_Maxi_(type_SB)_grey,_Sept_2025_01.jpg"
+  },
+  "volkswagen-transporter-t4": {
+    "url": "/api/cars/volkswagen-transporter-t4.webp",
+    "credit": "Anthony Levrot",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Perpignan_-_66000_-_2024.07.09_-_Volkswagen_Transporter_T4_%C2%A9_Anthony_Levrot.jpg"
+  },
+  "volkswagen-transporter-t5": {
+    "url": "/api/cars/volkswagen-transporter-t5.webp",
+    "credit": "Thomas doerfer",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:VW_T5_Transporter_TDI.JPG"
+  },
+  "volkswagen-transporter-t6": {
+    "url": "/api/cars/volkswagen-transporter-t6.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:VOLKSWAGEN_T6_TRANSPORTER_HONG_KONG.jpg"
+  },
+  "volkswagen-transporter-t7": {
+    "url": "/api/cars/volkswagen-transporter-t7.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Volkswagen_T7_Transporter_DSC_7482.jpg"
+  },
+  "skoda-octavia-mk1-1u": {
+    "url": "/api/cars/skoda-octavia-mk1-1u.webp",
+    "credit": "Thomas doerfer",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Skoda_Octavia.JPG"
+  },
+  "skoda-octavia-mk2-1z": {
+    "url": "/api/cars/skoda-octavia-mk2-1z.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:%C5%A0KODA_OCTAVIA_(Typ_1Z)_China_(3).jpg"
+  },
+  "skoda-octavia-mk3-5e": {
+    "url": "/api/cars/skoda-octavia-mk3-5e.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:%C5%A0KODA_OCTAVIA_(5E)_China.jpg"
+  },
+  "skoda-octavia-mk4-nx": {
+    "url": "/api/cars/skoda-octavia-mk4-nx.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:%C5%A0koda_Octavia_IV_Scout_IMG_7906.jpg"
+  },
+  "skoda-fabia-mk1-6y": {
+    "url": "/api/cars/skoda-fabia-mk1-6y.webp",
+    "credit": "Bene Riobó",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:%C5%A0koda_Fabia_Mk1_en_Maia.jpg"
+  },
+  "skoda-fabia-mk2-5j": {
+    "url": "/api/cars/skoda-fabia-mk2-5j.webp",
+    "credit": "SqodaFabia",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Skoda_Fabia_mk2.jpg"
+  },
+  "skoda-fabia-mk3-nj": {
+    "url": "/api/cars/skoda-fabia-mk3-nj.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:%C5%A0KODA_FABIA_(NJ)_China.jpg"
+  },
+  "skoda-fabia-mk4-pj": {
+    "url": "/api/cars/skoda-fabia-mk4-pj.webp",
+    "credit": "Jakub CA",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:%C5%A0koda_Fabia_Mk4.jpg"
+  },
+  "skoda-superb-mk1-3u": {
+    "url": "/api/cars/skoda-superb-mk1-3u.webp",
+    "credit": "Michel de Vries",
+    "license": "CC BY-SA 3.0 de",
+    "source": "https://commons.wikimedia.org/wiki/File:SkodaSuperb.jpg"
+  },
+  "skoda-superb-mk2-3t": {
+    "url": "/api/cars/skoda-superb-mk2-3t.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:%C5%A0KODA_SUPERB_(B6,_Typ_3T)_China.jpg"
+  },
+  "skoda-superb-mk3-3v": {
+    "url": "/api/cars/skoda-superb-mk3-3v.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:%C5%A0KODA_SUPERB_(B8_Typ_3V)_China.jpg"
+  },
+  "skoda-superb-mk4-b9": {
+    "url": "/api/cars/skoda-superb-mk4-b9.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Volkswagen_Passat_Variant_B9,_%C5%A0koda_Superb_IV_Combi_IMG_9459.jpg"
+  },
+  "skoda-rapid-nh3": {
+    "url": "/api/cars/skoda-rapid-nh3.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:%C5%A0KODA_RAPID_(NH3)_China.jpg"
+  },
+  "skoda-kodiaq-1st-gen-ns": {
+    "url": "/api/cars/skoda-kodiaq-1st-gen-ns.webp",
+    "credit": "Retired electrician",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Moscow,_%C5%A0koda_Kodiaq_(1st_gen)_Aug_2025_05.jpg"
+  },
+  "skoda-kodiaq-2nd-gen-ps": {
+    "url": "/api/cars/skoda-kodiaq-2nd-gen-ps.webp",
+    "credit": "Retired electrician",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Moscow,_%C5%A0koda_Kodiaq_(2nd_gen)_Aug_2025_02.jpg"
+  },
+  "skoda-karoq-nu": {
+    "url": "/api/cars/skoda-karoq-nu.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Skoda_Karoq_Facelift_1X7A0318.jpg"
+  },
+  "mercedes-a-class-w168": {
+    "url": "/api/cars/mercedes-a-class-w168.webp",
+    "credit": "Luc106, Vajotwo and Kev22 This image was created with PhotoScape.",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mercedes-Benz_A-Class_timeline.jpg"
+  },
+  "mercedes-a-class-w169": {
+    "url": "/api/cars/mercedes-a-class-w169.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:MERCEDES-BENZ_A-CLASS_(W169)_China.jpg"
+  },
+  "mercedes-a-class-w176": {
+    "url": "/api/cars/mercedes-a-class-w176.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:MERCEDES-BENZ_A-CLASS_(W176)_China.jpg"
+  },
+  "mercedes-a-class-w177": {
+    "url": "/api/cars/mercedes-a-class-w177.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:MERCEDES-BENZ_A-CLASS_(W177)_China.jpg"
+  },
+  "mercedes-c-class-w204": {
+    "url": "/api/cars/mercedes-c-class-w204.webp",
+    "credit": "AngMoKio",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mercedes-Benz_C-Class_w204_amk.jpg"
+  },
+  "mercedes-e-class-w213": {
+    "url": "/api/cars/mercedes-e-class-w213.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:MERCEDES-BENZ_E-CLASS_(W213)_China.jpg"
+  },
+  "mercedes-s-class-w220": {
+    "url": "/api/cars/mercedes-s-class-w220.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:MERCEDES-BENZ_S-CLASS_(W220)_China.jpg"
+  },
+  "mercedes-s-class-w221": {
+    "url": "/api/cars/mercedes-s-class-w221.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:MERCEDES-BENZ_S-CLASS_(W221)_China_(34).jpg"
+  },
+  "mercedes-s-class-w222": {
+    "url": "/api/cars/mercedes-s-class-w222.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:MERCEDES-BENZ_S-CLASS_(W222)_China_(7).jpg"
+  },
+  "mercedes-s-class-w223": {
+    "url": "/api/cars/mercedes-s-class-w223.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:MERCEDES-BENZ_S-CLASS_(W223)_China_(26).jpg"
+  },
+  "mercedes-vito-w638": {
+    "url": "/api/cars/mercedes-vito-w638.webp",
+    "credit": "Detectandpreserve",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mercedes-Benz_Vito_Gen1_W638_1996_2003_Bundespolizei_Germany_frontright_2008-03-27_A.jpg"
+  },
+  "mercedes-vito-w639": {
+    "url": "/api/cars/mercedes-vito-w639.webp",
+    "credit": "Matti Blume (MB-one)",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mercedes-Benz_Vito_CDI_(W639_MoPf)_fl_IAA_2010.JPG"
+  },
+  "mercedes-vito-w447": {
+    "url": "/api/cars/mercedes-vito-w447.webp",
+    "credit": "Charles from Port Chester, New York",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mercedes-Benz_V-Klasse_(W447)_Vito_111_CDI_(2015)_(52051931057).jpg"
+  },
+  "mercedes-sprinter-w901-w905": {
+    "url": "/api/cars/mercedes-sprinter-w901-w905.webp",
+    "credit": "Nikolai Bulykin",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:%D0%90%D0%BB%D0%BC%D0%B0%D1%82%D1%8B,_Mercedes_Sprinter_%D0%BD%D0%B0_%D0%A2%D0%BE%D0%BB%D0%B5_%D0%B1%D0%B8-%D0%A0%D0%BE%D0%B7%D1%8B%D0%B1%D0%B0%D0%BA%D0%B8%D0%B5%D0%B2%D0%B0.jpg"
+  },
+  "mercedes-sprinter-w906": {
+    "url": "/api/cars/mercedes-sprinter-w906.webp",
+    "credit": "Navigator84",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mercedes-Benz_Sprinter_W906_China_2015-04-08.jpg"
+  },
+  "mercedes-sprinter-w907-w910": {
+    "url": "/api/cars/mercedes-sprinter-w907-w910.webp",
+    "credit": "Kev22",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mercedes-Benz_Sprinter_City_(W907)_-_Macareux_05.jpg"
+  },
+  "bmw-1-series-e87": {
+    "url": "/api/cars/bmw-1-series-e87.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_1_SERIES_(E87)_China.jpg"
+  },
+  "bmw-1-series-f20-f21": {
+    "url": "/api/cars/bmw-1-series-f20-f21.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_1_SERIES_(F20)_China.jpg"
+  },
+  "bmw-1-series-f40": {
+    "url": "/api/cars/bmw-1-series-f40.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_F40_128ti_IMG_4142.jpg"
+  },
+  "bmw-3-series-e36": {
+    "url": "/api/cars/bmw-3-series-e36.webp",
+    "credit": "Malokkii",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_3_Series_E36.png"
+  },
+  "bmw-3-series-e46": {
+    "url": "/api/cars/bmw-3-series-e46.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_3_SERIES_(E46)_China.jpg"
+  },
+  "bmw-3-series-e90-e91-e92-e93": {
+    "url": "/api/cars/bmw-3-series-e90-e91-e92-e93.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_3_SERIES_E90_China_(3).jpg"
+  },
+  "bmw-3-series-f30-f31-f34": {
+    "url": "/api/cars/bmw-3-series-f30-f31-f34.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_3_SERIES_(F30)_MACAU.jpg"
+  },
+  "bmw-5-series-e34": {
+    "url": "/api/cars/bmw-5-series-e34.webp",
+    "credit": "Rutger van der Maar",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_5_Series_Touring_(E34).jpg"
+  },
+  "bmw-5-series-e39": {
+    "url": "/api/cars/bmw-5-series-e39.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_5_SERIES_(E39)_China.jpg"
+  },
+  "bmw-5-series-e60-e61": {
+    "url": "/api/cars/bmw-5-series-e60-e61.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_5_SERIES_(E60)_China.jpg"
+  },
+  "bmw-5-series-g30-g31": {
+    "url": "/api/cars/bmw-5-series-g30-g31.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_5_SERIES_(G30)_HONG_KONG.jpg"
+  },
+  "bmw-x1-e84": {
+    "url": "/api/cars/bmw-x1-e84.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_X1_(E84)_China_(13).jpg"
+  },
+  "bmw-x1-f48": {
+    "url": "/api/cars/bmw-x1-f48.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_X1_LWB_(F48)_China.jpg"
+  },
+  "bmw-x1-u11": {
+    "url": "/api/cars/bmw-x1-u11.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_U11_X1_M35i_DSC_9809.jpg"
+  },
+  "bmw-x3-e83": {
+    "url": "/api/cars/bmw-x3-e83.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_X3_(E83)_China.jpg"
+  },
+  "bmw-x3-f25": {
+    "url": "/api/cars/bmw-x3-f25.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_X3_(F25)_China.jpg"
+  },
+  "bmw-x3-g01": {
+    "url": "/api/cars/bmw-x3-g01.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_X3_M_(G01)_1X7A6435.jpg"
+  },
+  "bmw-x3-g45": {
+    "url": "/api/cars/bmw-x3-g45.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_G45_X3_M50_DSC_7047.jpg"
+  },
+  "bmw-x5-e53": {
+    "url": "/api/cars/bmw-x5-e53.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_X5_(E53)_China.jpg"
+  },
+  "bmw-x5-e70": {
+    "url": "/api/cars/bmw-x5-e70.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_X5_(E70)_China_(2).jpg"
+  },
+  "bmw-x5-f15": {
+    "url": "/api/cars/bmw-x5-f15.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BMW_X5_(F15)_China_(3).jpg"
+  },
+  "bmw-x5-g05": {
+    "url": "/api/cars/bmw-x5-g05.webp",
+    "credit": "Alex Neman",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2018_BMW_X5_xDrive25d_F15_(rear).jpg"
+  },
+  "peugeot-206-206": {
+    "url": "/api/cars/peugeot-206-206.webp",
+    "credit": "Christopher Batt",
+    "license": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Peugeot_206_WRC.jpg"
+  },
+  "peugeot-207-207": {
+    "url": "/api/cars/peugeot-207-207.webp",
+    "credit": "DieselFordMondeo",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2006_Peugeot_207_GT_-_1.6_HDi_(110PS)_diesel_manual_-_2025-29-07,_front_left.jpg"
+  },
+  "peugeot-208-1st-gen-a9": {
+    "url": "/api/cars/peugeot-208-1st-gen-a9.webp",
+    "credit": "Mateusmatsuda",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Peugeot_208_(A9)_rear.jpg"
+  },
+  "peugeot-208-2nd-gen-p21": {
+    "url": "/api/cars/peugeot-208-2nd-gen-p21.webp",
+    "credit": "Damian B Oh",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Peugeot_208_GT_P21_Vertigo_Blue_(5).jpg"
+  },
+  "peugeot-301-m3": {
+    "url": "/api/cars/peugeot-301-m3.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Peugeot_301_(2012)_IMG_8110.jpg"
+  },
+  "peugeot-308-1st-gen-t7": {
+    "url": "/api/cars/peugeot-308-1st-gen-t7.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:PEUGEOT_308_SEDAN_China_(2).jpg"
+  },
+  "peugeot-308-2nd-gen-t9": {
+    "url": "/api/cars/peugeot-308-2nd-gen-t9.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:PEUGEOT_308_B_SEDAN_China_(2).jpg"
+  },
+  "peugeot-308-3rd-gen-p5": {
+    "url": "/api/cars/peugeot-308-3rd-gen-p5.webp",
+    "credit": "Damian B Oh",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Peugeot_308_P5_Nera_Black_(8).jpg"
+  },
+  "peugeot-2008-1st-gen-a94": {
+    "url": "/api/cars/peugeot-2008-1st-gen-a94.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:PEUGEOT_2008_(A94)_China.jpg"
+  },
+  "peugeot-2008-2nd-gen-p24": {
+    "url": "/api/cars/peugeot-2008-2nd-gen-p24.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:PEUGEOT_2008_(P24)_China.jpg"
+  },
+  "peugeot-3008-1st-gen-t84": {
+    "url": "/api/cars/peugeot-3008-1st-gen-t84.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:PEUGEOT_3008_(T84)_China.jpg"
+  },
+  "peugeot-3008-2nd-gen-p84": {
+    "url": "/api/cars/peugeot-3008-2nd-gen-p84.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:PEUGEOT_3008_(P84)_China.jpg"
+  },
+  "peugeot-3008-3rd-gen-p64": {
+    "url": "/api/cars/peugeot-3008-3rd-gen-p64.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Peugeot_e-3008_Auto_Zuerich_2023_1X7A1014.jpg"
+  },
+  "peugeot-partner-2nd-gen-b9": {
+    "url": "/api/cars/peugeot-partner-2nd-gen-b9.webp",
+    "credit": "Jérémy-Günther-Heinz Jähnick",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Peugeot_Partner_2_(2008-2012).JPG"
+  },
+  "peugeot-partner-1st-gen-m49-m59": {
+    "url": "/api/cars/peugeot-partner-1st-gen-m49-m59.webp",
+    "credit": "Charles from Port Chester, New York",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Peugeot_Partner_Tepee_(2012_%E2%80%93_2015)_(52052977691).jpg"
+  },
+  "peugeot-partner-3rd-gen-k9": {
+    "url": "/api/cars/peugeot-partner-3rd-gen-k9.webp",
+    "credit": "Vauxford",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2018_Peugeot_Partner_Tepee_Active_Front.jpg"
+  },
+  "renault-clio-mk1": {
+    "url": "/api/cars/renault-clio-mk1.webp",
+    "credit": "© M 93",
+    "license": "CC BY-SA 3.0 de",
+    "source": "https://commons.wikimedia.org/wiki/File:Renault_Clio_R.S._Line_(V)_%E2%80%93_f_17102021.jpg"
+  },
+  "renault-clio-mk2": {
+    "url": "/api/cars/renault-clio-mk2.webp",
+    "credit": "© M 93",
+    "license": "CC BY-SA 3.0 de",
+    "source": "https://commons.wikimedia.org/wiki/File:Renault_Clio_R.S._Line_(V)_%E2%80%93_f_17102021.jpg"
+  },
+  "renault-clio-mk4": {
+    "url": "/api/cars/renault-clio-mk4.webp",
+    "credit": "Thesupermat",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Renault_-_Clio_-_Mondial_de_l%27Automobile_de_Paris_2012_-_201.jpg"
+  },
+  "renault-clio-mk5": {
+    "url": "/api/cars/renault-clio-mk5.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Renault_Clio_V_Genf_2019_1Y7A5590.jpg"
+  },
+  "renault-megane-mk1": {
+    "url": "/api/cars/renault-megane-mk1.webp",
+    "credit": "Dhira123",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:DSC_0665_Mk1_Renault_Megane.jpg"
+  },
+  "renault-megane-mk3": {
+    "url": "/api/cars/renault-megane-mk3.webp",
+    "credit": "Dédélembrouille",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Renault_Megane_3.jpg"
+  },
+  "renault-megane-mk4": {
+    "url": "/api/cars/renault-megane-mk4.webp",
+    "credit": "KGC626",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2017_Renault_Megane_Mk4_Intens.jpg"
+  },
+  "renault-symbol-1st-gen": {
+    "url": "/api/cars/renault-symbol-1st-gen.webp",
+    "credit": "order_242 from Chile",
+    "license": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Renault_Symbol_1.6_Privilege_2015_(16336448189).jpg"
+  },
+  "renault-symbol-2nd-gen": {
+    "url": "/api/cars/renault-symbol-2nd-gen.webp",
+    "credit": "Carluver23",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:2008_Renault_Symbol_rear.jpg"
+  },
+  "renault-symbol-3rd-gen": {
+    "url": "/api/cars/renault-symbol-3rd-gen.webp",
+    "credit": "RL GNZLZ from Chile",
+    "license": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Renault_Symbol_1.6_Privilege_2012_(48369214291).jpg"
+  },
+  "renault-fluence-l38": {
+    "url": "/api/cars/renault-fluence-l38.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:RENAULT_FLUENCE_(RENAUTL_SAMSUNG_SM3)_China.jpg"
+  },
+  "renault-kangoo-2nd-gen-x61": {
+    "url": "/api/cars/renault-kangoo-2nd-gen-x61.webp",
+    "credit": "EurovisionNim",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2016_Renault_Kangoo_(X61_Series_II)_van_(2017-01-30)_01.jpg"
+  },
+  "renault-kangoo-3rd-gen-kfk": {
+    "url": "/api/cars/renault-kangoo-3rd-gen-kfk.webp",
+    "credit": "Just a Man",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2021_Renault_Kangoo_1.6_SCe_Express.jpg"
+  },
+  "renault-captur-1st-gen-j87": {
+    "url": "/api/cars/renault-captur-1st-gen-j87.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:RENAULT_CAPTUR_(J87)_China.jpg"
+  },
+  "renault-captur-2nd-gen-jb-je": {
+    "url": "/api/cars/renault-captur-2nd-gen-jb-je.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Renault_Captur_II_at_IAA_2019_IMG_0446.jpg"
+  },
+  "mitsubishi-lancer-5th-6th-era-evo-iii": {
+    "url": "/api/cars/mitsubishi-lancer-5th-6th-era-evo-iii.webp",
+    "credit": "Solomon203",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mitsubishi_Lancer_(5th_generation)_SEi_in_Taiwan_title.jpg"
+  },
+  "mitsubishi-lancer-7th-era-evo-ix": {
+    "url": "/api/cars/mitsubishi-lancer-7th-era-evo-ix.webp",
+    "credit": "TTTNIS",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:2000_Mitsubishi_Lancer_RS_Evolution_VI_Tommi_Makinen_Edition.jpg"
+  },
+  "mitsubishi-lancer-8th-9th-global-generation": {
+    "url": "/api/cars/mitsubishi-lancer-8th-9th-global-generation.webp",
+    "credit": "Dicky0615",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2007_Mitsubishi_Lancer_CH_4G69.jpg"
+  },
+  "mitsubishi-lancer-later-current-classic-nameplate": {
+    "url": "/api/cars/mitsubishi-lancer-later-current-classic-nameplate.webp",
+    "credit": "Kuha455405",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mitsubishi_Lancer_Patrolcar.jpg"
+  },
+  "mitsubishi-outlander-1st-gen-cu": {
+    "url": "/api/cars/mitsubishi-outlander-1st-gen-cu.webp",
+    "credit": "Retired electrician",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Moscow,_Mitsubishi_Outlander_(1st_gen)_Aug_2025_03.jpg"
+  },
+  "mitsubishi-outlander-2nd-gen-cw": {
+    "url": "/api/cars/mitsubishi-outlander-2nd-gen-cw.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:MITSUBISHI_OUTLANDER(CW,ZG,ZH)_China.jpg"
+  },
+  "mitsubishi-outlander-3rd-gen-gf-gg-zj": {
+    "url": "/api/cars/mitsubishi-outlander-3rd-gen-gf-gg-zj.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:MITSUBISHI_OUTLANDER_(GF,GG,ZJ,ZK,ZL)_China.jpg"
+  },
+  "mitsubishi-outlander-4th-gen-gm-gn": {
+    "url": "/api/cars/mitsubishi-outlander-4th-gen-gm-gn.webp",
+    "credit": "OWS Photography",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mitsubishi_Outlander_(GM)_Washington_DC_Metro_Area,_USA.jpg"
+  },
+  "mitsubishi-pajero-2nd-gen-v20": {
+    "url": "/api/cars/mitsubishi-pajero-2nd-gen-v20.webp",
+    "credit": "Corvettec6r",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mitsubishi_Pajero_3-door_1st_gen_%26_Hyundai_Galloper_3-door.jpg"
+  },
+  "mitsubishi-pajero-3rd-gen-v60": {
+    "url": "/api/cars/mitsubishi-pajero-3rd-gen-v60.webp",
+    "credit": "Salkov Rodion",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Pajero_4_and_3_gen.jpg"
+  },
+  "mitsubishi-pajero-4th-gen-v80": {
+    "url": "/api/cars/mitsubishi-pajero-4th-gen-v80.webp",
+    "credit": "Shadman al Samee",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Bangladesh_Army_Mitsubishi_Pajero_4th_gen.jpg"
+  },
+  "mitsubishi-asx-1st-global-gen-ga": {
+    "url": "/api/cars/mitsubishi-asx-1st-global-gen-ga.webp",
+    "credit": "Bene Riobó",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mitsubishi_ASX_GA.jpg"
+  },
+  "mitsubishi-asx-2nd-europe-gen-captur-based": {
+    "url": "/api/cars/mitsubishi-asx-2nd-europe-gen-captur-based.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mitsubishi_ASX_(2nd_generation)_1X7A7067.jpg"
+  },
+  "mitsubishi-attrage-1st-gen": {
+    "url": "/api/cars/mitsubishi-attrage-1st-gen.webp",
+    "credit": "Aero777",
+    "license": "CC BY-SA 2.5 my",
+    "source": "https://commons.wikimedia.org/wiki/File:2013_Mitsubishi_Attrage_GS_(Test_Drive_Car)_in_Glenmarie,_Malaysia.jpg"
+  },
+  "mitsubishi-l200-3rd-gen-k60-k70": {
+    "url": "/api/cars/mitsubishi-l200-3rd-gen-k60-k70.webp",
+    "credit": "Kabu Sawsaw",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:1996_Mitsubishi_L200.jpg"
+  },
+  "mitsubishi-l200-4th-gen-ka-kb": {
+    "url": "/api/cars/mitsubishi-l200-4th-gen-ka-kb.webp",
+    "credit": "HJ Mitchell",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mitsubishi_L200_at_Port_Solent.jpg"
+  },
+  "mitsubishi-l200-5th-gen-kj-kk-kl": {
+    "url": "/api/cars/mitsubishi-l200-5th-gen-kj-kk-kl.webp",
+    "credit": "UzeyirMikayil",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Follow_me_car_-_Mitsubishi_L200_UBBB_-_GYD.jpg"
+  },
+  "mitsubishi-l200-6th-gen-lc": {
+    "url": "/api/cars/mitsubishi-l200-6th-gen-lc.webp",
+    "credit": "Aciarium",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:DSC05661_Mitsubishi_L200,_Bundesheer,_Front_Right,_2023-10.jpg"
+  },
+  "nissan-sunny-n14": {
+    "url": "/api/cars/nissan-sunny-n14.webp",
+    "credit": "Rudolf Stricker",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Nissan_Sunny_hatchback_(N14)_rear_20071002.jpg"
+  },
+  "nissan-sunny-n16": {
+    "url": "/api/cars/nissan-sunny-n16.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:NISSAN_SUNNY_(N16)_China.jpg"
+  },
+  "nissan-sunny-later-regional-generations": {
+    "url": "/api/cars/nissan-sunny-later-regional-generations.webp",
+    "credit": "Ahadika9054",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2006_Nissan_Sunny,_December_2024.jpg"
+  },
+  "nissan-micra-k11": {
+    "url": "/api/cars/nissan-micra-k11.webp",
+    "credit": "Charles01",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Nissan_Micra_(K11)_in_Mechalen_NL.jpg"
+  },
+  "nissan-x-trail-t33": {
+    "url": "/api/cars/nissan-x-trail-t33.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Nissan_X-Trail_(T33)_1X7A7179.jpg"
+  },
+  "nissan-juke-f15": {
+    "url": "/api/cars/nissan-juke-f15.webp",
+    "credit": "OWS Photography",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Nissan_Juke_(F15)_Washington_DC_Metro_Area,_USA_(2).jpg"
+  },
+  "nissan-juke-f16": {
+    "url": "/api/cars/nissan-juke-f16.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2024_Nissan_Juke_(F16)_IMG_0165.jpg"
+  },
+  "nissan-navara-d21": {
+    "url": "/api/cars/nissan-navara-d21.webp",
+    "credit": "Jeremy from Sydney, Australia",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:1994_Nissan_Navara_(D21)_Ti_V6_4-door_utility_(19687644725).jpg"
+  },
+  "nissan-navara-d22": {
+    "url": "/api/cars/nissan-navara-d22.webp",
+    "credit": "Calreyn88",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2001_Nissan_Navara_2.5_TD_4X4_D22.jpg"
+  },
+  "nissan-navara-d40": {
+    "url": "/api/cars/nissan-navara-d40.webp",
+    "credit": "HoldenFan1104",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2010_Nissan_Navara_(D40)_ST-X_Cab_Chassis.jpg"
+  },
+  "nissan-navara-d23-np300": {
+    "url": "/api/cars/nissan-navara-d23-np300.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:NISSAN_NAVARA_D23_China.jpg"
+  },
+  "ford-focus-mk1": {
+    "url": "/api/cars/ford-focus-mk1.webp",
+    "credit": "M 93",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Ford_Focus_MK1.jpg"
+  },
+  "ford-focus-mk2": {
+    "url": "/api/cars/ford-focus-mk2.webp",
+    "credit": "Jiří Sedláček",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Ford_Focus_MK2_at_Legendy_2018_in_Prague.jpg"
+  },
+  "ford-focus-mk3": {
+    "url": "/api/cars/ford-focus-mk3.webp",
+    "credit": "Sunolafjagtenben-hur",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Silver_Ford_Focus_MK3_-_Jeffrey_Street,_Gillingham,_Medway.jpg"
+  },
+  "ford-focus-mk4": {
+    "url": "/api/cars/ford-focus-mk4.webp",
+    "credit": "Jengtingchen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Ford_Focus_MK4_sedan_004.jpg"
+  },
+  "ford-fiesta-mk4": {
+    "url": "/api/cars/ford-fiesta-mk4.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:FORD_FIESTA_MK4_SEDAN_China.jpg"
+  },
+  "ford-fiesta-mk5": {
+    "url": "/api/cars/ford-fiesta-mk5.webp",
+    "credit": "MichalPL",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Crashed_Ford_Fiesta_MK5_in_Zabrze,_Poland,_Silesian_Voivodeship,_March_2024.jpg"
+  },
+  "ford-fiesta-mk6": {
+    "url": "/api/cars/ford-fiesta-mk6.webp",
+    "credit": "Gzzz",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Burnt_Ford_Fiesta_Mk6.jpg"
+  },
+  "ford-fiesta-mk7-8-naming-varies": {
+    "url": "/api/cars/ford-fiesta-mk7-8-naming-varies.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Ford_Fiesta_MK7_Facelift_1X7A0408.jpg"
+  },
+  "ford-transit-5th-6th-era": {
+    "url": "/api/cars/ford-transit-5th-6th-era.webp",
+    "credit": "Seattle Municipal Archives from Seattle, WA",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:1937_Ford_Transit_Bus_in_Seattle,_when_new.jpg"
+  },
+  "ford-transit-7th-gen": {
+    "url": "/api/cars/ford-transit-7th-gen.webp",
+    "credit": "Dadagui73",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Ford_Transit_2006.jpg"
+  },
+  "ford-transit-8th-gen-pre-facelift": {
+    "url": "/api/cars/ford-transit-8th-gen-pre-facelift.webp",
+    "credit": "Michael Gil",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2014_Ford_Transit_CIAS.jpg"
+  },
+  "ford-transit-8th-gen-facelift": {
+    "url": "/api/cars/ford-transit-8th-gen-facelift.webp",
+    "credit": "Captainmorlypogi1959",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Ford_Transit_2020.jpg"
+  },
+  "ford-kuga-mk1": {
+    "url": "/api/cars/ford-kuga-mk1.webp",
+    "credit": "Detectandpreserve",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Ford_Kuga_from_2008_dealer_decals_sideright_2008-06-09_A.jpg"
+  },
+  "ford-kuga-mk2": {
+    "url": "/api/cars/ford-kuga-mk2.webp",
+    "credit": "Steinfeld-feld",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2017_Ford_Kuga_Mk2_facelift_front_EU_specification_(white)_1.jpg"
+  },
+  "ford-kuga-mk3": {
+    "url": "/api/cars/ford-kuga-mk3.webp",
+    "credit": "Calreyn88",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2019_Ford_Kuga_ST_Line.jpg"
+  },
+  "ford-ranger-2nd-3rd-international-era": {
+    "url": "/api/cars/ford-ranger-2nd-3rd-international-era.webp",
+    "credit": "Hyins",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:2nd_Gen_2025_Ford_Ranger_T6_RA_XLT_4WD_P789_China_Front_Three_Quarter_View.jpg"
+  },
+  "ford-ranger-t6": {
+    "url": "/api/cars/ford-ranger-t6.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Ford_Ranger_(T6,_P703)_Wildtrak_IMG_7323.jpg"
+  },
+  "ford-ranger-t6-2-current": {
+    "url": "/api/cars/ford-ranger-t6-2-current.webp",
+    "credit": "Ethan Llamas",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:PIMS_2024_-_Ford_Ranger_2.0_Turbo_Wildtrak_4x2.jpg"
+  },
+  "seat-ibiza-mk2-6k": {
+    "url": "/api/cars/seat-ibiza-mk2-6k.webp",
+    "credit": "Michael Gil from Toronto, ON, Canada",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:SEAT_Ibiza_Mk2_rear.jpg"
+  },
+  "seat-ibiza-mk3-6l": {
+    "url": "/api/cars/seat-ibiza-mk3-6l.webp",
+    "credit": "Rafa Otero from Madrid, Spain",
+    "license": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:SEAT_Ibiza_Mk3_TDI.jpg"
+  },
+  "seat-ibiza-mk4-6j": {
+    "url": "/api/cars/seat-ibiza-mk4-6j.webp",
+    "credit": "Neuwieser",
+    "license": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Seat_ibiza_SC_kit_aerodimamico_mk4.jpg"
+  },
+  "seat-ibiza-mk5-kj": {
+    "url": "/api/cars/seat-ibiza-mk5-kj.webp",
+    "credit": "Riepppi",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:1.6_TDI_DGTC_2019_SEAT_IBIZA_KJ.jpg"
+  },
+  "seat-leon-mk1-1m": {
+    "url": "/api/cars/seat-leon-mk1-1m.webp",
+    "credit": "Jason",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:SEAT_Leon_Mk1_hu.jpg"
+  },
+  "seat-leon-mk2-1p": {
+    "url": "/api/cars/seat-leon-mk2-1p.webp",
+    "credit": "M 93",
+    "license": "CC BY-SA 3.0 de",
+    "source": "https://commons.wikimedia.org/wiki/File:Seat_Leon_(1P)_%E2%80%93_Frontansicht,_17._April_2011,_D%C3%BCsseldorf.jpg"
+  },
+  "seat-leon-mk3-5f": {
+    "url": "/api/cars/seat-leon-mk3-5f.webp",
+    "credit": "Retired electrician",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Moscow,_SEAT_Leon_FR_Mk3_red,_Aug_2025_01.jpg"
+  },
+  "seat-leon-mk4-kl": {
+    "url": "/api/cars/seat-leon-mk4-kl.webp",
+    "credit": "Wikimedia Commons",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Seat_Leon.jpg"
+  },
+  "seat-arona-kj7": {
+    "url": "/api/cars/seat-arona-kj7.webp",
+    "credit": "Matti Blume",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Seat_Arona,_IAA_2017,_Frankfurt_(1Y7A2246).jpg"
+  },
+  "seat-ateca-kh7": {
+    "url": "/api/cars/seat-ateca-kh7.webp",
+    "credit": "Charles01",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Seat_Ateca_2016_in_Hertfordshire.jpg"
+  },
+  "audi-a3-8l": {
+    "url": "/api/cars/audi-a3-8l.webp",
+    "credit": "Jeremy from Sydney, Australia",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:1997_Audi_A3_(8L)_1.6_3-door_hatchback_(26381040274).jpg"
+  },
+  "audi-a3-8p": {
+    "url": "/api/cars/audi-a3-8p.webp",
+    "credit": "Luftfahrrad",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Audi_A3_8P_1.9TDI_2.Facelift_front.jpg"
+  },
+  "audi-a3-8v": {
+    "url": "/api/cars/audi-a3-8v.webp",
+    "credit": "Berthold Werner",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Audi_A3_8V_2014-07-28_08-10-04.jpg"
+  },
+  "audi-a3-8y": {
+    "url": "/api/cars/audi-a3-8y.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2024_Audi_A3_8Y_Sedan_IMG_1026.jpg"
+  },
+  "audi-a4-b5": {
+    "url": "/api/cars/audi-a4-b5.webp",
+    "credit": "P,TO 19104",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Audi_A4_B5_(with_facelift)_blue_sedan.jpg"
+  },
+  "audi-a4-b6": {
+    "url": "/api/cars/audi-a4-b6.webp",
+    "credit": "Lothar Spurzem",
+    "license": "CC BY-SA 2.0 de",
+    "source": "https://commons.wikimedia.org/wiki/File:Audi_A4_B6_TDI_Cabrio_(2019-03-27_Sp_r).JPG"
+  },
+  "audi-a4-b8": {
+    "url": "/api/cars/audi-a4-b8.webp",
+    "credit": "Thomas doerfer",
+    "license": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Audi_A4_B8_Limousine_Ambiente_2.0_TDI_Eissilber.JPG"
+  },
+  "audi-a4-b9": {
+    "url": "/api/cars/audi-a4-b9.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Audi_A4_B9_sedans_(FL)_1X7A6817.jpg"
+  },
+  "audi-a6-c5": {
+    "url": "/api/cars/audi-a6-c5.webp",
+    "credit": "Rudolf Stricker",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Audi_A6_C5_front_20080121.jpg"
+  },
+  "audi-a6-c6": {
+    "url": "/api/cars/audi-a6-c6.webp",
+    "credit": "KGC626",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Audi_A6_C6_Facelift.jpg"
+  },
+  "audi-a6-c7": {
+    "url": "/api/cars/audi-a6-c7.webp",
+    "credit": "M 93",
+    "license": "CC BY-SA 3.0 de",
+    "source": "https://commons.wikimedia.org/wiki/File:Audi_A6_S-line_(C7)_%E2%80%93_Frontansicht,_1._Mai_2012,_D%C3%BCsseldorf.jpg"
+  },
+  "audi-a6-c8": {
+    "url": "/api/cars/audi-a6-c8.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Audi_A6_Allroad_Quattro_C8_1X7A0302.jpg"
+  },
+  "audi-q3-8u": {
+    "url": "/api/cars/audi-q3-8u.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:AUDI_Q3_(Typ_8U)_China_(7).jpg"
+  },
+  "audi-q3-f3": {
+    "url": "/api/cars/audi-q3-f3.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Audi_Q3_F3_DSC_7494.jpg"
+  },
+  "audi-q5-8r": {
+    "url": "/api/cars/audi-q5-8r.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:AUDI_Q5_8R_China_(2).jpg"
+  },
+  "audi-q5-fy": {
+    "url": "/api/cars/audi-q5-fy.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Audi_Q5_FY_50_TFSI_e_Facelift_IMG_5284.jpg"
+  },
+  "audi-q5-gu": {
+    "url": "/api/cars/audi-q5-gu.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Audi_Q5_Sportback_GU_DSC_9268.jpg"
+  },
+  "audi-q7-4l": {
+    "url": "/api/cars/audi-q7-4l.webp",
+    "credit": "Navigator84",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Audi_Q7_4L_China_2012-07-15.jpg"
+  },
+  "audi-q7-4m": {
+    "url": "/api/cars/audi-q7-4m.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2025_Audi_Q7_(4M)_DSC_7492.jpg"
+  },
+  "opel-corsa-b": {
+    "url": "/api/cars/opel-corsa-b.webp",
+    "credit": "Johannes Maximilian",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Opel_Corsa_B_2023_03_18_JM.jpg"
+  },
+  "opel-corsa-c": {
+    "url": "/api/cars/opel-corsa-c.webp",
+    "credit": "Charles01",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Opel_Corsa_C_hatchback_5d_in_Slenaken_NL.jpg"
+  },
+  "opel-corsa-e": {
+    "url": "/api/cars/opel-corsa-e.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2023_Opel_Corsa-e_IAA_2023_1X7A0385.jpg"
+  },
+  "opel-corsa-f": {
+    "url": "/api/cars/opel-corsa-f.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Opel_Corsa_F_IMG_5815.jpg"
+  },
+  "opel-astra-f": {
+    "url": "/api/cars/opel-astra-f.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Opel_Astra_F_Facelift_DSC_0628.jpg"
+  },
+  "opel-astra-g": {
+    "url": "/api/cars/opel-astra-g.webp",
+    "credit": "Exixiz20",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Opel_Astra_G_1.6_16V.jpg"
+  },
+  "opel-astra-h": {
+    "url": "/api/cars/opel-astra-h.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:OPEL_ASTRA_H_GTC_China_(3).jpg"
+  },
+  "opel-astra-k": {
+    "url": "/api/cars/opel-astra-k.webp",
+    "credit": "Yorii01",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:OPEL_ASTRA_K_01_Siena.jpg"
+  },
+  "opel-insignia-a": {
+    "url": "/api/cars/opel-insignia-a.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BUICK_REGAL_FIFTH_GENERATION_(OPEL_INSIGNIA_A)_China.jpg"
+  },
+  "opel-insignia-b": {
+    "url": "/api/cars/opel-insignia-b.webp",
+    "credit": "Alexander-93",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Opel_Insignia_B_Sports_Tourer_GSi_1X7A2436.jpg"
+  },
+  "opel-mokka-a": {
+    "url": "/api/cars/opel-mokka-a.webp",
+    "credit": "Trop86",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Opel_Mokka_A_120325.jpg"
+  },
+  "opel-mokka-b": {
+    "url": "/api/cars/opel-mokka-b.webp",
+    "credit": "Alexander Migl",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Opel_Mokka_B_1X7A0317.jpg"
+  },
+  "opel-vectra-a": {
+    "url": "/api/cars/opel-vectra-a.webp",
+    "credit": "ROCostiTheBunnyCZ",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Opel_Vectra_A_1.7D_Sedan_(1988-1995_Pre-Facelift)-front.jpg"
+  },
+  "opel-vectra-b": {
+    "url": "/api/cars/opel-vectra-b.webp",
+    "credit": "Dinkun Chen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:OPEL_VECTRA_B_SEDAN_China.jpg"
+  },
+  "opel-vectra-c": {
+    "url": "/api/cars/opel-vectra-c.webp",
+    "credit": "Rudolf Stricker",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Opel_Vectra_C_front_20080331.jpg"
+  }
+}

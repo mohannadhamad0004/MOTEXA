@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-11-08T14:58:16.957Z",
+  "mode": "Read-only filesystem and generated catalog audit; DB/runtime state requires PostgreSQL access.",
+  "active": 22,
+  "publicGlbs": 22,
+  "missing": [],
+  "unexpected": [],
+  "generated": [
+    {
+      "file": "docs\\3d\\models.json",
+      "matches": true
+    },
+    {
+      "file": "mobile\\src\\features\\car3d\\models.ts",
+      "matches": true
+    },
+    {
+      "file": "docs\\3d\\CREDITS.md",
+      "matches": true
+    }
+  ],
+  "missingAttribution": [],
+  "beetle": {
+    "key": "manual-19febfb9-3b4a-4a5f-b2c0-ce33547da350-ad65d3b3205c45de",
+    "author": "Angelos Gkanias",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/volkswagen-beetle-83276f21bd9c41e196c474350b43efb0",
+    "sha256": "ad65d3b3205c45de56ab9b2ff4b50f66d960737793950d6b67aa4920bad6e1dd"
+  },
+  "promotionJournalPresent": false
+}

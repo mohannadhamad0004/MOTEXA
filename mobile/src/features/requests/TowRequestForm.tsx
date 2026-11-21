@@ -1,0 +1,301 @@
+import { hapticError, hapticSuccess } from "../../motion";
+import { useEffect, useRef, useState } from "react";
+import { View } from "react-native";
+import { cityCentre } from "../../core/constants/cities";
+import { isFreshLocation, Point, roundPoint } from "../../core/constants/geo";
+import { useL } from "../../core/hooks/useL";
+import { useSessionUser } from "../../core/session/session";
+import { currentCar } from "../catalog/myCar";
+import { MAPS_AVAILABLE, PinMap } from "../shared/maps";
+import { LocationProblem, reverseGeocode, useCurrentLocation } from "../shared/useCurrentLocation";
+import { useProblemLabels } from "./requestBits";
+import { TOW_PROBLEMS, TowProblem, CustomerTowRequest, customerTowRequests, existingIdOf } from "./requestsService";
+import { Card as GCard, Chip as GChip, Field, GButton, GIconName, GText } from "../../components/garage";
+import { gType, useGarageTheme } from "../../theme/garage";
+
+// ---- garage adapters: these fields only appear in the customer map panel; same structure, "Mo's Garage" look ----
+function useTheme() {
+  const { g, align, row } = useGarageTheme();
+  return { align, row, c: { ink: g.ink, text: g.ink, soft: g.soft } };
+}
+const Text = GText;
+const Card = ({ children }: { children: React.ReactNode }) => <GCard style={{ marginBottom: 12 }}>{children}</GCard>;
+const Input = (p: { label: string; value: string; onChangeText: (v: string) => void; multiline?: boolean; maxLength?: number; keyboardType?: "default" | "decimal-pad" | "number-pad" | "phone-pad"; placeholder?: string }) => <Field {...p} />;
+const Button = ({ label, onPress, icon, disabled }: { label: string; onPress: () => void; icon?: string; disabled?: boolean; variant?: string }) => (
+  <View style={{ marginBottom: 10 }}>
+    <GButton variant="secondary" label={label} onPress={onPress} icon={icon as GIconName} disabled={disabled} />
+  </View>
+);
+const Chip = ({ label, on, onPress }: { label: string; on?: boolean; onPress: () => void }) => <GChip label={label} on={on} onPress={onPress} />;
+function ChipRow({ children }: { children: React.ReactNode }) {
+  const { row } = useGarageTheme();
+  return <View style={[row, { flexWrap: "wrap", gap: 8, marginBottom: 4 }]}>{children}</View>;
+}
+function Section({ title, children }: { n?: string; title: string; children: React.ReactNode }) {
+  const { align } = useGarageTheme();
+  return (
+    <View style={{ marginTop: 20 }}>
+      <GText style={[gType.label, { fontWeight: "800", marginBottom: 10 }, align]}>{title}</GText>
+      {children}
+    </View>
+  );
+}
+
+
+/**
+ * All state and rules of the tow request form (validation, address lookup, location). The full screen
+ * (customer/towrequest/new) and the panel on the map page both use it, so the rules live in one place.
+ */
+export function useTowRequestForm(company: { id: string; city: string } | null) {
+  const user = useSessionUser();
+  const { t } = useL();
+  const car = currentCar(); // from "Fits my car" when set; still editable
+  const [pickup, setPickup] = useState("");
+  const [dropoff, setDropoff] = useState("");
+  const [make, setMake] = useState(car?.make ?? "");
+  const [model, setModel] = useState(car?.model ?? "");
+  const [year, setYear] = useState(car?.year ?? "");
+  const [problem, setProblem] = useState<TowProblem | null>(null);
+  const [phone, setPhone] = useState("");
+  const [notes, setNotes] = useState("");
+  // null = any driver of the company; else one FREE driver the customer picked
+  const [driverId, setDriverId] = useState<string | null>(null);
+  // NEAREST (no company: the server picks the nearest FREE driver from the pickup point), COMPANY, or DRIVER
+  const [nearest, setNearest] = useState(false);
+  // Where the car is: read only when you tap "Use my current location" (or place the pin yourself). Sent with the request, nowhere else.
+  const [spot, setSpot] = useState<Point | null>(null);
+  const [auto, setAuto] = useState(false); // the pickup text was filled in from the map, so moving the pin may refresh it
+  const [finding, setFinding] = useState(false);
+  // The destination pin (optional): sent as dropoffLat / dropoffLng so the driver gets the road route and distance to it.
+  const [destSpot, setDestSpot] = useState<Point | null>(null);
+  const [destAuto, setDestAuto] = useState(false); // the destination text came from the map
+  const destLookup = useRef(0);
+  const loc = useCurrentLocation("tow-request", user.id);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  // Address lookups: only the newest one may write (a manual edit or removing the pin cancels it), and map moves are debounced.
+  const lookup = useRef(0);
+  const lookupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelLookup = () => {
+    lookup.current++;
+    if (lookupTimer.current) clearTimeout(lookupTimer.current);
+    setFinding(false);
+  };
+  useEffect(
+    () => () => {
+      lookup.current++;
+      if (lookupTimer.current) clearTimeout(lookupTimer.current);
+    },
+    []
+  );
+  const placeDest = (p: Point) => {
+    const at = roundPoint(p);
+    setDestSpot(at);
+    if (dropoff.trim() && !destAuto) return;
+    const mine = ++destLookup.current;
+    void reverseGeocode(at).then((text) => {
+      if (mine !== destLookup.current || !text) return;
+      setDropoff(text);
+      setDestAuto(true);
+    });
+  };
+  const editDropoff = (v: string) => {
+    setDropoff(v);
+    setDestAuto(false);
+  };
+  const startDestPin = () => {
+    const point = spot ?? cityCentre(company?.city ?? "");
+    if (!point) {
+      setErr(t("Place the pickup pin or choose a valid company city first.", "ضع دبوس الاستلام أو اختر مدينة الشركة الصحيحة أولًا."));
+      return;
+    }
+    setErr(null);
+    placeDest({ lat: point.lat + 0.005, lng: point.lng + 0.005 });
+  };
+  const removeDestPin = () => {
+    destLookup.current++;
+    setDestSpot(null);
+  };
+  const place = (p: Point, replaceText: boolean) => {
+    const at = roundPoint(p);
+    setSpot(at);
+    if (!(replaceText || !pickup.trim() || auto)) return;
+    cancelLookup();
+    const mine = lookup.current;
+    setFinding(true);
+    lookupTimer.current = setTimeout(
+      async () => {
+        const text = await reverseGeocode(at);
+        if (mine !== lookup.current) return;
+        setFinding(false);
+        if (text) {
+          setPickup(text);
+          setAuto(true);
+        }
+      },
+      replaceText ? 0 : 400
+    );
+  };
+  const useHere = async () => {
+    const p = await loc.locate();
+    if (p) place(p, true);
+  };
+  const editPickup = (v: string) => {
+    cancelLookup();
+    setPickup(v);
+    setAuto(false);
+  };
+  const removePin = () => {
+    cancelLookup();
+    setSpot(null);
+  };
+  /** Drops the pin at a fresh reading from this form, else at a known company-city centre. */
+  const startPin = () => {
+    const point = loc.fix && isFreshLocation(loc.fix.timestamp) ? loc.fix.point : cityCentre(company?.city ?? "");
+    if (!point) {
+      setErr(t("Use your current location or choose a valid company city first.", "استخدم موقعك الحالي أو اختر مدينة الشركة الصحيحة أولًا."));
+      return;
+    }
+    setErr(null);
+    place(point, false);
+  };
+
+  /** Validates and sends. Returns the request id (a 409 "already open" answer returns that request's id), or null. */
+  const submit = async () => {
+    const r = await send();
+    // haptic feedback for the outcome only: a request sent, or a failed submit
+    if (!r) hapticError();
+    else if (!r.existing) hapticSuccess();
+    return r;
+  };
+  const send = async (): Promise<{ id: string; existing: boolean; request?: CustomerTowRequest } | null> => {
+    const y = year.trim() ? Number(year.trim()) : null;
+    if (pickup.trim().length < 3) return fail(t("Enter the pickup address.", "أدخل عنوان الاستلام."));
+    if (dropoff.trim().length < 3) return fail(t("Enter the destination.", "أدخل الوجهة."));
+    if (!make.trim() || !model.trim()) return fail(t("Enter the car make and model.", "أدخل ماركة السيارة وطرازها."));
+    if (y !== null && !(Number.isInteger(y) && y >= 1950 && y <= new Date().getFullYear() + 1)) return fail(t("The car year is not valid.", "سنة السيارة غير صحيحة."));
+    if (!problem) return fail(t("Choose what is wrong with the car.", "اختر مشكلة السيارة."));
+    if (!/^[0-9+()\-\s]{6,20}$/.test(phone.trim()) || phone.replace(/\D/g, "").length < 5) return fail(t("Enter a valid contact phone number.", "أدخل رقم هاتف صحيحًا للتواصل."));
+    if (nearest && !spot) return fail(t("Use your current location or place the pin: we need the pickup point to find the nearest driver.", "استخدم موقعك الحالي أو ضع الدبوس: نحتاج نقطة الاستلام لإيجاد أقرب سائق."));
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await customerTowRequests.create({
+        mode: nearest ? "NEAREST" : driverId ? "DRIVER" : "COMPANY",
+        ...(nearest || !company ? {} : { companyId: company.id }),
+        pickupAddress: pickup.trim(),
+        dropoffAddress: dropoff.trim(),
+        contactPhone: phone.trim(),
+        vehicleMake: make.trim(),
+        vehicleModel: model.trim(),
+        vehicleYear: y,
+        ...(spot ? { pickupLat: spot.lat, pickupLng: spot.lng } : {}),
+        ...(destSpot ? { dropoffLat: destSpot.lat, dropoffLng: destSpot.lng } : {}),
+        problemType: problem,
+        notes: notes.trim(),
+        ...(driverId && !nearest ? { driverId } : {}),
+      });
+      return { id: r.id, existing: false, request: r };
+    } catch (e: any) {
+      const existing = existingIdOf(e, "existingRequestId");
+      if (existing) return { id: existing, existing: true };
+      setErr(e.message);
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  };
+  const fail = (m: string) => {
+    setErr(m);
+    return null;
+  };
+
+  return { destSpot, placeDest, startDestPin, removeDestPin, editDropoff, loc, spot, place, useHere, editPickup, removePin, startPin, finding, busy, err, submit, setErr, pickup, dropoff, setDropoff, make, setMake, model, setModel, year, setYear, problem, setProblem, phone, setPhone, notes, setNotes, driverId, setDriverId, nearest, setNearest, cancelLookup };
+}
+export type TowForm = ReturnType<typeof useTowRequestForm>;
+
+/** The form fields. `pinMap` shows the small pin map (the full screen); on the map page the pin lives on the big map. */
+export function TowRequestFields({ form, pinMap, numbered = true }: { form: TowForm; pinMap: boolean; numbered?: boolean }) {
+  const { t } = useL();
+  const { c, align } = useTheme();
+  const problemLabel = useProblemLabels();
+  const wrap = (n: string, title: string, body: React.ReactNode) => (numbered ? <Section n={n} title={title}>{body}</Section> : <View style={{ marginTop: 20 }}><Text style={[{ color: c.ink, fontSize: 15, fontWeight: "700", marginBottom: 10 }, align]}>{title}</Text>{body}</View>);
+  return (
+    <>
+      {wrap(
+        "01",
+        t("Pickup", "الاستلام"),
+        <Card>
+          {form.loc.dialog}
+          <Button
+            variant="ghost"
+            icon="locate-outline"
+            label={form.finding || form.loc.locating ? t("Finding your location…", "جارٍ تحديد موقعك…") : t("Use my current location", "استخدم موقعي الحالي")}
+            disabled={form.finding || form.loc.locating}
+            onPress={form.useHere}
+          />
+          <LocationProblem loc={form.loc} />
+          <Input label={t("Pickup address", "عنوان الاستلام")} value={form.pickup} onChangeText={form.editPickup} multiline maxLength={300} />
+          {MAPS_AVAILABLE && pinMap ? (
+            form.spot ? (
+              <>
+                <PinMap point={form.spot} onChange={(p) => form.place(p, false)} />
+                <Text style={{ color: c.soft, fontSize: 11, marginBottom: 10 }}>
+                  {t("Tap the map or drag the pin to adjust the pickup point. Add a street or landmark above if the address is empty.", "اضغط على الخريطة أو اسحب الدبوس لتعديل نقطة الاستلام. أضف شارعًا أو معلمًا أعلاه إن كان العنوان فارغًا.")}
+                </Text>
+                <Button variant="ghost" icon="trash-outline" label={t("Remove the pin", "إزالة الدبوس")} onPress={form.removePin} />
+              </>
+            ) : (
+              <Button variant="ghost" icon="map-outline" label={t("Choose on the map", "اختر على الخريطة")} onPress={form.startPin} />
+            )
+          ) : null}
+          {!pinMap ? (
+            form.spot ? (
+              <>
+                <Text style={{ color: c.soft, fontSize: 11, marginBottom: 10 }}>{t("Drag the A pin on the map to adjust the pickup point.", "اسحب الدبوس A على الخريطة لتعديل نقطة الاستلام.")}</Text>
+                <Button variant="ghost" icon="trash-outline" label={t("Remove the pin", "إزالة الدبوس")} onPress={form.removePin} />
+              </>
+            ) : (
+              <Button variant="ghost" icon="map-outline" label={t("Place the pin on the map", "ضع الدبوس على الخريطة")} onPress={form.startPin} />
+            )
+          ) : null}
+          <Input label={t("Destination", "الوجهة")} value={form.dropoff} onChangeText={form.editDropoff} multiline maxLength={300} />
+          {MAPS_AVAILABLE ? (
+            form.destSpot ? (
+              <>
+                <PinMap point={form.destSpot} onChange={form.placeDest} />
+                <Text style={{ color: c.soft, fontSize: 11, marginBottom: 10 }}>{t("Drag the pin to the place where the car should be taken.", "اسحب الدبوس إلى المكان الذي ستُنقل إليه السيارة.")}</Text>
+                <Button variant="ghost" icon="trash-outline" label={t("Remove the destination pin", "إزالة دبوس الوجهة")} onPress={form.removeDestPin} />
+              </>
+            ) : (
+              <Button variant="ghost" icon="flag-outline" label={t("Choose the destination on the map", "اختر الوجهة على الخريطة")} onPress={form.startDestPin} />
+            )
+          ) : null}
+        </Card>
+      )}
+      {wrap(
+        "02",
+        t("Car and problem", "السيارة والمشكلة"),
+        <>
+          <Card>
+            <Input label={t("Make", "الشركة المصنعة")} value={form.make} onChangeText={form.setMake} maxLength={60} />
+            <Input label={t("Model", "الطراز")} value={form.model} onChangeText={form.setModel} maxLength={60} />
+            <Input label={t("Year (optional)", "السنة (اختياري)")} value={form.year} onChangeText={form.setYear} keyboardType="number-pad" maxLength={4} />
+          </Card>
+          <Text style={[{ color: c.soft, fontSize: 13, marginBottom: 8 }, align]}>{t("What is wrong?", "ما المشكلة؟")}</Text>
+          <ChipRow>
+            {TOW_PROBLEMS.map((k) => (
+              <Chip key={k} label={problemLabel[k]} on={form.problem === k} onPress={() => form.setProblem(k)} />
+            ))}
+          </ChipRow>
+          <View style={{ height: 12 }} />
+          <Card>
+            <Input label={t("Contact phone", "هاتف التواصل")} value={form.phone} onChangeText={form.setPhone} keyboardType="phone-pad" maxLength={20} />
+            <Input label={t("Notes (optional)", "ملاحظات (اختياري)")} value={form.notes} onChangeText={form.setNotes} multiline maxLength={500} />
+          </Card>
+        </>
+      )}
+    </>
+  );
+}

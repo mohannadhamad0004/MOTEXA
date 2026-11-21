@@ -1,0 +1,75 @@
+# MOTEXA — Agent Guide (shared by Codex and Claude Code)
+
+Read this whole file before doing anything. It is the single source of truth for every AI agent working in this repo.
+
+## 1. What MOTEXA is
+Graduation project (An-Najah National University, Computer Engineering) by Mohannad Hamad and Diala Bakir, supervised by Dr. Sufyan Samara.
+A car-services platform for Palestine: verified mechanics, a car-parts marketplace (shops), tow-truck companies with real trucks, customer requests, admin review, and (planned) AI car diagnosis.
+Currency: ILS, shown as "₪ 120.00". Languages: English + Arabic (full RTL). Cities: the shared 22-city Palestinian list.
+
+## 2. Repo layout
+- `backend/` — Express 5 + TypeScript (tsx watch), PostgreSQL `motexa_dev`, Prisma 7.x, argon2id, JWT (15 min, no refresh yet). Hand-written validation (no Zod). Every state change writes an AuditLog.
+- `mobile/` — React Native, Expo SDK 57, Expo Router (routes in `mobile/src/app`), tested in **Expo Go on a real Android phone**.
+  - `src/theme/` tokens (dark + light, bronze accent #E0A36F / #9A602D), `useTheme`, `makeStyles`
+  - `src/core/` config (`apiUrl`), session, landing per role, constants (cities, categories, money, geo, files), hooks
+  - `src/components/ui/` shared UI kit (Text, Button, Card, Badge, Chip, Input/SearchBar, Skeleton, EmptyState, ErrorState, Price, SectionHeader, StatusTimeline, ListRow, ImageTile…)
+  - `src/components/layout/` Screen (safe area), DashboardLayout, AuthLayout, RoleGate, tab bar options
+  - `src/components/*.tsx` (top level) = the original design components (Appearance, BrandSurfaces, EditorialUI, InteractiveButton, LanguageSwitch, MotexaVisual)
+  - `src/features/*` feature-specific code (catalog, requests, tow, parts, shared/maps = Leaflet/OSM WebView)
+- `apps/web/` — the web app (separate; React + Tailwind + shadcn). Not part of mobile work.
+
+## 3. Ownership
+Since 2026-11-18 Mohannad works on MOTEXA alone: every file in this repo is his to change. There is no partner-owned file list and no "listed bugs only" rule any more. The history of earlier partner changes stays in `docs/agents/STATUS.md`; new entries no longer need a "Changed in Diala's files" section.
+
+## 4. Hard rules
+1. Work on the current branch (`feature/mohannad-mobile` unless told otherwise). Never push. Never commit — the human commits (no AI co-author lines).
+2. No destructive git: no `reset --hard`, `clean`, `checkout -- <file>` on others' work, `stash drop`, force push, rebase.
+3. Database: additive migrations only. Never `prisma migrate reset`, `db push`, or editing applied migrations. On merged branches use `npx prisma migrate deploy`.
+4. Never commit or print secrets. `.env` files, `storage/`, uploads stay out of git. API keys live only in `backend/.env`.
+5. No fake data on screen: no fake ratings, sales counts, ETAs, discounts. Demo data only in the dev seed (`backend/src/seed/test-accounts.ts`, `ALLOW_DEV_SEED`).
+6. Privacy: customers never see provider phone/email/plates/licences; documents are private (owner + matching admin only).
+7. Mobile: every new native package must work in Expo Go (`npx expo install <pkg>`); ask the human first. No NativeWind/Tailwind/CSS on mobile — StyleSheet + theme tokens + shared UI kit. Every screen: EN + AR, RTL, dark + light, 390px wide without overflow.
+8. Proposal first for anything non-trivial: read, propose (files, plan), STOP and wait for "approved".
+9. Finish with: mobile `npx tsc --noEmit` = 0, backend `npx tsc --noEmit` = 0, `npx prisma validate` when schema changed, plus `git status --short`.
+10. Test data cleanup: remove the test records you created, but ALWAYS keep their audit rows (the audit log is append-only); only add one `TEST_DATA_REMOVED` audit row per removal (`actorId` null, `details.by` = the agent). Never delete audit rows.
+
+## 4a. 3D data rules
+- A 3D model either EXISTS (published, or hidden by the Parts Admin while it is being fixed) or is DELETED. There is no "removed", "archived", "retired" or kept-old-version state anywhere: not in `docs/3d/models.json`, not in the DB, not in files, not in the UI.
+- The Parts Admin is authorised to add, edit, replace and delete 3D models.
+- Delete is permanent: the GLB file and its rows (revision, part map, zones, accessory auto-fits for that car, the import that produced it) go, even when in use. The app first shows what is affected, requires confirmation and writes an audit row (`VEHICLE3D_MODEL_DELETED`).
+- Replace: customers keep the current model until the admin approves the new one; on approval the old model's file and rows are deleted (no revision history, no restore).
+- Hide/Show stays: hidden = the model exists but customers don't get it.
+- The Sketchfab duplicate check only looks at models and imports that exist.
+
+## 5. Running locally (Windows, PowerShell)
+- Backend: `cd backend; npm run dev` → health `http://<LAN-IP>:5000/api/health`
+- Mobile: `cd mobile; npx expo start -c --offline` → scan with Expo Go. `mobile/.env`: `EXPO_PUBLIC_API_URL=http://<LAN-IP>:5000/api` (the laptop IP changes; check `ipconfig`).
+- Dev seed: `cd backend; npx tsx src/seed/test-accounts.ts` (dev accounts `*@motexa.test`, password `Motexa-Dev-1234!`).
+- Customer signup codes (and every other OTP) need `OTP_HASH_SECRET` (64 hex) in `backend/.env`. With no SMTP_* / RESEND_* set (dev), emails are not sent: the backend terminal prints them as a `[DEV EMAIL] to=… subject=MOTEXA | Email verification code | …` line with the 6-digit code.
+
+## 6. Working in tandem (Codex + Claude Code)
+- Only ONE agent edits a given file area at a time. Default split: **Claude Code builds, Codex reviews** (or the human assigns areas explicitly).
+- If both must write at the same time, use separate git worktrees/branches; the human merges.
+- After every task, append a short entry to `docs/agents/STATUS.md`: date, agent, task, files changed, checks run, open issues. Read it before starting.
+- Reviews go to `docs/agents/REVIEW.md` (findings with file:line, severity, suggested fix). Reviewers do not edit code unless asked.
+
+## 7. Current state (update when it changes)
+Done: auth redesign (one sign-in screen, customer-only signup with an email code, providers apply from a customer account via Work with MOTEXA and get their role only on approval by that department), tow fleet + company profile, parts shops + products (condition/type/fitment/categories/filters), provider files, requests (part inquiries, tow requests with state machine), customer storefront home, mechanics for customers (public catalog, profile, service requests, mechanic inbox), GPS nearest companies + OSM maps (Leaflet WebView), login per role, merge of Diala's admin OTP + fonts + admin tabs, theme tokens + shared UI kit on ALL of Mohannad's screens (customer, provider, tow/parts admin), 14 Codex review fixes. Diala's screens (auth, onboarding, admin tabs, mechanics admin) are NOT yet on the theme tokens.
+In progress: UI direction agreement (ChatGPT + Claude review → final design spec), then UI polish phases.
+Next: Emergency (one-tap tow request), ratings/reviews, orders (cash only), My Cars, AI diagnosis.
+
+8. Proposal first for anything non-trivial:
+   read the relevant files, propose the files and implementation plan, then STOP
+   and wait for "approved".
+
+   Once the human says "approved", that approval covers the entire proposed scope.
+   Continue autonomously through implementation, edits, local commands, tests,
+   visual validation, and fixes required to satisfy the approved acceptance criteria.
+
+   Do not repeatedly ask for permission for normal actions inside the approved scope.
+   Ask again only if:
+  - the scope must materially expand,
+  - a destructive operation is required,
+  - a new native dependency is required,
+  - database/schema work not included in the proposal becomes necessary,
+  - or a commit/push/deployment is requested.

@@ -1,0 +1,945 @@
+{
+  "valid": true,
+  "car": {
+    "dimensions": [
+      2.061525261763837,
+      1.441410810265177,
+      4.6
+    ],
+    "wheelsFound": false,
+    "mappedParts": [],
+    "partMapIn": []
+  },
+  "fit": {
+    "type": "RIMS",
+    "fitVersion": 6,
+    "replaces": {
+      "how": "wheel analysis",
+      "hidden": 3
+    },
+    "wheels": [
+      {
+        "wheel": "RL",
+        "refusal": null,
+        "warnings": [
+          "BUILT_TYRE"
+        ],
+        "archGapBeforeMm": 7.1,
+        "archGapAfterMm": 5,
+        "movedMm": 2.1,
+        "axleConfidence": 0.775,
+        "steerDeg": 0,
+        "tyreOuterMm": 637.2,
+        "tyreWidthMm": 229.9,
+        "stockRimMm": 489.9,
+        "stockRimInches": 18.3,
+        "rimMm": 456.8,
+        "rimWidthMm": 209.9,
+        "sidewallMm": 90.2,
+        "faceInsetMm": 5.2,
+        "gapToTyreMm": 0,
+        "brakesKept": 0,
+        "tyre": "built",
+        "archSamples": 11,
+        "archConfidence": 0.758,
+        "blockedBy": null,
+        "hiddenBrakeParts": 0
+      },
+      {
+        "wheel": "RR",
+        "refusal": null,
+        "warnings": [
+          "BUILT_TYRE"
+        ],
+        "archGapBeforeMm": 7.1,
+        "archGapAfterMm": 5,
+        "movedMm": 2.1,
+        "axleConfidence": 0.779,
+        "steerDeg": 0,
+        "tyreOuterMm": 637.2,
+        "tyreWidthMm": 229.8,
+        "stockRimMm": 489.8,
+        "stockRimInches": 18.3,
+        "rimMm": 456.8,
+        "rimWidthMm": 209.8,
+        "sidewallMm": 90.2,
+        "faceInsetMm": 5.2,
+        "gapToTyreMm": 0,
+        "brakesKept": 0,
+        "tyre": "built",
+        "archSamples": 11,
+        "archConfidence": 0.758,
+        "blockedBy": null,
+        "hiddenBrakeParts": 0
+      },
+      {
+        "wheel": "FL",
+        "refusal": null,
+        "warnings": [
+          "BUILT_TYRE"
+        ],
+        "archGapBeforeMm": 3.2,
+        "archGapAfterMm": 5,
+        "movedMm": -1.8,
+        "axleConfidence": 0.756,
+        "steerDeg": 0,
+        "tyreOuterMm": 637.3,
+        "tyreWidthMm": 229.8,
+        "stockRimMm": 489.7,
+        "stockRimInches": 18.3,
+        "rimMm": 456.8,
+        "rimWidthMm": 209.8,
+        "sidewallMm": 90.3,
+        "faceInsetMm": 5.1,
+        "gapToTyreMm": 0,
+        "brakesKept": 0,
+        "tyre": "built",
+        "archSamples": 11,
+        "archConfidence": 0.917,
+        "blockedBy": null,
+        "hiddenBrakeParts": 0
+      },
+      {
+        "wheel": "FR",
+        "refusal": null,
+        "warnings": [
+          "BUILT_TYRE"
+        ],
+        "archGapBeforeMm": 3.2,
+        "archGapAfterMm": 5,
+        "movedMm": -1.8,
+        "axleConfidence": 0.756,
+        "steerDeg": 0,
+        "tyreOuterMm": 637.3,
+        "tyreWidthMm": 229.8,
+        "stockRimMm": 489.8,
+        "stockRimInches": 18.3,
+        "rimMm": 456.8,
+        "rimWidthMm": 209.8,
+        "sidewallMm": 90.3,
+        "faceInsetMm": 5.1,
+        "gapToTyreMm": 0,
+        "brakesKept": 0,
+        "tyre": "built",
+        "archSamples": 11,
+        "archConfidence": 0.917,
+        "blockedBy": null,
+        "hiddenBrakeParts": 0
+      }
+    ],
+    "faceSign": 1,
+    "wheelSource": "proposal",
+    "override": null,
+    "copies": 4,
+    "turnedDeg": 0,
+    "flipped180": false,
+    "partSize": [
+      2.315,
+      3.872,
+      3.855
+    ],
+    "scale": 0.091,
+    "nonUniform": [
+      1.301,
+      1.301
+    ],
+    "stored": false,
+    "partBox": [
+      -1.0308,
+      -0.0001,
+      -2.2841,
+      1.0308,
+      1.4377,
+      2.2863
+    ],
+    "wheelDiagnostics": [
+      {
+        "wheel": "RL",
+        "pieces": [
+          {
+            "name": "Object_5",
+            "mat": "Index_0_1",
+            "axis": [
+              0.997800486510904,
+              -0.055073912949221385,
+              0.03689245493410796
+            ],
+            "bounds": [
+              -0.8652445673942566,
+              0.07403448224067688,
+              -1.536953330039978,
+              -0.6466535925865173,
+              0.5631621479988098,
+              -1.0475554466247559
+            ],
+            "measure": {
+              "lo": -0.10900938198713692,
+              "hi": 0.10974368398886361,
+              "rmin": 0.000005769543875913812,
+              "rmax": 0.24494262319781576,
+              "arc": 12
+            }
+          },
+          {
+            "name": "Object_5",
+            "mat": "Index_0_1",
+            "axis": [
+              0.9999986844937597,
+              0.0007386612515123778,
+              0.0014440880532230027
+            ],
+            "bounds": [
+              -0.8703783750534058,
+              -1.3802081255676057e-8,
+              -1.610717535018921,
+              -0.6407092213630676,
+              0.6371966600418091,
+              -0.9735209941864014
+            ],
+            "measure": {
+              "lo": -0.11497157249113146,
+              "hi": 0.11497157249113166,
+              "rmin": 0.24209369237748138,
+              "rmax": 0.31882785722222673,
+              "arc": 12
+            }
+          },
+          {
+            "name": "Object_7",
+            "mat": "Index_0_2",
+            "axis": [
+              0.999999999857547,
+              0.000014487670190550858,
+              0.000008661036598462949
+            ],
+            "bounds": [
+              -0.8401935696601868,
+              0.2913617193698883,
+              -1.3193767070770264,
+              -0.83884197473526,
+              0.3457617163658142,
+              -1.265044093132019
+            ],
+            "measure": {
+              "lo": 0.08328714716660333,
+              "hi": 0.08465230550935064,
+              "rmin": 0.0001263721411436831,
+              "rmax": 0.027380205298017286,
+              "arc": 12
+            }
+          },
+          {
+            "name": "Object_11",
+            "mat": "Index_1_1",
+            "axis": [
+              1,
+              0,
+              0
+            ],
+            "bounds": [
+              -0.6524219512939453,
+              0.08423878252506256,
+              -1.5265604257583618,
+              -0.6524219512939453,
+              0.5527982115745544,
+              -1.0577248334884644
+            ],
+            "measure": {
+              "lo": -0.10323474862498475,
+              "hi": -0.10300390782362755,
+              "rmin": 0.00015983685914264684,
+              "rmax": 0.23447761064583153,
+              "arc": 12
+            }
+          }
+        ]
+      },
+      {
+        "wheel": "RR",
+        "pieces": [
+          {
+            "name": "Object_5",
+            "mat": "Index_0_1",
+            "axis": [
+              0.9976560521829334,
+              0.0537152753433584,
+              -0.04239187112585816
+            ],
+            "bounds": [
+              0.6466535925865173,
+              0.07403448224067688,
+              -1.536953330039978,
+              0.8652445673942566,
+              0.5631621479988098,
+              -1.0475554466247559
+            ],
+            "measure": {
+              "lo": -0.1089457743257806,
+              "hi": 0.10969676060149196,
+              "rmin": 0.00004332724153501572,
+              "rmax": 0.2448963594063387,
+              "arc": 12
+            }
+          },
+          {
+            "name": "Object_5",
+            "mat": "Index_0_1",
+            "axis": [
+              0.9999975628374194,
+              -0.001962422167442095,
+              -0.0010115426132603416
+            ],
+            "bounds": [
+              0.6407092213630676,
+              -1.3802081255676057e-8,
+              -1.610717535018921,
+              0.8703783750534058,
+              0.6371966600418091,
+              -0.9735209941864014
+            ],
+            "measure": {
+              "lo": -0.11489855069332662,
+              "hi": 0.11489855069332675,
+              "rmin": 0.24212343364973002,
+              "rmax": 0.31880775393249533,
+              "arc": 12
+            }
+          },
+          {
+            "name": "Object_7",
+            "mat": "Index_0_2",
+            "axis": [
+              0.9999999998576293,
+              -0.000014484827759075312,
+              -0.000008656280375345973
+            ],
+            "bounds": [
+              0.83884197473526,
+              0.2913617193698883,
+              -1.3193767070770264,
+              0.8401935696601868,
+              0.3457617163658142,
+              -1.265044093132019
+            ],
+            "measure": {
+              "lo": 0.0832930497264229,
+              "hi": 0.08465103948473153,
+              "rmin": 0.00011972191188533764,
+              "rmax": 0.02739319279135483,
+              "arc": 12
+            }
+          },
+          {
+            "name": "Object_11",
+            "mat": "Index_1_1",
+            "axis": [
+              1,
+              0,
+              0
+            ],
+            "bounds": [
+              0.6524219512939453,
+              0.08423878252506256,
+              -1.5265604257583618,
+              0.6524219512939453,
+              0.5527982115745544,
+              -1.0577248334884644
+            ],
+            "measure": {
+              "lo": -0.10317518416096344,
+              "hi": -0.10306601207215546,
+              "rmin": 0.00012557942474665442,
+              "rmax": 0.23443301264855781,
+              "arc": 12
+            }
+          }
+        ]
+      },
+      {
+        "wheel": "FL",
+        "pieces": [
+          {
+            "name": "Object_5",
+            "mat": "Index_0_1",
+            "axis": [
+              0.9978604292397366,
+              -0.050356880737906284,
+              -0.04169830116248467
+            ],
+            "bounds": [
+              -0.8652445673942566,
+              0.07403448224067688,
+              1.1274784803390503,
+              -0.6466535925865173,
+              0.5631621479988098,
+              1.616876244544983
+            ],
+            "measure": {
+              "lo": -0.10896651171297866,
+              "hi": 0.1097752951584808,
+              "rmin": 0.00010644101601236429,
+              "rmax": 0.2448646231318362,
+              "arc": 12
+            }
+          },
+          {
+            "name": "Object_5",
+            "mat": "Index_0_1",
+            "axis": [
+              0.9989325266165522,
+              -0.02716431441271611,
+              0.037361842700250746
+            ],
+            "bounds": [
+              -0.8703783750534058,
+              -1.3802081255676057e-8,
+              1.0534440279006958,
+              -0.6407092213630676,
+              0.6371966600418091,
+              1.690910816192627
+            ],
+            "measure": {
+              "lo": -0.11492228751431363,
+              "hi": 0.11492228751431376,
+              "rmin": 0.2421856412784404,
+              "rmax": 0.3188306723779801,
+              "arc": 12
+            }
+          },
+          {
+            "name": "Object_7",
+            "mat": "Index_0_2",
+            "axis": [
+              0.9999999998894177,
+              0.000014488986454340241,
+              -0.0000033517091770545533
+            ],
+            "bounds": [
+              -0.8404638767242432,
+              0.2913617193698883,
+              1.3450767993927002,
+              -0.8391122817993164,
+              0.3457617163658142,
+              1.399409294128418
+            ],
+            "measure": {
+              "lo": 0.08356000970916495,
+              "hi": 0.08492011083745736,
+              "rmin": 0.0001479113335950892,
+              "rmax": 0.027320474543636487,
+              "arc": 12
+            }
+          },
+          {
+            "name": "Object_11",
+            "mat": "Index_1_1",
+            "axis": [
+              1,
+              0,
+              0
+            ],
+            "bounds": [
+              -0.6524219512939453,
+              0.08423878252506256,
+              1.1377202272415161,
+              -0.6524219512939453,
+              0.5527982115745544,
+              1.606279730796814
+            ],
+            "measure": {
+              "lo": -0.10319524529185661,
+              "hi": -0.10304834663540532,
+              "rmin": 0.000089353941557121,
+              "rmax": 0.2344877328384703,
+              "arc": 12
+            }
+          }
+        ]
+      },
+      {
+        "wheel": "FR",
+        "pieces": [
+          {
+            "name": "Object_5",
+            "mat": "Index_0_1",
+            "axis": [
+              0.9980124057241291,
+              0.0516069615394361,
+              0.0361657232943489
+            ],
+            "bounds": [
+              0.6466535925865173,
+              0.07403448224067688,
+              1.1274784803390503,
+              0.8652445673942566,
+              0.5631621479988098,
+              1.616876244544983
+            ],
+            "measure": {
+              "lo": -0.10896695056103527,
+              "hi": 0.10977569825373396,
+              "rmin": 0.00008723837181896557,
+              "rmax": 0.24487661613380599,
+              "arc": 12
+            }
+          },
+          {
+            "name": "Object_5",
+            "mat": "Index_0_1",
+            "axis": [
+              0.9989324581271214,
+              0.02716421043890761,
+              0.0373637494282587
+            ],
+            "bounds": [
+              0.6407092213630676,
+              -1.3802081255676057e-8,
+              1.0534440279006958,
+              0.8703783750534058,
+              0.6371966600418091,
+              1.690910816192627
+            ],
+            "measure": {
+              "lo": -0.11492280445600896,
+              "hi": 0.11492280445600885,
+              "rmin": 0.24212535411340977,
+              "rmax": 0.3188306723208978,
+              "arc": 12
+            }
+          },
+          {
+            "name": "Object_7",
+            "mat": "Index_0_2",
+            "axis": [
+              0.9999999998895741,
+              -0.000014483589799767206,
+              0.0000033282675772405667
+            ],
+            "bounds": [
+              0.8391122817993164,
+              0.2913617193698883,
+              1.3450767993927002,
+              0.8404638767242432,
+              0.3457617163658142,
+              1.399409294128418
+            ],
+            "measure": {
+              "lo": 0.08355993573784701,
+              "hi": 0.08492006971486202,
+              "rmin": 0.0001700206972995107,
+              "rmax": 0.027336814768899282,
+              "arc": 12
+            }
+          },
+          {
+            "name": "Object_11",
+            "mat": "Index_1_1",
+            "axis": [
+              1,
+              0,
+              0
+            ],
+            "bounds": [
+              0.6524219512939453,
+              0.08423878252506256,
+              1.1377202272415161,
+              0.6524219512939453,
+              0.5527982115745544,
+              1.606279730796814
+            ],
+            "measure": {
+              "lo": -0.10319570119979801,
+              "hi": -0.10304793688237557,
+              "rmin": 0.00008603985190774344,
+              "rmax": 0.23442646797526756,
+              "arc": 12
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "autofit": {
+    "version": 6,
+    "type": "RIMS",
+    "orient": [
+      "axle",
+      0,
+      "mid"
+    ],
+    "placements": [
+      {
+        "pos": [
+          -0.7624,
+          0.3186,
+          -1.2921
+        ],
+        "sc": [
+          0.0907,
+          0.118,
+          0.118
+        ],
+        "rot": [
+          3.141592591386422,
+          0.0003532581446981047,
+          -3.141240484104007
+        ],
+        "side": -1
+      },
+      {
+        "pos": [
+          0.7624,
+          0.3186,
+          -1.2921
+        ],
+        "sc": [
+          0.0906,
+          0.118,
+          0.118
+        ],
+        "rot": [
+          8.69126272693034e-9,
+          -0.00007928604704284576,
+          0.0002192381386568122
+        ],
+        "side": 1
+      },
+      {
+        "pos": [
+          -0.7586,
+          0.3186,
+          1.3722
+        ],
+        "sc": [
+          0.0907,
+          0.118,
+          0.118
+        ],
+        "rot": [
+          -3.1415926383240897,
+          0.0002960957614991228,
+          3.141489540303213
+        ],
+        "side": -1
+      },
+      {
+        "pos": [
+          0.7586,
+          0.3186,
+          1.3722
+        ],
+        "sc": [
+          0.0907,
+          0.118,
+          0.118
+        ],
+        "rot": [
+          -1.537960583613637e-8,
+          -0.0002980044213982683,
+          -0.00010321729883403583
+        ],
+        "side": 1
+      }
+    ],
+    "shadows": [],
+    "tyres": [
+      {
+        "c": [
+          -0.7576,
+          0.3186,
+          -1.2921
+        ],
+        "ri": 0.2164,
+        "ro": 0.3186,
+        "w": 0.2299,
+        "rot": [
+          3.141592591386422,
+          0.0003532581446981047,
+          -3.141240484104007
+        ]
+      },
+      {
+        "c": [
+          0.7576,
+          0.3186,
+          -1.2921
+        ],
+        "ri": 0.2164,
+        "ro": 0.3186,
+        "w": 0.2298,
+        "rot": [
+          8.69126272693034e-9,
+          -0.00007928604704284576,
+          0.0002192381386568122
+        ]
+      },
+      {
+        "c": [
+          -0.7537,
+          0.3186,
+          1.3722
+        ],
+        "ri": 0.2164,
+        "ro": 0.3187,
+        "w": 0.2298,
+        "rot": [
+          -3.1415926383240897,
+          0.0002960957614991228,
+          3.141489540303213
+        ]
+      },
+      {
+        "c": [
+          0.7537,
+          0.3186,
+          1.3722
+        ],
+        "ri": 0.2164,
+        "ro": 0.3187,
+        "w": 0.2298,
+        "rot": [
+          -1.537960583613637e-8,
+          -0.0002980044213982683,
+          -0.00010321729883403583
+        ]
+      }
+    ],
+    "keep": [],
+    "hideMore": [],
+    "shift": [],
+    "rimRuntime": {
+      "active": [
+        "RL",
+        "RR",
+        "FL",
+        "FR"
+      ],
+      "kept": [],
+      "offsets": [
+        {
+          "wheel": "RL",
+          "delta": [
+            -0.0021,
+            0,
+            0
+          ]
+        },
+        {
+          "wheel": "RR",
+          "delta": [
+            0.00209,
+            0,
+            0
+          ]
+        },
+        {
+          "wheel": "FL",
+          "delta": [
+            0.00184,
+            0,
+            0
+          ]
+        },
+        {
+          "wheel": "FR",
+          "delta": [
+            -0.00184,
+            0,
+            0
+          ]
+        }
+      ],
+      "hideBrakes": []
+    },
+    "info": {
+      "type": "RIMS",
+      "fitVersion": 6,
+      "replaces": {
+        "how": "wheel analysis",
+        "hidden": 3
+      },
+      "wheels": [
+        {
+          "wheel": "RL",
+          "refusal": null,
+          "warnings": [
+            "BUILT_TYRE"
+          ],
+          "archGapBeforeMm": 7.1,
+          "archGapAfterMm": 5,
+          "movedMm": 2.1,
+          "axleConfidence": 0.775,
+          "steerDeg": 0,
+          "tyreOuterMm": 637.2,
+          "tyreWidthMm": 229.9,
+          "stockRimMm": 489.9,
+          "stockRimInches": 18.3,
+          "rimMm": 456.8,
+          "rimWidthMm": 209.9,
+          "sidewallMm": 90.2,
+          "faceInsetMm": 5.2,
+          "gapToTyreMm": 0,
+          "brakesKept": 0,
+          "tyre": "built",
+          "archSamples": 11,
+          "archConfidence": 0.758,
+          "blockedBy": null,
+          "hiddenBrakeParts": 0
+        },
+        {
+          "wheel": "RR",
+          "refusal": null,
+          "warnings": [
+            "BUILT_TYRE"
+          ],
+          "archGapBeforeMm": 7.1,
+          "archGapAfterMm": 5,
+          "movedMm": 2.1,
+          "axleConfidence": 0.779,
+          "steerDeg": 0,
+          "tyreOuterMm": 637.2,
+          "tyreWidthMm": 229.8,
+          "stockRimMm": 489.8,
+          "stockRimInches": 18.3,
+          "rimMm": 456.8,
+          "rimWidthMm": 209.8,
+          "sidewallMm": 90.2,
+          "faceInsetMm": 5.2,
+          "gapToTyreMm": 0,
+          "brakesKept": 0,
+          "tyre": "built",
+          "archSamples": 11,
+          "archConfidence": 0.758,
+          "blockedBy": null,
+          "hiddenBrakeParts": 0
+        },
+        {
+          "wheel": "FL",
+          "refusal": null,
+          "warnings": [
+            "BUILT_TYRE"
+          ],
+          "archGapBeforeMm": 3.2,
+          "archGapAfterMm": 5,
+          "movedMm": -1.8,
+          "axleConfidence": 0.756,
+          "steerDeg": 0,
+          "tyreOuterMm": 637.3,
+          "tyreWidthMm": 229.8,
+          "stockRimMm": 489.7,
+          "stockRimInches": 18.3,
+          "rimMm": 456.8,
+          "rimWidthMm": 209.8,
+          "sidewallMm": 90.3,
+          "faceInsetMm": 5.1,
+          "gapToTyreMm": 0,
+          "brakesKept": 0,
+          "tyre": "built",
+          "archSamples": 11,
+          "archConfidence": 0.917,
+          "blockedBy": null,
+          "hiddenBrakeParts": 0
+        },
+        {
+          "wheel": "FR",
+          "refusal": null,
+          "warnings": [
+            "BUILT_TYRE"
+          ],
+          "archGapBeforeMm": 3.2,
+          "archGapAfterMm": 5,
+          "movedMm": -1.8,
+          "axleConfidence": 0.756,
+          "steerDeg": 0,
+          "tyreOuterMm": 637.3,
+          "tyreWidthMm": 229.8,
+          "stockRimMm": 489.8,
+          "stockRimInches": 18.3,
+          "rimMm": 456.8,
+          "rimWidthMm": 209.8,
+          "sidewallMm": 90.3,
+          "faceInsetMm": 5.1,
+          "gapToTyreMm": 0,
+          "brakesKept": 0,
+          "tyre": "built",
+          "archSamples": 11,
+          "archConfidence": 0.917,
+          "blockedBy": null,
+          "hiddenBrakeParts": 0
+        }
+      ],
+      "faceSign": 1,
+      "wheelSource": "proposal",
+      "override": null,
+      "copies": 4,
+      "turnedDeg": 0,
+      "flipped180": false,
+      "partSize": [
+        2.315,
+        3.872,
+        3.855
+      ],
+      "scale": 0.091,
+      "nonUniform": [
+        1.301,
+        1.301
+      ]
+    }
+  },
+  "kit": {
+    "type": "RIMS",
+    "finish": "SILVER",
+    "size": {
+      "rimInches": 17
+    }
+  },
+  "carSha256": "0d9ec461a976badc487e5ecece5a6d121f8c92502ce01f6c11b4a774d9b8dd94",
+  "partSha256": "512a47b76cd1b5569ab11adc0a509fa99abadf5c963dc3499a534369e42d7572",
+  "viewerSha256": "200221aaa77e9ff60debeb59b0e536e6ddedbe7543b3c2737dfa248febec9017",
+  "screenshots": [
+    {
+      "name": "before-front-three-quarter",
+      "sha256": "3bac464e6da8883bdbb72e50f499caa4d15b43bfb462ea86e4d1277b47fe59a7"
+    },
+    {
+      "name": "before-side",
+      "sha256": "2b97b7f5233b5e6e4bfe19dac3d5c58d98b592f0eebb532d900a01dca84de13a"
+    },
+    {
+      "name": "on-left-side",
+      "sha256": "e4b209f03daec576703675243b4f77ba9970ea30665b338aa1a5731564d656e2"
+    },
+    {
+      "name": "on-right-side",
+      "sha256": "3c1bf976855c99d6ee711fa06973779a77e6fbb00a830bc38167322d4e60eb76"
+    },
+    {
+      "name": "on-front-three-quarter",
+      "sha256": "21e4045e1cada8650769f8d177864f8248bfd49359ae3cfba1af9508688f3beb"
+    },
+    {
+      "name": "on-wheel-closeup",
+      "sha256": "221dfc1c9a14e8f7877ca5401bb18c2241d82bde4f93fc5de859c7d202fce31a"
+    },
+    {
+      "name": "on-rear",
+      "sha256": "0a0c50b26754355fe8a931a4434bc04ce031236e616001b2401bcc307c7e92e0"
+    },
+    {
+      "name": "off-side",
+      "sha256": "2b97b7f5233b5e6e4bfe19dac3d5c58d98b592f0eebb532d900a01dca84de13a"
+    },
+    {
+      "name": "off-front-three-quarter",
+      "sha256": "3bac464e6da8883bdbb72e50f499caa4d15b43bfb462ea86e4d1277b47fe59a7"
+    },
+    {
+      "name": "off-wheel-closeup",
+      "sha256": "32e04a3fd222ee3dcef0b953b63038885e5e0863b27b594794d0408850c01d0b"
+    },
+    {
+      "name": "off-rear",
+      "sha256": "427906b5cd2a8d8ffd97d2d1b979c81b2239dfea259e075c47ad75d5bddcc35f"
+    }
+  ]
+}

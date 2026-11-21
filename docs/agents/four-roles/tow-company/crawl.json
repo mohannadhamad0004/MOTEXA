@@ -1,0 +1,155 @@
+[
+ {
+  "route": "/provider/tow/settings",
+  "title": "",
+  "elements": [
+   {
+    "i": 0,
+    "role": "button",
+    "name": "MOTEXA",
+    "size": "80x44",
+    "small": false,
+    "result": "NAV /provider/tow"
+   },
+   {
+    "i": 1,
+    "role": "button",
+    "name": "Back",
+    "size": "52x44",
+    "small": false,
+    "result": "NAV /provider/tow"
+   },
+   {
+    "i": 2,
+    "role": "button",
+    "name": "Settings",
+    "size": "72x44",
+    "small": false,
+    "result": "CHANGED"
+   },
+   {
+    "i": 3,
+    "role": "button",
+    "name": "Dashboard",
+    "size": "92x44",
+    "small": false,
+    "result": "NAV /provider/tow"
+   },
+   {
+    "i": 4,
+    "role": "button",
+    "name": "Jobs",
+    "size": "56x44",
+    "small": false,
+    "result": "NAV /provider/tow/dispatch"
+   },
+   {
+    "i": 5,
+    "role": "button",
+    "name": "Active jobs",
+    "size": "90x44",
+    "small": false,
+    "result": "NAV /provider/tow/active"
+   },
+   {
+    "i": 6,
+    "role": "button",
+    "name": "History",
+    "size": "70x44",
+    "small": false,
+    "result": "NAV /provider/tow/history"
+   },
+   {
+    "i": 7,
+    "role": "button",
+    "name": "Trucks",
+    "size": "66x44",
+    "small": false,
+    "result": "NAV /provider/tow/trucks"
+   },
+   {
+    "i": 8,
+    "role": "button",
+    "name": "Drivers",
+    "size": "71x44",
+    "small": false,
+    "result": "NAV /provider/tow/drivers"
+   },
+   {
+    "i": 9,
+    "role": "button",
+    "name": "Profile",
+    "size": "67x44",
+    "small": false,
+    "result": "NAV /provider/tow/company"
+   },
+   {
+    "i": 10,
+    "role": "button",
+    "name": "Media",
+    "size": "64x44",
+    "small": false,
+    "result": "NAV /provider/tow/media"
+   },
+   {
+    "i": 11,
+    "role": "button",
+    "name": "Customer preview",
+    "size": "131x44",
+    "small": false,
+    "result": "NAV /provider/tow/preview"
+   },
+   {
+    "i": 12,
+    "role": "button",
+    "name": "Availability",
+    "size": "93x44",
+    "small": false,
+    "result": "NAV /provider/tow/availability"
+   },
+   {
+    "i": 13,
+    "role": "button",
+    "name": "Service area",
+    "size": "99x44",
+    "small": false,
+    "result": "NAV /provider/tow/service-area"
+   },
+   {
+    "i": 14,
+    "role": "button",
+    "name": "Live map",
+    "size": "80x44",
+    "small": false,
+    "result": "NAV /provider/tow/live"
+   },
+   {
+    "i": 15,
+    "role": "button",
+    "name": "Settings",
+    "size": "75x44",
+    "small": false,
+    "result": "NOTHING"
+   },
+   {
+    "i": 16,
+    "role": "button",
+    "name": "Language, appearance and account",
+    "size": "320x48",
+    "small": false,
+    "result": "CHANGED"
+   },
+   {
+    "i": 17,
+    "role": "button",
+    "name": "Business profile",
+    "size": "320x48",
+    "small": false,
+    "result": "NAV /provider/tow/company"
+   }
+  ],
+  "problems": [],
+  "landed": "/provider/tow/settings",
+  "total": 18
+ }
+]
