@@ -275,12 +275,7 @@ export default function MechanicApplication() {
           <MechanicButton
             secondary
             label={m.t("Go to sign in", "الذهاب لتسجيل الدخول")}
-            onPress={() =>
-              router.replace({
-                pathname: "/auth/login",
-                params: { selectedRole: "mechanic" },
-              })
-            }
+            onPress={() => router.replace("/auth/login")}
           />
         </MechanicCard>
       ) : editing ? (

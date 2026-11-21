@@ -64,11 +64,6 @@ export const notifications = {
   readAll: () => api("POST", "/notifications/read-all"),
 };
 
-export async function register(input: { kind: Kind; fullName: string; businessName: string; email: string; phoneNumber: string; city: string; password: string; acceptTerms: true }) {
-  // public endpoint: the shared client sends no token when none is stored
-  return api<{ success: boolean; message: string }>("POST", "/auth/provider/register", input);
-}
-
 // ---- the department's side (kind picks /tow or /parts; the server checks the permission)
 const base = (k: Kind) => `/admin/providers/${k === "TOW" ? "tow" : "parts"}`;
 export type Tab = "NEW" | "NEEDS_CHANGES" | "APPROVED" | "REJECTED";
