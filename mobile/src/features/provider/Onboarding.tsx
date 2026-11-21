@@ -24,6 +24,19 @@ import { Application, Doc, Info, TruckRow, onboarding } from "./api";
 import { actionLabel, appStatusLabel, bi, docLabel, docStatusLabel, fmtDay, fmtTime, keyLabel, truckTypeLabel } from "./labels";
 import { VerticalStepper, useDocViewer } from "./ui";
 import { DButton, Panel, Pill, StatusChip, cardStyle, useDT } from "../department/ui";
+import { useSessionUser } from "../shared/session";
+import { ProviderAccountNote } from "../work/ProviderAccountNote";
+
+/** A customer applicant (Work with MOTEXA) goes back to their customer account from here; providers have their own area. */
+function CustomerExit() {
+  const m = useMechanicTheme();
+  if (useSessionUser().role !== "CUSTOMER") return null;
+  return (
+    <View style={{ marginTop: 18 }}>
+      <ProviderButton secondary label={m.t("Back to my customer account", "العودة إلى حسابي كزبون")} onPress={() => router.replace("/customer/profile" as never)} />
+    </View>
+  );
+}
 
 const ACTOR = { id: "", email: "", fullName: "" };
 const err = (e: unknown, fallback: string) => (e instanceof Error ? e.message : fallback);
@@ -408,6 +421,7 @@ function ReviewStep({ app, onEdit, onSubmitted }: { app: Application; onEdit: (s
   return (
     <View style={{ gap: 12 }}>
       {error ? <ProviderNote error>{error}</ProviderNote> : null}
+      <ProviderAccountNote kind={app.kind} />
       <ProviderCard>
         <View style={{ gap: 2 }}>
           {row(m.t("Name", "الاسم"), i.name)}
@@ -626,6 +640,7 @@ export default function Onboarding() {
             setEditing(true);
           }}
         />
+        <CustomerExit />
       </MechanicPage>
     );
 
@@ -659,6 +674,7 @@ export default function Onboarding() {
           )
         }
       </VerticalStepper>
+      <CustomerExit />
     </MechanicPage>
   );
 }

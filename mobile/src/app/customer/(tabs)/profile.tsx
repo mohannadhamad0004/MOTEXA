@@ -9,6 +9,7 @@ import { openMyCarPicker, useMyCar } from "../../../features/catalog/myCar";
 import { CarPreview } from "../../../features/car3d/CarPreview";
 import { signOut, useSessionUser } from "../../../features/shared/session";
 import { gShape, gType, useGarageTheme } from "../../../theme/garage";
+import { applicationStatus, workKindLabel } from "../../../features/work/ProviderAccountNote";
 
 export default function CustomerProfile() {
   const user = useSessionUser();
@@ -19,6 +20,7 @@ export default function CustomerProfile() {
   const { car } = useMyCar();
   const setCar = openMyCarPicker;
   const initial = (user.fullName.trim()[0] ?? "?").toUpperCase();
+  const work = user.applications?.find((a) => a.status !== "REJECTED") ?? user.applications?.[0];
 
   return (
     <GaragePage
@@ -60,6 +62,17 @@ export default function CustomerProfile() {
         <Card pad={12}>
           <ListRow icon="document-text-outline" title={t("My requests", "طلباتي")} sub={t("Questions, tow and mechanic requests", "الأسئلة وطلبات السحب والميكانيكي")} onPress={() => router.push("/customer/requests")} />
           <ListRow divider icon="notifications-outline" title={t("Notifications", "الإشعارات")} sub={t("Request updates show in My requests", "تظهر تحديثات الطلبات في طلباتي")} onPress={() => router.push("/customer/requests")} />
+        </Card>
+      </Section>
+
+      <Section title={t("Work with MOTEXA", "اعمل مع MOTEXA")}>
+        <Card pad={12}>
+          <ListRow
+            icon="briefcase-outline"
+            title={work ? `${workKindLabel(t, work.kind)}: ${applicationStatus(t, work.status)[0]}` : t("Become a provider", "كن مزوّد خدمة")}
+            sub={work ? t("Open your application", "افتح طلبك") : t("Apply as a mechanic, tow company or parts shop", "قدّم كميكانيكي أو شركة سحب أو متجر قطع غيار")}
+            onPress={() => router.push("/work-with-motexa" as never)}
+          />
         </Card>
       </Section>
 

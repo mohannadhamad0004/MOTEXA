@@ -48,6 +48,12 @@ const PHONE = /^\+?[0-9 ()-]{8,24}$/;
 
 async function mine(res: any): Promise<App> {
   const u = res.locals.authUser as { id: string; role: string };
+  if (u.role === "CUSTOMER") {
+    // a customer fills in their own application (POST /apply/tow|parts) until the approval makes them the provider
+    const apps = [await loadApp("TOW", { userId: u.id }), await loadApp("PARTS", { userId: u.id })].filter((a): a is App => !!a);
+    // no application: refused exactly like any other non-provider role
+    return apps.find((a) => a.row.verificationStatus !== "REJECTED") ?? apps[0] ?? fail(403, "Tow company or parts shop access required.");
+  }
   const kind: Kind | null = u.role === "TOW_PROVIDER" ? "TOW" : u.role === "PARTS_PROVIDER" ? "PARTS" : null;
   if (!kind) return fail(403, "Tow company or parts shop access required.");
   const app = await loadApp(kind, { userId: u.id });

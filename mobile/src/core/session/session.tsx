@@ -9,7 +9,12 @@ export type SessionUser = {
   role: string;
   status: string;
   adminPermissions: { permission: string }[];
+  /** Work with MOTEXA: this account's provider applications (from /auth/me). */
+  applications?: { kind: "MECHANIC" | "TOW" | "PARTS"; status: string }[];
 };
+
+/** A customer with a provider application of one of these kinds: may open that application's wizard (UX only; the server checks). */
+export const isApplicant = (u: SessionUser, kinds: string[]) => u.role === "CUSTOMER" && !!u.applications?.some((a) => kinds.includes(a.kind));
 
 // UX gating only. These are NOT security: real endpoints must enforce the same rules server-side.
 export const isPartsProvider = (u: SessionUser) => u.role === "PARTS_PROVIDER";

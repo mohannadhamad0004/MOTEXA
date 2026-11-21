@@ -34,6 +34,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import adminRoutes from "./routes/admin.routes.js";
 import adminOtpRoutes from "./routes/admin-otp.routes.js";
+import applyRoutes from "./routes/apply.routes.js";
 dotenv.config();
 
 const app = express();
@@ -85,6 +86,7 @@ app.get("/api/health", (_req, res) => {
   });
 });
 app.use("/api/auth", authRoutes);
+app.use("/api", applyRoutes); // Work with MOTEXA: POST /api/apply/:kind
 app.use("/api/auth/mechanic",mechanicRegistrationRoutes);
 app.use("/api/auth/provider", providerRegistrationRoutes);
 app.use("/api/mechanics",mechanicsRoutes);

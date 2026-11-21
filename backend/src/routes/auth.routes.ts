@@ -9,6 +9,7 @@ import { createLimiter, issueSession, revokeSession, rotateSession } from "../se
 import { generateOtp, getOtpExpiryDate, hashOtp, verifyOtpHash, OTP_MAX_ATTEMPTS, OTP_MAX_REQUESTS_PER_HOUR, OTP_RESEND_COOLDOWN_SECONDS } from "../services/otp.service.js";
 import { awaitingEmail, meetsPasswordPolicy } from "../services/password-reset-completion.service.js";
 import { sendAccountExistsEmail, sendSignupCodeEmail } from "../services/email.service.js";
+import { applicationsOf } from "../services/applications.js";
 
 const router = Router();
 
@@ -324,7 +325,7 @@ router.get("/me", async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      user,
+      user: { ...user, applications: await applicationsOf(user.id) }, // Work with MOTEXA status (Profile)
     });
   } catch (error) {
     console.error("Session verification error:", error);

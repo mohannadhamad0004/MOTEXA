@@ -28,6 +28,7 @@ import {
   type App,
   type Kind,
 } from "../services/provider-onboarding.js";
+import { approvalBlocked, promoteApplicant } from "../services/applications.js";
 
 const TABS = { NEW: "PENDING", NEEDS_CHANGES: "NEEDS_CHANGES", APPROVED: "APPROVED", REJECTED: "REJECTED" } as const;
 
@@ -149,6 +150,8 @@ export function createProviderReviewRouter(kind: Kind) {
       if (app.row.verificationStatus !== "PENDING") return fail(409, "Only an application waiting for review can be approved.");
       const failing = checklist(app).filter((c) => !c.ok);
       if (failing.length) return res.status(409).json({ success: false, message: "The approval checklist is not complete.", failing: failing.map((c) => c.key) });
+      const blocked = await approvalBlocked(app.row.userId);
+      if (blocked) return fail(409, blocked);
       const who = actor(res).id;
       await prisma.$transaction(async (tx) => {
         const data = { verificationStatus: "APPROVED" as const, rejectionReason: null, flaggedFields: [], reviewedById: who, reviewedAt: new Date() };
@@ -161,6 +164,7 @@ export function createProviderReviewRouter(kind: Kind) {
           await tx.partsShopProfile.update({ where: { id: app.row.id }, data });
         }
         await tx.auditLog.create({ data: { actorId: who, action: "PROVIDER_APPROVED", targetId: app.row.id, details: { kind } } });
+        await promoteApplicant(tx, app.row.userId, kind, who);
       });
       const fresh = await load(app.row.id);
       await postMessage(fresh, { authorUserId: null, role: "SYSTEM", body: "Your application was approved. You can now receive requests.||تمت الموافقة على طلبك. يمكنك الآن استقبال الطلبات." });
