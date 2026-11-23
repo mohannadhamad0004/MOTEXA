@@ -37,3 +37,14 @@ Desktop.ini
 # Private uploads and local test artifacts
 **/.private/
 **/test-results/
+
+# Local copies, build exports and recording outputs (keep on this computer)
+**/backups/
+**/dist-*/
+**/workshop-gps/
+**/recordings/
+**/*.bak
+**/*.before-*.txt
+**/*.before.txt
+*.dump
+*.backup

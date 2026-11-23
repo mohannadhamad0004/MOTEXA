@@ -1,0 +1,34 @@
+[
+  {
+    "file": "mobile\\assets\\cinematic\\supplied\\EXT_MERCEDES.png",
+    "source": "C:\\Users\\Zain\\OneDrive\\Pictures\\Screenshots\\\u0644\u0642\u0637\u0629 \u0634\u0627\u0634\u0629 2026-11-18 155249.png",
+    "width": 1202,
+    "height": 737,
+    "bytes": 1142724,
+    "sha256": "83c77a68d8032cae4814356d9d17bd7c153970d5133319dbd772e3673a1706fd"
+  },
+  {
+    "file": "mobile\\assets\\cinematic\\supplied\\INT_MERCEDES.png",
+    "source": "C:\\Users\\Zain\\OneDrive\\Pictures\\Screenshots\\\u0644\u0642\u0637\u0629 \u0634\u0627\u0634\u0629 2026-11-18 155232.png",
+    "width": 1240,
+    "height": 748,
+    "bytes": 986981,
+    "sha256": "2ad5477c9c6d3cc099da5187be09f227fc495f3f8f78a181053b59769beba45b"
+  },
+  {
+    "file": "mobile\\assets\\cinematic\\supplied\\DASH_MERCEDES.png",
+    "source": "C:\\Users\\Zain\\OneDrive\\Pictures\\Screenshots\\\u0644\u0642\u0637\u0629 \u0634\u0627\u0634\u0629 2026-11-18 155239.png",
+    "width": 1332,
+    "height": 741,
+    "bytes": 868485,
+    "sha256": "72ed201ca87477424c195dfdc971348171cbca24acf6e46fb26322ad445ee85b"
+  },
+  {
+    "file": "mobile\\assets\\cinematic\\supplied\\SIDE_MERCEDES.png",
+    "source": "C:\\Users\\Zain\\OneDrive\\Pictures\\Screenshots\\\u0644\u0642\u0637\u0629 \u0634\u0627\u0634\u0629 2026-11-18 155215.png",
+    "width": 1232,
+    "height": 658,
+    "bytes": 820387,
+    "sha256": "911826706cc935ed4ef55de05d73590f5f6734c0a645eadd46a20e6832c69764"
+  }
+]

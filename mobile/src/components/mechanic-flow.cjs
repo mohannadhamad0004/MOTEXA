@@ -1,3 +1,4 @@
+/* global __dirname, Buffer */
 const fs = require("fs"),
   path = require("path"),
   http = require("http"),

@@ -1,34 +1,33 @@
-import Svg, { Path } from "react-native-svg";
+import MechanicStageSurface from './MechanicStageSurface';
+import {MechanicFormSection} from './MechanicFormSection';
+import MechanicJourneyHeader from './MechanicJourneyHeader';
+import Pressable from "./MotionPressable";
+import TextInput from "./PremiumTextInput";
 import { useState } from "react";
 import {
   View,
   ScrollView,
-  TextInput,
-  Pressable,
-  ImageBackground,
   Modal,
   KeyboardAvoidingView,
   Platform,
-  StyleSheet,
   type TextInputProps,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { Text } from "./MotexaVisual";
-import BrandWordmark from "./BrandWordmark";
-import LanguageSwitch from "./LanguageSwitch";
-import { CanvasFill, PanelFill } from "./BrandSurfaces";
+import BrandHeader from "./BrandHeader";
+
+import { CanvasFill } from "./BrandSurfaces";
 import {
   MechanicPage,
-  MechanicProgress,
   MechanicCard,
   MechanicButton,
   MechanicNote,
   useMechanicTheme,
 } from "./MechanicUI";
 import { mechanicApi } from "./mechanic-api";
+import * as Store from './SessionStore';
 
 type FieldProps = TextInputProps & {
   label: string;
@@ -42,8 +41,8 @@ function RegistrationField({ label, icon, trailing, ...props }: FieldProps) {
     <View style={{ gap: 6, marginBottom: 13 }}>
       <Text
         style={{
-          fontSize: 12,
-          lineHeight: 19,
+          fontSize: 13,
+          lineHeight: 22,
           fontWeight: "600",
           color: m.ink,
           textAlign: m.align,
@@ -76,8 +75,8 @@ function RegistrationField({ label, icon, trailing, ...props }: FieldProps) {
               minWidth: 0,
               minHeight: 49,
               paddingVertical: 11,
-              fontSize: 13,
-              lineHeight: 22,
+              fontSize: 14,
+              lineHeight: 23,
               color: m.ink,
               textAlign: m.align,
             },
@@ -148,9 +147,24 @@ export default function MechanicRegistration({
         },
         true,
       );
-      setPassword("");
-      setConfirm("");
-      setStep("done");
+      // Creation completes step one only. Authenticate through the existing endpoint,
+      // then continue the draft without granting any professional approval.
+      try {
+        const session = await mechanicApi<{accessToken?:string;user?:{role:string;status:string}}>(
+          '/api/auth/login','POST',{email:email.trim().toLowerCase(),password},true,
+        );
+        if (!session.accessToken || session.user?.role !== 'MECHANIC' || session.user.status !== 'ACTIVE')
+          throw Error('Unexpected mechanic session.');
+        await Store.setItemAsync('motexa_access_token',session.accessToken);
+        setPassword('');
+        setConfirm('');
+        router.replace('/mechanic');
+      } catch {
+        // The account already exists: offer sign-in rather than resubmitting registration.
+        setPassword('');
+        setConfirm('');
+        setStep('done');
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Please try again.");
     } finally {
@@ -161,7 +175,7 @@ export default function MechanicRegistration({
     return (
       <MechanicPage
         photo
-        title={m.t("Your account is created", "تم إنشاء حسابك")}
+        title={m.t("Continue your application", "استكمل طلبك")}
       >
         <MechanicCard>
           <Text
@@ -238,140 +252,10 @@ export default function MechanicRegistration({
             paddingBottom: insets.bottom + 26,
           }}
         >
-          <View
-            style={{
-              flexDirection: "row",
-              direction: "ltr",
-              alignItems: "center",
-              gap: 6,
-              paddingHorizontal: 16,
-              paddingTop: insets.top + 6,
-              paddingBottom: 8,
-            }}
-          >
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={m.t(
-                "Back to sign in",
-                "العودة لتسجيل الدخول",
-              )}
-              disabled={busy}
-              onPress={signIn}
-              style={{ width: 30, minHeight: 42, justifyContent: "center" }}
-            >
-              <Ionicons
-                name={m.ar ? "arrow-forward" : "arrow-back"}
-                size={21}
-                color={m.ink}
-              />
-            </Pressable>
-            <BrandWordmark size={18} style={{ flex: 1 }} />
-            <LanguageSwitch compact light unified />
-          </View>
-          <View style={{ paddingHorizontal: 30, paddingBottom: 9 }}>
-            <MechanicProgress current={1} />
-          </View>
-          {previewOnly && (
-            <View style={{ paddingHorizontal: 18 }}>
-              <MechanicNote>
-                {m.t(
-                  "Preview only · No account will be created and nothing is sent to the database.",
-                  "معاينة فقط · لن يتم إنشاء حساب أو إرسال أي بيانات لقاعدة البيانات.",
-                )}
-              </MechanicNote>
-            </View>
-          )}
-          <ImageBackground
-            accessible={false}
-            source={require("../../assets/images/motexa-mechanic-registration-hero.png")}
-            resizeMode="cover"
-            style={{
-              width: "100%",
-              height: 194,
-              overflow: "hidden",
-              backgroundColor: "#433020",
-            }}
-          >
-            <LinearGradient
-              colors={["rgba(36,22,12,0)", "rgba(36,22,12,.1)"]}
-              style={StyleSheet.absoluteFill}
-            />
-            <Svg
-              pointerEvents="none"
-              accessible={false}
-              width="100%"
-              height={28}
-              viewBox="0 0 390 28"
-              preserveAspectRatio="none"
-              style={{ position: "absolute", top: -1, left: 0 }}
-            >
-              <Path
-                d="M0 0 H390 V24 C304 11 226 0 149 4 C80 5 30 10 0 22 Z"
-                fill={m.dark ? "#30231B" : "#FFF9EF"}
-              />
-            </Svg>
-            <Svg
-              pointerEvents="none"
-              accessible={false}
-              width="100%"
-              height={44}
-              viewBox="0 0 390 44"
-              preserveAspectRatio="none"
-              style={{ position: "absolute", bottom: -1, left: 0 }}
-            >
-              <Path
-                d="M0 18 C65 0 121 2 190 10 C264 20 323 33 390 20 L390 44 L0 44 Z"
-                fill={m.dark ? "#35291F" : "#FFFAF1"}
-              />
-            </Svg>
-          </ImageBackground>
-          <View
-            style={{
-              marginHorizontal: 15,
-              marginTop: -1,
-              borderRadius: 28,
-              overflow: "hidden",
-              borderWidth: 1,
-              borderColor: m.border,
-              padding: 18,
-              backgroundColor: m.surface,
-            }}
-          >
-            <PanelFill radius={28} />
-            <View
-              style={{
-                flexDirection: m.row,
-                alignItems: "center",
-                gap: 7,
-                marginBottom: 5,
-              }}
-            >
-              <Text
-                accessibilityRole="header"
-                style={{
-                  flex: 1,
-                  fontSize: 25,
-                  lineHeight: 34,
-                  fontWeight: "600",
-                  color: m.ink,
-                  textAlign: m.align,
-                }}
-              >
-                {m.t("Create your account", "إنشاء حسابك")}
-              </Text>
-              <Ionicons name="construct-outline" size={21} color={m.muted} />
-            </View>
-            <Text
-              style={{
-                fontSize: 12,
-                lineHeight: 22,
-                color: m.muted,
-                textAlign: m.align,
-                marginBottom: 20,
-              }}
-            >
-              {m.t("Join MOTEXA as a mechanic.", "انضم إلى MOTEXA كميكانيكي.")}
-            </Text>
+          <View style={{paddingTop:insets.top+6}}><BrandHeader onBack={signIn} backDisabled={busy} backLabel={m.t('Back to sign in','العودة لتسجيل الدخول')}/></View>
+          <View style={{paddingHorizontal:18}}><MechanicJourneyHeader title={m.t('Your expertise starts here.','هنا تبدأ رحلتك المهنية.')} subtitle={m.t('Create your account. Build a profile people can trust.','أنشئ حسابك، وابنِ ملفًا مهنيًا يستحق الثقة.')} current={1} stepsDisabled={busy} canSelectStep={value=>previewOnly||value===1} onStep={value=>{if(value===1)return;if(previewOnly)onPreviewStep?.(value);else router.push({pathname:'/auth/mechanic-preview',params:{stage:String(value)}});}}/>{<MechanicNote>{previewOnly?m.t('Preview only · No account will be created.','معاينة فقط · لن يتم إنشاء حساب.'):m.t('Create your account to begin your professional application.','أنشئ حسابك لبدء طلب الاعتماد المهني.')}</MechanicNote>}</View>
+          <View style={{marginHorizontal:15}}><MechanicStageSurface stage={1}><View>
+            <MechanicFormSection icon="person-outline" number="01" title={m.t('Create your account','إنشاء حسابك')} description={m.t('Your identity and contact details, together in one place.','هويتك ومعلومات التواصل، في مكان واحد.')}/>
             {error && <MechanicNote error>{error}</MechanicNote>}
             <RegistrationField
               label={m.t("Full name", "الاسم الكامل")}
@@ -434,6 +318,7 @@ export default function MechanicRegistration({
                 </Pressable>
               }
             />
+            <MechanicFormSection icon="lock-closed-outline" number="02" title={m.t('Protect your account','احمِ حسابك')} description={m.t('Use a strong password you do not use elsewhere.','اختر كلمة مرور قوية لا تستخدمها في حساب آخر.')}/>
             <RegistrationField
               label={m.t("Password", "كلمة المرور")}
               icon="lock-closed-outline"
@@ -590,7 +475,7 @@ export default function MechanicRegistration({
                 </Text>
               </Pressable>
             </View>
-          </View>
+          </View></MechanicStageSurface></View>
         </ScrollView>
       </KeyboardAvoidingView>
       <Modal

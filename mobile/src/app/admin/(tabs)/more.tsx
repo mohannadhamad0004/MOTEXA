@@ -1,16 +1,19 @@
-import CurvedPhotoHero from "../../../components/CurvedPhotoHero";
+import AccountPreferences from '../../../components/AccountPreferences';
+import SignOutAction from '../../../components/SignOutAction';
+import WorkspaceHeading from '../../../components/WorkspaceHeading';
+import BrandHeader from '../../../components/BrandHeader';
+import Pressable from "../../../components/MotionPressable";
+
 import React, { useState } from "react";
 import {
   Image,
-  ImageBackground,
   Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+
 import { router } from "expo-router";
 import * as SecureStore from "../../../components/SessionStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,7 +22,6 @@ import { CanvasFill } from "../../../components/BrandSurfaces";
 import { Text } from "../../../components/MotexaVisual";
 import { EditorialTitle } from "../../../components/PremiumUI";
 import BrandWordmark from "../../../components/BrandWordmark";
-import LanguageSwitch from "../../../components/LanguageSwitch";
 import MotexaDialog from "../../../components/MotexaDialog";
 import { WorkspacePhotography } from "../../../components/WorkspacePhotography";
 import { useLanguage } from "../../../i18n/LanguageContext";
@@ -131,28 +133,8 @@ export default function MoreScreen() {
           paddingBottom: 20,
         }}
       >
-        <View
-          style={[
-            s.header,
-            {
-              paddingTop: insets.top + 9,
-              flexDirection: "row",
-              direction: "ltr",
-            },
-          ]}
-        >
-          <BrandWordmark style={{ flex: 1 }} />
-          <LanguageSwitch light compact unified />
-        </View>
-        <CurvedPhotoHero
-          eyebrow={t("MOTEXA / SUPER ADMIN", "MOTEXA / المسؤول الأعلى")}
-          title={t("Your\nworkspace", "مساحتك\nالإدارية")}
-          caption={t("Super Admin", "المسؤول الأعلى")}
-          description={t(
-            "Manage your account and workspace",
-            "إدارة حسابك ومساحة عملك",
-          )}
-        />
+        <View style={{paddingTop:insets.top+8}}><BrandHeader/></View>
+        <View style={{paddingHorizontal:20,paddingBottom:10}}><WorkspaceHeading eyebrow={t('MOTEXA / YOUR ACCOUNT','MOTEXA / حسابك')} title={t('Make it yours.','مساحةٌ تناسبك.')} description={t('Your account, preferences and platform tools.','حسابك، تفضيلاتك، وأدوات إدارة المنصّة.')}/></View>
         <View style={s.body}>
           <View style={[s.section, { flexDirection: row }]}>
             <Text
@@ -177,7 +159,7 @@ export default function MoreScreen() {
               },
             ]}
           >
-            {items.map(([label, description, icon, onPress, photo], index) => (
+            {items.map(([label, description, icon, onPress, photo], index) => icon === "log-out-outline" ? <SignOutAction key={icon} onPress={onPress}/> : (
               <Pressable
                 key={icon}
                 accessibilityRole="button"
@@ -307,48 +289,7 @@ export default function MoreScreen() {
                   : t("Help & Support", "المساعدة والدعم")}
               </EditorialTitle>
               {sheet === "settings" ? (
-                <>
-                  <Text
-                    style={{
-                      fontSize: 13,
-                      lineHeight: 23,
-                      color: muted,
-                      textAlign: align,
-                      marginTop: 10,
-                      marginBottom: 23,
-                    }}
-                  >
-                    {t(
-                      "Choose your language and appearance. Changes apply throughout MOTEXA.",
-                      "اختر اللغة والمظهر. تُطبّق التغييرات على جميع واجهات MOTEXA.",
-                    )}
-                  </Text>
-                  <View
-                    style={{
-                      alignItems: "center",
-                      padding: 15,
-                      borderWidth: 1,
-                      borderColor: border,
-                      borderRadius: 26,
-                    }}
-                  >
-                    <LanguageSwitch compact light unified />
-                  </View>
-                  <Text
-                    style={{
-                      fontSize: 11,
-                      lineHeight: 20,
-                      color: muted,
-                      textAlign: align,
-                      marginTop: 17,
-                    }}
-                  >
-                    {t(
-                      "The device icon follows your system appearance.",
-                      "أيقونة الجهاز تستخدم المظهر المحدد في إعدادات جهازك.",
-                    )}
-                  </Text>
-                </>
+                <AccountPreferences/>
               ) : (
                 <>
                   <Text

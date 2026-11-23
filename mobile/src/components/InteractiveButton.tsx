@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
-  Pressable,
+  Platform,
   StyleSheet,
   TouchableOpacityProps,
 } from "react-native";
+import Pressable from "./MotionPressable";
 import { motion } from "./DesignTokens";
 import { useReducedMotion } from "./MotexaVisual";
 export default function InteractiveButton({
@@ -61,7 +62,7 @@ export default function InteractiveButton({
         hovered && !disabled && { opacity: 0.92 },
         pressed && !disabled && { opacity: activeOpacity },
         disabled && { opacity: 0.55 },
-        focused && {
+        focused && Platform.OS === "web" && {
           outlineColor: "#9C6B3D",
           outlineWidth: 2,
           outlineOffset: 3,

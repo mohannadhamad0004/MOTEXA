@@ -1,6 +1,8 @@
+import MechanicInterviewAppointment from './MechanicInterviewAppointment';
+import {ReviewMessage,ReviewEmpty} from './MechanicReviewElements';
 import { useCallback, useRef, useState } from "react";
 import { View } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Text } from "./MotexaVisual";
 import {
   MechanicChoice,
@@ -26,8 +28,9 @@ import {
 
 /** Authenticated mechanic side of the review journey. Does not alter registration. */
 export default function MechanicReviewHub() {
+  const params=useLocalSearchParams<{tab?:string}>();
   const m = useMechanicTheme(),
-    [page, setPage] = useState("test"),
+    [page, setPage] = useState(params.tab==='conversation'?'conversation':'test'),
     [profile, setProfile] = useState<MechanicProfile | null>(null),
     [tests, setTests] = useState<ProfessionalTest[]>([]),
     [messages, setMessages] = useState<ConversationMessage[]>([]),
@@ -46,7 +49,7 @@ export default function MechanicReviewHub() {
   const latest = tests.find(
     (t) => t.submissionVersion === profile?.submissionVersion,
   );
-  async function load(id?: string, version?: number) {
+  const load = useCallback(async (id?: string, version?: number) => {
     const p =
       id && version !== undefined
         ? null
@@ -77,8 +80,8 @@ export default function MechanicReviewHub() {
       setAnswers({});
       setIndex(0);
     }
-  }
-  async function run(fn: () => Promise<void>) {
+  }, []);
+  const run = useCallback(async (fn: () => Promise<void>) => {
     if (operating.current) return;
     operating.current = true;
     setBusy(true);
@@ -91,13 +94,13 @@ export default function MechanicReviewHub() {
         setError(
           e instanceof Error
             ? e.message
-            : m.t("Please try again.", "حاول مجددًا."),
+            : (m.ar ? "حاول مجددًا." : "Please try again."),
         );
     } finally {
       operating.current = false;
       if (mounted.current) setBusy(false);
     }
-  }
+  }, [m.ar]);
   useFocusEffect(
     useCallback(() => {
       mounted.current = true;
@@ -109,7 +112,7 @@ export default function MechanicReviewHub() {
         mounted.current = false;
         clearInterval(timer);
       };
-    }, []),
+    }, [load, run]),
   );
   const date = (s: string) =>
     new Date(s).toLocaleString(m.ar ? "ar" : "en", {
@@ -149,11 +152,13 @@ export default function MechanicReviewHub() {
       name={profile?.user.fullName ?? ""}
       unread={notices.filter((n) => !n.readAt).length}
     >
+      {profile?.verificationStatus==='PENDING'&&page==='test'&&<View style={{gap:6,marginBottom:16}}><Text accessibilityRole="header" style={{fontSize:23,lineHeight:35,color:m.ink,fontWeight:'600',textAlign:m.align}}>{m.t('Your verification tasks','المطلوب لإكمال تقييمك')}</Text><Text style={{fontSize:12,lineHeight:24,color:m.muted,textAlign:m.align}}>{latest?.submittedAt&&profile.interviewConfirmedAt?m.t('Your tasks are complete. The administrator will record the final review.','اكتملت مهامك. يسجّل الأدمن المراجعة النهائية بعد ذلك.'):m.t('Complete the remaining interview confirmation and questions below. Saved tasks do not need to be repeated.','أكمل تأكيد المقابلة والأسئلة المتبقية أدناه. المهام المحفوظة لا تحتاج تكرارًا.')}</Text></View>}
+      {profile?.verificationStatus==='PENDING'&&<MechanicInterviewAppointment profile={profile} onUpdated={setProfile}/>}
       <WorkspaceButton
         small
         secondary
         icon="arrow-back"
-        label={m.t("Back to my application", "العودة لطلبي")}
+        label={profile?.verificationStatus==='VERIFIED'?m.t("Back to my workspace", "العودة لمساحة عملي"):m.t("Back to my application", "العودة لطلبي")}
         onPress={() =>
           router.replace("/mechanic" as import("expo-router").Href)
         }
@@ -170,7 +175,7 @@ export default function MechanicReviewHub() {
             onPress={() => void run(() => load())}
           />
         </WorkspaceCard>
-      ) : !profile.submittedAt ? (
+      ) : !profile.submittedAt&&profile.verificationStatus!=='VERIFIED' ? (
         <MechanicNote>
           {m.t(
             "Complete and submit your professional application first.",
@@ -188,12 +193,8 @@ export default function MechanicReviewHub() {
           />
           <WorkspaceCard>
             {!latest ? (
-              <MechanicNote>
-                {m.t(
-                  "No test has been assigned to this application yet. Your administrator will notify you when it is ready.",
-                  "لم يرسل اختبار لهذه النسخة من الطلب بعد. سيصلك إشعار عند تجهيزه.",
-                )}
-              </MechanicNote>
+              <ReviewEmpty icon="clipboard-outline" title={m.t('Your next challenge is on its way.','تقييمك هو الخطوة القادمة.')} description={m.t('No test has been assigned to this application yet. Your administrator will notify you when it is ready.','لم يُرسل اختبار لهذه النسخة من الطلب بعد. سيصلك إشعار عند تجهيزه.')}/>
+
             ) : latest.submittedAt ? (
               <>
                 <WorkspaceBadge
@@ -378,62 +379,9 @@ export default function MechanicReviewHub() {
                 }
               />
             )}
-            <View style={{ gap: 13, minHeight: 230 }}>
-              {messages.map((msg) => (
-                <View
-                  key={msg.id}
-                  style={{
-                    maxWidth: "88%",
-                    alignSelf:
-                      msg.senderId === profile.userId
-                        ? "flex-end"
-                        : "flex-start",
-                    borderRadius: 24,
-                    padding: 15,
-                    gap: 5,
-                    backgroundColor:
-                      msg.senderId === profile.userId ? "#573822" : m.soft,
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 10,
-                      color:
-                        msg.senderId === profile.userId ? "#DEC6A5" : m.muted,
-                    }}
-                  >
-                    {msg.sender.fullName}
-                  </Text>
-                  <Text
-                    selectable
-                    style={{
-                      fontSize: 13,
-                      lineHeight: 23,
-                      color:
-                        msg.senderId === profile.userId ? "#FFF6E8" : m.ink,
-                    }}
-                  >
-                    {msg.body}
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 9,
-                      color:
-                        msg.senderId === profile.userId ? "#DEC6A5" : m.muted,
-                    }}
-                  >
-                    {date(msg.createdAt)}
-                  </Text>
-                </View>
-              ))}
-              {!messages.length && (
-                <MechanicNote>
-                  {m.t(
-                    "Ask about your application or requested documents.",
-                    "اسأل عن طلبك أو الوثائق المطلوبة.",
-                  )}
-                </MechanicNote>
-              )}
+            <View style={{ gap: 13, minHeight: messages.length?180:0 }}>
+              {messages.map(msg=><ReviewMessage key={msg.id} sender={msg.sender.fullName} body={msg.body} time={date(msg.createdAt)} mine={msg.senderId===profile.userId}/>)}
+              {!messages.length&&<ReviewEmpty title={m.t('Your administrator, within reach.','أدمن الميكانيك، أقرب إليك.')} description={m.t('Ask about your application, documents or next assessment step.','اسأل عن طلبك أو وثائقك أو الخطوة التالية في التقييم.')}/>}
             </View>
             <MechanicField
               label={m.t("Write a message", "اكتب رسالة")}
@@ -500,7 +448,7 @@ export default function MechanicReviewHub() {
                         "POST",
                       );
                       if (n.kind === "MESSAGE") setPage("conversation");
-                      else if (n.kind?.startsWith("TEST")) setPage("test");
+                      else if ((n.kind?.startsWith("TEST")||n.kind==='ASSESSMENT_PACKAGE_ASSIGNED')) setPage("test");
                       else
                         router.replace(
                           "/mechanic" as import("expo-router").Href,

@@ -1,0 +1,7 @@
+import {ActivityIndicator,View} from 'react-native';
+import {Ionicons} from '@expo/vector-icons';
+import {Text} from './MotexaVisual';
+import {useMechanicTheme} from './MechanicUI';
+import {OwnerSurface} from './OwnerControls';
+/** Loading is honest: no made-up vehicle or service values appear before APIs resolve. */
+export default function OwnerLoading(){const m=useMechanicTheme();return <View style={{gap:22,paddingTop:27}}><View style={{gap:8}}><Text style={{fontSize:9,letterSpacing:2,color:m.bronze,textAlign:m.align}}>MOTEXA / YOUR JOURNEY</Text><Text accessibilityRole="header" style={{fontSize:27,lineHeight:40,fontWeight:'600',color:m.ink,textAlign:m.align}}>{m.t('Getting everything ready.','بنجهّز رحلتك.')}</Text><Text style={{fontSize:12,lineHeight:25,color:m.muted,textAlign:m.align}}>{m.t('Loading your saved vehicles and service updates.','بنحمّل سياراتك المحفوظة وتحديثات خدماتك.')}</Text></View><OwnerSurface><View style={{height:210,alignItems:'center',justifyContent:'center',gap:21}}><View style={{width:85,height:85,borderRadius:43,borderWidth:1,borderColor:m.border,alignItems:'center',justifyContent:'center'}}><Ionicons name="car-sport-outline" size={39} color={m.bronze}/></View><ActivityIndicator color={m.bronze}/></View></OwnerSurface><View style={{gap:11,padding:18,borderRadius:26,borderWidth:1,borderColor:m.border}}><View style={{height:10,width:'64%',backgroundColor:m.soft,borderRadius:5}}/><View style={{height:10,width:'40%',backgroundColor:m.soft,borderRadius:5}}/></View></View>;}

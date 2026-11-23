@@ -1,9 +1,12 @@
 import {motion} from './DesignTokens';
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Platform, Animated, Easing, StyleSheet, Text as NativeText, TextProps, View, ViewProps } from 'react-native';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { AccessibilityInfo, Animated, Easing, StyleSheet, Text as NativeText, TextProps, View, ViewProps } from 'react-native';
 import { useFonts } from 'expo-font';
 
 const FontsReady = createContext(false);
+type Typeface={regular:string;medium:string;bold:string;arabic:string;arabicMedium:string;arabicBold:string};
+const TypefaceContext=createContext<Typeface|null>(null);
+export const TypefaceProvider=TypefaceContext.Provider;
 export function VisualProvider({ children }: { children: React.ReactNode }) {
   const [loaded] = useFonts({
     MotexaDisplay: require('../../assets/fonts/Outfit-SemiBold.ttf'),
@@ -26,11 +29,13 @@ function textContent(value: React.ReactNode): string {
 }
 export function Text({ style, children, ...props }: TextProps) {
   const ready = useContext(FontsReady);
+  const typeface=useContext(TypefaceContext);
   const flat = StyleSheet.flatten(style) || {};
   const arabic = /[\u0600-\u06ff]/.test(textContent(children));
   const weight = flat.fontWeight === 'bold' ? 700 : Number(flat.fontWeight || 400);
-  const family = arabic
-    ? weight >= 700 ? 'MotexaArabicBold' : weight >= 500 ? 'MotexaArabicMedium' : 'MotexaArabic'
+  const family = typeface
+    ? arabic ? weight>=700?typeface.arabicBold:weight>=500?typeface.arabicMedium:typeface.arabic : weight>=700?typeface.bold:weight>=500?typeface.medium:typeface.regular
+    : arabic ? weight >= 700 ? 'MotexaArabicBold' : weight >= 500 ? 'MotexaArabicMedium' : 'MotexaArabic'
     : Number(flat.fontSize || 0) >= 20 ? (weight >= 700 ? 'MotexaDisplayBold' : 'MotexaDisplay') : weight >= 700 ? 'MotexaBold' : weight >= 500 ? 'MotexaMedium' : 'MotexaRegular';
   return <NativeText {...props} style={[style, ready && { fontFamily: flat.fontFamily || family, fontWeight: 'normal' }, arabic && {letterSpacing: 0, writingDirection: "rtl", textAlign: flat.textAlign || "right"}]}>{children}</NativeText>;
 }
@@ -49,7 +54,7 @@ export function useReducedMotion() {
 }
 export function HeroReveal({ children, style, delay = 0, ...props }: ViewProps & {delay?:number}) {
   const reduced = useReducedMotion();
-  const progress = useRef(new Animated.Value(1)).current;
+  const [progress] = useState(()=>new Animated.Value(1));
   useEffect(() => {
     if (reduced) { progress.setValue(1); return; }
     progress.setValue(0);
@@ -61,7 +66,7 @@ export function HeroReveal({ children, style, delay = 0, ...props }: ViewProps &
 }
 export function DecorativeHalo() {
   const reduced = useReducedMotion();
-  const drift = useRef(new Animated.Value(0)).current;
+  const [drift] = useState(()=>new Animated.Value(0));
   useEffect(() => {
     if(reduced) { drift.setValue(0); return; }
     const animation = Animated.loop(Animated.sequence([

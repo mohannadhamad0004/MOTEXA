@@ -1,0 +1,8 @@
+import {useEffect,useRef,useState} from 'react';
+import {Asset} from 'expo-asset';
+import {useReducedMotion} from './MotexaVisual';
+/** Browser playback catches play/pause races; native keeps the existing expo-video implementation. */
+export default function CustomerDrivingFilm({paused,interior=false}:{paused:boolean;interior?:boolean}){const ref=useRef<HTMLVideoElement|null>(null),reduced=useReducedMotion(),[failed,setFailed]=useState(false),source=Asset.fromModule(interior?require('../../assets/videos/motexa-interior-driving.mp4'):require('../../assets/videos/motexa-driving.mp4')).uri,poster=Asset.fromModule(interior?require('../../assets/images/motexa-interior-poster.jpg'):require('../../assets/images/motexa-driving-poster.jpg')).uri;
+ useEffect(()=>{const video=ref.current;if(!video)return;let disposed=false;function update(){if(!video)return;if(paused||reduced||document.hidden){video.pause();return;}void video.play().catch((e:unknown)=>{if(disposed)return;const name=e instanceof DOMException?e.name:'';if(name!=='AbortError')setFailed(true);});}update();document.addEventListener('visibilitychange',update);return()=>{disposed=true;document.removeEventListener('visibilitychange',update);video.pause();};},[paused,reduced,source]);
+ return <div aria-hidden="true" style={{position:'absolute',inset:0,pointerEvents:'none'}}>{failed?<img alt="" src={poster} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>:<video ref={ref} data-testid="customer-driving-film" src={source} poster={poster} muted loop playsInline preload="metadata" controls={false} tabIndex={-1} onError={()=>setFailed(true)} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>}</div>;
+}

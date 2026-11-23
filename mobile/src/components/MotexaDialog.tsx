@@ -1,3 +1,7 @@
+import {useFonts} from 'expo-font';
+import {LinearGradient} from 'expo-linear-gradient';
+import BrandMonogram from './BrandMonogram';
+import Pressable from "./MotionPressable";
 import {Text,HeroReveal,useReducedMotion} from "./MotexaVisual";
 import {PanelFill} from "./BrandSurfaces";
 import {useAppearance} from "./Appearance";
@@ -7,7 +11,6 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   ActivityIndicator,
   Modal,
-  Pressable,
   StyleSheet,
   ScrollView,
   View,
@@ -24,6 +27,7 @@ type Props = {
   confirmText?: string;
   cancelText?: string;
   loading?: boolean;
+  singleAction?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -37,6 +41,7 @@ export default function MotexaDialog({
   confirmText = "Confirm",
   cancelText = "Cancel",
   loading = false,
+  singleAction = false,
   onConfirm,
   onCancel,
 }: Props) {
@@ -51,6 +56,9 @@ export default function MotexaDialog({
     warning: "warning-outline",
   } as const;
 
+  const signOut=icon==='log-out-outline';
+  const branded=signOut||(type==='error'&&icon==='lock-closed-outline');
+  const [exitFontsReady]=useFonts({MotexaExitTitle:require('../../assets/fonts/GreatVibes-Regular.ttf'),MotexaExitTitleArabic:require('../../assets/fonts/Tajawal-Medium.ttf')});
   const isDanger = type === "error" || type === "warning";
 
   return (
@@ -64,27 +72,28 @@ export default function MotexaDialog({
       }}
     >
       <View style={styles.overlay}>
-        <HeroReveal accessibilityViewIsModal style={[styles.card,{maxHeight:"88%"}]}><PanelFill radius={32}/><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{alignItems:"center",flexGrow:1}}>
-          <View style={[styles.iconCircle,{backgroundColor:dark?"#58432E":"#F3DFC5"}]}>
+        <HeroReveal accessibilityViewIsModal style={[styles.card,{maxHeight:"88%"},branded&&{maxWidth:320,padding:20}]}><PanelFill radius={32}/>{branded&&<><LinearGradient pointerEvents="none" colors={dark?["#3E2D21","#30231B","#503724"]:["#FFFAF1","#FAEFDF","#EDD2AF"]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/><BrandMonogram size={155} style={{top:5,left:-42,opacity:.04}}/></>}<ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{alignItems:"center",flexGrow:1}}>
+          {branded&&<Text style={{fontSize:10,lineHeight:20,letterSpacing:isArabic?0:1.5,color:muted,marginBottom:9}}>{signOut?(isArabic?"MOTEXA / جلستك":"MOTEXA / YOUR SESSION"):(isArabic?"MOTEXA / دخول آمن":"MOTEXA / SECURE ACCESS")}</Text>}
+          <View style={[styles.iconCircle,{backgroundColor:dark?"#58432E":"#F3DFC5"},branded&&{width:48,height:52,borderRadius:17,marginBottom:10,borderWidth:1,borderColor:dark?"#916C47":"#D8B68C"}]}>
             <Ionicons
-              name={icon || icons[type]}
-              size={28}
+              name={signOut?"exit-outline":icon || icons[type]}
+              size={signOut?25:28}
               color={type==="success"?"#377250":type==="error"?"#A84436":dark?"#E6BE88":"#8B5B32"}
             />
           </View>
 
-          <Text accessibilityRole="header" style={[styles.title,{color:ink}]}>{title}</Text>
-          <Text style={[styles.message,{color:muted}]}>{message}</Text>
+          <Text accessibilityRole="header" style={[styles.title,{color:ink},branded&&{fontFamily:exitFontsReady?(isArabic?"MotexaExitTitleArabic":"MotexaExitTitle"):undefined,fontSize:isArabic?25:32,lineHeight:isArabic?38:41,fontWeight:"400",marginBottom:8}]}>{title}</Text>
+          <Text style={[styles.message,{color:muted},branded&&{fontSize:12,lineHeight:21,marginBottom:16}]}>{message}</Text>
 
-          <View style={[styles.actions,{flexDirection:isArabic?"row-reverse":"row"}]}>
-            <Pressable
+          <View style={[styles.actions,{flexDirection:isArabic?"row-reverse":"row"},branded&&{gap:8}]}>
+            {!singleAction&&(<Pressable
               accessibilityRole="button"
-              style={({pressed})=>[styles.cancelButton,{backgroundColor:"transparent",opacity:pressed?0.75:1}]}
+              style={({pressed})=>[styles.cancelButton,{backgroundColor:"transparent",opacity:pressed?0.75:1},branded&&{paddingVertical:10,minHeight:44,minWidth:94,borderRadius:19}]}
               onPress={onCancel}
               disabled={loading}
             >
-              <Text style={[styles.cancelText,{color:ink}]}>{cancelText}</Text>
-            </Pressable>
+              <Text style={[styles.cancelText,{color:ink},branded&&{fontSize:12,lineHeight:21}]}>{cancelText}</Text>
+            </Pressable>)}
 
             <Pressable
               accessibilityRole="button"
@@ -92,6 +101,7 @@ export default function MotexaDialog({
                 styles.confirmButton,
                 {opacity:pressed?0.8:1},
                 isDanger && styles.dangerButton,
+                branded&&{paddingVertical:10,minHeight:44,minWidth:94,borderRadius:19,backgroundColor:dark?"#91643B":"#80532E"},
                 loading && { opacity: 0.6 },
               ]}
               onPress={onConfirm}
@@ -100,7 +110,7 @@ export default function MotexaDialog({
               {loading ? (
                 <ActivityIndicator color="#FFF7EB" />
               ) : (
-                <Text style={styles.confirmText}>
+                <Text style={[styles.confirmText,branded&&{fontSize:12,lineHeight:21}]}>
                   {confirmText}
                 </Text>
               )}

@@ -1,0 +1,25 @@
+import {View} from 'react-native';
+import {LinearGradient} from 'expo-linear-gradient';
+import {Ionicons} from '@expo/vector-icons';
+import {useFonts} from 'expo-font';
+import BrandMonogram from './BrandMonogram';
+import {Text} from './MotexaVisual';
+import MechanicExpertiseWheel from './MechanicExpertiseWheel';
+import {MechanicField,useMechanicTheme} from './MechanicUI';
+import {MechanicFormSection} from './MechanicFormSection';
+import {mechanicSpecializations} from './mechanic-api';
+
+type ProfessionalFields={city:string;phoneNumber:string;specializations:string[];yearsOfExperience:string;experienceSummary:string};
+/** A controlled editor: every value belongs to the existing application draft. */
+export default function MechanicProfileComposer({name,value,onChange,disabled}:{name:string;value:ProfessionalFields;onChange:(patch:Partial<ProfessionalFields>)=>void;disabled:boolean}){
+ const m=useMechanicTheme();const[ready]=useFonts({MotexaProfileCraft:require('../../assets/fonts/GreatVibes-Regular.ttf'),MotexaProfileCraftArabic:require('../../assets/fonts/Tajawal-Medium.ttf')});
+ const icons=['cog-outline','construct-outline','flash-outline','git-compare-outline','battery-charging-outline','car-sport-outline'] as const;
+ const block={paddingVertical:13,gap:14};
+ const initials=name.trim().split(/\s+/).filter(Boolean).slice(0,2).map(word=>word[0]).join('').toUpperCase();
+ return <View style={{gap:18}}>
+  <View style={{borderRadius:28,overflow:'hidden',padding:21,borderWidth:1,borderColor:m.border,gap:17}}><LinearGradient pointerEvents="none" colors={m.dark?['#59412C','#35271D']:['#EAD0AC','#FCF3E5']} style={{position:'absolute',inset:0}}/><BrandMonogram size={180} style={{top:-16,right:-24,opacity:.045}}/><View style={{flexDirection:m.row,alignItems:'center',gap:13}}><View style={{width:53,height:60,borderRadius:20,backgroundColor:m.surface,alignItems:'center',justifyContent:'center'}}>{initials?<Text style={{fontSize:21,color:m.ink}}>{initials}</Text>:<Ionicons name="person-outline" size={26} color={m.muted}/>}</View><View style={{flex:1,gap:4}}><Text style={{fontSize:20,lineHeight:29,fontWeight:'600',color:m.ink,textAlign:m.align}}>{name||m.t('Your professional profile','ملفك المهني')}</Text><Text style={{fontSize:12,lineHeight:23,color:m.muted,textAlign:m.align}}>{value.city||m.t('Add the city you work in','أضف المدينة التي تعمل فيها')}</Text></View></View><Text style={{fontFamily:ready?(m.ar?'MotexaProfileCraftArabic':'MotexaProfileCraft'):undefined,fontSize:m.ar?23:33,lineHeight:m.ar?37:44,color:m.ink,textAlign:m.align}}>{m.t('The craft behind the care.','خبرتك وراء كل عناية.')}</Text><View style={{borderTopWidth:1,borderColor:m.border,paddingTop:11,flexDirection:m.row,flexWrap:'wrap',gap:13}}><Text style={{fontSize:11,lineHeight:22,color:m.muted}}>{value.specializations.length+' '+m.t('specialties selected','تخصصات مختارة')}</Text>{value.yearsOfExperience!==''&&<Text style={{fontSize:11,lineHeight:22,color:m.muted}}>{value.yearsOfExperience+' '+m.t('years of experience','سنوات خبرة')}</Text>}</View></View>
+  <View style={block}><MechanicFormSection number="01" icon="location-outline" title={m.t('Your working details','بيانات عملك')}/><MechanicField icon="location-outline" label={m.t('City','المدينة')} value={value.city} onChangeText={city=>onChange({city})} editable={!disabled}/><MechanicField icon="call-outline" label={m.t('Phone number','رقم الهاتف')} value={value.phoneNumber} onChangeText={phoneNumber=>onChange({phoneNumber})} keyboardType="phone-pad" editable={!disabled}/></View>
+  <View style={block}><MechanicFormSection number="02" icon="construct-outline" title={m.t('Choose your expertise','اختر تخصصاتك')} description={m.t('Select every specialty that reflects your real experience.','اختر التخصصات التي تعبّر عن خبرتك الفعلية.')}/><View style={{gap:8,flexDirection:m.row,flexWrap:'wrap'}}>{mechanicSpecializations.map(([key,en,ar],index)=>{const selected=value.specializations.includes(key);return <MechanicExpertiseWheel key={key} label={m.t(en,ar)} selected={selected} disabled={disabled} icon={icons[index]} onPress={()=>onChange({specializations:selected?value.specializations.filter(item=>item!==key):[...value.specializations,key]})}/>;})}</View></View>
+  <View style={block}><MechanicFormSection number="03" icon="ribbon-outline" title={m.t('Experience that matters','خبرة تصنع الفرق')} description={m.t('Explain the work you know, in your own words.','صف الأعمال التي تتقنها بكلماتك.')}/><MechanicField icon="calendar-outline" label={m.t('Years of experience','سنوات الخبرة')} value={value.yearsOfExperience} onChangeText={yearsOfExperience=>onChange({yearsOfExperience})} keyboardType="number-pad" maxLength={2} editable={!disabled}/><MechanicField icon="reader-outline" label={m.t('Tell us about your experience','نبذة عن خبرتك')} value={value.experienceSummary} onChangeText={experienceSummary=>onChange({experienceSummary})} multiline maxLength={2000} editable={!disabled}/><Text style={{fontSize:10,lineHeight:20,color:m.muted,textAlign:m.align}}>{value.experienceSummary.length+'/2000'}</Text></View>
+ </View>;
+}

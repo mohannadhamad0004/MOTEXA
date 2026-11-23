@@ -1,0 +1,6 @@
+{
+  "existingFilesChanged": [
+    "mobile/src/components/OwnerHome.tsx"
+  ],
+  "authorizedScope": "Home update explicitly requested after Phase1; other screens/backend remain untouched"
+}

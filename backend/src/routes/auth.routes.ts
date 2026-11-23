@@ -1,3 +1,4 @@
+import accountProfileRouter from './account-profile.routes.js';
 import {isCurrentSession} from "../services/session-version.service.js";
 
 import { Router } from "express";
@@ -7,6 +8,7 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../prisma.js";
 
 const router = Router();
+router.use("/profile",accountProfileRouter);
 
 router.post("/login", async (req, res) => {
   try {
@@ -172,7 +174,7 @@ router.get("/me", async (req, res) => {
     }
 
     if (
-      user.role !== "SUPER_ADMIN" && user.role !== "ADMIN" && user.role !== "MECHANIC"
+      user.role !== "SUPER_ADMIN" && user.role !== "ADMIN" && user.role !== "MECHANIC" && user.role !== "CUSTOMER"
     ) {
       return res.status(403).json({
         success: false,

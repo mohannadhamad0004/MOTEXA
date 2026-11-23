@@ -1,34 +1,78 @@
+import { useFonts } from 'expo-font';
+import BrandHeader from './BrandHeader';
+import Pressable from "./MotionPressable";
+import TextInput from "./PremiumTextInput";
+import type { TextInput as NativeTextInput } from "react-native";
 import { CanvasFill } from "./BrandSurfaces";
 import BrandWordmark from "./BrandWordmark";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState,useSyncExternalStore } from "react";
 import {
   ActivityIndicator,
   Image,
   ImageBackground,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StatusBar,
   StyleSheet,
-  TextInput,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router,useLocalSearchParams } from "expo-router";
+import OwnerRecovery from "./OwnerRecovery";
 import * as SecureStore from "./SessionStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppearance } from "./Appearance";
 import { useLanguage } from "../i18n/LanguageContext";
 import { Text, VisualProvider } from "./MotexaVisual";
 import { EditorialTitle } from "./PremiumUI";
-import LanguageSwitch from "./LanguageSwitch";
+
 import { ManagementBanner } from "./ManagementBanner";
 
 type Step = "email" | "code" | "password" | "complete";
 const API = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "");
+function RecoveryAction({label,onPress,loading,ar,row}:{
+  label:string;onPress:()=>void;loading:boolean;ar:boolean;row:'row'|'row-reverse';
+}) { return (
+    <Pressable
+      accessibilityRole="button"
+      disabled={loading}
+      onPress={onPress}
+      style={({ pressed }) => [
+        s.primary,
+        { opacity: loading ? 0.6 : pressed ? 0.8 : 1 },
+      ]}
+    >
+      <LinearGradient
+        colors={["#72492B", "#422918"]}
+        style={[s.primaryFill, { flexDirection: row }]}
+      >
+        {loading ? (
+          <ActivityIndicator color="#FFF1DE" />
+        ) : (
+          <>
+            <Text style={s.primaryText}>{label}</Text>
+            <Ionicons
+              name={ar ? "arrow-back" : "arrow-forward"}
+              size={19}
+              color="#EECDA2"
+            />
+          </>
+        )}
+      </LinearGradient>
+    </Pressable>
+  );
+}
+
+const subscribeRecoveryHydration=()=>()=>{};
+const recoveryClient=()=>true;
+const recoveryServer=()=>false;
 export default function PasswordRecoveryScreen() {
+  const hydrated=useSyncExternalStore(subscribeRecoveryHydration,recoveryClient,recoveryServer);
+  const {selectedRole}=useLocalSearchParams<{selectedRole?:string}>();
+  const [recoveryFontsReady] = useFonts({MotexaRecoveryScript:require('../../assets/fonts/GreatVibes-Regular.ttf'),MotexaRecoveryArabic:require('../../assets/fonts/Tajawal-Medium.ttf')});
+  const [recoveryPhotoWidth, setRecoveryPhotoWidth] = useState(358);
   const { dark } = useAppearance();
   const { isArabic: ar } = useLanguage();
   const insets = useSafeAreaInsets();
@@ -43,11 +87,11 @@ export default function PasswordRecoveryScreen() {
     [error, setError] = useState(""),
     [focused, setFocused] = useState(""),
     [lastSent, setLastSent] = useState(0),
-    [now, setNow] = useState(Date.now());
+    [now, setNow] = useState(() => Date.now());
   const busy = useRef(false),
     alive = useRef(true),
     controller = useRef<AbortController | null>(null),
-    codeInput = useRef<TextInput>(null);
+    codeInput = useRef<NativeTextInput>(null);
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -102,7 +146,7 @@ export default function PasswordRecoveryScreen() {
   const back = () => {
     if (loading) return;
     if (step === "email" || step === "complete") {
-      router.replace("/auth/login");
+      if(selectedRole==='customer')router.replace({pathname:'/auth/login',params:{selectedRole:'customer'}});else router.replace("/auth/login");
       return;
     }
     resetInputs();
@@ -247,35 +291,6 @@ export default function PasswordRecoveryScreen() {
       setStep("complete");
     });
   };
-  const button = (label: string, action: () => void) => (
-    <Pressable
-      accessibilityRole="button"
-      disabled={loading}
-      onPress={action}
-      style={({ pressed }) => [
-        s.primary,
-        { opacity: loading ? 0.6 : pressed ? 0.8 : 1 },
-      ]}
-    >
-      <LinearGradient
-        colors={["#72492B", "#422918"]}
-        style={[s.primaryFill, { flexDirection: row }]}
-      >
-        {loading ? (
-          <ActivityIndicator color="#FFF1DE" />
-        ) : (
-          <>
-            <Text style={s.primaryText}>{label}</Text>
-            <Ionicons
-              name={ar ? "arrow-back" : "arrow-forward"}
-              size={19}
-              color="#EECDA2"
-            />
-          </>
-        )}
-      </LinearGradient>
-    </Pressable>
-  );
   const heading = (title: string, sub: string) => (
     <View style={s.heading}>
       <EditorialTitle
@@ -364,6 +379,8 @@ export default function PasswordRecoveryScreen() {
       </View>
     );
   };
+  if(!hydrated)return <View style={{flex:1,backgroundColor:'#130E0B',alignItems:'center',justifyContent:'center'}}><ActivityIndicator color="#E0A36F"/></View>;
+  if(selectedRole==='customer')return <OwnerRecovery step={step} email={email} onEmail={setEmail} otp={otp} onOtp={setOtp} password={password} onPassword={setPassword} confirm={confirm} onConfirm={setConfirm} show={show} onShow={()=>setShow(v=>!v)} loading={loading} error={error} cooldown={cooldown} masked={masked} requirements={requirements} onRequest={request} onVerify={verify} onUpdate={update} onBack={back}/>;
   return (
     <VisualProvider>
       <View style={{ flex: 1, backgroundColor: paper }}>
@@ -382,98 +399,21 @@ export default function PasswordRecoveryScreen() {
           >
             <View style={[s.frame, { backgroundColor: paper }]}>
               <CanvasFill />
-              <View
-                style={[
-                  s.top,
-                  { paddingTop: insets.top + 12, flexDirection: row },
-                ]}
-              >
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t("Back", "رجوع")}
-                  disabled={loading}
-                  onPress={back}
-                  style={s.back}
-                >
-                  <Ionicons
-                    name={ar ? "arrow-forward" : "arrow-back"}
-                    size={23}
-                    color={ink}
-                  />
-                </Pressable>
-                <View style={{ flex: 1, minWidth: 68 }}>
-                  <BrandWordmark
-                    style={{
-                      color: ink,
-                      fontSize: 15,
-                      fontWeight: "600",
-                      letterSpacing: 2,
-                    }}
-                  />
-                  <Text
-                    style={{
-                      fontSize: 6,
-                      lineHeight: 12,
-                      letterSpacing: 1.3,
-                      color: muted,
-                    }}
-                  >
-                    SMART AUTO CARE
-                  </Text>
-                </View>
-                <LanguageSwitch compact light unified />
-              </View>
+              <View style={{paddingTop:insets.top+12}}><BrandHeader onBack={back} backDisabled={loading} backLabel={t('Back','رجوع')}/></View>
               {step === "email" && (
                 <>
-                  <ImageBackground
-                    source={require("../../assets/images/motexa-admin-coastal-hero.png")}
-                    style={s.hero}
-                  >
-                    <View
-                      style={[
-                        s.heroPaper,
-                        {
-                          backgroundColor: paper,
-                          [ar ? "left" : "right"]: undefined,
-                          [ar ? "right" : "left"]: 0,
-                          [ar
-                            ? "borderBottomLeftRadius"
-                            : "borderBottomRightRadius"]: 110,
-                        },
-                      ]}
-                    >
-                      <EditorialTitle
-                        accent
-                        style={{
-                          fontSize: 37,
-                          lineHeight: 48,
-                          color: ink,
-                          textAlign: align,
-                        }}
-                      >
-                        {t("Reset\npassword.", "استعادة\nكلمة المرور.")}
-                      </EditorialTitle>
-                      <Text
-                        style={{
-                          fontSize: 13,
-                          lineHeight: 22,
-                          color: muted,
-                          textAlign: align,
-                          marginTop: 12,
-                        }}
-                      >
-                        {t(
-                          "Don't worry. We will help you regain access.",
-                          "لا تقلق، سنساعدك على استعادة الوصول لحسابك.",
-                        )}
-                      </Text>
-                    </View>
-                  </ImageBackground>
+                  <View style={{paddingHorizontal:22,paddingTop:12,paddingBottom:16}}>
+                    <Text style={{fontSize:10,lineHeight:19,letterSpacing:ar?0:1.2,color:muted,textAlign:align,marginBottom:5}}>{t('ACCOUNT RECOVERY','استعادة الحساب')}</Text><EditorialTitle accent={false} style={{fontFamily:recoveryFontsReady?(ar?'MotexaRecoveryArabic':'MotexaRecoveryScript'):undefined,fontSize:ar?27:38,lineHeight:ar?40:50,color:ink,textAlign:align}}>{t('Back to your world.','لنعد إلى عالمك.')}</EditorialTitle>
+                    <Text style={{fontSize:13,lineHeight:22,color:muted,textAlign:align,marginTop:6}}>{t("Don't worry. We will help you regain access.",'لا تقلق، سنساعدك على استعادة الوصول لحسابك.')}</Text>
+                  </View>
+                  <View testID="recovery-photograph" onLayout={event=>setRecoveryPhotoWidth(event.nativeEvent.layout.width)} style={{height:185,marginHorizontal:16,overflow:'hidden',borderTopLeftRadius:32,borderTopRightRadius:16,borderBottomLeftRadius:16,borderBottomRightRadius:54,backgroundColor:'#39281D'}}>
+                    <Image accessible={false} source={require('../../assets/images/ferrari-samuel-hagger.jpg')} resizeMode="cover" style={{position:'absolute',width:recoveryPhotoWidth,height:recoveryPhotoWidth*1.5,left:0,top:92-recoveryPhotoWidth*1.5*.61}}/>
+                  </View>
                   <View
                     style={[
                       s.panel,
                       s.roundPanel,
-                      { backgroundColor: paper, marginTop: -25 },
+                      { backgroundColor: surface, marginTop: 16,marginHorizontal:16,marginBottom:20,borderWidth:1,borderColor:border,borderRadius:28 },
                     ]}
                   >
                     <View
@@ -554,7 +494,7 @@ export default function PasswordRecoveryScreen() {
                         {error}
                       </Text>
                     ) : null}
-                    {button(t("Send code", "إرسال الرمز"), request)}
+                    <RecoveryAction label={t("Send code", "إرسال الرمز")} onPress={request} loading={loading} ar={ar} row={row}/>
                     <Pressable
                       accessibilityRole="button"
                       disabled={loading}
@@ -658,7 +598,7 @@ export default function PasswordRecoveryScreen() {
                       {error}
                     </Text>
                   ) : null}
-                  {button(t("Verify code", "التحقق من الرمز"), verify)}
+                  <RecoveryAction label={t("Verify code", "التحقق من الرمز")} onPress={verify} loading={loading} ar={ar} row={row}/>
                   <Pressable
                     accessibilityRole="button"
                     disabled={loading || cooldown > 0}
@@ -760,7 +700,7 @@ export default function PasswordRecoveryScreen() {
                       {error}
                     </Text>
                   ) : null}
-                  {button(t("Update password", "تحديث كلمة المرور"), update)}
+                  <RecoveryAction label={t("Update password", "تحديث كلمة المرور")} onPress={update} loading={loading} ar={ar} row={row}/>
                 </View>
               )}
               {step === "complete" && (
@@ -822,9 +762,7 @@ export default function PasswordRecoveryScreen() {
                         )}
                       </Text>
                     </View>
-                    {button(t("Go to sign in", "الانتقال لتسجيل الدخول"), () =>
-                      router.replace("/auth/login"),
-                    )}
+                    <RecoveryAction label={t("Go to sign in", "الانتقال لتسجيل الدخول")} onPress={()=>router.replace("/auth/login")} loading={loading} ar={ar} row={row}/>
                   </View>
                 </>
               )}
@@ -901,7 +839,7 @@ const s = StyleSheet.create({
     alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: -51,
+    marginTop: 0,
   },
   heading: { marginTop: 13, marginBottom: 18 },
   inputRow: {

@@ -1,14 +1,16 @@
+import { useLocalPreference } from "../components/useLocalPreference";
 import {
   createContext,
   ReactNode,
   useContext,
-  useState,
 } from "react";
 
 import {
   Language,
   translations,
 } from "./translations";
+
+const validLanguage = (value:string):value is Language => value === "ar" || value === "en";
 
 type LanguageContextType = {
   language: Language;
@@ -29,7 +31,7 @@ export function LanguageProvider({
   children,
 }: LanguageProviderProps) {
   const [language, setLanguage] =
-    useState<Language>("en");
+    useLocalPreference<Language>("motexa_language", "en", validLanguage);
 
   const toggleLanguage = () => {
     setLanguage((currentLanguage) =>

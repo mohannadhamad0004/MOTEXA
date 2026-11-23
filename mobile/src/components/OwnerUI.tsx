@@ -1,0 +1,11 @@
+import type {ReactNode} from 'react';
+import {View} from 'react-native';
+import {Ionicons} from '@expo/vector-icons';
+import {Text} from './MotexaVisual';
+import {CustomerTitle} from './CustomerType';
+import {useMechanicTheme} from './MechanicUI';
+import Pressable from './MotionPressable';
+export function OwnerIntro({eyebrow,en,ar,description}:{eyebrow:string;en:string;ar:string;description?:string}){const m=useMechanicTheme();return <View style={{gap:8,paddingTop:20,paddingBottom:6}}><Text style={{fontSize:12,letterSpacing:2,color:m.bronze,textAlign:m.align}}>{eyebrow}</Text><CustomerTitle en={en} ar={ar}/>{!!description&&<Text style={{fontSize:13,lineHeight:27,color:m.muted,textAlign:m.align}}>{description}</Text>}</View>;}
+export function OwnerLine({label,value,icon}:{label:string;value:string;icon?:keyof typeof Ionicons.glyphMap}){const m=useMechanicTheme();return <View style={{flexDirection:m.row,gap:12,paddingVertical:13,borderBottomWidth:1,borderColor:m.border}}>{icon&&<Ionicons name={icon} size={19} color={m.bronze} style={{marginTop:2}}/>}<View style={{gap:5,flex:1}}><Text style={{fontSize:12,color:m.muted,textAlign:m.align}}>{label}</Text><Text selectable style={{fontSize:14,lineHeight:26,color:m.ink,textAlign:m.align}}>{value||'—'}</Text></View></View>;}
+export function OwnerPill({children,icon}:{children:ReactNode;icon?:keyof typeof Ionicons.glyphMap}){const m=useMechanicTheme();return <View style={{flexDirection:m.row,alignItems:'center',alignSelf:m.ar?'flex-end':'flex-start',gap:6,borderWidth:1,borderColor:m.border,borderRadius:99,paddingHorizontal:10,paddingVertical:5}}>{icon&&<Ionicons name={icon} size={13} color={m.bronze}/>}<Text style={{fontSize:12,lineHeight:21,color:m.muted}}>{children}</Text></View>;}
+export function OwnerIconButton({label,icon,onPress,disabled=false}:{label:string;icon:keyof typeof Ionicons.glyphMap;onPress:()=>void;disabled?:boolean}){const m=useMechanicTheme();return <Pressable focusVisibleOnly accessibilityRole="button" accessibilityLabel={label} onPress={onPress} disabled={disabled} style={({pressed})=>({width:48,height:48,borderRadius:24,borderWidth:1,borderColor:m.border,backgroundColor:m.surface,alignItems:'center',justifyContent:'center',opacity:disabled?.4:pressed?.7:1})}><Ionicons name={icon} size={20} color={m.ink}/></Pressable>;}

@@ -23,6 +23,7 @@ export function EditorialTitle({
   const { isArabic } = useLanguage();
   return (
     <Text
+      accessibilityRole="header"
       {...props}
       style={[
         {
@@ -75,8 +76,8 @@ export function SectionCaption({
       <Text
         style={{
           flex: 1,
-          fontSize: 10,
-          lineHeight: 20,
+          fontSize: 12,
+          lineHeight: 21,
           letterSpacing: isArabic ? 0 : 1.5,
           color: muted,
           textAlign: isArabic ? "right" : "left",

@@ -1,5 +1,22 @@
+import MechanicAssessmentPackage from './MechanicAssessmentPackage';
+import MechanicInterviewScheduler from './MechanicInterviewScheduler';
+import {ReviewQuestionSurface,ReviewCheckpoint,ReviewMessage,ReviewEmpty} from './MechanicReviewElements';
+import MechanicDossierContact from './MechanicDossierContact';
+import MechanicDossierFocus from './MechanicDossierFocus';
+import MechanicDossierHistory from './MechanicDossierHistory';
+import MechanicReviewStudio from './MechanicReviewStudio';
+import ApplicationStatusOptions from './ApplicationStatusOptions';
+import ApplicationQueueHeading from './ApplicationQueueHeading';
+import ApplicationResultsState from './ApplicationResultsState';
+import ApplicationSearchTools from './ApplicationSearchTools';
+import ApplicationReviewCard from './ApplicationReviewCard';
+import MechanicReviewBrief from './MechanicReviewBrief';
+import {ServiceModeOverview,ServiceModeDossier,type ServiceModeKey} from './MechanicServiceModes';
+import SignOutAction from './SignOutAction';
+
+import Pressable from "./MotionPressable";
 import { useCallback, useRef, useState } from "react";
-import { View, Pressable, useWindowDimensions } from "react-native";
+import { View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Text } from "./MotexaVisual";
@@ -25,6 +42,7 @@ import {
 } from "./MechanicWorkspaceUI";
 import {
   mechanicApi,
+  MechanicApiError,
   mechanicSpecializations,
   type MechanicProfile,
 } from "./mechanic-api";
@@ -77,34 +95,43 @@ const blankQuestion = {
   correctIndex: 0,
   active: true,
 };
+
+function DocumentReviewChoice({label,selected,disabled,userId,documentId,submissionVersion,onReview}:{label:string;selected:boolean;disabled:boolean;userId:string;documentId:string;submissionVersion:number;onReview:(userId:string,documentId:string,submissionVersion:number,reviewed:boolean)=>Promise<void>}) {
+  return <MechanicChoice label={label} selected={selected} disabled={disabled} icon="document-text-outline" onPress={()=>{void onReview(userId,documentId,submissionVersion,!selected);}}/>;
+}
+
 export default function MechanicReviewScreen() {
-  const m = useMechanicTheme(),
-    { width } = useWindowDimensions(),
-    wide = width >= 1000;
+  const m = useMechanicTheme();
   const [page, setPage] = useState<Page>("home"),
     [tab, setTab] = useState<DetailTab>("profile"),
     [filter, setFilter] = useState("ALL"),
     [filterOpen, setFilterOpen] = useState(false),
     [query, setQuery] = useState("");
-  const [workflowCounts, setWorkflowCounts] = useState<Record<string, number>>(
-    {},
-  );
+  const [serviceMode,setServiceMode]=useState<ServiceModeKey|'ALL'>('ALL');
+  const [totalMechanics,setTotalMechanics]=useState<number|null>(null);
+  const [serviceCounts,setServiceCounts]=useState<Partial<Record<ServiceModeKey,number>>>({});
+  const [questionsLoaded,setQuestionsLoaded]=useState(false);
+  const [summaryLoaded,setSummaryLoaded]=useState(false);
+  const [dossierOffsets,setDossierOffsets]=useState<Record<string,number>>({});
   const [cursor, setCursor] = useState<string | null>(null);
   const [rows, setRows] = useState<ApplicationSummary[]>([]),
     [counts, setCounts] = useState<Record<string, number>>({}),
-    [user, setUser] = useState<{ id: string; fullName: string } | null>(null),
+    [user, setUser] = useState<{ id: string; fullName: string; role?:string } | null>(null),
     [notices, setNotices] = useState<WorkflowNotice[]>([]);
   const [detail, setDetail] = useState<MechanicProfile | null>(null),
     [tests, setTests] = useState<ProfessionalTest[]>([]),
     [reviewed, setReviewed] = useState<string[]>([]),
     [questions, setQuestions] = useState<Question[]>([]),
     [selected, setSelected] = useState<string[]>([]),
+    [manualQuestions,setManualQuestions]=useState(false),
     [specialty, setSpecialty] = useState("ALL");
   const [messages, setMessages] = useState<ConversationMessage[]>([]),
     [hasOlder, setHasOlder] = useState(false),
     [draft, setDraft] = useState(""),
     [notes, setNotes] = useState(""),
-    [assessment, setAssessment] = useState("PASSED");
+    [assessment, setAssessment] = useState("PASSED"),
+    [interviewChoice,setInterviewChoice]=useState(''),
+    [interviewNotesDraft,setInterviewNotesDraft]=useState('');
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -132,16 +159,6 @@ export default function MechanicReviewScreen() {
         ? m.t("Safety", "السلامة")
         : s;
   };
-  const tone = (s: string) =>
-    s === "VERIFIED" || s === "READY"
-      ? ("green" as const)
-      : s === "REJECTED"
-        ? ("red" as const)
-        : s === "NEW"
-          ? ("blue" as const)
-          : s === "SUSPENDED"
-            ? ("grey" as const)
-            : ("bronze" as const);
   const date = (s: string) =>
     new Date(s).toLocaleString(m.ar ? "ar" : "en", {
       month: "short",
@@ -152,7 +169,7 @@ export default function MechanicReviewScreen() {
   const latest = tests.find(
     (t) => t.submissionVersion === detail?.submissionVersion,
   );
-  async function run(fn: () => Promise<void>) {
+  const run = useCallback(async (fn: () => Promise<void>) => {
     if (operation.current) return;
     operation.current = true;
     setBusy(true);
@@ -161,44 +178,46 @@ export default function MechanicReviewScreen() {
     try {
       await fn();
     } catch (e) {
+      if(e instanceof MechanicApiError&&e.status===401){router.replace({pathname:'/auth/login',params:{selectedRole:'mechanics-admin'}});return;}
       setError(
         e instanceof Error
           ? e.message
-          : m.t("Please try again.", "حاول مجددًا."),
+          : (m.ar ? "حاول مجددًا." : "Please try again."),
       );
     } finally {
       operation.current = false;
       setBusy(false);
     }
-  }
-  async function refresh() {
+  }, [m.ar]);
+  const refresh = useCallback(async () => {
     const [data, n] = await Promise.all([
       mechanicApi<{
         profiles: ApplicationSummary[];
         counts: Record<string, number>;
         nextCursor: string | null;
         workflowCounts: Record<string, number>;
-      }>("/api/mechanics/admin"),
+        serviceCounts?:Partial<Record<ServiceModeKey,number>>;
+        registeredServiceCounts?:Partial<Record<ServiceModeKey,number>>;
+        totalMechanics?:number;
+      }>("/api/mechanics/admin?mode="+serviceMode),
       mechanicApi<{ notifications: WorkflowNotice[] }>(
         "/api/mechanics/notifications",
       ),
     ]);
-    setRows((old) =>
-      old.length > 100
-        ? [
-            ...data.profiles,
-            ...old.filter((p) => !data.profiles.some((n) => n.id === p.id)),
-          ]
-        : data.profiles,
-    );
-    if (!loadedMore.current) setCursor(data.nextCursor);
+    setRows(data.profiles);
+    loadedMore.current=false;
+    setCursor(data.nextCursor);
+    setServiceCounts(data.registeredServiceCounts??data.serviceCounts??{});
+    setTotalMechanics(typeof data.totalMechanics==='number'?data.totalMechanics:null);
     setCounts(data.counts);
-    setWorkflowCounts(data.workflowCounts);
+    setSummaryLoaded(true);
     setNotices(n.notifications);
-  }
+  }, [serviceMode]);
   async function reloadDetail(id: string) {
     const data = await getWorkflowDetail(id);
     setDetail(data.profile);
+    setInterviewChoice(data.profile.interviewRecorded?data.profile.interviewResult??'':'');
+    setInterviewNotesDraft(data.profile.interviewRecorded?data.profile.interviewNotes??'':'');
     setTests(data.tests);
     setReviewed(data.reviewed);
     return data;
@@ -206,6 +225,7 @@ export default function MechanicReviewScreen() {
   async function loadQuestions() {
     const data = await workflow<{ questions: Question[] }>("/questions");
     setQuestions(data.questions);
+    setQuestionsLoaded(true);
   }
   async function loadMessages(id: string, older = false) {
     const before =
@@ -223,8 +243,11 @@ export default function MechanicReviewScreen() {
     useCallback(() => {
       focused.current = true;
       void run(async () => {
+        const session=await Store.getItemAsync('motexa_access_token');
+        if(!focused.current)return;
+        if(!session){router.replace({pathname:'/auth/login',params:{selectedRole:'mechanics-admin'}});return;}
         const me = await mechanicApi<{
-          user: { id: string; fullName: string };
+          user: { id: string; fullName: string; role?:string };
         }>("/api/auth/me");
         if (!focused.current) return;
         setUser(me.user);
@@ -233,7 +256,7 @@ export default function MechanicReviewScreen() {
       return () => {
         focused.current = false;
       };
-    }, []),
+    }, [run, refresh]),
   );
   useFocusEffect(
     useCallback(() => {
@@ -242,31 +265,40 @@ export default function MechanicReviewScreen() {
           void refresh().catch(() => {});
       }, 25000);
       return () => clearInterval(timer);
-    }, []),
+    }, [refresh]),
   );
+  const conversationUserId=detail?.userId;
   useFocusEffect(
     useCallback(() => {
-      if (page !== "detail" || tab !== "conversation" || !detail) return;
+      if (page !== "detail" || tab !== "conversation" || !conversationUserId) return;
       const timer = setInterval(() => {
         if (!operation.current)
-          void loadMessages(detail.userId).catch(() => {});
+          void workflow<{messages:ConversationMessage[];hasMore:boolean}>("/applications/"+conversationUserId+"/messages").then(data=>{setMessages(data.messages);setHasOlder(data.hasMore);}).catch(() => {});
       }, 12000);
       return () => clearInterval(timer);
-    }, [page, tab, detail?.userId]),
+    }, [page, tab, conversationUserId]),
   );
+  async function reviewDocument(userId:string,documentId:string,submissionVersion:number,isReviewed:boolean) {
+    await run(async()=>{
+      await workflow("/applications/"+userId+"/reviews","POST",{documentId,reviewed:isReviewed,submissionVersion});
+      await reloadDetail(userId);
+    });
+  }
   function navigate(next: string) {
     setError("");
     setNotice("");
+    if(next === "home") setServiceMode("ALL");
     if (next === "bank") void run(loadQuestions);
     setPage(next as Page);
   }
-  async function open(id: string, target: DetailTab = "profile") {
+  async function open(id: string, target: DetailTab = "documents") {
     await run(async () => {
       await reloadDetail(id);
+      setDossierOffsets({});
       setPage("detail");
       setTab(target);
       setNotes("");
-      setSelected([]);
+      setSelected([]);setManualQuestions(false);
       if (target === "test") await loadQuestions();
       if (target === "conversation") await loadMessages(id);
     });
@@ -279,7 +311,6 @@ export default function MechanicReviewScreen() {
       void run(() => loadMessages(detail.userId));
   }
   const unread = notices.filter((n) => !n.readAt).length;
-  const total = Object.values(counts).reduce((a, b) => a + b, 0);
   const matches = rows.filter(
     (p) =>
       (page !== "directory" ||
@@ -364,7 +395,7 @@ export default function MechanicReviewScreen() {
       });
       await loadQuestions();
       setReviewQuestion(null);
-      setSelected([]);
+      setSelected([]);setManualQuestions(false);
     });
   }
   function editQuestion(q?: Question) {
@@ -426,332 +457,16 @@ export default function MechanicReviewScreen() {
       await refresh();
     });
   }
-  function infoRow(icon: WorkspaceIcon, title: string, value: string) {
-    return (
-      <View style={{ width: wide ? "48%" : "100%", gap: 5 }}>
-        <View style={{ flexDirection: m.row, gap: 6, alignItems: "center" }}>
-          <Ionicons name={icon} size={15} color={m.muted} />
-          <Text style={{ fontSize: 11, color: m.muted }}>{title}</Text>
-        </View>
-        <Text
-          selectable
-          style={{
-            fontSize: 13,
-            lineHeight: 22,
-            color: m.ink,
-            textAlign: m.align,
-          }}
-        >
-          {value || "—"}
-        </Text>
-      </View>
-    );
-  }
-  function stats() {
-    return (
-      <View
-        style={{
-          flexDirection: m.row,
-          flexWrap: "wrap",
-          gap: 8,
-          marginBottom: 20,
-        }}
-      >
-        {[
-          [
-            "people-outline",
-            m.t("Total mechanics", "إجمالي الميكانيكيين"),
-            total,
-          ],
-          [
-            "document-text-outline",
-            m.t("New requests", "طلبات جديدة"),
-            workflowCounts.NEW ?? 0,
-          ],
-          [
-            "time-outline",
-            m.t("In review", "قيد المراجعة"),
-            (counts.PENDING ?? 0) + (counts.NEEDS_COMPLETION ?? 0),
-          ],
-          ["checkmark-outline", m.t("Approved", "معتمد"), counts.VERIFIED ?? 0],
-          ["close-outline", m.t("Rejected", "مرفوض"), counts.REJECTED ?? 0],
-          ["pause-outline", m.t("Suspended", "موقوف"), counts.SUSPENDED ?? 0],
-        ].map(([icon, title, count]) => (
-          <View
-            key={String(title)}
-            style={{
-              width: wide ? "15.8%" : "31.3%",
-              borderWidth: 1,
-              borderColor: m.border,
-              borderRadius: 23,
-              padding: width < 370 ? 10 : 14,
-              backgroundColor: m.surface,
-              flexDirection: m.row,
-              alignItems: "center",
-              gap: 8,
-              minHeight: 83,
-            }}
-          >
-            <View
-              style={{
-                width: 27,
-                height: 27,
-                borderRadius: 15,
-                backgroundColor: m.soft,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Ionicons
-                name={icon as WorkspaceIcon}
-                size={15}
-                color={m.muted}
-              />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ fontSize: 24, color: m.ink, fontWeight: "600" }}>
-                {count}
-              </Text>
-              <Text style={{ fontSize: 9, lineHeight: 15, color: m.muted }}>
-                {title}
-              </Text>
-            </View>
-          </View>
-        ))}
-      </View>
-    );
-  }
   function applicationList() {
     return (
-      <WorkspaceCard>
-        <View
-          style={{
-            flexDirection: m.row,
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 10,
-            flexWrap: "wrap",
-          }}
-        >
-          <View>
-            <Text style={{ fontSize: 20, fontWeight: "600", color: m.ink }}>
-              {m.t("Mechanic applications", "طلبات الميكانيكيين")}
-            </Text>
-            <Text style={{ fontSize: 11, color: m.muted, marginTop: 5 }}>
-              {m.t(
-                "Review, assess and follow every application.",
-                "راجع كل طلب وتابع مراحل التقييم.",
-              )}
-            </Text>
-          </View>
-          <WorkspaceButton
-            small
-            secondary
-            icon="book-outline"
-            label={m.t("Question bank", "بنك الأسئلة")}
-            onPress={() => navigate("bank")}
-          />
-        </View>
-        <MechanicField
-          label={m.t("Search mechanics", "البحث عن ميكانيكي")}
-          icon="search-outline"
-          value={query}
-          onChangeText={setQuery}
-          placeholder={m.t(
-            "Name, specialty or city…",
-            "الاسم أو التخصص أو المدينة…",
-          )}
-        />
-        <View style={{ flexDirection: m.row, alignItems: "center", gap: 9 }}>
-          <Text style={{ fontSize: 11, color: m.muted }}>
-            {m.t("Application status", "حالة الطلب")}
-          </Text>
-          <View style={{ flex: 1 }}>
-            <WorkspaceButton
-              small
-              secondary
-              label={label(filter)}
-              icon="chevron-down"
-              onPress={() => setFilterOpen(true)}
-            />
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => {
-              setFilter("ALL");
-              setQuery("");
-            }}
-          >
-            <Text style={{ fontSize: 11, color: m.muted }}>
-              {m.t("Reset", "مسح")}
-            </Text>
-          </Pressable>
-        </View>
-        <Text style={{ fontSize: 10, color: m.muted }}>
-          {matches.length +
-            " " +
-            m.t("loaded matches · Latest first", "نتائج محملة · الأحدث أولًا")}
-        </Text>
-        {!matches.length && (
-          <MechanicNote>
-            {m.t(
-              "No matching submitted applications.",
-              "لا توجد طلبات مرسلة مطابقة.",
-            )}
-          </MechanicNote>
-        )}
-        {matches.map((p) => {
-          const st = stage(p),
-            t = p.tests?.find(
-              (t) => t.submissionVersion === p.submissionVersion,
-            );
-          if (wide)
-            return (
-              <View
-                key={p.id}
-                style={{
-                  flexDirection: m.row,
-                  alignItems: "center",
-                  gap: 14,
-                  paddingVertical: 17,
-                  borderTopWidth: 1,
-                  borderTopColor: m.border,
-                }}
-              >
-                <WorkspaceAvatar name={p.user.fullName} />
-                <View style={{ flex: 1.5, minWidth: 0 }}>
-                  <Text
-                    style={{ fontSize: 14, color: m.ink, fontWeight: "600" }}
-                  >
-                    {p.user.fullName}
-                  </Text>
-                  <Text style={{ fontSize: 10, color: m.muted, marginTop: 5 }}>
-                    {p.specializations.map(spec).join(" · ")}
-                  </Text>
-                </View>
-                <View style={{ flex: 1, gap: 5 }}>
-                  <Text style={{ fontSize: 12, color: m.ink }}>{p.city}</Text>
-                  <Text style={{ fontSize: 10, color: m.muted }}>
-                    {p.yearsOfExperience +
-                      " " +
-                      m.t("years experience", "سنوات خبرة")}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <WorkspaceBadge label={label(st)} tone={tone(st)} />
-                </View>
-                <Text style={{ fontSize: 10, color: m.muted, flex: 0.8 }}>
-                  {date(p.submittedAt)}
-                </Text>
-                <WorkspaceButton
-                  small
-                  secondary
-                  label={m.t("Review request", "مراجعة الطلب")}
-                  onPress={() => void open(p.userId)}
-                />
-              </View>
-            );
-          return (
-            <View
-              key={p.id}
-              style={{
-                borderWidth: 1,
-                borderColor: m.border,
-                borderRadius: 24,
-                padding: 16,
-                gap: 13,
-                backgroundColor: m.surface,
-              }}
-            >
-              <View
-                style={{
-                  flexDirection: m.row,
-                  justifyContent: "space-between",
-                }}
-              >
-                <Text style={{ fontSize: 9, color: m.muted }}>
-                  {"MX-" + p.id.slice(0, 8).toUpperCase()}
-                </Text>
-                <Text style={{ fontSize: 9, color: m.muted }}>
-                  {date(p.submittedAt)}
-                </Text>
-              </View>
-              <View
-                style={{
-                  flexDirection: m.row,
-                  gap: 10,
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                }}
-              >
-                <WorkspaceAvatar name={p.user.fullName} />
-                <View style={{ flex: 1, minWidth: 130 }}>
-                  <Text
-                    style={{ fontSize: 16, fontWeight: "600", color: m.ink }}
-                  >
-                    {p.user.fullName}
-                  </Text>
-                  <Text
-                    style={{ fontSize: 11, lineHeight: 20, color: m.muted }}
-                  >
-                    {p.specializations.map(spec).join(" · ")}
-                  </Text>
-                </View>
-                <WorkspaceBadge label={label(st)} tone={tone(st)} />
-              </View>
-              <View style={{ flexDirection: m.row, flexWrap: "wrap", gap: 6 }}>
-                {[
-                  p.city,
-                  `${p.yearsOfExperience ?? 0} ${m.t("years", "سنوات")}`,
-                  p.offersWorkshop ? m.t("Workshop", "ورشة") : "",
-                  p.offersOnSite ? m.t("On-site", "ميداني") : "",
-                  p.offersOnline ? m.t("Online", "أونلاين") : "",
-                ]
-                  .filter(Boolean)
-                  .map((s) => (
-                    <WorkspaceBadge key={s} label={s} />
-                  ))}
-              </View>
-              <View style={{ flexDirection: m.row, gap: 10 }}>
-                {[
-                  [m.t("Profile", "الملف"), m.t("Submitted", "مرسل")],
-                  [
-                    m.t("Documents", "الوثائق"),
-                    `${p.documents?.length ?? 0} ${m.t("uploaded", "مرفوعة")}`,
-                  ],
-                  [
-                    m.t("Skills test", "الاختبار"),
-                    t?.submittedAt
-                      ? m.t("Submitted", "مرسل")
-                      : t
-                        ? m.t("Awaiting answers", "بانتظار الإجابة")
-                        : m.t("Not assigned", "لم يرسل"),
-                  ],
-                ].map(([title, value]) => (
-                  <View
-                    key={title}
-                    style={{
-                      flex: 1,
-                      borderTopWidth: 2,
-                      borderTopColor: m.border,
-                      paddingTop: 7,
-                      gap: 3,
-                    }}
-                  >
-                    <Text style={{ fontSize: 10, color: m.ink }}>{title}</Text>
-                    <Text style={{ fontSize: 9, color: m.muted }}>{value}</Text>
-                  </View>
-                ))}
-              </View>
-              <WorkspaceButton
-                small
-                label={m.t("Review request", "مراجعة الطلب")}
-                icon="arrow-forward"
-                disabled={busy}
-                onPress={() => void open(p.userId)}
-              />
-            </View>
-          );
+      <View style={{gap:10}}>
+        <ServiceModeOverview total={totalMechanics} counts={serviceCounts} selected={serviceMode} disabled={busy} onSelect={mode=>{if(mode!==serviceMode){setRows([]);setServiceMode(mode);}}}/>
+        <ApplicationSearchTools query={query} onQuery={setQuery} statusLabel={label(filter)} onStatus={()=>setFilterOpen(true)} filtered={!!query||filter!=='ALL'||serviceMode!=='ALL'} onReset={()=>{setFilter('ALL');setQuery('');setServiceMode('ALL');}}/>
+        <ApplicationQueueHeading hasResults={matches.length>0} onBank={()=>navigate('bank')}/>
+        {!matches.length&&<ApplicationResultsState loading={busy} loaded={summaryLoaded} filtered={!!query||filter!=='ALL'||serviceMode!=='ALL'||page==='directory'} onRetry={()=>void run(refresh)} onClear={()=>{setFilter('ALL');setQuery('');setServiceMode('ALL');}}/>}
+        {matches.map((p,index) => {
+          const st = stage(p);
+          return <ApplicationReviewCard key={p.id} delay={Math.min(index,4)*45} profile={p} status={st} statusLabel={label(st)} specialties={p.specializations.map(spec).join(' · ')} date={date(p.submittedAt)} disabled={busy} onReview={()=>void open(p.userId)}/>;
         })}
         {cursor && (
           <WorkspaceButton
@@ -763,7 +478,7 @@ export default function MechanicReviewScreen() {
                 const data = await mechanicApi<{
                   profiles: ApplicationSummary[];
                   nextCursor: string | null;
-                }>("/api/mechanics/admin?cursor=" + encodeURIComponent(cursor));
+                }>("/api/mechanics/admin?mode="+serviceMode+"&cursor=" + encodeURIComponent(cursor));
                 setRows((old) => [
                   ...old,
                   ...data.profiles.filter(
@@ -776,7 +491,7 @@ export default function MechanicReviewScreen() {
             }
           />
         )}
-      </WorkspaceCard>
+      </View>
     );
   }
   function questionBank(assign = false) {
@@ -800,7 +515,12 @@ export default function MechanicReviewScreen() {
                 )
           }
         />
-        <WorkspaceCard>
+        {!assign&&<View style={{flexDirection:m.row,alignItems:'center',gap:10,marginBottom:15,paddingBottom:13,borderBottomWidth:1,borderColor:m.border}}><Ionicons name="library-outline" size={22} color={m.muted}/><Text style={{flex:1,fontSize:12,lineHeight:23,color:m.muted,textAlign:m.align}}>{questionsLoaded?questions.filter(q=>q.active&&q.reviewStatus==='APPROVED').length+' '+m.t('approved active questions · ','أسئلة فعالة ومعتمدة · ')+questions.length+' '+m.t('total','بالإجمالي'):m.t('Retrieving your saved question library','جارٍ استرجاع مكتبة الأسئلة المحفوظة')}</Text></View>}
+        {assign&&<>
+          {detail&&<MechanicAssessmentPackage profile={detail} latest={latest} questionIds={selected} questions={questions} onSuggested={async ids=>{await loadQuestions();setSelected(ids);}} onSent={async()=>{await reloadDetail(detail.userId);setNotice(m.t('Questions and interview sent together. The mechanic can now complete the assigned tasks.','تم إرسال الأسئلة وموعد المقابلة معًا. يمكن للميكانيكي الآن إكمال المطلوب.'));}}/>}
+          <WorkspaceButton secondary label={manualQuestions?m.t('Hide manual question selection','إخفاء اختيار الأسئلة يدويًا'):m.t('Choose questions manually','اختيار الأسئلة يدويًا')} onPress={()=>setManualQuestions(v=>!v)}/>
+        </>}
+        {(!assign||manualQuestions)&&<WorkspaceCard flat={assign}>
           <WorkspaceButton
             secondary
             icon="add"
@@ -830,17 +550,7 @@ export default function MechanicReviewScreen() {
                       detail?.specializations.includes(q.specialization)))),
             )
             .map((q) => (
-              <View
-                key={q.id}
-                style={{
-                  borderRadius: 24,
-                  padding: 15,
-                  borderWidth: 1,
-                  borderColor: selected.includes(q.id) ? "#AC7E4B" : m.border,
-                  gap: 10,
-                  backgroundColor: selected.includes(q.id) ? m.soft : m.surface,
-                }}
-              >
+              <ReviewQuestionSurface key={q.id} selected={selected.includes(q.id)}>
                 <View
                   style={{
                     flexDirection: m.row,
@@ -946,9 +656,11 @@ export default function MechanicReviewScreen() {
                   label={m.t("Edit question", "تعديل السؤال")}
                   onPress={() => editQuestion(q)}
                 />
-              </View>
+              </ReviewQuestionSurface>
             ))}
-          {!questions.length && (
+          {!questionsLoaded&&<View style={{gap:10}}><MechanicNote>{busy?m.t('Loading your question bank…','جارٍ تحميل بنك الأسئلة…'):m.t('The question bank has not loaded. Retry to retrieve your saved questions.','لم يتم تحميل بنك الأسئلة. أعد المحاولة لاسترجاع الأسئلة المحفوظة.')}</MechanicNote><WorkspaceButton secondary disabled={busy} icon="refresh-outline" label={m.t('Reload question bank','إعادة تحميل بنك الأسئلة')} onPress={()=>void run(loadQuestions)}/></View>}
+          {questionsLoaded&&questions.length>0&&!questions.some(q=>(specialty==='ALL'||q.specialization===specialty)&&(!assign||(q.active&&q.reviewStatus==='APPROVED'&&(q.specialization==='SAFETY'||detail?.specializations.includes(q.specialization)))))&&<MechanicNote>{m.t('No questions match this specialty or test eligibility. Choose another specialty.','لا توجد أسئلة مطابقة للتخصص أو شروط الاختبار. اختر تخصصًا آخر.')}</MechanicNote>}
+          {questionsLoaded&&!questions.length && (
             <MechanicNote>
               {m.t(
                 "Your question bank is empty. Add professionally reviewed questions to begin.",
@@ -956,8 +668,8 @@ export default function MechanicReviewScreen() {
               )}
             </MechanicNote>
           )}
-        </WorkspaceCard>
-        {assign && (
+        </WorkspaceCard>}
+        {assign && manualQuestions && (
           <WorkspaceCard>
             <Text style={{ fontSize: 17, fontWeight: "600", color: m.ink }}>
               {m.t("Selected questions", "الأسئلة المختارة") +
@@ -979,11 +691,13 @@ export default function MechanicReviewScreen() {
                 "الإجابات الصحيحة لا تظهر للميكانيكي. يرسل إجابتيه مرة واحدة.",
               )}
             </MechanicNote>
+
             <WorkspaceButton
+              secondary
               icon="send-outline"
               label={m.t(
-                "Preview & send two questions",
-                "معاينة وإرسال السؤالين",
+                "Send questions only",
+                "إرسال الأسئلة فقط",
               )}
               disabled={
                 busy ||
@@ -1000,7 +714,7 @@ export default function MechanicReviewScreen() {
   }
   function resultView() {
     return (
-      <WorkspaceCard>
+      <WorkspaceCard flat>
         <Text style={{ fontSize: 20, fontWeight: "600", color: m.ink }}>
           {m.t("Professional test", "الاختبار المهني")}
         </Text>
@@ -1126,11 +840,13 @@ export default function MechanicReviewScreen() {
                     onPress={() => setAssessment(v)}
                   />
                 ))}
+                {notes.trim().length<5&&<Text accessibilityLiveRegion="polite" style={{fontSize:12,lineHeight:23,color:m.muted,textAlign:m.align}}>{m.t('Add assessment notes above (at least 5 characters), then save.','اكتب ملاحظات التقييم في الحقل أعلاه (5 أحرف على الأقل)، ثم احفظ.')}</Text>}
                 <WorkspaceButton
                   label={m.t("Save assessment", "حفظ التقييم")}
-                  disabled={busy || notes.trim().length < 5}
+                  disabled={busy}
                   onPress={() =>
                     void run(async () => {
+                      if(notes.trim().length<5)throw Error(m.t('Write assessment notes above before saving (at least 5 characters).','اكتب ملاحظات التقييم في الحقل أعلاه قبل الحفظ (5 أحرف على الأقل).'));
                       await workflow(
                         "/tests/" + latest.id + "/review",
                         "POST",
@@ -1150,7 +866,7 @@ export default function MechanicReviewScreen() {
                   secondary
                   label={m.t("Prepare another test", "تجهيز اختبار آخر")}
                   onPress={() => {
-                    setSelected([]);
+                    setSelected([]);setManualQuestions(false);
                     setTests((old) => old);
                     setTab("test");
                     setSpecialty("ALL");
@@ -1210,9 +926,23 @@ export default function MechanicReviewScreen() {
         p.documents.some((d) => d.kind === k && reviewed.includes(d.id)),
       ),
       canApprove =
-        docsDone && latest?.reviewedAt && latest.assessment === "PASSED";
+        docsDone && latest?.reviewedAt && latest.assessment === "PASSED" && p.interviewRecorded === true && p.interviewResult === "PASSED";
     return (
-      <WorkspaceCard>
+      <WorkspaceCard flat>
+        <WorkspaceHeading title={m.t('Professional interview','المقابلة المهنية')} subtitle={m.t('Record this only after the interview takes place. Test grading does not record an interview.','سجّل النتيجة بعد إجراء المقابلة فقط. تقييم الاختبار لا يسجّل مقابلة.')}/>
+        <MechanicInterviewScheduler key={p.id+'-'+(p.interviewScheduleId??'new')} profile={p} onSaved={()=>reloadDetail(p.userId)}/>
+        {p.interviewRecorded&&<MechanicNote>{m.t('Recorded interview: ','نتيجة المقابلة المسجّلة: ')+(p.interviewResult==='PASSED'?m.t('Passed','اجتاز'):m.t('Not passed','لم يجتز'))+'\n'+(p.interviewNotes??'')}</MechanicNote>}
+        {p.verificationStatus==='PENDING'&&!!p.interviewConfirmedAt&&<>
+          <MechanicField label={m.t('Professional interview notes','ملاحظات المقابلة المهنية')} value={interviewNotesDraft} onChangeText={setInterviewNotesDraft} multiline editable={!busy}/>
+          {[['PASSED','Interview passed','اجتاز المقابلة'],['FAILED','Interview not passed','لم يجتز المقابلة']].map(([value,en,ar])=><MechanicChoice key={value} label={m.t(en,ar)} selected={interviewChoice===value} onPress={()=>setInterviewChoice(value)} disabled={busy}/>) }
+          <Text style={{fontSize:12,lineHeight:23,color:m.muted,textAlign:m.align}}>{m.t('Choose the interview outcome and add at least 5 characters of notes.','اختر نتيجة المقابلة وأضف ملاحظات من 5 أحرف على الأقل.')}</Text>
+          <WorkspaceButton icon="chatbubbles-outline" label={m.t('Save interview result','حفظ نتيجة المقابلة')} disabled={busy} onPress={()=>void run(async()=>{
+            if(!['PASSED','FAILED'].includes(interviewChoice)||interviewNotesDraft.trim().length<5)throw Error(m.t('Choose the interview outcome and write interview notes before saving.','اختر نتيجة المقابلة واكتب ملاحظاتها قبل الحفظ.'));
+            await mechanicApi('/api/mechanics/admin/'+p.userId+'/interview','POST',{result:interviewChoice,notes:interviewNotesDraft.trim(),submissionVersion:p.submissionVersion,scheduleId:p.interviewScheduleId});
+            await reloadDetail(p.userId);
+            setNotice(m.t('Interview result saved. Final approval is still a separate action.','تم حفظ نتيجة المقابلة. الموافقة النهائية إجراء منفصل.'));
+          })}/>
+        </>}
         <WorkspaceHeading
           title={m.t("Review final decision", "مراجعة القرار النهائي")}
           subtitle={m.t(
@@ -1230,25 +960,8 @@ export default function MechanicReviewScreen() {
             m.t("Professional assessment passed", "اجتياز التقييم المهني"),
             latest?.assessment === "PASSED",
           ],
-        ].map(([title, done]) => (
-          <View
-            key={String(title)}
-            style={{
-              flexDirection: m.row,
-              justifyContent: "space-between",
-              gap: 8,
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ fontSize: 12, color: m.ink, flex: 1 }}>{title}</Text>
-            <WorkspaceBadge
-              label={
-                done ? m.t("Complete", "مكتمل") : m.t("Pending", "بانتظار")
-              }
-              tone={done ? "green" : "bronze"}
-            />
-          </View>
-        ))}
+          [m.t('Professional interview passed','اجتياز المقابلة المهنية'),p.interviewRecorded===true&&p.interviewResult==='PASSED'],
+        ].map(([title, done]) => <ReviewCheckpoint key={String(title)} label={String(title)} complete={!!done}/>)}
         {p.reviewNotes && <MechanicNote>{p.reviewNotes}</MechanicNote>}
         <MechanicField
           multiline
@@ -1307,7 +1020,7 @@ export default function MechanicReviewScreen() {
   }
   function conversation() {
     return (
-      <WorkspaceCard>
+      <WorkspaceCard flat>
         <WorkspaceHeading
           title={m.t("Application conversation", "محادثة الطلب")}
           subtitle={detail?.user.fullName}
@@ -1320,56 +1033,9 @@ export default function MechanicReviewScreen() {
             onPress={() => void run(() => loadMessages(detail!.userId, true))}
           />
         )}
-        <View style={{ gap: 12, minHeight: 200 }}>
-          {messages.map((msg) => (
-            <View
-              key={msg.id}
-              style={{
-                maxWidth: "88%",
-                alignSelf:
-                  msg.senderId === user?.id ? "flex-end" : "flex-start",
-                padding: 15,
-                borderRadius: 24,
-                backgroundColor: msg.senderId === user?.id ? "#573822" : m.soft,
-                gap: 5,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 10,
-                  color: msg.senderId === user?.id ? "#DDC9AD" : m.muted,
-                }}
-              >
-                {msg.sender.fullName}
-              </Text>
-              <Text
-                selectable
-                style={{
-                  fontSize: 13,
-                  lineHeight: 23,
-                  color: msg.senderId === user?.id ? "#FFF6E8" : m.ink,
-                }}
-              >
-                {msg.body}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 9,
-                  color: msg.senderId === user?.id ? "#DDC9AD" : m.muted,
-                }}
-              >
-                {date(msg.createdAt)}
-              </Text>
-            </View>
-          ))}
-          {!messages.length && (
-            <MechanicNote>
-              {m.t(
-                "Start a conversation about this application.",
-                "ابدأ محادثة بخصوص هذا الطلب.",
-              )}
-            </MechanicNote>
-          )}
+        <View style={{ gap: 12, minHeight: messages.length?180:0 }}>
+          {messages.map(msg=><ReviewMessage key={msg.id} sender={msg.sender.fullName} body={msg.body} time={date(msg.createdAt)} mine={msg.senderId===user?.id}/>)}
+          {!messages.length&&<ReviewEmpty title={m.t('A direct line to clarity.','تواصل يجعل الخطوة أوضح.')} description={m.t('Discuss documents, assessments and requested updates in this application.','ناقش الوثائق والتقييم والتعديلات المطلوبة ضمن هذا الطلب.')}/>}
         </View>
         <MechanicField
           label={m.t("Write a message", "اكتب رسالة")}
@@ -1398,278 +1064,20 @@ export default function MechanicReviewScreen() {
     );
   }
   function detailView() {
-    if (!detail) return null;
-    const p = detail;
-    return (
-      <>
-        <WorkspaceButton
-          secondary
-          small
-          icon="arrow-back"
-          label={m.t("Back to applications", "العودة للطلبات")}
-          onPress={() => navigate("applications")}
-        />
-        <View style={{ height: 14 }} />
-        <WorkspaceTabs
-          value={tab}
-          onChange={changeTab}
-          items={[
-            ["profile", m.t("Overview", "الملف")],
-            ["documents", m.t("Documents", "الوثائق")],
-            ["test", m.t("Professional test", "الاختبار")],
-            ["conversation", m.t("Conversation", "المحادثة")],
-            ["decision", m.t("Decision", "القرار")],
-            ["history", m.t("History", "السجل")],
-          ].map(([key, label]) => ({ key, label }))}
-        />
-        <WorkspaceCard>
-          <View
-            style={{
-              flexDirection: m.row,
-              alignItems: "center",
-              gap: 13,
-              flexWrap: "wrap",
-            }}
-          >
-            <WorkspaceAvatar name={p.user.fullName} large />
-            <View style={{ flex: 1, minWidth: 160 }}>
-              <Text style={{ fontSize: 24, color: m.ink, fontWeight: "600" }}>
-                {p.user.fullName}
-              </Text>
-              <Text style={{ fontSize: 11, lineHeight: 21, color: m.muted }}>
-                {p.specializations.map(spec).join(" · ")}
-                {"\n"}
-                {p.city +
-                  " · " +
-                  p.yearsOfExperience +
-                  " " +
-                  m.t("years", "سنوات")}
-              </Text>
-            </View>
-            <WorkspaceBadge
-              label={label(p.verificationStatus)}
-              tone={tone(p.verificationStatus)}
-            />
-          </View>
-          <View style={{ flexDirection: m.row, gap: 9 }}>
-            {[
-              m.t("Profile", "الملف"),
-              m.t("Documents", "الوثائق"),
-              m.t("Test", "الاختبار"),
-              m.t("Decision", "القرار"),
-            ].map((title, i) => (
-              <View
-                key={title}
-                style={{
-                  flex: 1,
-                  borderTopWidth: 2,
-                  borderTopColor:
-                    i === 0 ||
-                    (i === 1 && reviewed.length >= p.documents.length) ||
-                    (i === 2 && !!latest?.reviewedAt)
-                      ? "#8B9A75"
-                      : m.border,
-                  paddingTop: 8,
-                }}
-              >
-                <Text style={{ fontSize: 10, color: m.muted }}>{title}</Text>
-              </View>
-            ))}
-          </View>
-        </WorkspaceCard>
-        {tab === "profile" ? (
-          <View
-            style={{
-              flexDirection: wide ? m.row : "column",
-              gap: wide ? 18 : 0,
-            }}
-          >
-            <View style={{ flex: wide ? 1.3 : undefined }}>
-              <WorkspaceCard>
-                <Text style={{ fontSize: 19, color: m.ink, fontWeight: "600" }}>
-                  {m.t(
-                    "Personal & professional details",
-                    "البيانات الشخصية والمهنية",
-                  )}
-                </Text>
-                <View
-                  style={{ flexDirection: m.row, flexWrap: "wrap", gap: 20 }}
-                >
-                  {infoRow(
-                    "mail-outline",
-                    m.t("Email", "البريد"),
-                    p.user.email,
-                  )}
-                  {infoRow(
-                    "call-outline",
-                    m.t("Phone", "الهاتف"),
-                    p.phoneNumber,
-                  )}
-                  {infoRow("location-outline", m.t("City", "المدينة"), p.city)}
-                  {infoRow(
-                    "briefcase-outline",
-                    m.t("Experience", "الخبرة"),
-                    p.experienceSummary,
-                  )}
-                  {infoRow(
-                    "storefront-outline",
-                    m.t("Workshop", "الورشة"),
-                    p.offersWorkshop
-                      ? [p.workshopName, p.workshopAddress]
-                          .filter(Boolean)
-                          .join(" · ")
-                      : m.t("Not selected", "غير مختار"),
-                  )}
-                  {infoRow(
-                    "navigate-outline",
-                    m.t("Coverage", "التغطية"),
-                    p.coverageAreas.join(" · "),
-                  )}
-                </View>
-                <View
-                  style={{ flexDirection: m.row, flexWrap: "wrap", gap: 7 }}
-                >
-                  {[
-                    p.offersWorkshop ? m.t("Workshop", "ورشة") : "",
-                    p.offersOnSite ? m.t("On-site", "ميداني") : "",
-                    p.offersOnline
-                      ? m.t("Online consultation", "استشارة أونلاين")
-                      : "",
-                  ]
-                    .filter(Boolean)
-                    .map((v) => (
-                      <WorkspaceBadge key={v} label={v} />
-                    ))}
-                </View>
-              </WorkspaceCard>
-            </View>
-            <View style={{ flex: wide ? 1 : undefined }}>
-              <WorkspaceCard>
-                <Text style={{ fontSize: 20, fontWeight: "600", color: m.ink }}>
-                  {m.t("Your next step", "الخطوة التالية")}
-                </Text>
-                <Text style={{ fontSize: 12, lineHeight: 22, color: m.muted }}>
-                  {m.t(
-                    "Review the documents, send two questions and record your professional assessment.",
-                    "راجع الوثائق، وأرسل سؤالين، ثم سجل تقييمك المهني.",
-                  )}
-                </Text>
-                <WorkspaceButton
-                  icon="document-text-outline"
-                  label={m.t("Review documents", "مراجعة الوثائق")}
-                  onPress={() => changeTab("documents")}
-                />
-                <WorkspaceButton
-                  secondary
-                  icon="book-outline"
-                  label={
-                    latest?.submittedAt
-                      ? m.t("View test result", "عرض النتيجة")
-                      : latest
-                        ? m.t("Awaiting answers", "بانتظار الإجابات")
-                        : m.t("Prepare professional test", "تجهيز الاختبار")
-                  }
-                  onPress={() => changeTab("test")}
-                />
-                <WorkspaceButton
-                  secondary
-                  icon="chatbubble-outline"
-                  label={m.t("Open conversation", "فتح المحادثة")}
-                  onPress={() => changeTab("conversation")}
-                />
-                <WorkspaceButton
-                  secondary
-                  label={m.t("Review final decision", "مراجعة القرار")}
-                  onPress={() => setTab("decision")}
-                />
-              </WorkspaceCard>
-            </View>
-          </View>
-        ) : tab === "documents" ? (
-          <WorkspaceCard>
-            <WorkspaceHeading
-              title={m.t("Document review", "مراجعة الوثائق")}
-              subtitle={m.t(
-                "Review each required document and record its review status.",
-                "راجع كل وثيقة مطلوبة وسجّل حالة مراجعتها.",
-              )}
-            />
-            <MechanicDocuments
-              documents={p.documents}
-              includeWorkshopProof={p.offersWorkshop}
-            />
-            {p.documents.map((d) => (
-              <MechanicChoice
-                key={d.id}
-                label={
-                  d.fileName +
-                  " · " +
-                  m.t("Reviewed and clear", "تمت مراجعتها وواضحة")
-                }
-                selected={reviewed.includes(d.id)}
-                icon="document-text-outline"
-                disabled={busy}
-                onPress={() =>
-                  void run(async () => {
-                    await workflow(
-                      "/applications/" + p.userId + "/reviews",
-                      "POST",
-                      {
-                        documentId: d.id,
-                        reviewed: !reviewed.includes(d.id),
-                        submissionVersion: p.submissionVersion,
-                      },
-                    );
-                    await reloadDetail(p.userId);
-                  })
-                }
-              />
-            ))}
-            <WorkspaceButton
-              label={m.t("Continue to assessment", "متابعة للتقييم")}
-              onPress={() => changeTab("test")}
-            />
-          </WorkspaceCard>
-        ) : tab === "test" ? (
-          resultView()
-        ) : tab === "conversation" ? (
-          conversation()
-        ) : tab === "decision" ? (
-          decisionView()
-        ) : (
-          <WorkspaceCard>
-            <WorkspaceHeading
-              title={m.t("Activity history", "سجل الإجراءات")}
-            />
-            {p.history.map((h) => (
-              <View
-                key={h.id}
-                style={{
-                  borderLeftWidth: 2,
-                  borderLeftColor: m.border,
-                  paddingLeft: 14,
-                  gap: 5,
-                }}
-              >
-                <Text style={{ fontSize: 12, color: m.ink }}>
-                  {h.action.replace("MECHANIC_", "").replaceAll("_", " ")}
-                </Text>
-                {h.details?.notes && (
-                  <Text
-                    style={{ fontSize: 12, lineHeight: 22, color: m.muted }}
-                  >
-                    {h.details.notes}
-                  </Text>
-                )}
-                <Text style={{ fontSize: 10, color: m.muted }}>
-                  {date(h.createdAt)}
-                </Text>
-              </View>
-            ))}
-          </WorkspaceCard>
-        )}
-      </>
-    );
+    if(!detail)return null;
+    const p=detail;
+    const position=(key:string,y:number)=>setDossierOffsets(old=>old[key]===y?old:{...old,[key]:y});
+    const required=['IDENTITY','CERTIFICATE',...(p.offersWorkshop?['WORKSHOP_PROOF']:[])];
+    const reviewedCount=required.filter(kind=>p.documents.some(document=>document.kind===kind&&reviewed.includes(document.id))).length;
+    const testState=latest?.reviewedAt?m.t('Assessment recorded','التقييم مسجّل'):latest?.submittedAt?m.t('Answers submitted','تم إرسال الإجابات'):latest?m.t('Awaiting answers','بانتظار الإجابات'):m.t('No test assigned','لا يوجد اختبار مُرسل');
+    return <MechanicReviewStudio profile={p} statusLabel={label(p.verificationStatus)} specialties={p.specializations.map(spec)} section={tab} reviewedCount={reviewedCount} requiredCount={required.length} testState={testState} onSection={changeTab} onPosition={position}>
+      {tab==='profile'&&<View style={{padding:18,gap:18}}><MechanicDossierContact profile={p} specialties={p.specializations.map(spec)}/><ServiceModeDossier compact profile={p} onDocuments={()=>changeTab('documents')}/></View>}
+      {tab==='documents'&&<WorkspaceCard flat><WorkspaceHeading title={m.t('A closer look.','نظرة أقرب.')} subtitle={m.t('Review the original files before recording your decision.','راجع الملفات الأصلية قبل تسجيل قرارك.')}/><MechanicDocuments documents={p.documents} includeWorkshopProof={p.offersWorkshop}/>{p.documents.map(d=><DocumentReviewChoice key={d.id} label={d.fileName+' · '+m.t('Reviewed and clear','تمت مراجعتها وواضحة')} selected={reviewed.includes(d.id)} disabled={busy} userId={p.userId} documentId={d.id} submissionVersion={p.submissionVersion} onReview={reviewDocument}/>)}<WorkspaceButton label={m.t('Continue to assessment','متابعة للتقييم')} onPress={()=>changeTab('test')}/></WorkspaceCard>}
+      {tab==='test'&&resultView()}
+      {tab==='conversation'&&conversation()}
+      {tab==='decision'&&decisionView()}
+      {tab==='history'&&<WorkspaceCard flat><WorkspaceHeading title={m.t('Activity history','سجل الإجراءات')}/><MechanicDossierHistory events={p.history}/></WorkspaceCard>}
+    </MechanicReviewStudio>;
   }
   function notificationList() {
     return (
@@ -1756,7 +1164,9 @@ export default function MechanicReviewScreen() {
   return (
     <WorkspaceFrame
       page={page === "detail" ? tab : page}
+      hideNavigation={page==='detail'}
       onNavigate={navigate}
+      onSignOut={()=>setConfirm("LOGOUT")}
       name={user?.fullName ?? ""}
       unread={unread}
       busy={busy}
@@ -1765,30 +1175,18 @@ export default function MechanicReviewScreen() {
       {notice && <MechanicNote>{notice}</MechanicNote>}
       {page === "home" ? (
         <>
-          <WorkspaceHero name={user?.fullName ?? ""} />
-          {stats()}
-          {applicationList()}
+          <WorkspaceHero name={user?.fullName ?? ""} unread={unread} onNotifications={()=>navigate("notifications")} />
+          <MechanicReviewBrief loaded={summaryLoaded} counts={counts} rows={rows} loading={busy} error={error} onRetry={()=>void run(refresh)} onApplications={status=>{setQuery('');setFilter(status);setServiceMode('ALL');navigate('applications');}} onOpen={id=>void open(id,'profile')} onBank={()=>navigate('bank')} onMessages={()=>navigate('messages')}/>
         </>
       ) : page === "applications" || page === "directory" ? (
         <>
-          <WorkspaceHeading
-            title={
-              page === "directory"
-                ? m.t("Mechanics directory", "دليل الميكانيكيين")
-                : m.t("Applications", "الطلبات")
-            }
-            subtitle={m.t(
-              "Your mechanics department, connected to live application data.",
-              "قسم الميكانيك مرتبط ببيانات الطلبات الفعلية.",
-            )}
-          />
-          {stats()}
+          {page==='directory'&&<WorkspaceHeading title={m.t('Mechanics directory','دليل الميكانيكيين')}/>}
           {applicationList()}
         </>
       ) : page === "bank" ? (
         questionBank()
       ) : page === "detail" ? (
-        detailView()
+        null
       ) : page === "notifications" ? (
         notificationList()
       ) : page === "messages" ? (
@@ -1797,6 +1195,7 @@ export default function MechanicReviewScreen() {
             title={m.t("Application conversations", "محادثات الطلبات")}
           />
           <WorkspaceCard>
+            {!rows.length&&<MechanicNote>{m.t("No application conversations yet. Open an application to start its review conversation.","لا توجد محادثات طلبات حاليًا. افتح طلبًا لبدء محادثة مراجعته.")}</MechanicNote>}
             {rows.map((p) => (
               <Pressable
                 key={p.id}
@@ -1859,31 +1258,22 @@ export default function MechanicReviewScreen() {
                 onPress={() => navigate(p)}
               />
             ))}
-            <WorkspaceButton
-              secondary
-              icon="log-out-outline"
-              label={m.t("Sign out", "تسجيل الخروج")}
-              onPress={() => setConfirm("LOGOUT")}
-            />
+            <SignOutAction onPress={() => setConfirm("LOGOUT")} />
           </WorkspaceCard>
         </>
       )}
+      <MechanicDossierFocus visible={page==='detail'&&!!detail} section={tab} targetOffset={dossierOffsets[tab]} busy={busy} onClose={()=>navigate('applications')}>
+        {error&&<MechanicNote error>{error}</MechanicNote>}
+        {notice&&<MechanicNote>{notice}</MechanicNote>}
+        {page==='detail'&&detailView()}
+      </MechanicDossierFocus>
       <WorkspaceSheet
         visible={filterOpen}
+        editorial
         title={m.t("Choose a status", "اختيار الحالة")}
         onClose={() => setFilterOpen(false)}
       >
-        {statuses.map(([value, en, ar]) => (
-          <MechanicChoice
-            key={value}
-            label={m.t(en, ar)}
-            selected={filter === value}
-            onPress={() => {
-              setFilter(value);
-              setFilterOpen(false);
-            }}
-          />
-        ))}
+        <ApplicationStatusOptions items={statuses} selected={filter} onSelect={value=>{setFilter(value);setFilterOpen(false);}}/>
       </WorkspaceSheet>
       <WorkspaceSheet
         visible={questionOpen}
@@ -2041,10 +1431,13 @@ export default function MechanicReviewScreen() {
         />
       </WorkspaceSheet>
       <MotexaDialog
+        icon={confirm==="LOGOUT"?"log-out-outline":undefined}
         visible={!!confirm}
         title={confirm ? m.t(...actions[confirm]) : ""}
         message={
-          confirm === "SEND"
+          confirm === "LOGOUT"
+            ? m.t("Sign out of your current account? You can sign in again at any time.","هل تريد إنهاء جلستك الحالية؟ يمكنك تسجيل الدخول مجددًا في أي وقت.")
+            : confirm === "SEND"
             ? selected
                 .map((id) => questions.find((q) => q.id === id)?.prompt)
                 .join("\n\n")

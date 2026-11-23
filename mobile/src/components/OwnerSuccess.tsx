@@ -1,0 +1,8 @@
+import {OwnerEditorial} from './CustomerType';
+import {useEffect,useState} from 'react';
+import {Animated} from 'react-native';
+import Svg,{Circle,Path} from 'react-native-svg';
+import {Text,useReducedMotion,HeroReveal} from './MotexaVisual';
+import {useMechanicTheme} from './MechanicUI';
+export function OwnerSuccessMark(){const m=useMechanicTheme(),reduced=useReducedMotion(),[v]=useState(()=>new Animated.Value(reduced?1:0));useEffect(()=>{const a=Animated.spring(v,{toValue:1,damping:13,stiffness:125,useNativeDriver:true});if(reduced)v.setValue(1);else a.start();return()=>a.stop();},[reduced,v]);return <Animated.View accessible accessibilityLabel={m.t('Successfully saved','تم الحفظ بنجاح')} style={{width:88,height:88,alignItems:'center',justifyContent:'center',opacity:v,transform:[{scale:v.interpolate({inputRange:[0,1],outputRange:[.78,1]})}]}}><Svg width={88} height={88} viewBox="0 0 102 102"><Circle cx={51} cy={51} r={49} stroke={m.bronze} strokeOpacity={.25} strokeWidth={1} fill="none"/><Circle cx={51} cy={51} r={39} fill={m.surface} stroke={m.bronze} strokeOpacity={.55} strokeWidth={1}/><Path d="M35 51 L46 62 L68 39" stroke={m.bronze} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" fill="none"/></Svg></Animated.View>;}
+export function OwnerSuccessTitle({title,description}:{title:string;description:string}){const m=useMechanicTheme();return <HeroReveal delay={100} style={{gap:10,alignItems:'center'}}><OwnerEditorial style={{textAlign:'center'}}>{title}</OwnerEditorial><Text style={{fontSize:12,lineHeight:26,color:m.muted,textAlign:'center',maxWidth:400}}>{description}</Text></HeroReveal>;}

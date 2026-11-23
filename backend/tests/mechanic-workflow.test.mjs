@@ -313,6 +313,108 @@ test("live two-account workflow: permissions, snapshots, private grading, docume
         200,
       );
     assert.equal((await api(reviews, "GET", undefined, mt)).status, 403);
+    // Test grading is independent: no interview fields or interview audit entry.
+    let interviewProfile=await prisma.mechanicProfile.findUniqueOrThrow({where:{id:p.id}});
+    assert.equal(interviewProfile.interviewResult,null);
+    assert.equal(interviewProfile.interviewedAt,null);
+    assert.equal((await api(decision,'POST',approve,at)).status,400);
+    let progress=await api('/api/mechanics/me/progress','GET',undefined,mt);
+    assert.equal(progress.body.progress.stage,'INTERVIEW_REVIEW');
+    assert.equal(progress.body.progress.interview.recorded,false);
+    // Reproduce the former automatic grading side effect on this isolated fixture.
+    // It must not unlock approval without a dedicated interview event.
+    await prisma.mechanicProfile.update({where:{id:p.id},data:{interviewResult:'PASSED',interviewNotes:'Old automatic assessment result',interviewedAt:new Date(),interviewedById:admin.id}});
+    assert.equal((await api(decision,'POST',approve,at)).status,400);
+    progress=await api('/api/mechanics/me/progress','GET',undefined,mt);
+    assert.equal(progress.body.progress.interview.recorded,false);
+    const interview='/api/mechanics/admin/'+owner.id+'/interview';
+    const outcome={result:'PASSED',notes:'Completed an independent demo professional interview.',submissionVersion:1};
+    assert.equal((await api(interview,'POST',outcome,at)).status,409);
+    const schedulePath=interview+'/schedule';
+    const appointment={scheduledAt:new Date(Date.now()+3600000).toISOString(),method:'ONLINE',location:'https://example.invalid/demo-meeting',timeZone:'Asia/Jerusalem',simulation:false,submissionVersion:1};
+    assert.equal((await api(schedulePath,'POST',appointment,mt)).status,403);
+    assert.equal((await api(schedulePath,'POST',appointment,wt)).status,403);
+    assert.equal((await api(schedulePath,'POST',{...appointment,scheduledAt:'bad date'},at)).status,400);
+    assert.equal((await api(schedulePath,'POST',{...appointment,scheduledAt:new Date(Date.now()-60000).toISOString()},at)).status,400);
+    assert.equal((await api(schedulePath,'POST',{...appointment,timeZone:'Invalid/Zone'},at)).status,400);
+    assert.equal((await api(schedulePath,'POST',{...appointment,submissionVersion:0},at)).status,409);
+    // Zoom HTTP is isolated: no real external meetings or trial account changes.
+    const realFetch=globalThis.fetch;
+    const keys=['ZOOM_ACCOUNT_ID','ZOOM_CLIENT_ID','ZOOM_CLIENT_SECRET','ZOOM_HOST_USER_ID'];
+    const previous=keys.map(k=>process.env[k]);
+    const automatic={...appointment,location:'',createZoom:true,expectedScheduleId:null};
+    const notificationsBefore=await prisma.notification.count({where:{userId:owner.id,kind:'INTERVIEW_SCHEDULED'}});
+    try{
+      keys.forEach(k=>delete process.env[k]);
+      assert.equal((await api(schedulePath,'POST',automatic,at)).status,503);
+      assert.equal(await prisma.notification.count({where:{userId:owner.id,kind:'INTERVIEW_SCHEDULED'}}),notificationsBefore);
+      assert.equal((await prisma.mechanicProfile.findUnique({where:{id:p.id}})).interviewScheduleId,null);
+      keys.forEach(k=>process.env[k]='isolated-test');
+      let providerFailure=true, conflict=false, deleted=0, created=0;
+      globalThis.fetch=async(url,options)=>{
+        if(String(url).startsWith('https://zoom.us/oauth/token'))return Response.json({access_token:'private-zoom-token'});
+        if(String(url).startsWith('https://api.zoom.us/')){
+          if(options.method==='DELETE'){deleted++;return new Response(null,{status:204});}
+          if(providerFailure)return Response.json({message:'secret-provider-message'},{status:403});
+          created++;
+          if(conflict)await prisma.mechanicProfile.update({where:{id:p.id},data:{interviewScheduleId:'concurrent-booking'}});
+          return Response.json({id:123456789,join_url:'https://us06web.zoom.us/j/123456789?pwd=isolated',start_url:'private-host-url'});
+        }
+        return realFetch(url,options);
+      };
+      assert.equal((await api(schedulePath,'POST',automatic,mt)).status,403);
+      assert.equal((await api(schedulePath,'POST',{...automatic,submissionVersion:0},at)).status,409);
+      assert.equal(created,0);
+      const failed=await api(schedulePath,'POST',automatic,at);assert.equal(failed.status,502);assert.equal(JSON.stringify(failed.body).includes('secret-provider-message'),false);
+      providerFailure=false;conflict=true;
+      assert.equal((await api(schedulePath,'POST',automatic,at)).status,409);assert.equal(deleted,1);
+      assert.equal(await prisma.notification.count({where:{userId:owner.id,kind:'INTERVIEW_SCHEDULED'}}),notificationsBefore);
+      await prisma.mechanicProfile.update({where:{id:p.id},data:{interviewScheduleId:null}});conflict=false;
+      const zoomBooking=await api(schedulePath,'POST',automatic,at);assert.equal(zoomBooking.status,200);
+      assert.equal(zoomBooking.body.profile.interviewLocation,'https://us06web.zoom.us/j/123456789?pwd=isolated');
+      assert.equal(JSON.stringify(zoomBooking.body).includes('private-host-url'),false);
+      const invitation=await prisma.notification.findFirst({where:{userId:owner.id,kind:'INTERVIEW_SCHEDULED'},orderBy:{createdAt:'desc'}});
+      assert.ok(invitation.body.includes('https://us06web.zoom.us/j/123456789'));
+      assert.equal((await api(schedulePath,'POST',automatic,at)).status,409,'Retry with stale appointment cannot create a second meeting');
+      assert.equal(created,2,'One conflicted meeting and one committed meeting');
+    }finally{
+      globalThis.fetch=realFetch;
+      keys.forEach((k,i)=>{if(previous[i]===undefined)delete process.env[k];else process.env[k]=previous[i];});
+    }
+    let booking=await api(schedulePath,'POST',appointment,at);assert.equal(booking.status,200);
+    const oldId=booking.body.profile.interviewScheduleId;
+    const confirm='/api/mechanics/me/interview/confirm';
+    assert.equal((await api(confirm,'POST',{scheduleId:oldId,submissionVersion:1},at)).status,403);
+    assert.equal((await api(confirm,'POST',{scheduleId:'stale-id',submissionVersion:1},mt)).status,409);
+    assert.equal((await api(confirm,'POST',{scheduleId:oldId,submissionVersion:1},mt)).status,200);
+    assert.equal((await api(confirm,'POST',{scheduleId:oldId,submissionVersion:1},mt)).status,200);
+    assert.equal(await prisma.auditLog.count({where:{targetId:p.id,action:'MECHANIC_INTERVIEW_CONFIRMED'}}),1,'Confirmation is idempotent');
+    assert.equal((await api(interview,'POST',{...outcome,scheduleId:oldId},at)).status,409,'Real interviews cannot be marked complete early');
+    booking=await api(schedulePath,'POST',{...appointment,simulation:true},at);assert.equal(booking.status,200);
+    const scheduleId=booking.body.profile.interviewScheduleId;
+    assert.notEqual(scheduleId,oldId);assert.equal(booking.body.profile.interviewConfirmedAt,null);assert.equal(booking.body.profile.interviewResult,null);
+    assert.equal((await api(confirm,'POST',{scheduleId:oldId,submissionVersion:1},mt)).status,409);
+    assert.equal((await api(interview,'POST',{...outcome,scheduleId:oldId},at)).status,409);
+    assert.equal((await api(interview,'POST',{...outcome,scheduleId},at)).status,409,'Confirmation is required even in simulation');
+    assert.equal((await api(confirm,'POST',{scheduleId,submissionVersion:1},mt)).status,200);
+    const passedInterview={...outcome,scheduleId};
+    assert.equal((await api(interview,'POST',passedInterview,mt)).status,403);
+    assert.equal((await api(interview,'POST',passedInterview,wt)).status,403);
+    assert.equal((await api(interview,'POST',{...passedInterview,submissionVersion:0},at)).status,409);
+    assert.equal((await api(interview,'POST',{...passedInterview,notes:''},at)).status,400);
+    assert.equal((await api(interview,'POST',{...passedInterview,result:'FAILED'},at)).status,200);
+    assert.equal((await api(decision,'POST',approve,at)).status,400);
+    // Regrading the test must not overwrite the separately recorded interview.
+    assert.equal((await api('/api/mechanic-workflow/tests/'+t.id+'/review','POST',{assessment:'PASSED',notes:'Independent test review repeated.'},at)).status,200);
+    interviewProfile=await prisma.mechanicProfile.findUniqueOrThrow({where:{id:p.id}});
+    assert.equal(interviewProfile.interviewResult,'FAILED');
+    assert.equal((await api(decision,'POST',approve,at)).status,400);
+    assert.equal((await api(interview,'POST',passedInterview,at)).status,200);
+    progress=await api('/api/mechanics/me/progress','GET',undefined,mt);
+    assert.equal((await prisma.mechanicProfile.findUniqueOrThrow({where:{id:p.id}})).interviewNotes.startsWith('[SIMULATION]'),true);
+    assert.equal(progress.body.progress.interview.recorded,true);
+    assert.equal(progress.body.progress.interview.passed,true);
+    assert.equal(progress.body.progress.stage,'AWAITING_DECISION');
     r = await api(decision, "POST", approve, at);
     assert.equal(r.status, 200, JSON.stringify(r.body));
     assert.equal(r.body.profile.canReceiveServices, true);

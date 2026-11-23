@@ -15,7 +15,7 @@ export default function BrandWordmark({
   style,
   light = false,
   size = 21,
-  rule = true,
+  rule = false,
 }: {
   style?: StyleProp<TextStyle>;
   light?: boolean;
@@ -27,7 +27,7 @@ export default function BrandWordmark({
     MotexaBrand: require("../../assets/fonts/GFSDidot-Regular.ttf"),
   });
   const layout = StyleSheet.flatten(style) || {};
-  const color = light ? "#FFF3E2" : dark ? "#FFF1DF" : "#342318";
+  const color = light ? "#FFF3E2" : dark ? "#FFF5EA" : "#342318";
   return (
     <View
       accessible

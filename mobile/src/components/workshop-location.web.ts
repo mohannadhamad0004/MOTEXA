@@ -1,0 +1,5 @@
+import type {LocationObject,LocationSubscription} from 'expo-location';
+function normalize(p:GeolocationPosition):LocationObject{return {coords:{latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy,altitude:p.coords.altitude,altitudeAccuracy:p.coords.altitudeAccuracy,heading:p.coords.heading,speed:p.coords.speed},timestamp:p.timestamp};}
+export async function askPosition():Promise<LocationObject>{return new Promise((resolve,reject)=>{if(!navigator.geolocation){reject(Error('LOCATION_UNAVAILABLE'));return;}navigator.geolocation.getCurrentPosition(p=>resolve(normalize(p)),e=>reject(Error(e.code===1?'LOCATION_DENIED':'LOCATION_UNAVAILABLE')),{enableHighAccuracy:true,maximumAge:0,timeout:15000});});}
+export async function watchPosition(callback:(p:LocationObject)=>void):Promise<LocationSubscription>{const id=navigator.geolocation.watchPosition(p=>callback(normalize(p)),()=>{},{enableHighAccuracy:true,maximumAge:0,timeout:15000});return {remove:()=>navigator.geolocation.clearWatch(id)};}
+export {distance} from './workshop-distance';

@@ -1,0 +1,53 @@
+[
+  {
+    "width": 390,
+    "ar": false,
+    "reduced": false,
+    "holdCancellation": true,
+    "directFingerAndStop": true,
+    "reverse": true,
+    "scrollAlternative": true,
+    "measured": [
+      0.077,
+      0.195,
+      0.315,
+      0.433,
+      0.52
+    ],
+    "errors": [],
+    "apiRequests": 0,
+    "liveVideoPlayers": 0
+  },
+  {
+    "width": 320,
+    "ar": true,
+    "reduced": false,
+    "holdCancellation": true,
+    "directFingerAndStop": true,
+    "reverse": true,
+    "scrollAlternative": true,
+    "measured": [
+      0.083,
+      0.196,
+      0.315,
+      0.434,
+      0.52
+    ],
+    "errors": [],
+    "apiRequests": 0,
+    "liveVideoPlayers": 0
+  },
+  {
+    "width": 430,
+    "ar": false,
+    "reduced": true,
+    "holdCancellation": false,
+    "directFingerAndStop": false,
+    "reverse": false,
+    "scrollAlternative": false,
+    "measured": [],
+    "errors": [],
+    "apiRequests": 0,
+    "liveVideoPlayers": 0
+  }
+]

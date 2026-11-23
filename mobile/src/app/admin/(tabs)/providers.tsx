@@ -1,24 +1,24 @@
-import BrandWordmark from "../../../components/BrandWordmark";
-import { EditorialTitle } from "../../../components/PremiumUI";
+import WorkspaceHeading from '../../../components/WorkspaceHeading';
+import TextInput from "../../../components/PremiumTextInput";
+import BrandHeader from "../../../components/BrandHeader";
+
 import { LoadingState } from "../../../components/LoadingState";
-import { useBrandPalette } from "../../../components/BrandSurfaces";
+
 import { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from "react-native";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import * as SecureStore from "../../../components/SessionStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Heading, Text } from "../../../components/MotexaVisual";
-import { CanvasFill, PanelFill } from "../../../components/BrandSurfaces";
+import { Text } from "../../../components/MotexaVisual";
+import { CanvasFill, PanelFill, useBrandPalette } from "../../../components/BrandSurfaces";
 import { useAppearance } from "../../../components/Appearance";
-import LanguageSwitch from "../../../components/LanguageSwitch";
+
 import Button from "../../../components/InteractiveButton";
 import { useLanguage } from "../../../i18n/LanguageContext";
 type Provider = {
@@ -44,11 +44,7 @@ export default function ProvidersScreen() {
     categories.some((c) => c.role === requestedCategory)
       ? requestedCategory
       : "ALL";
-  useFocusEffect(
-    useCallback(() => {
-      setCategory(selectedCategory);
-    }, [selectedCategory]),
-  );
+
   const brandPalette = useBrandPalette();
   const { dark } = useAppearance();
   const { isArabic } = useLanguage();
@@ -58,6 +54,11 @@ export default function ProvidersScreen() {
     [error, setError] = useState(""),
     [search, setSearch] = useState(""),
     [category, setCategory] = useState("ALL");
+  useFocusEffect(
+    useCallback(() => {
+      setCategory(selectedCategory);
+    }, [selectedCategory]),
+  );
   const text = (en: string, ar: string) => (isArabic ? ar : en);
   const ink = dark ? "#FFF1DE" : "#35271D",
     muted = dark ? "#CFB99D" : "#735C45";
@@ -125,7 +126,7 @@ export default function ProvidersScreen() {
         }
         contentContainerStyle={{
           paddingHorizontal: 20,
-          paddingTop: insets.top + 12,
+          paddingTop: insets.top + 8,
           paddingBottom: 130 + insets.bottom,
           maxWidth: 760,
           width: "100%",
@@ -133,57 +134,9 @@ export default function ProvidersScreen() {
         }}
         keyboardShouldPersistTaps="handled"
       >
-        <View
-          style={[
-            direction,
-            {
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 12,
-              marginBottom: 22,
-            },
-          ]}
-        >
-          <BrandWordmark
-            style={{
-              color: muted,
-              letterSpacing: 2,
-              fontSize: 12,
-              fontWeight: "700",
-            }}
-          />
-          <LanguageSwitch compact unified />
-        </View>
-        <EditorialTitle
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.8}
-          style={{
-            color: ink,
-            fontSize: 30,
-            lineHeight: 42,
-            fontWeight: "700",
-            textAlign: isArabic ? "right" : "left",
-          }}
-        >
-          {text("Providers", "مزودو الخدمة")}
-        </EditorialTitle>
-        <Text
-          style={{
-            color: muted,
-            fontSize: 14,
-            lineHeight: 23,
-            marginTop: 5,
-            marginBottom: 20,
-            textAlign: isArabic ? "right" : "left",
-          }}
-        >
-          {text(
-            "Your service network, in one place.",
-            "شبكة خدماتك، في مكان واحد.",
-          )}
-        </Text>
-        <View style={[styles.summary, direction]}>
+        <View style={{marginHorizontal:-12,marginBottom:16}}><BrandHeader/></View>
+        <WorkspaceHeading eyebrow={text('MOTEXA / SERVICE NETWORK','MOTEXA / شبكة الخدمات')} title={text('Service providers.','مزودو الخدمات.')} description={text('Your service network, in one place.','شبكة خدماتك، في مكان واحد.')}/>
+        <View style={[styles.summary, direction,{borderWidth:1,borderColor:dark?"#73563C":"#E5D1B3",backgroundColor:dark?"#35291F":"#FFFAF1",borderRadius:28,paddingVertical:20}]}>
           {[
             { en: "Providers", ar: "مزود خدمة", value: rows.length },
             {
@@ -237,11 +190,7 @@ export default function ProvidersScreen() {
             }}
           />
         </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 8, paddingBottom: 20 }}
-        >
+        <View style={{flexDirection:isArabic?'row-reverse':'row',flexWrap:'wrap',gap:8,paddingBottom:20}}>
           {categories.map((c) => (
             <Button
               key={c.role}
@@ -249,7 +198,7 @@ export default function ProvidersScreen() {
               accessibilityRole="button"
               accessibilityState={{ selected: category === c.role }}
               style={{
-                minHeight: 42,
+                minHeight: 44,
                 paddingHorizontal: 16,
                 borderRadius: 22,
                 justifyContent: "center",
@@ -274,7 +223,7 @@ export default function ProvidersScreen() {
               </Text>
             </Button>
           ))}
-        </ScrollView>
+        </View>
         {loading ? (
           <LoadingState
             label={text("Loading providers…", "جارٍ تحميل مزودي الخدمة…")}

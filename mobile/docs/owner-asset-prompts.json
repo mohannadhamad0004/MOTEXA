@@ -1,0 +1,20 @@
+{
+  "tool": "Built-in image_gen",
+  "purpose": "Project-bound automotive illustrations; fictional plate numbers are decorative image content, never saved as owner registration data.",
+  "assets": [
+    {
+      "path": "mobile/assets/images/owner-studio-m8-v2.png",
+      "generationPrompt": "Use case: product-mockup. New automotive photographic asset for MOTEXA service application, NOT a UI screenshot. A real-looking black BMW M8 Competition coupe photographed in high-end studio, complete car isolated with alpha transparency, front three-quarter view pointing toward left, entire vehicle and wheels within frame. Accurate BMW blue-white roundel visibly on hood, authentic twin kidney grille and M8 badge, realistic detailed silver-black alloys. Front license display plate says MOTEXA (showroom display, not personal plate). Cinematic elegant graphite-black metallic paint, sharp softbox reflections, warm bronze rim highlights on roof and body, bright white headlight signatures. Low camera 50mm automotive commercial photography, dramatic but readable sculpted surfaces. Wide horizontal framing, car fills 92% width, minimal margin, subtle tire contact shadow, transparent background. No street, no buildings, no environment, no extra text or watermark. Preserve vehicle's recognizable manufacturer identity.",
+      "editPrompt": "Edit target: this generated black BMW M8 transparent studio cutout. Change ONLY the front license plate: remove the word MOTEXA and replace it with a realistic white license plate with dark digits exactly '58-317-42'. Keep BMW manufacturer hood roundel, grille M8 badge, body, wheels, reflections, framing and original alpha transparency unchanged. Preserve every other pixel and the vehicle photography quality. No project name anywhere on plate. Fictional display plate for illustration."
+    },
+    {
+      "path": "mobile/assets/images/owner-studio-corolla-v2.png",
+      "generationPrompt": "Use case: product-mockup. Brand new photoreal automotive studio cutout for MOTEXA app. Accurate white 2018 Toyota Corolla sedan (E170 facelift, narrow swept-back headlights, Toyota chrome emblem in center of slim upper grille, broad black lower air intake). Entire car in front three quarter perspective nose left, all visible wheels in frame. Retain recognizable Toyota logo clearly, front showroom plate says MOTEXA. Professional dramatic high-end catalog lighting, silver-white body with cool softbox reflections, subtle warm bronze rim highlights, black and silver realistic alloy wheels. Transparent alpha background, no floor or scenery, soft faint contact shadow under tires. Wide horizontal composition, car fills 94 percent width, minimal margins. Not BMW, no invented badge, no additional text or watermark.",
+      "editPrompt": "Edit target: generated white Toyota Corolla 2018 studio cutout. Change ONLY the front license plate: remove the word MOTEXA and replace with a realistic white license plate with dark digits exactly '72-486-19'. Preserve Toyota original manufacturer chrome emblem, body, grille, wheels, all lighting and framing, and alpha transparency unchanged. Keep every other element identical. No project name anywhere on plate. Fictional display plate for illustration."
+    },
+    {
+      "path": "mobile/assets/images/owner-studio-interior-v1.png",
+      "generationPrompt": "Use case: ads-marketing. New photographic background asset for MOTEXA premium automotive service app. Landscape close-up of a modern BMW sports car cockpit with recognizable BMW roundel in center of sculpted black leather steering wheel on left, luxurious deep chocolate leather with subtle bronze stitching, dark brushed metal, refined soft warm bronze accent lighting across dashboard, very high-end realistic automotive photography, moody night studio setting, no people, no overlaid text, no watermark. Driver's view, wheel and dashboard occupy left and middle, right side dissolves into near-black chocolate shadows giving space for UI. Crisp physical detail and depth of field, restrained palette of graphite, chocolate, warm bronze and ivory."
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "passed": true,
+  "actualPostgres": true,
+  "gpsInput": "Browser geolocation emulation; not physical-device road test",
+  "allThreeModes": true,
+  "savedVehicleSnapshot": true,
+  "requestAccepted": true,
+  "liveLocationPersisted": true,
+  "arrivalVerified": true,
+  "locationClearedAtArrival": true,
+  "completed": true,
+  "writes": [
+    {
+      "path": "/api/auth/login",
+      "status": 200
+    },
+    {
+      "path": "/api/service-requests",
+      "status": 201
+    },
+    {
+      "path": "/api/workshop/requests/870bac40-a807-440d-b832-5268992ef1f7/start",
+      "status": 200
+    },
+    {
+      "path": "/api/workshop/requests/870bac40-a807-440d-b832-5268992ef1f7/point",
+      "status": 200
+    },
+    {
+      "path": "/api/workshop/requests/870bac40-a807-440d-b832-5268992ef1f7/arrive",
+      "status": 200
+    }
+  ],
+  "errors": []
+}

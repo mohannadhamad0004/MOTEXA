@@ -19,7 +19,8 @@
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^10.1.2",
     "pg": "^8.23.1",
-    "resend": "^6.33.0"
+    "resend": "^6.33.0",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@types/cors": "^2.8.0",

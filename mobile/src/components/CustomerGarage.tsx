@@ -1,0 +1,28 @@
+import CustomerFuelWheel from './CustomerFuelWheel';
+import CustomerVehiclePass from './CustomerVehiclePass';
+import {CustomerTitle} from './CustomerType';
+import {View,ScrollView,useWindowDimensions,type TextInputProps} from 'react-native';
+import {Ionicons} from '@expo/vector-icons';
+import {Text} from './MotexaVisual';
+import TextInput from './PremiumTextInput';
+import Pressable from './MotionPressable';
+import {MechanicButton,useMechanicTheme} from './MechanicUI';
+import {useMechanicFonts} from './MechanicType';
+
+type Vehicle={id:string;make:string;model:string;year:number;fuel:string};
+type Props={vehicles:Vehicle[];selectedId?:string;onSelect:(id:string)=>void;make:string;model:string;year:string;fuel:string;setMake:(v:string)=>void;setModel:(v:string)=>void;setYear:(v:string)=>void;setFuel:(v:string)=>void;busy:boolean;onSave:()=>void};
+export default function CustomerGarage(p:Props){
+ const m=useMechanicTheme(),{width,fontScale}=useWindowDimensions(),columns=width>=480&&fontScale<1.3;
+ return <View style={{paddingTop:24,paddingBottom:24,gap:20}}>
+  <Text style={{fontSize:10,letterSpacing:2,color:m.muted,textAlign:m.align}}>{m.t('01 / YOUR GARAGE','01 / نتعرّف على سيارتك')}</Text><CustomerTitle en="Your personal garage." ar="سياراتك، وجاهزة للطريق."/>
+  {p.vehicles.length>0&&<View style={{gap:9}}><Text style={{fontSize:12,color:m.muted,textAlign:m.align}}>{m.t('Choose a saved car','اختَر سيارة محفوظة')}</Text>{p.vehicles.map(v=><Pressable focusVisibleOnly key={v.id} accessibilityRole="radio" accessibilityLabel={`${v.make} ${v.model} · ${v.year}`} accessibilityState={{checked:v.id===p.selectedId}} disabled={p.busy} onPress={()=>p.onSelect(v.id)}><CustomerVehiclePass vehicle={v} selected={v.id===p.selectedId}/></Pressable>)}</View>}
+  <View testID="customer-vehicle-card" style={{gap:18,borderRadius:30,borderWidth:1,borderColor:m.border,padding:20,backgroundColor:m.surface,boxShadow:'0px 8px 25px rgba(69,45,25,0.055)'}}><View style={{flexDirection:m.row,justifyContent:'space-between',alignItems:'center',paddingBottom:14,borderBottomWidth:1,borderColor:m.border}}><Text style={{fontSize:10,letterSpacing:1.5,color:m.muted}}>MOTEXA / VEHICLE PROFILE</Text><Text style={{fontSize:21,color:m.muted}}>01</Text></View><View style={{flexDirection:m.row,alignItems:'center',gap:10}}><Ionicons name="add-circle-outline" size={24} color={m.muted}/><Text style={{fontSize:20,lineHeight:32,fontWeight:'600',color:m.ink}}>{m.t('Add a car','إضافة سيارة')}</Text></View><View style={{backgroundColor:m.soft,borderRadius:20,padding:16,gap:5}}><Text style={{fontSize:18,lineHeight:30,fontWeight:'600',color:m.ink,textAlign:m.align}}>{[p.make,p.model].filter(Boolean).join(' ')||m.t('Your next journey starts here','سيارتك، وبداية رحلة جديدة')}</Text><Text style={{fontSize:11,lineHeight:23,color:m.muted,textAlign:m.align}}>{p.year||m.t('A few details, saved once for your next requests.','تفاصيل بسيطة، بنحفظها لطلباتك الجاية.')}</Text></View>
+   <View style={{gap:10}}><Text style={{fontSize:11,color:m.muted,textAlign:m.align}}>{m.t('Quick make selection','اختيار سريع للشركة')}</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection:m.row,gap:8,paddingVertical:4}}>{['Toyota','Hyundai','Kia','Volkswagen','Mercedes','BMW'].map(make=><Pressable focusVisibleOnly key={make} accessibilityRole="button" accessibilityLabel={make} disabled={p.busy} onPress={()=>p.setMake(make)} style={{paddingHorizontal:14,paddingVertical:9,borderRadius:12,borderWidth:1,borderColor:p.make===make?'#9E7343':m.border,backgroundColor:p.make===make?m.soft:m.surface}}><Text style={{fontSize:11,lineHeight:22,color:m.ink}}>{make}</Text></Pressable>)}</ScrollView></View>
+   <GarageField label={m.t('Make — e.g. Toyota','الشركة — مثل Toyota')} value={p.make} onChangeText={p.setMake} maxLength={50} editable={!p.busy}/>
+   <View style={{flexDirection:columns?m.row:'column',gap:16}}><View style={{flex:1}}><GarageField label={m.t('Model — e.g. Corolla','الموديل — مثل Corolla')} value={p.model} onChangeText={p.setModel} maxLength={60} editable={!p.busy}/></View><View style={{flex:columns?.7:1}}><GarageField label={m.t('Model year','سنة الصنع')} placeholder="2018" value={p.year} onChangeText={p.setYear} keyboardType="number-pad" maxLength={4} editable={!p.busy}/></View></View>
+   <Text style={{fontSize:12,color:m.ink,fontWeight:'600',textAlign:m.align}}>{m.t('Fuel type','نوع الوقود')}</Text><View accessibilityRole="radiogroup" style={{flexDirection:m.row,flexWrap:'wrap',gap:10}}>{([{key:'PETROL',icon:'flame-outline',en:'Petrol',ar:'بنزين'},{key:'DIESEL',icon:'water-outline',en:'Diesel',ar:'ديزل'},{key:'HYBRID',icon:'leaf-outline',en:'Hybrid',ar:'هايبرد'},{key:'ELECTRIC',icon:'flash-outline',en:'Electric',ar:'كهرباء'}] as const).map(item=><CustomerFuelWheel key={item.key} label={m.t(item.en,item.ar)} icon={item.icon} selected={p.fuel===item.key} disabled={p.busy} onPress={()=>p.setFuel(item.key)}/>)}</View>
+   <MechanicButton label={m.t('Save car & explore services','حفظ السيارة واستكشاف الخدمات')} busy={p.busy} onPress={p.onSave}/>
+  </View>
+ </View>;
+}
+function GarageField({label,...props}:TextInputProps&{label:string}){const m=useMechanicTheme(),ready=useMechanicFonts();return <View style={{gap:8}}><Text style={{fontSize:12,lineHeight:23,fontWeight:'600',color:m.ink,textAlign:m.align}}>{label}</Text><TextInput {...props} accessibilityLabel={label} style={{minHeight:56,paddingHorizontal:16,paddingVertical:12,borderWidth:1,borderColor:m.border,borderRadius:14,backgroundColor:m.surface,color:m.ink,fontSize:15,fontFamily:ready?(m.ar?'MechanicArabic':'MechanicLatin'):undefined,textAlign:m.align}}/></View>;}

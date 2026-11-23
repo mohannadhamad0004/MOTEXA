@@ -1,539 +1,81 @@
-import CurvedPhotoHero from "../../components/CurvedPhotoHero";
-import BrandWordmark from "../../components/BrandWordmark";
-import { EditorialTitle, SectionCaption } from "../../components/PremiumUI";
-import { LoadingState } from "../../components/LoadingState";
-import MotexaDialog from "../../components/MotexaDialog";
-import { LinearGradient } from "expo-linear-gradient";
-import { useBrandPalette } from "../../components/BrandSurfaces";
-import { useCallback, useState } from "react";
-import {
-  Alert,
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-  View,
-} from "react-native";
-import { router, useFocusEffect } from "expo-router";
-import * as SecureStore from "../../components/SessionStore";
-import { Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Heading, Text, HeroReveal } from "../../components/MotexaVisual";
-import { CanvasFill, PanelFill } from "../../components/BrandSurfaces";
-import { useAppearance } from "../../components/Appearance";
-import { useLanguage } from "../../i18n/LanguageContext";
-import LanguageSwitch from "../../components/LanguageSwitch";
-import Button from "../../components/InteractiveButton";
-type Account = {
-  fullName: string;
-  email: string;
-  role: string;
-  status: string;
-  adminPermissions?: ({ permission: string } | string)[];
-};
-export default function ProfileScreen() {
-  const brandPalette = useBrandPalette();
-  const [logoutVisible, setLogoutVisible] = useState(false),
-    [loggingOut, setLoggingOut] = useState(false);
-  const { dark } = useAppearance(),
-    { isArabic } = useLanguage(),
-    insets = useSafeAreaInsets();
-  const [account, setAccount] = useState<Account | null>(null),
-    [loading, setLoading] = useState(true),
-    [error, setError] = useState("");
-  const t = (en: string, ar: string) => (isArabic ? ar : en);
-  const ink = dark ? "#FFF0DC" : "#38281D",
-    muted = dark ? "#CDB698" : "#735B46";
-  const direction = {
-    flexDirection: isArabic ? ("row-reverse" as const) : ("row" as const),
-  };
-  const load = useCallback(async (signal: AbortSignal) => {
-    setLoading(true);
-    setError("");
-    try {
-      const token = await SecureStore.getItemAsync("motexa_access_token"),
-        base = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "");
-      if (!token || !base) throw Error("session");
-      const response = await fetch(`${base}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal,
-      });
-      if (response.status === 401) throw Error("session");
-      if (!response.ok) throw Error("load");
-      const data = await response.json();
-      if (!data.success || !data.user) throw Error("load");
-      setAccount(data.user);
-    } catch (e) {
-      if (!signal.aborted)
-        setError(
-          e instanceof Error && e.message === "session" ? "session" : "load",
-        );
-    } finally {
-      if (!signal.aborted) setLoading(false);
-    }
-  }, []);
-  useFocusEffect(
-    useCallback(() => {
-      const controller = new AbortController();
-      void load(controller.signal);
-      return () => controller.abort();
-    }, [load]),
-  );
-  const role =
-    account?.role === "SUPER_ADMIN"
-      ? t("Super Admin", "المشرف العام")
-      : t("Administrator", "مسؤول");
-  const permissionLabels: Record<string, string> = {
-    MANAGE_MECHANICS: t("Mechanics management", "إدارة الميكانيكيين"),
-    MANAGE_SPARE_PARTS: t("Spare parts management", "إدارة قطع الغيار"),
-    MANAGE_TOWING: t("Towing management", "إدارة السحب"),
-  };
-  const confirmLogout = async () => {
-    if (loggingOut) return;
-    try {
-      setLoggingOut(true);
-      await SecureStore.deleteItemAsync("motexa_access_token");
-      setLogoutVisible(false);
-      router.dismissAll();
-      router.replace("/");
-    } catch {
-      setLogoutVisible(false);
-      Alert.alert(
-        t("Unable to sign out", "تعذّر تسجيل الخروج"),
-        t("Please try again.", "يرجى المحاولة مجددًا."),
-      );
-    } finally {
-      setLoggingOut(false);
-    }
-  };
-  const surface = dark ? "#352A22" : "#FFFAF1",
-    border = dark ? "#6B523D" : "#E3CEAF",
-    soft = dark ? "#493729" : "#F1DEC3";
-  const statusLabels: Record<string, string> = {
-    ACTIVE: t("Active", "مفعّل"),
-    PENDING: t("Pending", "قيد الانتظار"),
-    SUSPENDED: t("Suspended", "معلّق"),
-    REJECTED: t("Rejected", "مرفوض"),
-  };
-  const fields = account
-    ? [
-        {
-          label: t("Full name", "الاسم الكامل"),
-          value: account.fullName,
-          icon: "person-outline" as const,
-        },
-        {
-          label: t("Email address", "البريد الإلكتروني"),
-          value: account.email,
-          icon: "mail-outline" as const,
-        },
-        {
-          label: t("Account role", "دور الحساب"),
-          value: role,
-          icon: "shield-outline" as const,
-        },
-      ]
-    : [];
-  return (
-    <View style={{ flex: 1 }}>
-      <CanvasFill />
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={loading}
-            onRefresh={() => void load(new AbortController().signal)}
-          />
-        }
-        contentContainerStyle={{
-          paddingTop: insets.top + 7,
-          paddingHorizontal: 18,
-          paddingBottom: insets.bottom + 36,
-          maxWidth: 700,
-          width: "100%",
-          alignSelf: "center",
-        }}
-      >
-        <View
-          style={{
-            flexDirection: "row",
-            direction: "ltr",
-            alignItems: "center",
-            gap: 8,
-            marginBottom: 10,
-          }}
-        >
-          <Button
-            accessibilityRole="button"
-            accessibilityLabel={t("Back", "رجوع")}
-            onPress={() => router.back()}
-            style={{
-              width: 34,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: "transparent",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Ionicons
-              name={isArabic ? "arrow-forward" : "arrow-back"}
-              size={20}
-              color={ink}
-            />
-          </Button>
-          <BrandWordmark size={18} style={{ flex: 1 }} />
-          <LanguageSwitch compact unified />
-        </View>
-        <View style={{ marginHorizontal: -18, marginBottom: 18 }}>
-          <CurvedPhotoHero
-            eyebrow="MOTEXA / ACCOUNT"
-            title={t("My profile", "ملفي الشخصي")}
-            caption={account?.fullName || t("Your account", "حسابك")}
-            description={t(
-              "Your account details and access",
-              "بيانات حسابك وصلاحيات الوصول",
-            )}
-          />
-        </View>
-        {loading ? (
-          <LoadingState
-            rows={2}
-            label={t("Loading your account…", "جارٍ تحميل حسابك…")}
-          />
-        ) : error ? (
-          <View
-            style={{
-              padding: 24,
-              borderRadius: 28,
-              backgroundColor: surface,
-              gap: 12,
-            }}
-          >
-            <Ionicons name="alert-circle-outline" size={28} color={muted} />
-            <Heading style={{ color: ink, fontSize: 20, lineHeight: 28 }}>
-              {t("Let’s reconnect", "لنُعِد الاتصال")}
-            </Heading>
-            <Text style={{ color: muted, lineHeight: 24 }}>
-              {error === "session"
-                ? t(
-                    "Your session expired. Sign out and sign in again.",
-                    "انتهت الجلسة. سجّل الخروج ثم ادخل مجددًا.",
-                  )
-                : t(
-                    "Pull down to load your account again.",
-                    "اسحب لأسفل لإعادة تحميل حسابك.",
-                  )}
-            </Text>
-          </View>
-        ) : (
-          account && (
-            <>
-              <View
-                style={{
-                  backgroundColor: surface,
-                  borderRadius: 25,
-                  borderWidth: 1,
-                  borderColor: border,
-                  padding: 20,
-                  marginBottom: 24,
-                  gap: 13,
-                }}
-              >
-                <View
-                  style={[
-                    direction,
-                    {
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 10,
-                    },
-                  ]}
-                >
-                  <Text style={{ color: ink, fontSize: 15, fontWeight: "600" }}>
-                    {role}
-                  </Text>
-                  <View
-                    style={{
-                      borderRadius: 20,
-                      paddingHorizontal: 12,
-                      paddingVertical: 6,
-                      backgroundColor:
-                        account.status === "ACTIVE"
-                          ? dark
-                            ? "#314635"
-                            : "#E6EFE2"
-                          : soft,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        color:
-                          account.status === "ACTIVE"
-                            ? dark
-                              ? "#CBE7CE"
-                              : "#315F39"
-                            : muted,
-                      }}
-                    >
-                      {statusLabels[account.status] || account.status}
-                    </Text>
-                  </View>
-                </View>
-                <View style={[direction, { alignItems: "center", gap: 10 }]}>
-                  <Ionicons name="mail-outline" size={18} color={muted} />
-                  <Text
-                    selectable
-                    style={{
-                      flex: 1,
-                      fontSize: 13,
-                      lineHeight: 23,
-                      color: muted,
-                      writingDirection: "ltr",
-                      textAlign: isArabic ? "right" : "left",
-                    }}
-                  >
-                    {account.email}
-                  </Text>
-                </View>
-              </View>
-              <SectionCaption
-                index="01"
-                title={t("ACCOUNT INFORMATION", "معلومات الحساب")}
-              />
-              <View style={{ height: 14 }} />
-              <View
-                style={{
-                  backgroundColor: surface,
-                  borderRadius: 25,
-                  paddingHorizontal: 20,
-                  borderWidth: 1,
-                  borderColor: border,
-                  marginBottom: 22,
-                  shadowColor: "#765133",
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowRadius: 12,
-                  shadowOpacity: dark ? 0.12 : 0.05,
-                  elevation: 2,
-                }}
-              >
-                {fields
-                  .filter((f) => f.icon !== "mail-outline")
-                  .map((field, index) => (
-                    <View
-                      key={field.icon}
-                      style={[
-                        direction,
-                        {
-                          paddingVertical: 17,
-                          gap: 12,
-                          alignItems: "center",
-                          borderTopWidth: index ? 1 : 0,
-                          borderTopColor: border,
-                        },
-                      ]}
-                    >
-                      <View
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 12,
-                          backgroundColor: soft,
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Ionicons name={field.icon} size={18} color={muted} />
-                      </View>
-                      <View style={{ flex: 1, gap: 5 }}>
-                        <Text
-                          style={{
-                            fontSize: 11,
-                            color: muted,
-                            textAlign: isArabic ? "right" : "left",
-                          }}
-                        >
-                          {field.label}
-                        </Text>
-                        <Text
-                          selectable
-                          style={{
-                            fontSize: 14,
-                            lineHeight: 23,
-                            color: ink,
-                            textAlign: isArabic ? "right" : "left",
-                          }}
-                        >
-                          {field.value}
-                        </Text>
-                      </View>
-                    </View>
-                  ))}
-              </View>
-              <SectionCaption
-                index="02"
-                title={t("ACCESS & PERMISSIONS", "الوصول والصلاحيات")}
-              />
-              <View style={{ height: 14 }} />
-              <View
-                style={{
-                  backgroundColor: surface,
-                  borderRadius: 25,
-                  padding: 20,
-                  borderWidth: 1,
-                  borderColor: border,
-                }}
-              >
-                <View
-                  style={[
-                    direction,
-                    { alignItems: "center", gap: 10, marginBottom: 12 },
-                  ]}
-                >
-                  <Ionicons
-                    name="shield-checkmark-outline"
-                    size={22}
-                    color={muted}
-                  />
-                  <Text style={{ fontSize: 15, fontWeight: "600", color: ink }}>
-                    {t("Workspace access", "صلاحيات مساحة العمل")}
-                  </Text>
-                </View>
-                <Text
-                  style={{
-                    color: muted,
-                    fontSize: 13,
-                    lineHeight: 24,
-                    textAlign: isArabic ? "right" : "left",
-                  }}
-                >
-                  {account.role === "SUPER_ADMIN"
-                    ? t(
-                        "Administrator accounts, invitations, and platform oversight.",
-                        "إدارة حسابات أدمن الأقسام والدعوات والإشراف على المنصة.",
-                      )
-                    : t(
-                        "Your assigned department permissions.",
-                        "الصلاحيات المسندة إليك ضمن قسمك.",
-                      )}
-                </Text>
-                {account.role !== "SUPER_ADMIN" && (
-                  <View style={{ gap: 8, marginTop: 14 }}>
-                    {account.adminPermissions?.length ? (
-                      account.adminPermissions.map((item) => {
-                        const p =
-                          typeof item === "string"
-                            ? { permission: item }
-                            : item;
-                        return (
-                          <View
-                            key={p.permission}
-                            style={[
-                              direction,
-                              {
-                                backgroundColor: soft,
-                                borderRadius: 14,
-                                padding: 12,
-                                gap: 8,
-                                alignItems: "center",
-                              },
-                            ]}
-                          >
-                            <Ionicons
-                              name="checkmark"
-                              size={17}
-                              color={muted}
-                            />
-                            <Text style={{ color: ink, fontSize: 13, flex: 1 }}>
-                              {permissionLabels[p.permission] || p.permission}
-                            </Text>
-                          </View>
-                        );
-                      })
-                    ) : (
-                      <Text style={{ color: muted, fontSize: 13 }}>
-                        {t(
-                          "No department permissions assigned.",
-                          "لم تُسند صلاحيات قسم لهذا الحساب.",
-                        )}
-                      </Text>
-                    )}
-                  </View>
-                )}
-              </View>
-              <View
-                style={[
-                  direction,
-                  {
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 7,
-                    marginTop: 24,
-                  },
-                ]}
-              >
-                <Ionicons name="lock-closed-outline" size={13} color={muted} />
-                <Text style={{ color: muted, fontSize: 11 }}>
-                  {t(
-                    "Your personal MOTEXA workspace",
-                    "مساحتك الشخصية في MOTEXA",
-                  )}
-                </Text>
-              </View>
-            </>
-          )
-        )}
-        <Button
-          accessibilityRole="button"
-          disabled={loggingOut}
-          onPress={() => setLogoutVisible(true)}
-          style={{
-            marginTop: 22,
-            minHeight: 50,
-            borderRadius: 25,
-            borderWidth: 1,
-            borderColor: dark ? "#896044" : "#D4AF8A",
-            backgroundColor: dark ? "#493126" : "#F4E2D1",
-            flexDirection: isArabic ? "row-reverse" : "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 9,
-            opacity: loggingOut ? 0.6 : 1,
-          }}
-        >
-          <Ionicons
-            name="log-out-outline"
-            size={21}
-            color={dark ? "#EDC1A2" : "#864B31"}
-          />
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: "600",
-              color: dark ? "#EDC1A2" : "#864B31",
-            }}
-          >
-            {t("Sign out", "تسجيل الخروج")}
-          </Text>
-        </Button>
-      </ScrollView>
-      <MotexaDialog
-        icon="log-out-outline"
-        visible={logoutVisible}
-        type="warning"
-        title={t("Sign out?", "تسجيل الخروج؟")}
-        message={t(
-          "You can sign in again whenever you’re ready.",
-          "يمكنك العودة وتسجيل الدخول في أي وقت.",
-        )}
-        confirmText={t("Sign out", "تسجيل الخروج")}
-        cancelText={t("Stay here", "البقاء هنا")}
-        loading={loggingOut}
-        onConfirm={confirmLogout}
-        onCancel={() => {
-          if (!loggingOut) setLogoutVisible(false);
-        }}
-      />
-    </View>
-  );
+import {useCallback,useRef,useState} from 'react';
+import {Alert,Image,RefreshControl,ScrollView,StyleSheet,View} from 'react-native';
+import {router,useFocusEffect} from 'expo-router';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {Ionicons} from '@expo/vector-icons';
+import {LinearGradient} from 'expo-linear-gradient';
+import BrandHeader from '../../components/BrandHeader';
+import BrandMonogram from '../../components/BrandMonogram';
+import WorkspaceHeading from '../../components/WorkspaceHeading';
+import Input from '../../components/PremiumTextInput';
+import Pressable from '../../components/MotionPressable';
+import SignOutAction from '../../components/SignOutAction';
+import MotexaDialog from '../../components/MotexaDialog';
+import {Text} from '../../components/MotexaVisual';
+import {CanvasFill} from '../../components/BrandSurfaces';
+import {useAppearance} from '../../components/Appearance';
+import {useLanguage} from '../../i18n/LanguageContext';
+import * as Session from '../../components/SessionStore';
+
+type Account={fullName:string;email:string;role:string;status:string;adminPermissions?:({permission:string}|string)[]};
+async function accountRequest(method:'GET'|'PATCH',signal:AbortSignal,fullName?:string){
+ const token=await Session.getItemAsync('motexa_access_token'),base=process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/,'');
+ if(!token||!base)throw Error('session');
+ const response=await fetch(base+'/api/auth/'+(method==='GET'?'me':'profile'),{method,signal,headers:{Authorization:'Bearer '+token,...(method==='PATCH'?{'Content-Type':'application/json'}:{})},...(method==='PATCH'?{body:JSON.stringify({fullName})}:{})});
+ if(response.status===401||response.status===403)throw Error('session');
+ if(!response.ok)throw Error('request');const data=await response.json();if(!data.success||!data.user)throw Error('request');return data.user as Account;
+}
+export default function ProfileScreen(){
+ const {dark}=useAppearance(),{isArabic:ar}=useLanguage(),insets=useSafeAreaInsets();
+ const [photoWidth,setPhotoWidth]=useState(0);
+ const [account,setAccount]=useState<Account|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[editing,setEditing]=useState(false),[draft,setDraft]=useState(''),[saving,setSaving]=useState(false),[notice,setNotice]=useState(''),[logout,setLogout]=useState(false),[loggingOut,setLoggingOut]=useState(false),[reload,setReload]=useState(0);
+ const generation=useRef(0),saveController=useRef<AbortController|null>(null);
+ const t=(en:string,arabic:string)=>ar?arabic:en,ink=dark?'#FFF1DF':'#432D1E',muted=dark?'#D8BE9B':'#80664E',surface=dark?'#392B21':'#FFF9EF',border=dark?'#806044':'#DFC7A7',soft=dark?'#60432C':'#EDD5B2',row=ar?'row-reverse' as const:'row' as const,align=ar?'right' as const:'left' as const;
+ useFocusEffect(useCallback(()=>{
+  const controller=new AbortController(),current=++generation.current;setLoading(true);setError('');setEditing(false);setNotice('');setSaving(false);
+  const timeout=setTimeout(()=>controller.abort(),15000);
+  void accountRequest('GET',controller.signal).then(user=>{if(current===generation.current)setAccount(user);}).catch(e=>{if(current===generation.current)setError(e instanceof Error?e.message:'request');}).finally(()=>{clearTimeout(timeout);if(current===generation.current)setLoading(false);});
+  return()=>{generation.current++;controller.abort();saveController.current?.abort();};
+ // Explicit refresh invalidates the account request.
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[reload]));
+ async function save(){
+  if(saving)return;const name=draft.trim().replace(/\s+/g,' ');if(name.length<2||name.length>120){setNotice('invalid');return;}
+  const current=generation.current,controller=new AbortController();saveController.current=controller;const timeout=setTimeout(()=>controller.abort(),15000);setSaving(true);setNotice('');
+  try{const user=await accountRequest('PATCH',controller.signal,name);if(current===generation.current){setAccount(user);setEditing(false);setNotice('saved');}}
+  catch(e){if(current===generation.current)setNotice(e instanceof Error&&e.message==='session'?'session':'failed');}
+  finally{clearTimeout(timeout);if(current===generation.current)setSaving(false);}
+ }
+ async function confirmLogout(){if(loggingOut)return;setLoggingOut(true);try{await Session.deleteItemAsync('motexa_access_token');setLogout(false);router.dismissAll();router.replace('/');}catch{setLogout(false);Alert.alert(t('Unable to sign out','تعذّر تسجيل الخروج'),t('Please try again.','يرجى المحاولة مجددًا.'));}finally{setLoggingOut(false);}}
+ const card={borderWidth:1,borderColor:border,borderRadius:27,backgroundColor:surface,padding:18,gap:12};
+ const role=account?.role==='SUPER_ADMIN'?t('Super Admin','السوبر أدمن'):t('Administrator','أدمن قسم');
+ const permissions:Record<string,string>={MANAGE_MECHANICS:t('Mechanics management','إدارة الميكانيكيين'),MANAGE_SPARE_PARTS:t('Spare parts management','إدارة قطع الغيار'),MANAGE_TOWING:t('Towing management','إدارة الونشات')};
+ const initials=account?.fullName.trim().split(/\s+/).slice(0,2).map(part=>part[0]).join('')??'M';
+ return <View style={{flex:1}}><CanvasFill/><ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={loading} onRefresh={()=>{if(!saving)setReload(value=>value+1);}}/>} contentContainerStyle={{paddingTop:insets.top+2,paddingHorizontal:18,paddingBottom:insets.bottom+28,width:'100%',maxWidth:700,alignSelf:'center',gap:10}}>
+  <BrandHeader onBack={()=>router.canGoBack()?router.back():router.replace('/admin')} backDisabled={saving}/>
+  <View style={{marginTop:-13,marginBottom:-9}}><WorkspaceHeading eyebrow={t('MOTEXA / PERSONAL WORKSPACE','MOTEXA / المساحة الشخصية')} title={t('Your place in MOTEXA.','حسابك، بهويتك.')} description={t('Your identity, access and personal preferences.','هويتك وصلاحياتك وتفضيلاتك الشخصية.')}/></View>
+  <View style={{borderRadius:31,borderWidth:1,borderColor:border,overflow:'hidden',backgroundColor:surface,marginBottom:5}}>
+   <View onLayout={event=>setPhotoWidth(event.nativeEvent.layout.width)} style={{height:photoWidth?photoWidth*.65:185,overflow:'hidden',backgroundColor:'#39291E'}}>
+    {photoWidth>0&&<Image accessible={false} source={require('../../../assets/images/profile-gclass-d-panyukov.jpg')} resizeMode="cover" style={{position:'absolute',width:'100%',height:photoWidth*1.25,top:-photoWidth*.48}}/>}
+    <LinearGradient pointerEvents="none" colors={['#21171000','#21171000','#21171099']} locations={[0,.58,1]} style={StyleSheet.absoluteFill}/>
+    <View style={{position:'absolute',bottom:15,left:16,right:16,flexDirection:row,alignItems:'center',gap:8}}><Ionicons name="shield-checkmark-outline" size={17} color="#FFF1DF"/><Text style={{fontSize:11,lineHeight:21,color:'#FFF1DF'}}>{t('Your personal MOTEXA workspace','مساحتك الشخصية في MOTEXA')}</Text></View>
+   </View>
+   {!!account&&!loading&&!error&&<View style={{paddingHorizontal:18,paddingTop:16,paddingBottom:18,gap:12,overflow:'hidden'}}>
+    <BrandMonogram size={190} style={{top:-38,left:undefined,right:-29,opacity:.035}}/>
+    <View style={{flexDirection:row,alignItems:'center',gap:12}}><View style={{width:49,height:54,borderRadius:18,backgroundColor:soft,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:20,lineHeight:30,color:ink}}>{initials}</Text></View><View style={{flex:1,minWidth:0,gap:2}}><Text accessibilityRole="header" style={{fontSize:20,lineHeight:31,fontWeight:'600',color:ink,textAlign:align}}>{account.fullName}</Text><Text style={{fontSize:12,lineHeight:22,color:muted,textAlign:align}}>{role}</Text></View></View>
+    <View style={{flexDirection:row,alignItems:'center',gap:7,paddingTop:10,borderTopWidth:1,borderColor:border}}><View style={{width:6,height:6,borderRadius:3,backgroundColor:account.status==='ACTIVE'?(dark?'#ACD8B3':'#35734A'):'#B16C50'}}/><Text style={{fontSize:11,lineHeight:21,color:muted}}>{account.status==='ACTIVE'?t('Active account','حساب مفعّل'):t('Account status: ','حالة الحساب: ')+account.status}</Text></View>
+   </View>}
+  </View>
+  {loading?<Text accessibilityLiveRegion="polite" style={{color:muted,lineHeight:25}}>{t('Loading your account…','جارٍ تحميل حسابك…')}</Text>:error?<View style={card}><Ionicons name="alert-circle-outline" size={25} color={muted}/><Text style={{color:ink,lineHeight:24,textAlign:align}}>{error==='session'?t('Your session expired. Sign in again.','انتهت صلاحية الجلسة. سجّل الدخول مجددًا.'):t('Account could not be loaded.','تعذّر تحميل الحساب.')}</Text><Pressable accessibilityRole="button" onPress={()=>error==='session'?router.replace('/auth/login'):setReload(value=>value+1)} style={{minHeight:46,borderRadius:23,backgroundColor:soft,alignItems:'center',justifyContent:'center'}}><Text style={{color:ink}}>{error==='session'?t('Sign in','تسجيل الدخول'):t('Retry','إعادة المحاولة')}</Text></Pressable></View>:account&&<>
+   <View style={card}>
+    <View style={{flexDirection:row,alignItems:'center',gap:10,borderBottomWidth:1,borderColor:border,paddingBottom:9}}><View style={{width:35,height:35,borderRadius:13,backgroundColor:soft,alignItems:'center',justifyContent:'center'}}><Ionicons name="person-outline" size={18} color={muted}/></View><Text accessibilityRole="header" style={{flex:1,fontSize:16,lineHeight:27,fontWeight:'600',color:ink,textAlign:align}}>{t('Personal details','البيانات الشخصية')}</Text>{!editing&&<Pressable accessibilityRole="button" accessibilityLabel={t('Edit name','تعديل الاسم')} onPress={()=>{setDraft(account.fullName);setEditing(true);setNotice('');}} style={{minWidth:50,minHeight:44,borderRadius:20,alignItems:'center',justifyContent:'center',backgroundColor:soft}}><Ionicons name="create-outline" size={19} color={ink}/></Pressable>}</View>
+    <Text style={{fontSize:11,lineHeight:21,color:muted,textAlign:align}}>{t('Full name','الاسم الكامل')}</Text>
+    {editing?<><Input accessibilityLabel={t('Full name','الاسم الكامل')} value={draft} onChangeText={setDraft} editable={!saving} maxLength={120} style={{minHeight:53,borderWidth:1,borderColor:border,borderRadius:21,paddingHorizontal:13,fontSize:14,color:ink,textAlign:align}}/><View style={{flexDirection:row,gap:9}}><Pressable accessibilityRole="button" disabled={saving} onPress={()=>void save()} style={{flex:1,minHeight:48,borderRadius:23,backgroundColor:soft,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:13,color:ink}}>{saving?t('Saving…','جارٍ الحفظ…'):t('Save name','حفظ الاسم')}</Text></Pressable><Pressable accessibilityRole="button" disabled={saving} onPress={()=>{setEditing(false);setNotice('');}} style={{minWidth:75,minHeight:48,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:13,color:muted}}>{t('Cancel','إلغاء')}</Text></Pressable></View></>:<Text style={{fontSize:15,lineHeight:25,color:ink,textAlign:align}}>{account.fullName}</Text>}
+    {!!notice&&<Text accessibilityLiveRegion="polite" style={{fontSize:12,lineHeight:23,color:notice==='saved'?(dark?'#ACD8B3':'#28613D'):muted,textAlign:align}}>{notice==='saved'?t('Your name has been saved.','تم حفظ اسمك.'):notice==='invalid'?t('Use 2–120 characters.','استخدم من حرفين إلى 120 حرفًا.'):notice==='session'?t('Your session expired. Sign in again.','انتهت صلاحية الجلسة. سجّل الدخول مجددًا.'):t('Changes were not saved. Please retry.','لم يتم حفظ التغييرات. حاول مجددًا.')}</Text>}
+    <View style={{borderTopWidth:1,borderColor:border,paddingTop:12,gap:5}}><Text style={{fontSize:11,lineHeight:21,color:muted,textAlign:align}}>{t('Email address · Read only','البريد الإلكتروني · للعرض فقط')}</Text><Text selectable style={{fontSize:13,lineHeight:24,color:ink,writingDirection:'ltr',textAlign:align}}>{account.email}</Text></View>
+   </View>
+   <View style={[card,{backgroundColor:dark?'#483224':'#F0DFC6'}]}><View style={{flexDirection:row,gap:10,alignItems:'center'}}><View style={{width:36,height:36,borderRadius:14,borderWidth:1,borderColor:border,alignItems:'center',justifyContent:'center'}}><Ionicons name="shield-checkmark-outline" size={20} color={muted}/></View><Text accessibilityRole="header" style={{fontSize:16,lineHeight:27,color:ink,fontWeight:'600'}}>{t('Assigned access','الصلاحيات المعيّنة')}</Text></View><Text style={{fontSize:12,lineHeight:24,color:muted,textAlign:align}}>{account.role==='SUPER_ADMIN'?t('Platform-wide administration and oversight.','إدارة وإشراف شاملان على المنصّة.'):(account.adminPermissions??[]).map(p=>{const key=typeof p==='string'?p:p.permission;return permissions[key]??key;}).join(' · ')||t('No department access assigned.','لا توجد صلاحيات قسم معيّنة.')}</Text><Text style={{fontSize:10,lineHeight:21,color:muted,textAlign:align}}>{t('Role and permissions cannot be changed from your profile.','لا يمكن تغيير الدور أو الصلاحيات من الملف الشخصي.')}</Text></View>
+  </>}
+  <SignOutAction disabled={saving||loggingOut} onPress={()=>setLogout(true)}/>
+ </ScrollView><MotexaDialog icon="log-out-outline" visible={logout} type="warning" title={t('Sign out?','تسجيل الخروج؟')} message={t('You can sign in again whenever you’re ready.','يمكنك العودة وتسجيل الدخول في أي وقت.')} confirmText={t('Sign out','تسجيل الخروج')} cancelText={t('Stay here','البقاء هنا')} loading={loggingOut} onConfirm={confirmLogout} onCancel={()=>{if(!loggingOut)setLogout(false);}}/></View>;
 }

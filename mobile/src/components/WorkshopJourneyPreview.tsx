@@ -1,0 +1,8 @@
+import {useState} from 'react';
+import {View} from 'react-native';
+import {Text} from './MotexaVisual';
+import {useMechanicTheme} from './MechanicUI';
+import {OwnerSurface,OwnerTag,OwnerButton} from './OwnerControls';
+import WorkshopMap from './WorkshopMap';
+/** Public visual sample only. Never requests device GPS or calls a backend. */
+export default function WorkshopJourneyPreview(){const m=useMechanicTheme(),[open,setOpen]=useState(false);return <View style={{gap:18,paddingTop:6}}><OwnerButton secondary label={m.t(open?'Hide workshop journey':'Route to workshop',open?'إخفاء رحلة الورشة':'الطريق إلى الورشة')} onPress={()=>setOpen(v=>!v)}/>{open&&<><Text accessibilityRole="header" style={{fontSize:27,lineHeight:40,color:m.ink,textAlign:m.align}}>{m.t('Your road to the workshop.','طريقك إلى الورشة.')}</Text><OwnerSurface><OwnerTag active icon="eye-outline" label={m.t('DESIGN SAMPLE · NOT LIVE GPS','مثال تصميم · ليس GPS مباشرًا')}/><Text style={{fontSize:13,lineHeight:25,color:m.muted,textAlign:m.align}}>{m.t('Example map positions for reviewing the interface. No location permission, real request or location sharing is used.','نقاط مثال لمراجعة شكل الواجهة. لا نطلب موقع جهازك ولا ننشئ طلبًا حقيقيًا ولا نشارك أي موقع.')}</Text><WorkshopMap destination={{latitude:32.221,longitude:35.254}} position={{latitude:32.215,longitude:35.25}}/><View style={{flexDirection:m.row,flexWrap:'wrap',gap:8}}><OwnerTag icon="storefront-outline" label={m.t('Workshop sample','مثال الورشة')}/><OwnerTag icon="navigate-outline" label={m.t('Customer sample','مثال العميل')}/></View></OwnerSurface></>}</View>;}

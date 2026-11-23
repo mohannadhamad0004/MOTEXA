@@ -40,12 +40,16 @@ enum MechanicVerificationStatus {
 
 model User {
   id                  String               @id @default(uuid())
+  phoneNumber         String?
   fullName            String
   email               String               @unique
   sessionVersion      Int                  @default(0)
   passwordHash        String
   role                UserRole
   status              AccountStatus        @default(PENDING)
+  vehicles CustomerVehicle[]
+  sentServiceRequests ServiceRequest[] @relation("RequestCustomer")
+  receivedServiceRequests ServiceRequest[] @relation("RequestMechanic")
   mechanicMessages    MechanicMessage[]
   mechanicProfile     MechanicProfile?
   emailVerifiedAt     DateTime?
@@ -117,6 +121,8 @@ model MechanicProfile {
   city              String?
   experienceSummary String?
   workshopAddress   String?
+  workshopLatitude Float?
+  workshopLongitude Float?
   coverageAreas     String[]                 @default([])
   termsAcceptedAt   DateTime?
   submittedAt       DateTime?
@@ -125,6 +131,13 @@ model MechanicProfile {
   interviewNotes    String?
   interviewedAt     DateTime?
   interviewedById   String?
+  interviewScheduleId String?
+  interviewScheduledAt DateTime?
+  interviewMethod String?
+  interviewLocation String?
+  interviewTimeZone String?
+  interviewConfirmedAt DateTime?
+  interviewSimulation Boolean @default(false)
   ministryStatus    String                   @default("NOT_REQUESTED")
   tests             MechanicTest[]
   messages          MechanicMessage[]
@@ -322,4 +335,71 @@ model MechanicDocumentReview {
   reviewedAt DateTime        @default(now())
 
   @@unique([profileId, documentId])
+}
+
+// Partial unique index for ACCEPTED/IN_PROGRESS is defined in migration
+// 20261116170000_one_active_service_per_mechanic (SQL predicate).
+model ServiceRequest {
+  id String @id @default(uuid())
+  customerId String
+  mechanicId String
+  customer User @relation("RequestCustomer", fields:[customerId], references:[id], onDelete:Restrict)
+  mechanic User @relation("RequestMechanic", fields:[mechanicId], references:[id], onDelete:Restrict)
+  journey WorkshopJourney?
+  clientRequestId String
+  mode String
+  title String
+  description String
+  vehicle String
+  vehicleId String?
+  savedVehicle CustomerVehicle? @relation(fields:[vehicleId], references:[id], onDelete:SetNull)
+  contactNumber String
+  address String @default("")
+  status String @default("NEW")
+  version Int @default(0)
+  decisionNote String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([customerId,clientRequestId])
+  @@index([mechanicId,status,createdAt])
+  @@index([customerId,createdAt])
+}
+
+model CustomerVehicle {
+  photoBytes Bytes?
+  photoDigest String?
+  photoUpdatedAt DateTime?
+  id String @id @default(uuid())
+  customerId String
+  customer User @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  clientVehicleId String
+  make String
+  model String
+  year Int
+  fuel String
+  isActive Boolean @default(false)
+  version Int @default(0)
+  archivedAt DateTime?
+  updatedAt DateTime @default(now()) @updatedAt
+  requests ServiceRequest[]
+  createdAt DateTime @default(now())
+  @@unique([customerId, clientVehicleId])
+  @@index([customerId, createdAt])
+}
+
+model WorkshopJourney {
+ requestId String @id
+ request ServiceRequest @relation(fields:[requestId],references:[id],onDelete:Cascade)
+ destinationLatitude Float
+ destinationLongitude Float
+ state String @default("EN_ROUTE")
+ sharing Boolean @default(false)
+ session String?
+ sequence Int @default(0)
+ latitude Float?
+ longitude Float?
+ accuracy Float?
+ positionAt DateTime?
+ arrivedAt DateTime?
+ updatedAt DateTime @updatedAt
 }

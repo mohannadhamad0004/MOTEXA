@@ -77,35 +77,19 @@ router.post("/", async (req, res) => {
       });
     }
 
+    const activationBaseUrl=process.env.ADMIN_ACTIVATION_URL;
+    if(!activationBaseUrl)return res.status(500).json({success:false,message:"Admin activation URL is not configured."});
     const token = randomBytes(32).toString("hex");
 
     const tokenHash = createHash("sha256").update(token).digest("hex");
 
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    const invitation = await prisma.adminInvitation.create({
-      data: {
-        email: normalizedEmail,
-        fullName: fullName.trim(),
-        tokenHash,
-        expiresAt,
-        permission,
-        invitedById: res.locals.authUser.id,
-      },
+    const invitation=await prisma.$transaction(async tx=>{
+      const created=await tx.adminInvitation.create({data:{email:normalizedEmail,fullName:fullName.trim(),tokenHash,expiresAt,permission,invitedById:res.locals.authUser.id}});
+      await tx.auditLog.create({data:{actorId:res.locals.authUser.id,action:"ADMIN_INVITATION_CREATED",targetId:created.id,details:{fullName:created.fullName,permission:created.permission}}});
+      return created;
     });
-
-    const activationBaseUrl = process.env.ADMIN_ACTIVATION_URL;
-
-    if (!activationBaseUrl) {
-      await prisma.adminInvitation.delete({
-        where: { id: invitation.id },
-      });
-
-      return res.status(500).json({
-        success: false,
-        message: "Admin activation URL is not configured.",
-      });
-    }
 
     const activationLink = `${activationBaseUrl}?token=${encodeURIComponent(token)}`;
 
@@ -127,8 +111,9 @@ router.post("/", async (req, res) => {
     } catch (emailError) {
       console.error("Invitation email error:", emailError);
 
-      await prisma.adminInvitation.delete({
-        where: { id: invitation.id },
+      await prisma.$transaction(async tx=>{
+        await tx.adminInvitation.delete({where:{id:invitation.id}});
+        await tx.auditLog.create({data:{actorId:res.locals.authUser.id,action:"ADMIN_INVITATION_DELIVERY_FAILED",targetId:invitation.id,details:{fullName:invitation.fullName,permission:invitation.permission}}});
       });
 
       return res.status(502).json({
@@ -214,14 +199,11 @@ router.patch("/:id/revoke", async (req, res) => {
       });
     }
 
-    const result = await prisma.adminInvitation.updateMany({
-      where: {
-        id: invitationId,
-        status: "PENDING",
-      },
-      data: {
-        status: "REVOKED",
-      },
+    const result=await prisma.$transaction(async tx=>{
+      const invitation=await tx.adminInvitation.findUnique({where:{id:invitationId},select:{fullName:true,permission:true}});
+      const updated=await tx.adminInvitation.updateMany({where:{id:invitationId,status:"PENDING"},data:{status:"REVOKED"}});
+      if(updated.count>0)await tx.auditLog.create({data:{actorId:res.locals.authUser.id,action:"ADMIN_INVITATION_REVOKED",targetId:invitationId,details:{fullName:invitation?.fullName??"",permission:invitation?.permission??""}}});
+      return updated;
     });
 
     if (result.count === 0) {
@@ -256,13 +238,11 @@ router.patch("/:id/status", async (req, res) => {
       });
     }
 
-    const result = await prisma.user.updateMany({
-      where: {
-        id,
-        role: "ADMIN",
-        status: status === "ACTIVE" ? "SUSPENDED" : "ACTIVE",
-      },
-      data: { status },
+    const result=await prisma.$transaction(async tx=>{
+      const account=await tx.user.findUnique({where:{id},select:{fullName:true}});
+      const updated=await tx.user.updateMany({where:{id,role:"ADMIN",status:status==="ACTIVE"?"SUSPENDED":"ACTIVE"},data:{status,sessionVersion:{increment:1}}});
+      if(updated.count>0)await tx.auditLog.create({data:{actorId:res.locals.authUser.id,action:status==="SUSPENDED"?"ADMIN_ACCOUNT_SUSPENDED":"ADMIN_ACCOUNT_REACTIVATED",targetId:id,details:{fullName:account?.fullName??"",status}}});
+      return updated;
     });
 
     if (result.count === 0) {

@@ -1,0 +1,16 @@
+{
+  "tool": "built-in image_gen",
+  "purpose": "Background removal of licensed reference photographs; not customer uploads",
+  "prompts": [
+    {
+      "key": "audi",
+      "path": "C:/Users/Zain/OneDrive/Dokumente/ChatGPT/motexa/owner-services-v10/assets/audi-rs7-real.jpg",
+      "prompt": "Background extraction only. Remove the background from this actual photograph, keeping ONLY the foreground white Audi RS7 completely intact, from front bumper to rear bumper, roof, side mirrors and all visible wheels. Preserve the exact real car, perspective, proportions, white paint, black grille, Audi rings, every visible light, wheel design, windows and existing photographic texture. Do not redesign, repaint, beautify, stylize, re-render or add any vehicle detail. Remove mountains, sky, road and all other surroundings. Output an actual transparent background (alpha), clean smooth precisely traced edges, tightly framed with small transparent margins around the entire car. Keep original photographic realism and lighting. No rectangle, no studio background, no floor, no glow, no text. Preserve the whole vehicle without cropping any part."
+    },
+    {
+      "key": "range",
+      "path": "C:/Users/Zain/OneDrive/Dokumente/ChatGPT/motexa/owner-services-v10/assets/range-rover-2023.jpg",
+      "prompt": "Background extraction only. Remove the background from this actual photograph, keeping ONLY the large red foreground Range Rover Sport fully intact, including whole body, front bumper, roof, side mirrors and all its visible wheels. Keep the red car's real photographic pixels and details as faithfully as possible: same exact perspective, proportions, paint, natural reflections, headlight shapes, grille, wheel design, windows, RANGE ROVER hood lettering, and the existing license plate EK23 CNY. Do not redraw, redesign, repaint, polish, stylize or add parts. Remove the other blue cars, fences, buildings, trees, pavement and sky. Output a genuine transparent alpha background, clean smooth traced edges, small transparent margins around the complete car. No floor or studio, no glow, no added shadows, no text, no cropping of the red vehicle."
+    }
+  ]
+}

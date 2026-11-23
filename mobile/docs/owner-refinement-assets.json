@@ -1,0 +1,26 @@
+[
+  {
+    "path": "C:/Users/Zain/OneDrive/Dokumente/GitHub/MOTEXA/mobile/assets/images/owner-workshop-v3.png",
+    "prompt": "Use case: photorealistic-natural. Production background photograph for MOTEXA automotive maintenance mobile application. A premium real automotive workshop at night, graphite black BMW sports coupe in front three-quarter view hood open, skilled mechanic in dark workwear inspecting engine bay, mechanic face mostly turned away, realistic tools and lift architecture, correct physical working posture. Cinematic commercial automotive photography, deep chocolate-black shadows, restrained warm bronze workshop strip lighting, crisp silver metal engine details, soft white practical overhead lights. The foreground car and working mechanic fill lower two thirds, upper left dark negative space for interface title. Wide landscape 3:2 composition. Authentic repair environment, sophisticated and quiet, no text, no project logo, no watermark, no exaggerated sparks, no sci-fi holograms, no orange oversaturation.",
+    "tool": "Built-in image_gen",
+    "purpose": "Editorial automotive illustration; not a photograph of a customer's vehicle or provider premises."
+  },
+  {
+    "path": "C:/Users/Zain/OneDrive/Dokumente/GitHub/MOTEXA/mobile/assets/images/owner-diagnostics-v3.png",
+    "prompt": "Use case: photorealistic-natural. Premium automotive diagnostic photograph for MOTEXA mobile service app. Close editorial view across a real modern car's open engine bay, gloved mechanic hands using a diagnostic tablet connected to car by cable, neatly arranged detailed engine components, graphite bodywork and black leather protective fender cover, no face. Refined commercial automotive photography with dramatic but clear warm bronze rim lighting on metal edges and deep chocolate background, realistic muted silver and black materials. Tablet screen angled away, no readable text or invented diagnostic numbers. Landscape composition, clear engine detail on right half, left half falls into clean dark negative space to allow a UI status overlay. No project logo, no watermark, no spark effects, no sci-fi, no neon blue.",
+    "tool": "Built-in image_gen",
+    "purpose": "Editorial automotive illustration; not a photograph of a customer's vehicle or provider premises."
+  },
+  {
+    "path": "C:/Users/Zain/OneDrive/Dokumente/GitHub/MOTEXA/mobile/assets/images/owner-wheel-v3.png",
+    "prompt": "Use case: photorealistic-natural. Luxury automotive mechanical detail background for MOTEXA service mobile app. Extreme close-up of dark graphite sports car front alloy wheel, perforated brake disc and a restrained bronze brake caliper, sharply photographed real materials, rubber tire texture and sculpted black bodywork edge. Low oblique automotive product-photography angle, right two thirds dominated by wheel with rich layered depth, left third deep chocolate shadows with negative space. Fine silver rim highlights and warm bronze softbox light, elegant near-black color grading. Landscape 3:2, no text, no project branding, no logo added, no watermark, no exaggerated glow or illustration, no collage.",
+    "tool": "Built-in image_gen",
+    "purpose": "Editorial automotive illustration; not a photograph of a customer's vehicle or provider premises."
+  },
+  {
+    "path": "C:/Users/Zain/OneDrive/Dokumente/GitHub/MOTEXA/mobile/assets/images/owner-interior-v3.png",
+    "prompt": "Use case: photorealistic-natural. New automotive interior photograph for MOTEXA premium maintenance mobile UI, clearly different from a wide BMW cockpit. Extreme cinematic driver's-side close-up of a Porsche sports car steering wheel, authentic Porsche crest, sculpted dark perforated leather with refined chocolate leather dashboard, bronze stitching and a brushed metal paddle shifter in sharp focus. The instrument panel falls softly out of focus, no invented legible gauge values. Camera low from passenger seat toward steering wheel, rich layered depth and realistic materials. Wheel concentrated on right, left falls into deep chocolate shadow with negative space. Warm bronze rim lighting and soft cool white reflection, luxury automotive commercial photography, landscape 3:2. No people, no text overlay, no project logo, no watermark, no neon or excessive glow.",
+    "tool": "Built-in image_gen",
+    "purpose": "Editorial automotive illustration; not a photograph of a customer's vehicle or provider premises."
+  }
+]

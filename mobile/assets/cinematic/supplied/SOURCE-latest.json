@@ -1,0 +1,23 @@
+[
+  {
+    "name": "MERCEDES_SHOWROOM_EXT",
+    "width": 1093,
+    "height": 717,
+    "bytes": 1306224,
+    "sha256": "408b87f30775902e234d9f2672a6c0d35a55bf05c3a78a49ec2461c0f0efbd57"
+  },
+  {
+    "name": "MERCEDES_SHOWROOM_COCKPIT",
+    "width": 1255,
+    "height": 761,
+    "bytes": 1252841,
+    "sha256": "9f64420edf26fb6865337c66294c569913200abf17de35e80ffa7f24747c5241"
+  },
+  {
+    "name": "MERCEDES_SHOWROOM_DASH",
+    "width": 1317,
+    "height": 762,
+    "bytes": 1225029,
+    "sha256": "0fa8475e2035c741843be7c067c3484d1bf11f572608af48cbf2f5f704f363ac"
+  }
+]

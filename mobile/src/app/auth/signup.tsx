@@ -1,3 +1,8 @@
+import {OwnerStudioScene} from '../../components/OwnerAuthHero';
+import {useFonts} from 'expo-font';
+import {mechanicApi,MechanicApiError} from '../../components/mechanic-api';
+
+import TextInput from "../../components/PremiumTextInput";
 import {
   MechanicPage,
   MechanicCard,
@@ -5,27 +10,27 @@ import {
   useMechanicTheme,
 } from "../../components/MechanicUI";
 import MechanicRegistration from "../../components/MechanicRegistration";
-import BrandWordmark from "../../components/BrandWordmark";
+import BrandHeader from "../../components/BrandHeader";
+import BrandMonogram from "../../components/BrandMonogram";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { EditorialTitle } from "../../components/PremiumUI";
 import {
   useAppearance,
   useAppearanceStyles,
 } from "../../components/Appearance";
-import { useReducedMotion } from "../../components/MotexaVisual";
+import { Text, useReducedMotion } from "../../components/MotexaVisual";
 import { palette } from "../../components/DesignTokens";
-import { PanelFill, CanvasFill } from "../../components/BrandSurfaces";
-import { Text } from "../../components/MotexaVisual";
-import LanguageSwitch from "../../components/LanguageSwitch";
+import { CanvasFill } from "../../components/BrandSurfaces";
+
+
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   Animated,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -35,10 +40,12 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import { useLanguage } from "../../i18n/LanguageContext";
 
+const subscribeToHydration = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
 export default function SignUpScreen() {
   const { selectedRole } = useLocalSearchParams<{ selectedRole?: string }>();
-  const [ready, setReady] = useState(false);
-  useEffect(() => setReady(true), []);
+  const ready = useSyncExternalStore(subscribeToHydration, clientSnapshot, serverSnapshot);
   if (!ready)
     return (
       <View style={{ flex: 1 }}>
@@ -46,6 +53,7 @@ export default function SignUpScreen() {
       </View>
     );
   if (!selectedRole) return <ChooseRegistrationRole />;
+
   return selectedRole === "mechanic" ? (
     <MechanicRegistration />
   ) : (
@@ -82,6 +90,8 @@ function ChooseRegistrationRole() {
   );
 }
 function ExistingSignUpScreen() {
+  const [greetingFontsReady]=useFonts({MotexaSignupGreeting:require('../../../assets/fonts/GreatVibes-Regular.ttf'),MotexaSignupArabic:require('../../../assets/fonts/Tajawal-Medium.ttf')});
+  const submitting=useRef(false);
   const { selectedRole } = useLocalSearchParams<{ selectedRole?: string }>();
   const role = typeof selectedRole === "string" ? selectedRole : "";
   const isAdminRole = [
@@ -108,13 +118,16 @@ function ExistingSignUpScreen() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  const [phone,setPhone]=useState('');
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const { language, toggleLanguage, t, isArabic } = useLanguage();
+  const { t, isArabic } = useLanguage();
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const [fadeAnim] = useState(() => new Animated.Value(0));
+  const [slideAnim] = useState(() => new Animated.Value(30));
 
   useEffect(() => {
     if (reduced) {
@@ -137,13 +150,24 @@ function ExistingSignUpScreen() {
     ]);
     animation.start();
     return () => animation.stop();
-  }, [reduced]);
+  }, [reduced, fadeAnim, slideAnim]);
+
+  async function createCustomer(){
+    if(submitting.current||role!=='customer')return;
+    setError('');
+    if(fullName.trim().length<2||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())||!/^\+?[\d\s()-]{8,30}$/.test(phone.trim())||password.length<10||!/[a-z]/i.test(password)||!/[0-9]/.test(password)||password!==confirmPassword){setError(isArabic?'أكمل الاسم والجوال والبريد. كلمة المرور 10 أحرف على الأقل تضم حروفًا وأرقامًا مع تأكيد مطابق.':'Complete your name, phone and email. Use matching passwords of at least 10 characters with letters and numbers.');return;}
+    submitting.current=true;setBusy(true);
+    try{await mechanicApi('/api/customer/register','POST',{fullName:fullName.trim(),phoneNumber:phone.trim(),email:email.trim(),password},true);router.replace({pathname:'/auth/login',params:{selectedRole:'customer',registered:'1'}});}
+    catch(e){setError(e instanceof MechanicApiError&&e.status===409?(isArabic?'البريد مستخدم. سجّل الدخول أو استعد الحساب.':'Email already registered. Sign in or recover your account.'):(isArabic?'تعذر إنشاء الحساب. راجع البيانات والاتصال وحاول مجددًا.':'Could not create account. Check your details and connection, then retry.'));}
+    finally{submitting.current=false;setBusy(false);}
+  }
 
   return (
     <LinearGradient
       colors={dark ? palette.canvasDark : palette.canvas}
       style={[styles.background, { overflow: "hidden" }]}
     >
+      <BrandMonogram/>
       <View style={styles.glowTop} />
       <View style={styles.glowBottom} />
 
@@ -167,56 +191,29 @@ function ExistingSignUpScreen() {
               },
             ]}
           >
-            {/* Top Bar */}
-            <View style={styles.topBar}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => router.back()}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={isArabic ? "arrow-forward" : "arrow-back"}
-                  size={21}
-                  color="#A27140"
-                />
-              </TouchableOpacity>
-
-              <LanguageSwitch light compact unified />
-            </View>
-
-            {/* Logo */}
-            <View style={styles.logoContainer}>
-              <LinearGradient
-                colors={["#F0C49A", "#B87345", "#7C4528"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.logoCircle}
-              >
-                <Ionicons name="person-add-outline" size={31} color="#1B100B" />
-              </LinearGradient>
-            </View>
-
-            <BrandWordmark style={styles.brandName} />
-
+            <BrandHeader onBack={()=>router.back()} backLabel={isArabic?'رجوع':'Back'}/>
             <Text style={[styles.tagline, isArabic && styles.arabicTagline]}>
-              {t.signup.system}
+              {role==='customer'?(isArabic?'حساب صاحب السيارة':'CAR OWNER ACCOUNT'):t.signup.system}
             </Text>
 
+            {role==='customer'&&<View style={{marginTop:15,marginBottom:8}}><OwnerStudioScene height={205} word="MOTEXA"/></View>}
             {/* Heading */}
             <View style={styles.headingSection}>
               <EditorialTitle
-                style={[styles.heading, isArabic && styles.arabicText]}
+                accent={role!=='customer'}
+                style={[styles.heading, isArabic && styles.arabicText,role==='customer'&&{fontFamily:greetingFontsReady?(isArabic?'MotexaSignupArabic':'MotexaSignupGreeting'):undefined,fontSize:isArabic?30:40,lineHeight:isArabic?44:54,fontWeight:'400'}]}
               >
-                {t.signup.title}
+                {role==='customer'?(isArabic?'أهلًا بك في MOTEXA.':'Welcome to MOTEXA.'):t.signup.title}
               </EditorialTitle>
 
               <Text style={[styles.description, isArabic && styles.arabicText]}>
-                {t.signup.description}
+                {role==='customer'?(isArabic?'أنشئ حسابك، ثم سجّل الدخول لإضافة سيارتك وبدء رحلتك.':'Create your account, then sign in to add your car and begin your journey.'):t.signup.description}
               </Text>
             </View>
 
             {/* Form */}
-            <View style={styles.card}>
+            <View style={[styles.card,role==='customer'&&{padding:20,paddingHorizontal:20,paddingTop:20,borderRadius:28,borderWidth:1,borderColor:dark?'#795A40':'#DDC7AA',backgroundColor:dark?'#382A21':'#FFFCF6',boxShadow:dark?'0px 12px 35px #00000020':'0px 12px 35px #7950340D'}]}>
+              {role==='customer'&&<View style={{flexDirection:isArabic?'row-reverse':'row',gap:10,alignItems:'center',paddingBottom:18,marginBottom:18,borderBottomWidth:1,borderColor:dark?'#795A40':'#E7D6BE'}}><Ionicons name="person-circle-outline" size={24} color={dark?'#DDB184':'#8E613D'}/><Text style={{fontSize:15,fontWeight:'600',color:dark?'#FFF1DF':'#432D1E'}}>{isArabic?'بيانات حسابك':'Your account details'}</Text><View style={{flex:1}}/><Ionicons name="shield-checkmark-outline" size={19} color={dark?'#DDB184':'#8E613D'}/></View>}
               {/* Full Name */}
               <Text style={[styles.label, isArabic && styles.arabicLabel]}>
                 {t.signup.fullName}
@@ -242,6 +239,8 @@ function ExistingSignUpScreen() {
                   style={[styles.input, isArabic && styles.arabicInput]}
                   placeholder={t.signup.fullNamePlaceholder}
                   placeholderTextColor="#9C836B"
+                  editable={!busy}
+                  autoComplete="name"
                   value={fullName}
                   onChangeText={setFullName}
                   onFocus={() => setFocusedField("fullName")}
@@ -250,6 +249,7 @@ function ExistingSignUpScreen() {
                 />
               </View>
 
+              {role==='customer'&&<><Text style={[styles.label,isArabic&&styles.arabicLabel]}>{isArabic?'رقم الجوال':'Phone number'}</Text><View style={[styles.inputContainer,isArabic&&styles.inputContainerArabic]}><View style={styles.inputIcon}><Ionicons name="call-outline" size={20} color="#A27140"/></View><TextInput style={[styles.input,isArabic&&styles.arabicInput]} accessibilityLabel={isArabic?'رقم الجوال':'Phone number'} value={phone} onChangeText={setPhone} keyboardType="phone-pad" editable={!busy}/></View></>}
               {/* Email */}
               <Text style={[styles.label, isArabic && styles.arabicLabel]}>
                 {t.common.email}
@@ -275,6 +275,8 @@ function ExistingSignUpScreen() {
                   style={[styles.input, isArabic && styles.arabicInput]}
                   placeholder={t.common.emailPlaceholder}
                   placeholderTextColor="#9C836B"
+                  editable={!busy}
+                  autoComplete="email"
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -314,9 +316,11 @@ function ExistingSignUpScreen() {
                 </View>
 
                 <TextInput
-                  style={[styles.passwordInput, isArabic && styles.arabicInput]}
+                  style={[styles.passwordInput, isArabic && styles.arabicInput,role==='customer'&&{fontSize:16}]}
                   placeholder={t.signup.passwordPlaceholder}
                   placeholderTextColor="#9C836B"
+                  editable={!busy}
+                  autoComplete="new-password"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
@@ -327,6 +331,8 @@ function ExistingSignUpScreen() {
 
                 <TouchableOpacity
                   style={styles.eyeButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={isArabic?(showPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور'):(showPassword?'Hide password':'Show password')}
                   onPress={() => setShowPassword(!showPassword)}
                 >
                   <Ionicons
@@ -337,6 +343,7 @@ function ExistingSignUpScreen() {
                 </TouchableOpacity>
               </View>
 
+              {role==='customer'&&<Text style={{fontSize:12,lineHeight:22,color:dark?'#D4BDA3':'#795C43',textAlign:isArabic?'right':'left',marginTop:-7,marginBottom:17}}>{isArabic?'10 أحرف على الأقل، تتضمّن حروفًا وأرقامًا.':'At least 10 characters, including letters and numbers.'}</Text>}
               {/* Confirm Password */}
               <Text style={[styles.label, isArabic && styles.arabicLabel]}>
                 {t.signup.confirmPassword}
@@ -363,9 +370,10 @@ function ExistingSignUpScreen() {
                 </View>
 
                 <TextInput
-                  style={[styles.passwordInput, isArabic && styles.arabicInput]}
+                  style={[styles.passwordInput, isArabic && styles.arabicInput,role==='customer'&&{fontSize:16}]}
                   placeholder={t.signup.confirmPasswordPlaceholder}
                   placeholderTextColor="#9C836B"
+                  editable={!busy}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showConfirmPassword}
@@ -378,6 +386,8 @@ function ExistingSignUpScreen() {
 
                 <TouchableOpacity
                   style={styles.eyeButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={isArabic?(showConfirmPassword?'إخفاء تأكيد كلمة المرور':'إظهار تأكيد كلمة المرور'):(showConfirmPassword?'Hide password confirmation':'Show password confirmation')}
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   <Ionicons
@@ -390,19 +400,24 @@ function ExistingSignUpScreen() {
                 </TouchableOpacity>
               </View>
 
+              {!!error&&<Text accessibilityRole="alert" style={{color:dark?'#FFB4A5':'#9C3528',lineHeight:24,marginBottom:12,textAlign:isArabic?'right':'left'}}>{error}</Text>}
               {/* Create Account */}
               <TouchableOpacity
                 activeOpacity={0.85}
-                style={styles.buttonWrapper}
+                style={[styles.buttonWrapper,{opacity:busy?.6:1}]}
+                onPress={()=>void createCustomer()}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel={t.signup.createAccount}
               >
                 <LinearGradient
-                  colors={["#E3AD7A", "#C47A48", "#A95F34"]}
+                  colors={role==='customer'?(dark?['#EAC299','#C68E5A']:['#6D482F','#302219']):['#E3AD7A','#C47A48','#A95F34']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.createButton}
                 >
-                  <Text style={styles.buttonText}>
-                    {t.signup.createAccount}
+                  <Text style={[styles.buttonText,role==='customer'&&{color:dark?'#2C1D12':'#FFF5E7'}]}>
+                    {busy?(isArabic?'جارٍ إنشاء الحساب…':'Creating account…'):t.signup.createAccount}
                   </Text>
 
                   <View
@@ -637,9 +652,9 @@ const baseStyles = StyleSheet.create({
 
   label: {
     color: "#92765B",
-    fontSize: 10,
+    fontSize: 13,
     fontWeight: "700",
-    letterSpacing: 1.3,
+    letterSpacing: 0.3,
     marginBottom: 9,
     marginLeft: 2,
   },

@@ -1,0 +1,13 @@
+import {View} from 'react-native';
+import {Ionicons} from '@expo/vector-icons';
+import {LinearGradient} from 'expo-linear-gradient';
+import Pressable from './MotionPressable';
+import {Text} from './MotexaVisual';
+import {useMechanicTheme} from './MechanicUI';
+import CustomerDrivingFilm from './CustomerDrivingFilm';
+export default function CustomerAutomotiveHero({paused,onExplore,onToggleMotion,minimal=false}:{paused:boolean;onExplore:()=>void;onToggleMotion:()=>void;minimal?:boolean}){
+ const m=useMechanicTheme();return <View testID="owner-driving-hero" style={{height:minimal?180:330,borderTopLeftRadius:30,borderTopRightRadius:10,borderBottomLeftRadius:10,borderBottomRightRadius:54,overflow:'hidden',backgroundColor:'#17100C'}}><CustomerDrivingFilm paused={paused}/><LinearGradient pointerEvents="none" colors={['#17100C80','#17100C00','#17100CE8']} locations={[0,.42,1]} style={{position:'absolute',inset:0}}/>
+ <View style={{flex:1,padding:15,justifyContent:'space-between'}}><View style={{flexDirection:m.row,alignItems:'center',gap:7}}><View style={{width:5,height:5,borderRadius:3,backgroundColor:'#E0A36F'}}/><Text style={{flex:1,fontSize:9,letterSpacing:1.8,color:'#FFF5EA'}}>MOTEXA / ON THE ROAD</Text><Pressable focusVisibleOnly accessibilityRole="button" accessibilityLabel={m.t(paused?'Resume background motion':'Pause background motion',paused?'تشغيل حركة الخلفية':'إيقاف حركة الخلفية')} onPress={onToggleMotion} style={{width:44,height:44,borderRadius:22,backgroundColor:'#17100C66',alignItems:'center',justifyContent:'center'}}><Ionicons name={paused?'play-outline':'pause-outline'} size={18} color="#FFF5EA"/></Pressable></View>
+ <View style={{gap:4,paddingBottom:minimal?0:12}}><Text style={{fontSize:10,color:'#E0A36F',letterSpacing:m.ar?0:2,textAlign:m.align}}>{m.t('FOR THE WAY AHEAD','لكل طريق جاي')}</Text><Text style={{fontSize:minimal?20:m.ar?24:27,lineHeight:minimal?28:m.ar?38:34,fontWeight:'600',color:'#FFF5EA',textAlign:m.align,letterSpacing:m.ar?0:-.8}}>{m.t('Your car.\nIn the right hands.','سيارتك،\nبإيد أهل الخبرة.')}</Text>{!minimal&&<Pressable accessibilityRole="button" onPress={onExplore} style={{minHeight:44,justifyContent:'center'}}><Text style={{fontSize:12,color:'#E0A36F',textAlign:m.align}}>{m.t('Explore car services →','استكشف خدمات السيارة ←')}</Text></Pressable>}</View></View>
+ <View pointerEvents="none" style={{position:'absolute',right:0,bottom:0,width:48,height:48,borderTopLeftRadius:24,backgroundColor:m.canvas,justifyContent:'center',alignItems:'center'}}><Ionicons name={m.ar?'arrow-back':'arrow-forward'} size={20} color={m.bronze}/></View></View>;
+}

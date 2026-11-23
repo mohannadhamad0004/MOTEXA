@@ -4,7 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppearance } from "./Appearance";
 import { useLanguage } from "../i18n/LanguageContext";
-import { Text } from "./MotexaVisual";
+import { Text, HeroReveal } from "./MotexaVisual";
 import { EditorialTitle } from "./PremiumUI";
 
 /** Shared photographic opening and ivory curve for workspace and administrator selection. */
@@ -37,7 +37,7 @@ export default function CurvedPhotoHero({
           colors={["rgba(20,13,8,.16)", "rgba(20,13,8,.3)"]}
           style={StyleSheet.absoluteFill}
         />
-        <View
+        <HeroReveal
           style={{
             position: "absolute",
             top: 31,
@@ -48,7 +48,7 @@ export default function CurvedPhotoHero({
         >
           <Text
             style={{
-              fontSize: 8,
+              fontSize: 10,
               lineHeight: 17,
               letterSpacing: ar ? 0 : 1.7,
               color: "#E6C6A1",
@@ -69,7 +69,7 @@ export default function CurvedPhotoHero({
           >
             {title}
           </EditorialTitle>
-        </View>
+        </HeroReveal>
         <View
           pointerEvents="none"
           style={[
@@ -112,8 +112,8 @@ export default function CurvedPhotoHero({
           </EditorialTitle>
           <Text
             style={{
-              fontSize: 11,
-              lineHeight: 19,
+              fontSize: 13,
+              lineHeight: 22,
               color: muted,
               textAlign: ar ? "right" : "left",
             }}

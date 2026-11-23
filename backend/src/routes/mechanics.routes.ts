@@ -1,3 +1,7 @@
+import {zoomClient,zoomConfig,ZoomError} from '../services/zoom-meeting.js';
+import {hasRecordedInterview} from '../services/mechanic-interview.js';
+import {mechanicProgress} from '../services/mechanic-progress.js';
+import {parseServiceConfig,serviceModeFilter,mechanicServiceModes} from '../services/mechanic-services.js';
 import { notifyAdmins } from "./mechanic-workflow.routes.js";
 import {
   Router,
@@ -99,9 +103,12 @@ async function view(userId: string) {
     orderBy: { createdAt: "desc" },
     take: 50,
   });
+  const interviewRecorded=await hasRecordedInterview(prisma,p);
   return {
     ...safe,
     history,
+    interviewRecorded,
+    interviewResult:interviewRecorded?p.interviewResult:null,
     canReceiveServices:
       p.verificationStatus === "VERIFIED" && p.user.status === "ACTIVE",
   };
@@ -126,9 +133,19 @@ router.get("/options", (_req, res) =>
   res.json({
     success: true,
     specializations: SPECIALIZATIONS,
+    serviceModes:mechanicServiceModes,
     documentMaxBytes: 5 * 1024 * 1024,
   }),
 );
+router.get('/me/progress',async(_req,res)=>{
+ const profile=await prisma.mechanicProfile.findUnique({where:{userId:own(res)},select:{id:true,verificationStatus:true,submittedAt:true,submissionVersion:true,offersWorkshop:true,interviewResult:true,interviewedAt:true,interviewedById:true,interviewScheduleId:true,interviewScheduledAt:true,interviewConfirmedAt:true,interviewSimulation:true,user:{select:{status:true}},documents:{select:{id:true,kind:true,storageKey:true}}}});
+ if(!profile)fail(404,'Mechanic profile not found.');
+ const [tests,reviews]=await Promise.all([
+  prisma.mechanicTest.findMany({where:{profileId:profile.id,submissionVersion:profile.submissionVersion},orderBy:{attempt:'desc'},take:1,select:{submissionVersion:true,attempt:true,submittedAt:true,reviewedAt:true,assessment:true}}),
+  prisma.mechanicDocumentReview.findMany({where:{profileId:profile.id},select:{documentId:true,storageKey:true}}),
+ ]);
+ res.json({success:true,progress:mechanicProgress({...profile,interviewResult:await hasRecordedInterview(prisma,profile)?profile.interviewResult:null},tests,reviews)});
+});
 router.get("/me", async (_req, res) =>
   res.json({ success: true, profile: await view(own(res)) }),
 );
@@ -151,13 +168,8 @@ router.put("/me", async (req, res) => {
       : Number(b.yearsOfExperience);
   if (years !== null && (!Number.isInteger(years) || years < 0 || years > 80))
     fail(400, "Experience must be between 0 and 80 years.");
-  const areas = Array.isArray(b.coverageAreas)
-    ? [
-        ...new Set(
-          b.coverageAreas.map((v: unknown) => text(v, 80)).filter(Boolean),
-        ),
-      ].slice(0, 30)
-    : [];
+  const services=parseServiceConfig(b);
+  if(!services.ok)fail(400,services.message);
   await prisma.$transaction(async (tx) => {
     const p = await locked(tx, userId);
     editable(p.verificationStatus);
@@ -169,12 +181,7 @@ router.put("/me", async (req, res) => {
         specializations: specs as string[],
         yearsOfExperience: years,
         experienceSummary: text(b.experienceSummary),
-        offersWorkshop: b.offersWorkshop === true,
-        offersOnSite: b.offersOnSite === true,
-        offersOnline: b.offersOnline === true,
-        workshopName: text(b.workshopName, 120),
-        workshopAddress: text(b.workshopAddress, 250),
-        coverageAreas: areas as string[],
+        ...services.value,
       },
     });
   });
@@ -286,6 +293,7 @@ router.post("/me/submit", async (req, res) => {
         interviewNotes: null,
         interviewedAt: null,
         interviewedById: null,
+        interviewScheduleId:null,interviewScheduledAt:null,interviewMethod:null,interviewLocation:null,interviewTimeZone:null,interviewConfirmedAt:null,interviewSimulation:false,
       },
     });
     const applicant = await tx.user.findUniqueOrThrow({
@@ -372,6 +380,8 @@ router.get("/documents/:id", async (req, res) => {
   });
 });
 router.get("/admin", reviewer, async (req, res) => {
+  const serviceWhere=serviceModeFilter(req.query.mode);
+  if(serviceWhere===null)fail(400,"Invalid service mode.");
   const status = text(req.query.status, 30);
   const allowed = [
     "PENDING",
@@ -394,6 +404,7 @@ router.get("/admin", reviewer, async (req, res) => {
   const profiles = await prisma.mechanicProfile.findMany({
     where: {
       submittedAt: { not: null },
+      ...serviceWhere,
       ...(status ? { verificationStatus: status as "PENDING" } : {}),
     },
     select: {
@@ -433,6 +444,13 @@ router.get("/admin", reviewer, async (req, res) => {
     where: { submittedAt: { not: null } },
     _count: { _all: true },
   });
+  const modeCounts=await Promise.all(mechanicServiceModes.map(mode=>prisma.mechanicProfile.count({where:{submittedAt:{not:null},...serviceModeFilter(mode)}})));
+  const serviceCounts=Object.fromEntries(mechanicServiceModes.map((mode,index)=>[mode,modeCounts[index]]));
+    const [totalMechanics,...registeredModeCounts]=await Promise.all([
+      prisma.mechanicProfile.count({where:{}}),
+      ...mechanicServiceModes.map(mode=>prisma.mechanicProfile.count({where:{...serviceModeFilter(mode)}})),
+    ]);
+    const registeredServiceCounts=Object.fromEntries(mechanicServiceModes.map((mode,index)=>[mode,registeredModeCounts[index]]));
   const pendingSummaries = await prisma.mechanicProfile.findMany({
     where: { verificationStatus: "PENDING", submittedAt: { not: null } },
     select: {
@@ -456,6 +474,10 @@ router.get("/admin", reviewer, async (req, res) => {
   res.json({
     success: true,
     workflowCounts,
+    serviceCounts,
+    totalMechanics,
+    registeredServiceCounts,
+    serviceMode:typeof req.query.mode==="string"?req.query.mode:"ALL",
     profiles: profiles.slice(0, 100),
     nextCursor: profiles.length > 100 ? profiles[99].id : null,
     counts: Object.fromEntries(
@@ -466,6 +488,68 @@ router.get("/admin", reviewer, async (req, res) => {
 router.get("/admin/:userId", reviewer, async (req, res) =>
   res.json({ success: true, profile: await view(String(req.params.userId)) }),
 );
+// Current appointment is versioned by a random schedule id. Rebooking invalidates
+// prior confirmation and outcome; historical appointments remain in the audit log.
+router.post('/admin/:userId/interview/schedule',reviewer,async(req,res)=>{
+ const raw=req.body?.scheduledAt;
+ const method=text(req.body?.method,20),timeZone=text(req.body?.timeZone,80);
+ let location=text(req.body?.location,1000);
+ const automaticZoom=req.body?.createZoom===true;
+ if(req.body?.createZoom!==undefined&&typeof req.body.createZoom!=='boolean')fail(400,'Invalid Zoom option.');
+ if(automaticZoom&&method!=='ONLINE')fail(400,'Zoom requires an online interview.');
+ const simulation=req.body?.simulation===true;
+ if(typeof raw!=='string'||!/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(raw))fail(400,'Choose an interview date and time with a time zone.');
+ const scheduledAt=new Date(raw);
+ if(!Number.isFinite(scheduledAt.getTime())||scheduledAt.getTime()<=Date.now())fail(400,'Choose a future interview date and time.');
+ if(!['IN_PERSON','ONLINE','PHONE'].includes(method)||(!automaticZoom&&location.length<3)||!timeZone)fail(400,'Choose an interview method, location or contact, and time zone.');
+ if(method==='ONLINE'&&!simulation&&!automaticZoom){try{const u=new URL(location);if(u.protocol!=='https:'||!u.hostname||u.username||u.password)throw Error();}catch{fail(400,'Paste the HTTPS participant link from a real online meeting.');}}
+ if(req.body?.simulation!==undefined&&typeof req.body.simulation!=='boolean')fail(400,'Invalid simulation flag.');
+ try{new Intl.DateTimeFormat('en',{timeZone}).format(scheduledAt);}catch{fail(400,'Invalid interview time zone.');}
+ // Validate application before contacting Zoom; never hold a DB transaction over HTTP.
+ const before=await prisma.mechanicProfile.findUnique({where:{userId:String(req.params.userId)}});
+ if(!before||before.verificationStatus!=='PENDING')fail(409,'Only pending applications can be scheduled.');
+ if(req.body?.submissionVersion!==before.submissionVersion)fail(409,'The application changed. Refresh before scheduling.');
+ if(automaticZoom&&req.body?.expectedScheduleId!==before.interviewScheduleId)fail(409,'The appointment changed. Refresh before creating a Zoom meeting.');
+ let meeting:{id:string;joinUrl:string}|undefined;
+ let zoom:ReturnType<typeof zoomClient>|undefined;
+ if(automaticZoom){
+  try{zoom=zoomClient(zoomConfig());meeting=await zoom.create(scheduledAt,timeZone);location=meeting.joinUrl;}
+  catch(e){if(e instanceof ZoomError)fail(e.status,e.message);throw e;}
+ }
+ try{
+ await prisma.$transaction(async tx=>{
+  const p=await locked(tx,String(req.params.userId));
+  if(p.verificationStatus!=='PENDING')fail(409,'Only pending applications can be scheduled.');
+  if(req.body?.submissionVersion!==p.submissionVersion)fail(409,'The application changed. Refresh before scheduling.');
+  if(p.interviewScheduleId!==before.interviewScheduleId)fail(409,'The appointment changed while scheduling. Refresh before retrying.');
+  const scheduleId=randomUUID();
+  await tx.mechanicProfile.update({where:{id:p.id},data:{interviewScheduleId:scheduleId,interviewScheduledAt:scheduledAt,interviewMethod:method,interviewLocation:location,interviewTimeZone:timeZone,interviewConfirmedAt:null,interviewSimulation:simulation,interviewResult:null,interviewNotes:null,interviewedAt:null,interviewedById:null}});
+  const details={scheduleId,scheduledAt:scheduledAt.toISOString(),timeZone,method,location,simulation,submissionVersion:p.submissionVersion,...(meeting?{provider:'ZOOM',zoomMeetingId:meeting.id}:{})};
+  await tx.auditLog.create({data:{actorId:res.locals.authUser.id,targetId:p.id,action:'MECHANIC_INTERVIEW_SCHEDULED',details}});
+  const when=new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeStyle:'short',timeZone}).format(scheduledAt);
+  await tx.notification.create({data:{userId:p.userId,relatedUserId:p.userId,kind:'INTERVIEW_SCHEDULED',title:simulation?'Simulation interview scheduled':'Professional interview scheduled',body:when+' ('+timeZone+') · '+method+' · '+location}});
+ });
+ }catch(e){
+  // A concurrent rebook or failed DB write must not send an orphan invitation.
+  if(meeting&&zoom)await zoom.remove(meeting.id).catch(()=>console.error('Zoom cleanup required for meeting',meeting!.id));
+  throw e;
+ }
+ res.json({success:true,profile:await view(String(req.params.userId))});
+});
+router.post('/me/interview/confirm',async(req,res)=>{
+ const userId=own(res);
+ await prisma.$transaction(async tx=>{
+  const p=await locked(tx,userId);
+  if(p.verificationStatus!=='PENDING'||!p.interviewScheduleId||!p.interviewScheduledAt)fail(409,'No interview appointment is open for confirmation.');
+  if(req.body?.scheduleId!==p.interviewScheduleId||req.body?.submissionVersion!==p.submissionVersion)fail(409,'The interview appointment changed. Refresh before confirming.');
+  if(p.interviewConfirmedAt)return;
+  await tx.mechanicProfile.update({where:{id:p.id},data:{interviewConfirmedAt:new Date()}});
+  await tx.auditLog.create({data:{actorId:userId,targetId:p.id,action:'MECHANIC_INTERVIEW_CONFIRMED',details:{scheduleId:p.interviewScheduleId,submissionVersion:p.submissionVersion,simulation:p.interviewSimulation}}});
+  const applicant=await tx.user.findUniqueOrThrow({where:{id:userId},select:{fullName:true}});
+  await notifyAdmins(tx,userId,'INTERVIEW_CONFIRMED','Interview appointment confirmed',applicant.fullName+' confirmed the current interview appointment.');
+ });
+ res.json({success:true,profile:await view(userId)});
+});
 router.post("/admin/:userId/interview", reviewer, async (req, res) => {
   const result = text(req.body?.result, 10),
     notes = text(req.body?.notes);
@@ -477,11 +561,15 @@ router.post("/admin/:userId/interview", reviewer, async (req, res) => {
       fail(409, "Only pending applications can be interviewed.");
     if (req.body?.submissionVersion !== p.submissionVersion)
       fail(409, "The application changed. Refresh before reviewing.");
+    if(!p.interviewScheduleId||!p.interviewScheduledAt||req.body?.scheduleId!==p.interviewScheduleId)fail(409,'Schedule an interview and use its current appointment before recording the result.');
+    if(!p.interviewConfirmedAt)fail(409,'The mechanic must confirm the interview appointment first.');
+    if(!p.interviewSimulation&&p.interviewScheduledAt.getTime()>Date.now())fail(409,'The interview time has not arrived. Simulation appointments must be explicitly marked when scheduled.');
+    const recordedNotes=(p.interviewSimulation?'[SIMULATION] ':'')+notes;
     await tx.mechanicProfile.update({
       where: { id: p.id },
       data: {
         interviewResult: result,
-        interviewNotes: notes,
+        interviewNotes: recordedNotes,
         interviewedAt: new Date(),
         interviewedById: res.locals.authUser.id,
       },
@@ -491,8 +579,9 @@ router.post("/admin/:userId/interview", reviewer, async (req, res) => {
       res.locals.authUser.id,
       p.id,
       "MECHANIC_INTERVIEW_" + result,
-      notes,
+      recordedNotes,
     );
+    await tx.notification.create({data:{userId:p.userId,relatedUserId:p.userId,kind:'INTERVIEW_RECORDED',title:'Professional interview recorded',body:'Your administrator recorded the professional interview result. Final approval remains a separate decision.'}});
   });
   res.json({ success: true, profile: await view(String(req.params.userId)) });
 });
@@ -528,7 +617,8 @@ router.post("/admin/:userId/decision", reviewer, async (req, res) => {
       action === "APPROVE" &&
       (!completeProfile(p) ||
         !completeDocuments(p) ||
-        p.interviewResult !== "PASSED")
+        p.interviewResult !== "PASSED" ||
+        !await hasRecordedInterview(tx,p))
     )
       fail(
         400,

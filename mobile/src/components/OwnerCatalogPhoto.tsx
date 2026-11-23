@@ -1,0 +1,6 @@
+import {useId} from 'react';
+import {View} from 'react-native';
+import Svg,{Defs,ClipPath,Path,Image as SvgImage,Ellipse} from 'react-native-svg';
+
+/** UI clipping of the licensed, unchanged photograph. No generated/repainted vehicle pixels. */
+export default function OwnerCatalogPhoto(){const clip='corolla'+useId().replace(/[^a-zA-Z0-9]/g,'');return <View accessible={false} style={{position:'absolute',inset:0}}><Svg width="100%" height="100%" viewBox="0 20 1000 510" preserveAspectRatio="xMidYMid meet"><Defs><ClipPath id={clip}><Path d="M376 62 C433 48 590 50 717 54 C767 55 794 61 826 80 L882 122 L925 148 L943 164 L950 188 Q968 213 970 265 L969 321 L958 345 L945 350 C941 388 925 415 905 416 C888 415 878 404 875 387 L602 434 C590 476 576 498 549 500 C524 501 508 487 498 468 L449 465 L195 455 C182 485 143 491 118 464 L108 451 L51 447 L31 439 L29 426 L33 411 L31 399 L31 340 L28 315 L32 302 L40 288 L44 270 L62 254 L76 247 L103 228 L160 206 L198 191 L203 179 L200 177 L204 164 L224 159 L240 158 L282 125 L342 87 Z"/></ClipPath></Defs><Ellipse cx="492" cy="477" rx="442" ry="30" fill="#000000" opacity={.13}/><SvgImage href={require('../../assets/images/owner-corolla-2018.webp')} x={0} y={0} width={1000} height={558} preserveAspectRatio="none" clipPath={'url(#'+clip+')'}/></Svg></View>;}

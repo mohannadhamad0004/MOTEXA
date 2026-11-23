@@ -58,7 +58,10 @@ test('mechanic registration without email, private documents, review, resubmissi
   assert.equal((await api('/api/mechanics/me','PUT',professional,mt)).status,200);
   r=await api('/api/mechanics/me/submit','POST',{acceptPrivacy:true},mt);assert.equal(r.status,200);version=r.body.profile.submissionVersion;
   assert.equal((await api('/api/mechanics/admin/'+mechanic.id+'/interview','POST',{result:'PASSED',notes:'Explained safe diagnostic procedures.',submissionVersion:version-1},rt)).status,409);
-  assert.equal((await api('/api/mechanics/admin/'+mechanic.id+'/interview','POST',{result:'PASSED',notes:'Explained safe diagnostic procedures.',submissionVersion:version},rt)).status,200);
+  const scheduled=await api('/api/mechanics/admin/'+mechanic.id+'/interview/schedule','POST',{scheduledAt:new Date(Date.now()+3600000).toISOString(),timeZone:'Asia/Jerusalem',method:'ONLINE',location:'Demo meeting',simulation:true,submissionVersion:version},rt);assert.equal(scheduled.status,200);
+  const scheduleId=scheduled.body.profile.interviewScheduleId;
+  assert.equal((await api('/api/mechanics/me/interview/confirm','POST',{scheduleId,submissionVersion:version},mt)).status,200);
+  assert.equal((await api('/api/mechanics/admin/'+mechanic.id+'/interview','POST',{result:'PASSED',notes:'Explained safe diagnostic procedures.',submissionVersion:version,scheduleId},rt)).status,200);
   r=await api('/api/mechanics/admin/'+mechanic.id+'/decision','POST',{action:'APPROVE',submissionVersion:version},rt);assert.equal(r.status,200);assert.equal(r.body.profile.canReceiveServices,true);
   assert.equal((await api('/api/mechanics/me/service-access','GET',undefined,mt)).status,200);
   assert.equal((await api('/api/mechanics/admin/'+mechanic.id+'/decision','POST',{action:'APPROVE',submissionVersion:version},rt)).status,409);

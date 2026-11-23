@@ -1,3 +1,4 @@
+import BrandMonogram from './BrandMonogram';
 import { palette } from "./DesignTokens";
 import { useAppearance } from "./Appearance";
 import { LinearGradient } from "expo-linear-gradient";
@@ -34,8 +35,8 @@ export function PanelFill({
         StyleSheet.absoluteFill,
         {
           borderRadius: radius,
-          borderWidth: 1.5,
-          borderColor: dark ? palette.borderDark : palette.border,
+          borderWidth: 1,
+          borderColor: dark ? "#806044" : "#E3CFB2",
         },
       ]}
     />
@@ -43,16 +44,10 @@ export function PanelFill({
 }
 export function CanvasFill() {
   const { dark } = useAppearance();
-  return (
-    <LinearGradient
-      pointerEvents="none"
-      accessible={false}
-      colors={dark ? palette.canvasDark : palette.canvas}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={StyleSheet.absoluteFill}
-    />
-  );
+  return <>
+    <LinearGradient pointerEvents="none" accessible={false} colors={dark ? palette.canvasDark : palette.canvas} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill}/>
+    <BrandMonogram/>
+  </>;
 }
 
 export function useBrandPalette() {

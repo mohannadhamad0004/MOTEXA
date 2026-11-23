@@ -1,0 +1,120 @@
+{
+  "registration": true,
+  "invalidLoginRejected": true,
+  "login": true,
+  "firstVehicleSetupBeforeHome": true,
+  "vehicleSaved": true,
+  "reloadRestoresSavedVehicle": true,
+  "vehicleEditPersisted": true,
+  "selectionPersisted": true,
+  "requestVehicleSelection": true,
+  "requestPersisted": true,
+  "accepted": true,
+  "in_progress": true,
+  "completed": true,
+  "mobileRequestAndCancellation": true,
+  "onlineRequestAndDecline": true,
+  "accountPersisted": true,
+  "removalPreservesHistory": true,
+  "restartRestoresGarage": true,
+  "signOutClearsSession": true,
+  "browserErrors": [],
+  "actualApiWrites": [
+    {
+      "path": "/api/customer/register",
+      "method": "POST",
+      "status": 201
+    },
+    {
+      "path": "/api/auth/login",
+      "method": "POST",
+      "status": 401
+    },
+    {
+      "path": "/api/auth/login",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/customer/vehicles",
+      "method": "POST",
+      "status": 201
+    },
+    {
+      "path": "/api/customer/vehicles",
+      "method": "POST",
+      "status": 201
+    },
+    {
+      "path": "/api/customer/vehicles/92222849-d76b-4ff2-814e-9ffe466e5f36/select",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/customer/vehicles/92222849-d76b-4ff2-814e-9ffe466e5f36",
+      "method": "PATCH",
+      "status": 200
+    },
+    {
+      "path": "/api/customer/vehicles/d4619373-cfce-41ba-8a5d-5f21b9a530de/select",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/service-requests",
+      "method": "POST",
+      "status": 201
+    },
+    {
+      "path": "/api/auth/login",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/service-requests/3b8cddcd-e507-403d-9d8c-ef55d1df2cca/action",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/service-requests/3b8cddcd-e507-403d-9d8c-ef55d1df2cca/action",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/service-requests/3b8cddcd-e507-403d-9d8c-ef55d1df2cca/action",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/service-requests",
+      "method": "POST",
+      "status": 201
+    },
+    {
+      "path": "/api/service-requests/fa08f170-6eec-49be-912c-568ed560d82c/cancel",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/service-requests",
+      "method": "POST",
+      "status": 201
+    },
+    {
+      "path": "/api/service-requests/6c9c4bf9-4c64-4f32-8107-d71d66c32075/action",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/customer/account",
+      "method": "PATCH",
+      "status": 200
+    },
+    {
+      "path": "/api/customer/vehicles/d4619373-cfce-41ba-8a5d-5f21b9a530de",
+      "method": "DELETE",
+      "status": 200
+    }
+  ],
+  "directLiveApi": false
+}

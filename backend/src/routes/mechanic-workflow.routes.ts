@@ -1,3 +1,5 @@
+import {randomUUID} from 'node:crypto';
+import {zoomClient,zoomConfig,ZoomError} from '../services/zoom-meeting.js';
 import { Router, type Response } from "express";
 import { prisma } from "../prisma.js";
 import type { Prisma } from "../generated/prisma/client.js";
@@ -293,6 +295,63 @@ router.get("/applications/:userId/tests", async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.json({ success: true, tests: tests.map((t) => safeTest(t, admin)) });
 });
+// Questions and appointment are one atomic assignment, with the same review gates.
+router.get('/applications/:userId/question-suggestions',async(req,res)=>{
+ await requireReviewer(res);
+ const {p}=await access(res,String(req.params.userId));
+ const candidates=await prisma.mechanicQuestion.findMany({where:{active:true,reviewStatus:'APPROVED',specialization:{in:[...p.specializations,'SAFETY']}},select:{id:true,prompt:true,options:true,specialization:true,revision:true},orderBy:[{updatedAt:'desc'},{id:'asc'}],take:100});
+ const relevant=candidates.find(q=>q.specialization!=='SAFETY'),safety=candidates.find(q=>q.specialization==='SAFETY');
+ const chosen=[relevant,safety].filter((q):q is NonNullable<typeof q>=>!!q);
+ for(const q of candidates){if(chosen.length>=2)break;if(!chosen.some(item=>item.id===q.id))chosen.push(q);}
+ res.json({success:true,questions:chosen.slice(0,2),submissionVersion:p.submissionVersion});
+});
+router.post('/applications/:userId/assessment-package',async(req,res)=>{
+ await requireReviewer(res);
+ const {p}=await access(res,String(req.params.userId));
+ const ids=req.body?.questionIds;
+ if(!Array.isArray(ids)||ids.length!==2||ids.some(id=>typeof id!=='string')||new Set(ids).size!==2)fail(400,'Choose two distinct approved questions.');
+ const raw=req.body?.scheduledAt,method=text(req.body?.method,20),zone=text(req.body?.timeZone,80),simulation=req.body?.simulation===true,automatic=req.body?.createZoom===true;
+ let location=text(req.body?.location,1000);
+ if(typeof raw!=='string'||!/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(raw))fail(400,'Choose an interview date and time with a time zone.');
+ const scheduledAt=new Date(raw);
+ if(!Number.isFinite(scheduledAt.getTime())||scheduledAt.getTime()<=Date.now())fail(400,'Choose a future interview appointment.');
+ if(!['IN_PERSON','ONLINE','PHONE'].includes(method)||!zone||(!automatic&&location.length<3)||(automatic&&method!=='ONLINE'))fail(400,'Complete the interview method and location.');
+ if(req.body?.simulation!==undefined&&typeof req.body.simulation!=='boolean'||req.body?.createZoom!==undefined&&typeof req.body.createZoom!=='boolean')fail(400,'Invalid interview options.');
+ try{new Intl.DateTimeFormat('en',{timeZone:zone}).format(scheduledAt);}catch{fail(400,'Invalid interview time zone.');}
+ if(method==='ONLINE'&&!automatic){try{const url=new URL(location);if(url.protocol!=='https:'||!url.hostname||url.username||url.password)throw Error();}catch{fail(400,'Use a valid HTTPS participant meeting link.');}}
+ const before=await prisma.mechanicTest.findFirst({where:{profileId:p.id,submissionVersion:p.submissionVersion},orderBy:{attempt:'desc'}});
+ function current(profile:typeof p,test:typeof before){
+  if(profile.verificationStatus!=='PENDING'||profile.submissionVersion!==req.body?.submissionVersion||profile.interviewScheduleId!==req.body?.expectedScheduleId||(test?.id??null)!==req.body?.expectedTestId)fail(409,'The application changed. Refresh before sending the package.');
+  if(test&&!test.submittedAt)fail(409,'The current test is still awaiting answers.');
+  if(test&&test.attempt>=5)fail(400,'The maximum of five tests has been reached.');
+ }
+ current(p,before);
+ // Validate questions before creating any external meeting, then recheck under lock.
+ const eligible=await prisma.mechanicQuestion.count({where:{id:{in:ids},active:true,reviewStatus:'APPROVED',specialization:{in:[...p.specializations,'SAFETY']}}});
+ if(eligible!==2)fail(400,'Choose approved active questions relevant to the mechanic.');
+ let meeting:{id:string;joinUrl:string}|undefined,zoom:ReturnType<typeof zoomClient>|undefined;
+ if(automatic){try{zoom=zoomClient(zoomConfig());meeting=await zoom.create(scheduledAt,zone);location=meeting.joinUrl;}catch(e){if(e instanceof ZoomError)fail(e.status,e.message);throw e;}}
+ let assigned;
+ try{assigned=await prisma.$transaction(async tx=>{
+  const lockedProfile=await lock(tx,p.id);
+  const old=await tx.mechanicTest.findFirst({where:{profileId:p.id,submissionVersion:lockedProfile.submissionVersion},orderBy:{attempt:'desc'}});
+  // The lock helper omits the user relation; only current profile fields are needed.
+  current({...p,...lockedProfile},old);
+  const qs=await tx.mechanicQuestion.findMany({where:{id:{in:ids},active:true,reviewStatus:'APPROVED',specialization:{in:[...lockedProfile.specializations,'SAFETY']}}});
+  if(qs.length!==2)fail(409,'The question bank changed. Refresh the selection.');
+  if(req.body?.questionRevisions&&qs.some(q=>req.body.questionRevisions[q.id]!==q.revision))fail(409,'A selected question changed. Preview it again.');
+  const test=await tx.mechanicTest.create({data:{profileId:p.id,submissionVersion:lockedProfile.submissionVersion,attempt:(old?.attempt??0)+1,assignedById:res.locals.authUser.id,items:{create:ids.map((id:string,position:number)=>{const q=qs.find(q=>q.id===id)!;return {questionId:q.id,revision:q.revision,position,prompt:q.prompt,options:q.options,correctIndex:q.correctIndex};})}},include:testInclude});
+  const scheduleId=randomUUID();
+  await tx.mechanicProfile.update({where:{id:p.id},data:{interviewScheduleId:scheduleId,interviewScheduledAt:scheduledAt,interviewMethod:method,interviewLocation:location,interviewTimeZone:zone,interviewConfirmedAt:null,interviewSimulation:simulation,interviewResult:null,interviewNotes:null,interviewedAt:null,interviewedById:null}});
+  const details={scheduleId,testId:test.id,scheduledAt:scheduledAt.toISOString(),timeZone:zone,method,location,simulation,submissionVersion:lockedProfile.submissionVersion,...(meeting?{provider:'ZOOM',zoomMeetingId:meeting.id}:{})};
+  await tx.auditLog.createMany({data:[{actorId:res.locals.authUser.id,targetId:p.id,action:'MECHANIC_TEST_ASSIGNED',details:{testId:test.id,submissionVersion:lockedProfile.submissionVersion}},{actorId:res.locals.authUser.id,targetId:p.id,action:'MECHANIC_INTERVIEW_SCHEDULED',details},{actorId:res.locals.authUser.id,targetId:p.id,action:'MECHANIC_ASSESSMENT_PACKAGE_SENT',details}]});
+  const when=new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeStyle:'short',timeZone:zone}).format(scheduledAt);
+  await tx.notification.create({data:{userId:p.userId,relatedUserId:p.userId,kind:'ASSESSMENT_PACKAGE_ASSIGNED',title:'Your verification tasks are ready',body:'Answer your two professional questions and confirm the interview: '+when+' ('+zone+') · '+location+(simulation?' · SIMULATION':'')}});
+  return {test,scheduleId};
+ });}catch(e){if(meeting&&zoom)await zoom.remove(meeting.id).catch(()=>console.error('Zoom cleanup required for meeting',meeting!.id));throw e;}
+ res.status(201).json({success:true,test:safeTest(assigned.test,true),scheduleId:assigned.scheduleId});
+});
+
 router.post("/applications/:userId/tests", async (req, res) => {
   await requireReviewer(res);
   const { p } = await access(res, String(req.params.userId));
@@ -361,7 +420,7 @@ router.post("/applications/:userId/tests", async (req, res) => {
     });
     await tx.mechanicProfile.update({
       where: { id: p.id },
-      data: { interviewResult: null, interviewNotes: null },
+      data: { interviewResult: null, interviewNotes: null, interviewedAt: null, interviewedById: null, interviewScheduleId:null,interviewScheduledAt:null,interviewMethod:null,interviewLocation:null,interviewTimeZone:null,interviewConfirmedAt:null,interviewSimulation:false },
     });
     await tx.notification.create({
       data: {
@@ -496,15 +555,6 @@ router.post("/tests/:id/review", async (req, res) => {
         reviewedById: res.locals.authUser.id,
         assessment,
         reviewNotes: notes,
-      },
-    });
-    await tx.mechanicProfile.update({
-      where: { id: p.id },
-      data: {
-        interviewResult: assessment === "PASSED" ? "PASSED" : "FAILED",
-        interviewNotes: notes,
-        interviewedAt: new Date(),
-        interviewedById: res.locals.authUser.id,
       },
     });
     await audit(

@@ -1,3 +1,7 @@
+import BrandHeader from './BrandHeader';
+import Pressable from "./MotionPressable";
+import TextInput from "./PremiumTextInput";
+import type { TextInput as NativeTextInput } from "react-native";
 import { CanvasFill } from "./BrandSurfaces";
 import BrandWordmark from "./BrandWordmark";
 import React, { useEffect, useRef, useState } from "react";
@@ -7,11 +11,9 @@ import {
   ImageBackground,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StatusBar,
   StyleSheet,
-  TextInput,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,7 +23,7 @@ import { useAppearance } from "./Appearance";
 import { useLanguage } from "../i18n/LanguageContext";
 import { Text } from "./MotexaVisual";
 import { EditorialTitle } from "./PremiumUI";
-import LanguageSwitch from "./LanguageSwitch";
+
 import { ManagementBanner } from "./ManagementBanner";
 
 type Props = {
@@ -52,17 +54,16 @@ export default function ActivationExperience(p: Props) {
   const { dark } = useAppearance();
   const { isArabic: ar } = useLanguage();
   const insets = useSafeAreaInsets();
-  const otpInput = useRef<TextInput>(null);
+  const otpInput = useRef<NativeTextInput>(null);
   const [focused, setFocused] = useState("");
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!p.lastSentAt || p.step !== "verify") return;
-    setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [p.lastSentAt, p.step]);
   const resendWait = p.lastSentAt
-    ? Math.max(0, Math.ceil((60000 - (now - p.lastSentAt)) / 1000))
+    ? Math.max(0, Math.min(60, Math.ceil((60000 - (now - p.lastSentAt)) / 1000)))
     : 0;
   const text = (en: string, arabic: string) => (ar ? arabic : en);
   const ink = dark ? "#FFF1DF" : "#432D1E",
@@ -240,46 +241,7 @@ export default function ActivationExperience(p: Props) {
         >
           <View style={[s.frame, { backgroundColor: canvas }]}>
             <CanvasFill />
-            <View
-              style={[
-                s.top,
-                { paddingTop: insets.top + 12, flexDirection: row },
-              ]}
-            >
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={text("Back to roles", "العودة للأدوار")}
-                onPress={p.onBack}
-                style={s.back}
-              >
-                <Ionicons
-                  name={ar ? "arrow-forward" : "arrow-back"}
-                  size={23}
-                  color={ink}
-                />
-              </Pressable>
-              <View style={{ flex: 1, minWidth: 68 }}>
-                <BrandWordmark
-                  style={{
-                    fontSize: 15,
-                    letterSpacing: 2.1,
-                    color: ink,
-                    fontWeight: "600",
-                  }}
-                />
-                <Text
-                  style={{
-                    fontSize: 6,
-                    lineHeight: 13,
-                    letterSpacing: 1.3,
-                    color: muted,
-                  }}
-                >
-                  SMART AUTO CARE
-                </Text>
-              </View>
-              <LanguageSwitch compact light unified />
-            </View>
+            <View style={{paddingTop:insets.top+12}}><BrandHeader onBack={p.onBack} backLabel={text('Back to roles','العودة للأدوار')}/></View>
             {p.checking ? (
               <View style={s.loading}>
                 <ActivityIndicator size="large" color="#A77845" />

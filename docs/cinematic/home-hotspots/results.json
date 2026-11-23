@@ -1,0 +1,22 @@
+[
+  {
+    "width": 390,
+    "ar": false,
+    "mechanicThreeModes": true,
+    "partsPortal": true,
+    "towingPortal": true,
+    "aiPortal": true,
+    "noDuplicateScenes": true,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "ar": true,
+    "mechanicThreeModes": true,
+    "partsPortal": true,
+    "towingPortal": true,
+    "aiPortal": true,
+    "noDuplicateScenes": true,
+    "errors": []
+  }
+]

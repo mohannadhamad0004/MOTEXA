@@ -1,0 +1,26 @@
+[
+  {
+    "file": "DEMO3_INTERIOR.jpg",
+    "source": "User-supplied motexa-exit-demo3.html #imA",
+    "width": 2480,
+    "height": 1496,
+    "bytes": 339612,
+    "sha256": "a045dea9e9aa2a91d10183684612c6a5e35f9ecd5fdee77d4a98d7aedb85d82d"
+  },
+  {
+    "file": "DEMO3_EXTERIOR.jpg",
+    "source": "User-supplied motexa-exit-demo3.html #imB",
+    "width": 2260,
+    "height": 1406,
+    "bytes": 409136,
+    "sha256": "e1327804714e588c7b3a510c3ad430e0f9727149adb5eeeb63fec5da0346fdc1"
+  },
+  {
+    "file": "DEMO3_DASHBOARD.jpg",
+    "source": "User-supplied motexa-exit-demo3.html #imC",
+    "width": 2664,
+    "height": 1454,
+    "bytes": 307042,
+    "sha256": "b881848050253177f40afddc0e8a103da70013c582af150662e6aa2705057082"
+  }
+]

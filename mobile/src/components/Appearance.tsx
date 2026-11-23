@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useMemo, useState } from "react";
+import { useLocalPreference } from "./useLocalPreference";
+import React, { createContext, useContext, useMemo } from "react";
 import {
   StyleSheet,
   useColorScheme,
@@ -8,6 +9,7 @@ import {
   StatusBar,
 } from "react-native";
 type Mode = "light" | "dark" | "system";
+const validMode = (value:string):value is Mode => ["light","dark","system"].includes(value);
 const Context = createContext<{
   mode: Mode;
   dark: boolean;
@@ -19,7 +21,7 @@ export function AppearanceProvider({
   children: React.ReactNode;
 }) {
   const system = useColorScheme();
-  const [mode, setMode] = useState<Mode>("light");
+  const [mode, setMode] = useLocalPreference<Mode>("motexa_appearance", "light", validMode);
   const dark = mode === "system" ? system === "dark" : mode === "dark";
   return (
     <Context.Provider value={{ mode, dark, setMode }}>
@@ -68,4 +70,15 @@ export function useAppearanceStyles<
     }
     return result as T;
   }, [base, dark]);
+}
+
+/** Isolated design-preview appearance: does not overwrite the user's saved preference. */
+export function PreviewAppearanceProvider({children}:{children:React.ReactNode}){const [mode,setMode]=React.useState<Mode>('dark'),system=useColorScheme(),dark=mode==='system'?system==='dark':mode==='dark';return <Context.Provider value={{mode,dark,setMode}}>{children}</Context.Provider>;}
+
+/** Owner experience defaults to the reference's dark presentation; choices persist independently. */
+export function OwnerAppearanceProvider({children}:{children:React.ReactNode}) {
+ const system=useColorScheme();
+ const [mode,setMode]=useLocalPreference<Mode>('motexa_owner_appearance','dark',validMode);
+ const dark=mode==='system'?system==='dark':mode==='dark';
+ return <Context.Provider value={{mode,dark,setMode}}><StatusBar barStyle={dark?'light-content':'dark-content'}/>{children}</Context.Provider>;
 }

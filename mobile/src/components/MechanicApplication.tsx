@@ -1,5 +1,18 @@
-import { useCallback, useEffect, useState } from "react";
-import { View, Image, Pressable } from "react-native";
+import MechanicType from './MechanicType';
+import MechanicAccountSpace from './MechanicAccountSpace';
+import MechanicInterviewAppointment from './MechanicInterviewAppointment';
+import {mechanicDraftStore} from './MechanicDraftStore';
+import {draftStageLimit,type MechanicDraftForm} from './mechanic-draft-store';
+import MechanicApplicationSummary from './MechanicApplicationSummary';
+import MechanicProfileComposer from './MechanicProfileComposer';
+import MechanicStageActions from './MechanicStageActions';
+import MechanicStageSurface from './MechanicStageSurface';
+import {MechanicFormSection} from './MechanicFormSection';
+import MechanicProgressPanel from './MechanicProgressPanel';
+import {ServiceModeChoices} from './MechanicServiceModes';
+import SignOutAction from './SignOutAction';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AppState, View, Image} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { Text } from "./MotexaVisual";
@@ -7,7 +20,6 @@ import * as Store from "./SessionStore";
 import MotexaDialog from "./MotexaDialog";
 import {
   MechanicPage,
-  MechanicServiceChoice,
   MechanicCard,
   MechanicField,
   MechanicButton,
@@ -21,19 +33,7 @@ import {
   type MechanicProfile,
 } from "./mechanic-api";
 import MechanicDocuments, { pickMechanicDocument } from "./MechanicDocuments";
-type Form = {
-  city: string;
-  phoneNumber: string;
-  specializations: string[];
-  yearsOfExperience: string;
-  experienceSummary: string;
-  offersWorkshop: boolean;
-  offersOnSite: boolean;
-  offersOnline: boolean;
-  workshopName: string;
-  workshopAddress: string;
-  coverageAreas: string;
-};
+type Form = MechanicDraftForm;
 const initial: Form = {
   city: "",
   phoneNumber: "",
@@ -96,17 +96,16 @@ export default function MechanicApplication({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [editing, setEditing] = useState(previewOnly),
-    [step, setStep] = useState(initialStep),
+    [storedStep, setStep] = useState(initialStep),
     [privacy, setPrivacy] = useState(false),
     [notices, setNotices] = useState<Notice[]>([]),
     [logout, setLogout] = useState(false),
-    [message, setMessage] = useState("");
-  useEffect(() => {
-    if (previewOnly) {
-      setStep(Math.max(0, Math.min(3, initialStep)));
-      setEditing(true);
-    }
-  }, [previewOnly, initialStep]);
+    [message, setMessage] = useState(""),
+    [draftReady,setDraftReady]=useState(false),
+    [draftStatus,setDraftStatus]=useState<'saving'|'local'|'error'>('saving');
+  const pendingDraft=useRef<{userId:string;draft:import('./mechanic-draft-store').MechanicDraft}|null>(null);
+  const step=previewOnly?Math.max(0,Math.min(3,initialStep)):storedStep;
+
   function apply(p: MechanicProfile) {
     setProfile(p);
     setForm({
@@ -144,6 +143,21 @@ export default function MechanicApplication({
         .then(async (data) => {
           if (!alive) return;
           apply(data.profile);
+          const p=data.profile;
+          if (['DRAFT','NEEDS_COMPLETION'].includes(p.verificationStatus)) {
+            const saved=await mechanicDraftStore.read(p.userId);
+            if(!alive)return;
+            if(saved?.profileId===p.id&&saved.submissionVersion===p.submissionVersion){
+              const restored={...initial,...saved.form};
+              setForm(restored);
+              setStep(Math.min(saved.step,draftStageLimit(restored,p.documents)));
+            }else{
+              const restored={...p,yearsOfExperience:p.yearsOfExperience===null?'':String(p.yearsOfExperience),coverageAreas:p.coverageAreas.join(', ')};
+              setStep(draftStageLimit(restored,p.documents));
+            }
+            setEditing(true);
+          }else {setEditing(false);await mechanicDraftStore.clear(p.userId);}
+          setDraftReady(true);
           const n = await mechanicApi<{ notifications: Notice[] }>(
             "/api/mechanics/notifications",
           );
@@ -160,6 +174,28 @@ export default function MechanicApplication({
       };
     }, [previewOnly]),
   );
+  // Passwords, document contents, approval state and preview fixtures are never cached.
+  useEffect(()=>{
+    if(previewOnly||!draftReady||!profile||!editing||!['DRAFT','NEEDS_COMPLETION'].includes(profile.verificationStatus)){
+      pendingDraft.current=null;
+      if(!previewOnly&&profile&&!['DRAFT','NEEDS_COMPLETION'].includes(profile.verificationStatus))void mechanicDraftStore.clear(profile.userId).catch(()=>{});
+      return;
+    }
+    const snapshot={userId:profile.userId,draft:{version:1 as const,form,step,profileId:profile.id,submissionVersion:profile.submissionVersion}};
+    pendingDraft.current=snapshot;
+    let active=true;
+    const timer=setTimeout(()=>{
+      setDraftStatus('saving');
+      void mechanicDraftStore.write(snapshot.userId,snapshot.draft)
+        .then(()=>{if(active)setDraftStatus('local');}).catch(()=>{if(active)setDraftStatus('error');});
+    },250);
+    return()=>{active=false;clearTimeout(timer);};
+  },[previewOnly,draftReady,profile,editing,form,step]);
+  useEffect(()=>{
+    const flush=()=>{const snapshot=pendingDraft.current;if(snapshot)void mechanicDraftStore.write(snapshot.userId,snapshot.draft).catch(()=>{});};
+    const listener=AppState.addEventListener('change',state=>{if(state!=='active')flush();});
+    return()=>{listener.remove();flush();};
+  },[]);
   async function run(fn: () => Promise<void>) {
     if (busy) return;
     setBusy(true);
@@ -210,6 +246,19 @@ export default function MechanicApplication({
       },
     );
     apply(data.profile);
+    await mechanicDraftStore.write(data.profile.userId,{version:1,form,step,profileId:data.profile.id,submissionVersion:data.profile.submissionVersion});
+  }
+  function validateStage(target: number) {
+    if (previewOnly) return;
+    if (target === 0 && (!form.city.trim() || !form.phoneNumber.trim() || !form.specializations.length || !form.experienceSummary.trim() || form.yearsOfExperience.trim() === '' || !Number.isInteger(Number(form.yearsOfExperience)) || Number(form.yearsOfExperience) < 0))
+      throw Error(m.t('Complete your city, phone, specialties and experience before continuing.','أكمل المدينة ورقم الهاتف والتخصصات وبيانات الخبرة قبل المتابعة.'));
+    if (target === 1 && ((!form.offersWorkshop && !form.offersOnSite && !form.offersOnline) || (form.offersWorkshop && (!form.workshopName.trim() || !form.workshopAddress.trim())) || (form.offersOnSite && !form.coverageAreas.split(/[,،]/).some(item=>item.trim())) || (form.offersOnline && !form.phoneNumber.trim())))
+      throw Error(m.t('Choose a service and complete its required details before continuing.','اختر طريقة تقديم الخدمة وأكمل بياناتها المطلوبة قبل المتابعة.'));
+    if (target === 2) {
+      const required=['IDENTITY','CERTIFICATE',...(form.offersWorkshop?['WORKSHOP_PROOF']:[])];
+      if (!required.every(kind=>profile?.documents.some(document=>document.kind===kind)))
+        throw Error(m.t('Upload the required documents before continuing.','ارفع الوثائق المطلوبة قبل المتابعة.'));
+    }
   }
   const editable =
     profile &&
@@ -238,10 +287,16 @@ export default function MechanicApplication({
         m.t("Review and submit", "المراجعة والإرسال"),
       ][step]
     : m.t(statusCopy[0], statusCopy[1]);
+  if(!previewOnly&&profile&&!editing&&(profile.submittedAt||profile.verificationStatus==='VERIFIED')){
+    return <MechanicType><MechanicAccountSpace profile={profile} notices={notices} busy={busy} error={error} onRefresh={refresh} onUpdated={apply} onEdit={()=>{setStep(0);setPrivacy(false);setEditing(true);}}/></MechanicType>;
+  }
   return (
     <MechanicPage
       title={title}
       progress={editing ? step + 2 : undefined}
+      stepsDisabled={busy}
+      canSelectStep={value=>previewOnly||(value>1&&value<=step+3)}
+      onStep={editing?value=>{if(previewOnly){onPreviewStep?.(value);return;}if(value<2||value===step+2||value>step+3)return;void run(async()=>{if(value>step+2)validateStage(step);await save();setPrivacy(false);setStep(value-2);});}:undefined}
       photo={!editing && !!profile}
       subtitle={
         profile
@@ -249,17 +304,11 @@ export default function MechanicApplication({
           : m.t("Your MOTEXA mechanic account", "حسابك كميكانيكي في MOTEXA")
       }
     >
-      {previewOnly && (
-        <MechanicNote>
-          {m.t(
-            "Preview mode · You can explore all steps. Nothing is sent to the database.",
-            "وضع المعاينة · تنقّل بين جميع الخطوات. لا تُرسل أي بيانات للداتا بيس.",
-          )}
-        </MechanicNote>
-      )}
+      {previewOnly&&<View style={{flexDirection:m.row,alignItems:'center',gap:7,paddingVertical:10,marginBottom:10,borderBottomWidth:1,borderColor:m.border}}><Ionicons name="eye-outline" size={15} color={m.muted}/><Text style={{fontSize:11,lineHeight:22,color:m.muted,flex:1,textAlign:m.align}}>{m.t('Preview only · Nothing is saved or submitted.','معاينة فقط · لا يتم حفظ أو إرسال أي بيانات.')}</Text></View>}
       {error && <MechanicNote error>{error}</MechanicNote>}
       {message && <MechanicNote>{message}</MechanicNote>}
-        {!previewOnly && !editing && profile?.submittedAt && <MechanicCard><Text style={{fontSize:17,fontWeight:'600',color:m.ink}}>{m.t('Professional review','المراجعة المهنية')}</Text><Text style={{fontSize:12,lineHeight:22,color:m.muted}}>{m.t('Receive your two-question test, follow application updates and contact your Mechanics Admin.','استقبل اختبار السؤالين، وتابع التحديثات وتواصل مع أدمن الميكانيك.')}</Text><MechanicButton label={m.t('Open test & administrator conversation','فتح الاختبار ومحادثة الأدمن')} onPress={()=>router.push('/mechanic/review' as import('expo-router').Href)}/></MechanicCard>}
+        {!previewOnly&&!editing&&profile&&<MechanicInterviewAppointment profile={profile} onUpdated={apply}/>}
+        {!previewOnly&&!editing&&profile?.submittedAt&&<MechanicProgressPanel profile={profile} onEdit={()=>{setStep(0);setPrivacy(false);setEditing(true);}}/>}
       {!profile ? (
         <MechanicCard>
           <MechanicButton
@@ -280,91 +329,10 @@ export default function MechanicApplication({
         </MechanicCard>
       ) : editing ? (
         <>
-          <Text
-            style={{
-              fontSize: 11,
-              lineHeight: 20,
-              color: m.muted,
-              marginBottom: 14,
-              textAlign: m.align,
-            }}
-          >
-            {m.t(
-              "Your progress is saved with Continue or Save draft.",
-              "تُحفظ تغييراتك بالمتابعة أو حفظ المسودة.",
-            )}
-          </Text>
-          <MechanicCard>
+          {!previewOnly&&<Text style={{fontSize:11,lineHeight:21,color:m.muted,marginBottom:12,textAlign:m.align}}>{draftStatus==='saving'?m.t('Saving draft on this device…','جارٍ حفظ المسودة على هذا الجهاز…'):draftStatus==='local'?m.t('Draft saved on this device · Continue or Save draft syncs it to your account.','المسودة محفوظة على هذا الجهاز · المتابعة أو حفظ المسودة يزامنها مع حسابك.'):m.t('Device save failed. Use Save draft to save to your account.','تعذّر الحفظ على الجهاز. استخدم حفظ المسودة لحفظها في حسابك.')}</Text>}
+          <MechanicStageSurface stage={step+2}>
             {step === 0 ? (
-              <>
-                <MechanicField
-                  icon="location-outline"
-                  label={m.t("City", "المدينة")}
-                  value={form.city}
-                  onChangeText={(v) => change("city", v)}
-                  editable={!busy}
-                />
-                <MechanicField
-                  icon="call-outline"
-                  label={m.t("Phone number", "رقم الهاتف")}
-                  value={form.phoneNumber}
-                  onChangeText={(v) => change("phoneNumber", v)}
-                  keyboardType="phone-pad"
-                  editable={!busy}
-                />
-                <Text style={{ fontSize: 14, fontWeight: "600", color: m.ink }}>
-                  {m.t(
-                    "Specializations · Choose one or more",
-                    "التخصصات · اختر واحدًا أو أكثر",
-                  )}
-                </Text>
-                {mechanicSpecializations.map(([key, en, ar]) => (
-                  <MechanicChoice
-                    key={key}
-                    icon={
-                      (
-                        {
-                          PETROL_ENGINES: "cog-outline",
-                          DIESEL_ENGINES: "construct-outline",
-                          ELECTRIC_VEHICLES: "flash-outline",
-                          TRANSMISSION: "git-compare-outline",
-                          AUTO_ELECTRICAL: "battery-charging-outline",
-                          SUSPENSION: "car-sport-outline",
-                        } as const
-                      )[key]
-                    }
-                    label={m.t(en, ar)}
-                    selected={form.specializations.includes(key)}
-                    disabled={busy}
-                    onPress={() =>
-                      change(
-                        "specializations",
-                        form.specializations.includes(key)
-                          ? form.specializations.filter((s) => s !== key)
-                          : [...form.specializations, key],
-                      )
-                    }
-                  />
-                ))}
-                <MechanicField
-                  icon="calendar-outline"
-                  label={m.t("Years of experience", "سنوات الخبرة")}
-                  value={form.yearsOfExperience}
-                  onChangeText={(v) => change("yearsOfExperience", v)}
-                  keyboardType="number-pad"
-                  maxLength={2}
-                  editable={!busy}
-                />
-                <MechanicField
-                  icon="reader-outline"
-                  label={m.t("Tell us about your experience", "نبذة عن خبرتك")}
-                  value={form.experienceSummary}
-                  onChangeText={(v) => change("experienceSummary", v)}
-                  multiline
-                  maxLength={2000}
-                  editable={!busy}
-                />
-              </>
+              <MechanicProfileComposer name={profile.user.fullName} value={form} disabled={busy} onChange={patch=>setForm(old=>({...old,...patch}))}/>
             ) : step === 1 ? (
               <>
                 <Text
@@ -390,47 +358,11 @@ export default function MechanicApplication({
                   }}
                 >
                   {m.t(
-                    "Choose one or more service modes. Only the relevant details will appear.",
-                    "اختر طريقة أو أكثر، وستظهر لك البيانات المطلوبة لكل اختيار.",
+                    "Choose your primary service. Each mode has its own required details.",
+                    "اختر خدمتك الأساسية؛ لكل مسار بيانات ومتطلبات مستقلة.",
                   )}
                 </Text>
-                <View style={{ gap: 9, marginBottom: 7 }}>
-                  <MechanicServiceChoice
-                    label={m.t("Workshop service", "الخدمة داخل الورشة")}
-                    description={m.t(
-                      "Customers visit your workshop",
-                      "يأتي العميل لورشتك",
-                    )}
-                    icon="home-outline"
-                    selected={form.offersWorkshop}
-                    disabled={busy}
-                    onPress={() =>
-                      change("offersWorkshop", !form.offersWorkshop)
-                    }
-                  />
-                  <MechanicServiceChoice
-                    label={m.t("On-site service", "الخدمة عند العميل")}
-                    description={m.t(
-                      "Travel to your customer",
-                      "تصل إلى موقع العميل",
-                    )}
-                    icon="car-outline"
-                    selected={form.offersOnSite}
-                    disabled={busy}
-                    onPress={() => change("offersOnSite", !form.offersOnSite)}
-                  />
-                  <MechanicServiceChoice
-                    label={m.t("Online consultation", "استشارة أونلاين")}
-                    description={m.t(
-                      "Consultations via your WhatsApp number",
-                      "استشارة عبر رقمك على واتساب",
-                    )}
-                    icon="logo-whatsapp"
-                    selected={form.offersOnline}
-                    disabled={busy}
-                    onPress={() => change("offersOnline", !form.offersOnline)}
-                  />
-                </View>
+                <ServiceModeChoices value={form} disabled={busy} onChange={field=>setForm(old=>({...old,offersWorkshop:false,offersOnSite:false,offersOnline:false,[field]:true}))}/>
                 {form.offersWorkshop && (
                   <>
                     <View
@@ -466,6 +398,7 @@ export default function MechanicApplication({
                       icon="storefront-outline"
                       label={m.t("Workshop name", "اسم الورشة")}
                       value={form.workshopName}
+                      maxLength={120}
                       onChangeText={(v) => change("workshopName", v)}
                       editable={!busy}
                     />
@@ -476,6 +409,7 @@ export default function MechanicApplication({
                         "موقع وعنوان الورشة",
                       )}
                       value={form.workshopAddress}
+                      maxLength={250}
                       onChangeText={(v) => change("workshopAddress", v)}
                       editable={!busy}
                       multiline
@@ -583,7 +517,7 @@ export default function MechanicApplication({
                 {form.offersWorkshop && (
                   <Image
                     accessible={false}
-                    source={require("../../assets/images/motexa-mechanic-registration-hero.png")}
+                    source={require("../../assets/images/department-workshop-mathias.jpg")}
                     resizeMode="cover"
                     style={{
                       width: "100%",
@@ -596,6 +530,7 @@ export default function MechanicApplication({
               </>
             ) : step === 2 ? (
               <>
+                <MechanicFormSection icon="shield-checkmark-outline" number="04" title={m.t('Your professional credentials','وثائقك المهنية')} description={profile.documents.filter(d=>['IDENTITY','CERTIFICATE',...(form.offersWorkshop?['WORKSHOP_PROOF']:[])].includes(d.kind)).length+'/'+(form.offersWorkshop?3:2)+' '+m.t('required files uploaded','ملفات مطلوبة مرفوعة')}/>
                 <MechanicNote>
                   {m.t(
                     "Identity and a training or experience certificate are required for everyone. Workshop services also need proof of ownership or authorized use. Documents are private.",
@@ -654,213 +589,7 @@ export default function MechanicApplication({
               </>
             ) : (
               <>
-                <View
-                  style={{
-                    flexDirection: m.row,
-                    alignItems: "center",
-                    gap: 9,
-                    marginBottom: 4,
-                  }}
-                >
-                  <Ionicons
-                    name="clipboard-outline"
-                    size={22}
-                    color={m.muted}
-                  />
-                  <Text
-                    style={{
-                      fontSize: 15,
-                      lineHeight: 24,
-                      fontWeight: "600",
-                      color: m.ink,
-                    }}
-                  >
-                    {m.t(
-                      "Your application at a glance",
-                      "ملخص طلبك قبل الإرسال",
-                    )}
-                  </Text>
-                </View>
-                {[
-                  {
-                    key: "personal",
-                    icon: "person-outline" as const,
-                    title: m.t("Personal details", "المعلومات الشخصية"),
-                    target: 0,
-                    lines: [
-                      profile.user.fullName,
-                      profile.user.email,
-                      form.city,
-                      form.phoneNumber,
-                    ],
-                  },
-                  {
-                    key: "expertise",
-                    icon: "construct-outline" as const,
-                    title: m.t(
-                      "Specializations & experience",
-                      "التخصصات والخبرة",
-                    ),
-                    target: 0,
-                    lines: [
-                      form.specializations.map(specLabel).join("، "),
-                      form.yearsOfExperience
-                        ? form.yearsOfExperience +
-                          " " +
-                          m.t("years of experience", "سنوات خبرة")
-                        : "",
-                      form.experienceSummary,
-                    ],
-                  },
-                  {
-                    key: "services",
-                    icon: "storefront-outline" as const,
-                    title: m.t("Service options", "طرق تقديم الخدمة"),
-                    target: 1,
-                    lines: [
-                      [
-                        form.offersWorkshop ? m.t("Workshop", "ورشة") : "",
-                        form.offersOnSite ? m.t("On-site", "ميداني") : "",
-                        form.offersOnline
-                          ? m.t("Online consultation", "أونلاين")
-                          : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" · "),
-                      form.offersWorkshop ? form.workshopName : "",
-                      form.offersWorkshop ? form.workshopAddress : "",
-                      form.offersOnSite ? form.coverageAreas : "",
-                      form.offersOnline
-                        ? m.t("WhatsApp: ", "واتساب: ") + form.phoneNumber
-                        : "",
-                    ],
-                  },
-                  {
-                    key: "documents",
-                    icon: "documents-outline" as const,
-                    title: m.t("Required documents", "الوثائق المطلوبة"),
-                    target: 2,
-                    lines: [
-                      m.t("Identity: ", "الهوية: ") +
-                        (profile.documents.some((d) => d.kind === "IDENTITY")
-                          ? m.t("Uploaded", "مرفوعة")
-                          : m.t("Not uploaded yet", "لم تُرفع بعد")),
-                      m.t("Certificate: ", "الشهادة: ") +
-                        (profile.documents.some((d) => d.kind === "CERTIFICATE")
-                          ? m.t("Uploaded", "مرفوعة")
-                          : m.t("Not uploaded yet", "لم تُرفع بعد")),
-                      form.offersWorkshop
-                        ? m.t("Workshop proof: ", "إثبات الورشة: ") +
-                          (profile.documents.some(
-                            (d) => d.kind === "WORKSHOP_PROOF",
-                          )
-                            ? m.t("Uploaded", "مرفوع")
-                            : m.t("Not uploaded yet", "لم يُرفع بعد"))
-                        : "",
-                    ],
-                  },
-                ].map((section) => (
-                  <View
-                    key={section.key}
-                    style={{
-                      borderWidth: 1,
-                      borderColor: m.border,
-                      borderRadius: 22,
-                      padding: 13,
-                      gap: 10,
-                      backgroundColor: m.dark ? "#30241C" : "#FFFCF7",
-                    }}
-                  >
-                    <View
-                      style={{
-                        flexDirection: m.row,
-                        gap: 10,
-                        alignItems: "center",
-                      }}
-                    >
-                      <View
-                        style={{
-                          width: 37,
-                          height: 37,
-                          borderRadius: 19,
-                          backgroundColor: m.soft,
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Ionicons
-                          name={section.icon}
-                          size={19}
-                          color={m.muted}
-                        />
-                      </View>
-                      <Text
-                        style={{
-                          flex: 1,
-                          fontSize: 13,
-                          lineHeight: 22,
-                          fontWeight: "600",
-                          color: m.ink,
-                          textAlign: m.align,
-                        }}
-                      >
-                        {section.title}
-                      </Text>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={
-                          m.t("Edit ", "تعديل ") + section.title
-                        }
-                        disabled={busy}
-                        onPress={() =>
-                          previewOnly
-                            ? onPreviewStep?.(section.target + 2)
-                            : setStep(section.target)
-                        }
-                        style={{
-                          minWidth: 36,
-                          minHeight: 40,
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Ionicons
-                          name="create-outline"
-                          size={20}
-                          color={m.muted}
-                        />
-                      </Pressable>
-                    </View>
-                    <View style={{ gap: 5 }}>
-                      {section.lines.filter(Boolean).length ? (
-                        section.lines.filter(Boolean).map((line, index) => (
-                          <Text
-                            key={index}
-                            style={{
-                              fontSize: 12,
-                              lineHeight: 22,
-                              color: m.muted,
-                              textAlign: m.align,
-                            }}
-                          >
-                            {line}
-                          </Text>
-                        ))
-                      ) : (
-                        <Text
-                          style={{
-                            fontSize: 12,
-                            lineHeight: 22,
-                            color: m.muted,
-                            textAlign: m.align,
-                          }}
-                        >
-                          {m.t("Not entered yet", "لم تُدخل البيانات بعد")}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                ))}
+                <MechanicApplicationSummary name={profile.user.fullName} email={profile.user.email} value={form} specialties={form.specializations.map(specLabel)} documents={profile.documents} disabled={busy} onEdit={target=>{if(previewOnly)onPreviewStep?.(target+2);else setStep(target);}}/>
                 <MechanicChoice
                   label={m.t(
                     "I confirm my information is accurate and consent to private document review by authorized MOTEXA administrators.",
@@ -893,65 +622,19 @@ export default function MechanicApplication({
                       });
                       apply(data.profile);
                       setEditing(false);
+                      await mechanicDraftStore.clear(data.profile.userId);
                       await refresh();
                     })
                   }
                 />
               </>
             )}
-          </MechanicCard>
-          <View style={{ gap: 10 }}>
-            {step < 3 && (
-              <MechanicButton
-                label={m.t("Save and continue", "حفظ ومتابعة")}
-                busy={busy}
-                onPress={() =>
-                  void run(async () => {
-                    await save();
-                    if (previewOnly) onPreviewStep?.(step + 3);
-                    else setStep((v) => v + 1);
-                  })
-                }
-              />
-            )}{" "}
-            {step > 0 && (
-              <MechanicButton
-                secondary
-                label={m.t("Previous step", "الخطوة السابقة")}
-                disabled={busy}
-                onPress={() =>
-                  previewOnly
-                    ? onPreviewStep?.(step + 1)
-                    : setStep((v) => v - 1)
-                }
-              />
-            )}
-            <MechanicButton
-              secondary
-              label={m.t("Save draft and close", "حفظ المسودة وإغلاق")}
-              busy={busy}
-              onPress={() =>
-                void run(async () => {
-                  if (previewOnly) {
-                    setMessage(
-                      m.t(
-                        "Preview only — changes stay on this screen and are not saved to the database.",
-                        "معاينة فقط — التغييرات محلية ولا تُحفظ في قاعدة البيانات.",
-                      ),
-                    );
-                    return;
-                  }
-                  await save();
-                  setEditing(false);
-                  setMessage(m.t("Your progress is saved.", "تم حفظ تقدّمك."));
-                })
-              }
-            />
-          </View>
+          </MechanicStageSurface>
+          <MechanicStageActions step={step} busy={busy} onContinue={()=>void run(async()=>{validateStage(step);await save();if(previewOnly)onPreviewStep?.(step+3);else setStep(v=>v+1);})} onPrevious={()=>{if(previewOnly)onPreviewStep?.(step+1);else setStep(v=>v-1);}} onSave={()=>void run(async()=>{if(previewOnly){setMessage(m.t('Preview only — changes stay on this screen and are not saved to the database.','معاينة فقط — التغييرات محلية ولا تُحفظ في قاعدة البيانات.'));return;}await save();setEditing(false);setMessage(m.t('Your progress is saved.','تم حفظ تقدّمك.'));})}/>
         </>
       ) : (
         <>
-          <MechanicCard>
+          {(!profile.submittedAt||profile.verificationStatus==='DRAFT')&&<MechanicCard>
             <Text
               style={{
                 fontSize: 16,
@@ -1007,7 +690,7 @@ export default function MechanicApplication({
             {profile.verificationStatus === "DRAFT" && (
               <ApplicationChecklist profile={profile} />
             )}
-            {profile.submittedAt && <ApplicationTimeline profile={profile} />}
+
             {editable && (
               <MechanicButton
                 label={
@@ -1016,7 +699,6 @@ export default function MechanicApplication({
                     : m.t("Complete requested changes", "استكمال المطلوب")
                 }
                 onPress={() => {
-                  setStep(0);
                   setPrivacy(false);
                   setEditing(true);
                 }}
@@ -1028,7 +710,7 @@ export default function MechanicApplication({
               busy={busy}
               onPress={() => void run(refresh)}
             />
-          </MechanicCard>
+          </MechanicCard>}
           {profile.verificationStatus === "VERIFIED" && (
             <MechanicCard>
               <Text style={{ fontSize: 16, fontWeight: "600", color: m.ink }}>
@@ -1118,11 +800,7 @@ export default function MechanicApplication({
       {!previewOnly && (
         <>
           <View style={{ height: 18 }} />
-          <MechanicButton
-            secondary
-            label={m.t("Sign out", "تسجيل الخروج")}
-            onPress={() => setLogout(true)}
-          />
+          <SignOutAction onPress={() => setLogout(true)} />
           <MotexaDialog
             icon="log-out-outline"
             visible={logout}
@@ -1231,126 +909,6 @@ function ApplicationChecklist({ profile }: { profile: MechanicProfile }) {
               }}
             >
               {desc}
-            </Text>
-          </View>
-        </View>
-      ))}
-    </View>
-  );
-}
-function ApplicationTimeline({ profile }: { profile: MechanicProfile }) {
-  const m = useMechanicTheme();
-  const decided = [
-    "VERIFIED",
-    "REJECTED",
-    "NEEDS_COMPLETION",
-    "SUSPENDED",
-  ].includes(profile.verificationStatus);
-  const rows = [
-    {
-      title: m.t("Application received", "تم استلام الطلب"),
-      detail: profile.submittedAt
-        ? new Date(profile.submittedAt).toLocaleString(m.ar ? "ar" : "en")
-        : "",
-      done: !!profile.submittedAt,
-      active: false,
-    },
-    {
-      title: m.t("Administrator review", "مراجعة الأدمن"),
-      detail: m.t(
-        "Your file is submitted for professional review.",
-        "ملفك مرسل للمراجعة المهنية.",
-      ),
-      done: decided,
-      active: profile.verificationStatus === "PENDING",
-    },
-    {
-      title: m.t("Professional interview", "المقابلة المهنية"),
-      detail:
-        profile.interviewResult === "PASSED"
-          ? m.t("Interview passed", "تم اجتياز المقابلة")
-          : profile.interviewResult === "FAILED"
-            ? m.t("Interview result recorded", "تم تسجيل نتيجة المقابلة")
-            : m.t("Waiting for the administrator", "بانتظار الأدمن"),
-      done: !!profile.interviewResult,
-      active: false,
-    },
-    {
-      title: m.t("Review decision", "قرار المراجعة"),
-      detail: decided
-        ? m.t(
-            "A decision is recorded on your application.",
-            "تم تسجيل قرار على طلبك.",
-          )
-        : m.t("You will be notified in the app.", "سيصلك إشعار داخل التطبيق."),
-      done: decided,
-      active: false,
-    },
-  ];
-  return (
-    <View style={{ paddingTop: 9, gap: 0 }}>
-      {rows.map((r, i) => (
-        <View
-          key={r.title}
-          style={{ flexDirection: m.row, gap: 11, minHeight: 69 }}
-        >
-          <View style={{ alignItems: "center", width: 24 }}>
-            <View
-              style={{
-                width: 23,
-                height: 23,
-                borderRadius: 12,
-                backgroundColor: r.done ? "#80502A" : m.surface,
-                borderWidth: r.active ? 2 : 1,
-                borderColor: r.done || r.active ? "#A16B36" : m.border,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {r.done ? (
-                <Ionicons name="checkmark" size={13} color="#FFF7EA" />
-              ) : r.active ? (
-                <View
-                  style={{
-                    width: 9,
-                    height: 9,
-                    borderRadius: 5,
-                    backgroundColor: "#A16B36",
-                  }}
-                />
-              ) : null}
-            </View>
-            {i < rows.length - 1 && (
-              <View
-                style={{
-                  width: 1,
-                  flex: 1,
-                  backgroundColor: m.border,
-                  marginVertical: 3,
-                }}
-              />
-            )}
-          </View>
-          <View style={{ flex: 1, paddingBottom: 16, gap: 3 }}>
-            <Text
-              style={{
-                fontSize: 13,
-                fontWeight: "600",
-                color: m.ink,
-                textAlign: m.align,
-              }}
-            >
-              {r.title}
-            </Text>
-            <Text
-              style={{
-                fontSize: 10,
-                lineHeight: 18,
-                color: m.muted,
-                textAlign: m.align,
-              }}
-            >
-              {r.detail}
             </Text>
           </View>
         </View>

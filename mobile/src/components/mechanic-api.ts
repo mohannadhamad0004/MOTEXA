@@ -25,6 +25,14 @@ export type MechanicProfile = {
   submissionVersion: number;
   reviewNotes: string | null;
   interviewResult: string | null;
+  interviewRecorded?: boolean;
+  interviewScheduleId?:string|null;
+  interviewScheduledAt?:string|null;
+  interviewMethod?:string|null;
+  interviewLocation?:string|null;
+  interviewTimeZone?:string|null;
+  interviewConfirmedAt?:string|null;
+  interviewSimulation?:boolean;
   interviewNotes: string | null;
   canReceiveServices: boolean;
   documents: MechanicDocument[];
@@ -36,6 +44,9 @@ export type MechanicProfile = {
     details: { notes?: string } | null;
   }[];
 };
+export class MechanicApiError extends Error {
+  constructor(message:string,public readonly status:number,public readonly code?:string){super(message);this.name='MechanicApiError';}
+}
 export async function mechanicApi<T = any>(
   route: string,
   method = "GET",
@@ -47,7 +58,7 @@ export async function mechanicApi<T = any>(
   const token = publicRequest
     ? null
     : await Store.getItemAsync("motexa_access_token");
-  if (!publicRequest && !token) throw Error("Sign in again to continue.");
+  if (!publicRequest && !token) throw new MechanicApiError("Sign in again to continue.",401);
   const controller = new AbortController(),
     timer = setTimeout(() => controller.abort(), 30000);
   try {
@@ -62,7 +73,7 @@ export async function mechanicApi<T = any>(
     });
     const data = await response.json();
     if (!response.ok || !data.success)
-      throw Error(data.message || "The request could not be completed.");
+      throw new MechanicApiError(data.message || "The request could not be completed.",response.status,typeof data.code==='string'?data.code:undefined);
     return data;
   } finally {
     clearTimeout(timer);
