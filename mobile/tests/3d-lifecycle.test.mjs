@@ -12,9 +12,12 @@ test('successful Meshy tasks show factual local processing and failure states in
  assert.equal(accessoryProcessingLabel({...task,providerState:'IN_PROGRESS'}),null);
  assert.equal(accessoryProcessingLabel({...task,status:'READY_FOR_FINAL_REVIEW',generationStage:'READY'}),null);
 });
-test('preview follows the ACTIVE car (never silently another one); another saved car only when explicitly picked; Garage is never modified',()=>{
+test('preview follows the ACTIVE car only: never another saved car, no fallback, Garage is never modified',()=>{
  const cars=[{carId:'active-missing-3d',isActive:true,allowed:false},{carId:'compatible',isActive:false,allowed:true}],before=JSON.stringify(cars);
- assert.equal(selectPreviewCar(cars,null).carId,'active-missing-3d');assert.equal(selectPreviewCar(cars,null).allowed,false);assert.equal(selectPreviewCar(cars,'compatible').carId,'compatible');assert.equal(selectPreviewCar(cars.map(c=>({...c,isActive:!c.isActive})),null).carId,'compatible');assert.equal(selectPreviewCar(cars.map(c=>({...c,isActive:false})),null).carId,'compatible');assert.equal(JSON.stringify(cars),before);assert.equal(selectPreviewCar([],null),undefined);
+ assert.equal(selectPreviewCar(cars).carId,'active-missing-3d');assert.equal(selectPreviewCar(cars).allowed,false);
+ assert.equal(selectPreviewCar(cars.map(c=>({...c,isActive:!c.isActive}))).carId,'compatible');
+ assert.equal(selectPreviewCar(cars.map(c=>({...c,isActive:false}))),undefined);
+ assert.equal(JSON.stringify(cars),before);
 });
 test('customer kits require the backend allowed result, published model and saved fit; stale contracts fail closed',()=>{
  const part={part:'MAIN',type:'REAR_BUMPER',fitsIds:['generation'],model:{file:'accessories/acc-fixture.glb',size:{}},autoFit:{fit:{placements:[{}]},adj:null},allowed:true};

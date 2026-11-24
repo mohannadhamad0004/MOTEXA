@@ -170,6 +170,8 @@ export function DeptPage({
   onRefresh,
   tabs = true,
   footer,
+  list = false,
+  maxWidth = 680,
 }: {
   hero?: ReactNode;
   /** the hero is a garage HeroLayout (it brings its own safe-area top): no top bar, the department switcher goes under it */
@@ -181,6 +183,10 @@ export function DeptPage({
   tabs?: boolean;
   /** sticky bar pinned to the bottom (for pages without the tab bar) */
   footer?: ReactNode;
+  /** the children bring their own scroller (a virtualized FlatList): no page ScrollView around them, no pull-to-refresh here */
+  list?: boolean;
+  /** content width cap (wide two-pane screens pass more) */
+  maxWidth?: number;
 }) {
   const { available } = useDepartment();
   const d = useDT();
@@ -191,10 +197,18 @@ export function DeptPage({
       <View style={{ flex: 1 }}>
         <View style={[StyleSheet.absoluteFill, { backgroundColor: d.page }]} />
         <StatusBar barStyle={d.dark ? "light-content" : "dark-content"} />
+        {list ? (
+          <View style={{ flex: 1, width: "100%", maxWidth, alignSelf: "center" }}>
+            <TopBar back={back} />
+            <Switcher />
+            {/* no gutter here: the list brings its own (so a full-bleed Rail inside it is not clipped) */}
+            <View style={{ flex: 1, paddingTop: 12 }}>{children}</View>
+          </View>
+        ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
           refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} /> : undefined}
-          contentContainerStyle={{ width: "100%", maxWidth: 680, alignSelf: "center", flexGrow: 1, paddingBottom: footer ? 230 : tabs ? 130 : 40 }}
+          contentContainerStyle={{ width: "100%", maxWidth, alignSelf: "center", flexGrow: 1, paddingBottom: footer ? 230 : tabs ? 130 : 40 }}
         >
           {garageHero ? hero : <TopBar back={back} />}
           <Switcher />
@@ -203,10 +217,11 @@ export function DeptPage({
             {children}
           </View>
         </ScrollView>
+        )}
         <ToastHost />
         {footer ? (
           <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12), backgroundColor: d.surface, borderTopWidth: 1, borderTopColor: d.border }}>
-            <View style={{ width: "100%", maxWidth: 680, alignSelf: "center" }}>{footer}</View>
+            <View style={{ width: "100%", maxWidth, alignSelf: "center" }}>{footer}</View>
           </View>
         ) : null}
       </View>

@@ -1,13 +1,12 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
-import { Card, ErrorState, GarageHero, GaragePage, GButton, GIcon, GText, ListRow, Note, Section, SkeletonBlock, StatusChip, StickyActionBar } from "../../../components/garage";
+import { Card, ErrorState, GaragePage, HeroLayout, GButton, GIcon, GText, ListRow, Note, Section, SkeletonBlock, StatusChip, StickyActionBar } from "../../../components/garage";
 import { cityLabel } from "../../../core/constants/cities";
 import { distanceLabel, locationMemory, roundPoint } from "../../../core/constants/geo";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { useSkillLabel } from "../../../features/mechanics/mechanicBits";
 import { mechanicCatalog } from "../../../features/mechanics/mechanicsService";
-import { InitialBubble } from "../../../features/requests/garageBits";
 import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 
 // Public mechanic profile. Only fields MOTEXA verified or the mechanic published; no phone, email or credentials.
@@ -28,15 +27,14 @@ export default function MechanicProfile() {
       onRefresh={state.reload}
       refreshing={state.loading && !!state.data}
       hero={
-        <GarageHero
-          variant="detail"
-          onBack={() => (router.canGoBack() ? router.back() : router.navigate("/customer/mechanics"))}
-          title={m?.name ?? t("Mechanic", "ميكانيكي")}
-          line={m ? [m.workshopName, cityLabel(m.city, isArabic)].filter(Boolean).join(" · ") : undefined}
-          visual={m ? <InitialBubble name={m.name} size={72} /> : undefined}
-        >
-          {verified ? <StatusChip tone="success" icon="shield-checkmark" label={t("Verified by MOTEXA", "موثّق من موتكسا")} /> : null}
-        </GarageHero>
+        <HeroLayout
+          config={{
+            tab: "mechanics",
+            title: m?.name ?? t("Mechanic", "ميكانيكي"),
+            line: m ? [m.workshopName, cityLabel(m.city, isArabic)].filter(Boolean).join(" · ") : undefined,
+            top: { label: t("Mechanic", "ميكانيكي"), back: () => (router.canGoBack() ? router.back() : router.navigate("/customer/mechanics")), actions: [] },
+          }}
+        />
       }
       bottom={
         m ? (
@@ -52,6 +50,7 @@ export default function MechanicProfile() {
         <SkeletonBlock height={180} radius={gShape.card} />
       ) : (
         <View>
+          {verified ? <View style={{ alignItems: "flex-start", marginBottom: 12 }}><StatusChip tone="success" icon="shield-checkmark" label={t("Verified by MOTEXA", "موثّق من موتكسا")} /></View> : null}
           <Card pad={12}>
             {m.distanceKm != null ? (
               <ListRow icon="navigate-outline" title={distanceLabel(m.distanceKm, isArabic)} sub={m.distanceSource === "city" ? t("from the city centre", "من مركز المدينة") : undefined} />

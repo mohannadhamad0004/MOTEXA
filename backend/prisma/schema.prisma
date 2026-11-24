@@ -1471,6 +1471,7 @@ model ProductAccessory3D {
   fits                  ProductAccessory3DFit[]
   photos                ProductAccessory3DPhoto[]
   autoFits              AccessoryAutoFit[]
+  fitJobs               AccessoryFitJob[]
 
   @@unique([productId, kitPart])
   @@index([shopId])
@@ -1514,6 +1515,46 @@ model AccessoryAutoFit {
 
   @@id([accessoryId, generationId])
   @@index([model3dKey])
+}
+
+enum AccessoryFitJobStatus {
+  QUEUED
+  RUNNING
+  DONE
+  CANCELLED
+  FAILED
+}
+
+// ---- "Run auto-fit" on many cars of one accessory (Parts Admin, bulk fits screen): a resumable background job. The worker
+// (services/accessory-fit-jobs.ts) holds a lease while it works; after a restart an expired lease is picked up again at `position`.
+model AccessoryFitJob {
+  id               String                @id @default(uuid())
+  accessoryId      String
+  accessory        ProductAccessory3D    @relation(fields: [accessoryId], references: [id], onDelete: Cascade)
+  createdById      String
+  status           AccessoryFitJobStatus @default(QUEUED)
+  /// the generation ids to fit, in order (resolved from the filter when the job was created)
+  targets          Json
+  /// true = approved fits are re-run too (they lose their approval until reviewed again)
+  includeApproved  Boolean               @default(false)
+  total            Int
+  /// how many targets were handled (done + skipped + errors); the next one is targets[position]
+  position         Int                   @default(0)
+  done             Int                   @default(0)
+  skipped          Int                   @default(0)
+  errors           Int                   @default(0)
+  /// time spent fitting, for the "about N min left" estimate
+  workMs           Int                   @default(0)
+  error            String?
+  leaseToken       String?
+  leaseUntil       DateTime?
+  createdAt        DateTime              @default(now())
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  updatedAt        DateTime              @updatedAt
+
+  @@index([status, leaseUntil])
+  @@index([accessoryId, createdAt])
 }
 
 model ProductAccessory3DFit {

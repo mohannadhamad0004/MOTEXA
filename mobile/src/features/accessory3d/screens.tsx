@@ -707,6 +707,10 @@ const RIM_NOTES: Record<string, [string, string]> = { // in this order
   ARCH_NOT_MEASURED: ["fender not measured, kept in place", "تعذّر قياس الرفرف، بقيت مكانها"],
 };
 const BODY_NAMES: Record<string, [string, string]> = { sedan: ["boot lid", "غطاء الصندوق"], hatch: ["top of the tailgate", "أعلى الباب الخلفي"], roof: ["roof", "السقف"] };
+/** The viewer kit of one stored fit (Accessory fits editor, bulk fits preview). A failed fit stores only its reason: the part is fitted
+ *  live with the viewer's evidence flags so the admin sees why; `live` (a draft wheel inset) also ignores the stored fit. */
+export const fitKit = (r: AutoFitRow, baseAdj: FitAdjust, live = false) => r.hasModel && r.fit ? { type: r.type, file: r.file??`private-accessory-${r.accessoryId}-${r.modelRevision}.glb`, assetLoader:r.file?undefined:()=>adminAccessoryApi.asset(r.accessoryId,"model"),
+  size: r.fit.fit.failed ? { ...r.size, forceFit: true } : r.size, ...(r.fit.fit.failed ? { qaEvidence: true } : {}), finish: r.finish ?? null, paintMatch: false, adj: NO_ADJUST, fit: live || r.fit.fit.failed ? undefined : r.fit.fit, baseAdj } : null;
 function AutoFitEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }) {
   const { t } = useL(); const { g, row, align } = useGarageTheme();
   const models = useLoad(() => adminAccessoryApi.partMaps(), []);
@@ -742,8 +746,7 @@ function AutoFitEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
   }, async () => { setInset(null); await Promise.all([fits.reload(), refreshRuntimeModels()]); });
   // a failed fit stores only its reason: the part is fitted live with the viewer's evidence flags (placed where the auto-fit put it, never
   // refused), so the admin sees why and can try nudges; it still cannot be approved (here or on the server)
-  const kit = useMemo(() => r?.hasModel && r.fit ? { type: r.type, file: r.file??`private-accessory-${r.accessoryId}-${r.modelRevision}.glb`, assetLoader:r.file?undefined:()=>adminAccessoryApi.asset(r.accessoryId,"model"),
-    size: r.fit.fit.failed ? { ...r.size, forceFit: true } : r.size, ...(r.fit.fit.failed ? { qaEvidence: true } : {}), finish: r.finish ?? null, paintMatch: false, adj: NO_ADJUST, fit: draft || r.fit.fit.failed ? undefined : r.fit.fit, baseAdj: adj } : null, [r, adj, draft]);
+  const kit = useMemo(() => r ? fitKit(r, adj, !!draft) : null, [r, adj, draft]);
   const gaps = (info.feetGapMm ?? info.topGapMm ?? []).map(x => x === null ? "—" : `${x} mm`).join(" / ");
   return <GaragePage hero={<GarageHero variant="detail" backLabel={t("Back", "رجوع")} onBack={() => router.back()} title={t("Accessory fits", "تركيب الإكسسوارات")} line={t("Each accessory is fitted to each car once, from the car's real shape. Check it, correct it if needed, approve.", "تُركّب كل قطعة على كل سيارة مرة واحدة، من شكل السيارة الحقيقي. افحصها وصحّحها إن لزم ثم اعتمدها.")} />}
     onRefresh={() => { void models.reload(); void fits.reload(); }} refreshing={(models.loading && !!models.data) || (fits.loading && !!fits.data)}>

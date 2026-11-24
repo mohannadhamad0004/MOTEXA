@@ -5,7 +5,7 @@
 // The Parts Admin approves it or stores a correction (adj); customers' own Adjust goes on top.
 import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
@@ -20,19 +20,40 @@ import { testProviderRuntime } from "./generation-runtime.js";
 
 type Adj = { x: number; y: number; z: number; rx: number; ry: number; s: number };
 /** The viewer's fit version for an accessory type (sceneHtml.ts FIT_VERSIONS + FIT_GROUPS are the single source; the server only compares). */
+let fitSource: { mtimeMs: number; versions: Record<string, unknown>; groups: Record<string, unknown> } | null = null;
 export function fitVersion(type: string): number {
-  const src = readFileSync(path.join(REPO_ROOT, "mobile/src/features/car3d/sceneHtml.ts"), "utf8");
-  const obj = (name: string) => JSON.parse(new RegExp(`var ${name} = (\\{[^}]*\\});`).exec(src)?.[1] ?? "{}") as Record<string, unknown>;
-  const v = obj("FIT_VERSIONS")[String(obj("FIT_GROUPS")[type] ?? "other")];
+  // parsed once per change of the file (the bulk screen asks for thousands of rows)
+  const file = path.join(REPO_ROOT, "mobile/src/features/car3d/sceneHtml.ts"), mtimeMs = statSync(file).mtimeMs;
+  if (fitSource?.mtimeMs !== mtimeMs) {
+    const src = readFileSync(file, "utf8");
+    const obj = (name: string) => JSON.parse(new RegExp(`var ${name} = (\\{[^}]*\\});`).exec(src)?.[1] ?? "{}") as Record<string, unknown>;
+    fitSource = { mtimeMs, versions: obj("FIT_VERSIONS"), groups: obj("FIT_GROUPS") };
+  }
+  const v = fitSource.versions[String(fitSource.groups[type] ?? "other")];
   return typeof v === "number" ? v : 0;
 }
 const typeOf = (fit: unknown) => String((fit as { type?: unknown } | null)?.type ?? "");
-const partRevision = (key: string | null) => digest(key && existsSync(privatePath(key)) ? readFileSync(privatePath(key)) : Buffer.alloc(0)).slice(0, 16);
+const partRevs = new Map<string, { mtimeMs: number; size: number; rev: string }>();
+/** Hash of the accessory's private model file (cached by mtime + size, like modelFileSha). */
+const partRevision = (key: string | null) => {
+  const file = key ? privatePath(key) : null;
+  if (!file || !existsSync(file)) return digest(Buffer.alloc(0)).slice(0, 16);
+  const st = statSync(file), hit = partRevs.get(file);
+  if (hit && hit.mtimeMs === st.mtimeMs && hit.size === st.size) return hit.rev;
+  const rev = digest(readFileSync(file)).slice(0, 16); partRevs.set(file, { mtimeMs: st.mtimeMs, size: st.size, rev }); return rev;
+};
 /** The car as the app sees it: file + runtime config (zones, confirmed part map). */
 async function carRevision(key: string, type: string): Promise<string | null> {
   const { modelWithZones } = await import("./accessory3d.js"); // lazy: accessory3d imports this module
   const sha = modelFileSha(key), m = await modelWithZones(key);
   return sha && m ? revisionOf(sha, m, type) : null;
+}
+/** carRevision for many cars at once (one batched config read). */
+async function carRevisions(keys: string[], type: string): Promise<Map<string, string | null>> {
+  const { modelsWithZones } = await import("./accessory3d.js");
+  const models = await modelsWithZones(keys), out = new Map<string, string | null>();
+  for (const key of new Set(keys)) { const sha = modelFileSha(key), m = models.get(key); out.set(key, sha && m ? revisionOf(sha, m, type) : null); }
+  return out;
 }
 /** The car as a fitter of this type sees it: file + runtime config. The RIMS zone (wheel inset) only counts for rims, so setting it
  *  never makes another type's stored (approved, corrected) fit on that car stale. */
@@ -171,6 +192,89 @@ export function fitStatus(input: { row: { fit: unknown; approvedAt: Date | null;
   return { status: "failed", reason: "FIT_CHECK_NOT_PASSED" };
 }
 
+// ---- The bulk fits screen: every car of one accessory as one row, filtered and paged on the server (5,000 cars must work).
+export const FIT_STATUSES: FitStatus[] = ["approved", "passed", "failed", "not_computed", "needs_correction", "has_correction"];
+export type FitRow = { generationId: string; make: string; makeAr: string; model: string; modelAr: string; code: string; nameEn: string; nameAr: string;
+  yearFrom: number; yearTo: number; model3dKey: string; photoUrl: string | null; status: FitStatus; reason: string | null; approvedAt: Date | null;
+  /** the stored fit's updatedAt: a bulk approve only takes a fit that is still exactly the one checked */
+  stamp: Date | null };
+type RowSet = { accessory: { id: string; productId: string; productName: string; type: string; kitPart: string; status: string; universal: boolean }; rows: FitRow[] };
+
+/** Every target car of the accessory with its review state: the same rules as fitEligibility / fitStatus, read in a few batched queries. */
+async function computeFitRows(accessoryId: string): Promise<RowSet> {
+  const a = await prisma.productAccessory3D.findUnique({ where: { id: accessoryId }, include: { product: { select: { name: true, isUniversal: true } }, autoFits: true } });
+  if (!a) return fail("NOT_FOUND", "Accessory not found.", 404);
+  if (!["PUBLISHED", "READY_FOR_FINAL_REVIEW"].includes(a.status)) return fail("FIT_NOT_READY", "Only a published or review-ready accessory has fits.", 409);
+  const type = a.accessoryType, version = fitVersion(type), partRev = partRevision(a.privateModelPath), bumper = type === "FRONT_BUMPER" || type === "REAR_BUMPER";
+  const targets = (await accessoryTargets(accessoryId)).filter(g => g.isPublished && g.model3dKey);
+  const keys = [...new Set(targets.map(g => g.model3dKey!))];
+  const [revs, maps] = await Promise.all([carRevisions(keys, type), bumper ? prisma.carPartMap.findMany({ where: { model3dKey: { in: keys } } }) : Promise.resolve([])]);
+  const mapOf = new Map(maps.map(m => [m.model3dKey, m])), fits = new Map(a.autoFits.map(r => [r.generationId, r]));
+  const rows = targets.map((g): FitRow => {
+    const key = g.model3dKey!, r = fits.get(g.id) ?? null;
+    const isCurrent = !!r && r.model3dKey === key && typeOf(r.fit) === type && r.fitVersion === version && validFit(r.fit, version) && r.partRevision === partRev && r.carRevision === revs.get(key);
+    let blockedCode: string | null = null;
+    if (isCurrent && bumper && !(r!.fit as { failed?: string }).failed) { const space = bumperSpace(mapOf.get(key) ?? null, key, type); if (space !== "PART_MAP" && space !== "CUT") blockedCode = "PART_MAP_STALE"; }
+    const st = fitStatus({ row: r, isCurrent, blockedCode });
+    return { generationId: g.id, make: g.vehicle.make, makeAr: g.vehicle.makeAr || g.vehicle.make, model: g.vehicle.model, modelAr: g.vehicle.modelAr || g.vehicle.model, code: g.code,
+      nameEn: g.nameEn, nameAr: g.nameAr, yearFrom: g.yearFrom, yearTo: g.yearTo, model3dKey: key, photoUrl: g.photoUrl ?? null, status: st.status, reason: st.reason,
+      approvedAt: st.status === "approved" ? r!.approvedAt : null, stamp: r?.updatedAt ?? null };
+  });
+  rows.sort((x, y) => x.make.localeCompare(y.make) || x.model.localeCompare(y.model) || x.yearFrom - y.yearFrom || x.code.localeCompare(y.code));
+  return { accessory: { id: a.id, productId: a.productId, productName: a.product?.name ?? "", type, kitPart: a.kitPart, status: a.status, universal: type === "RIMS" && !!a.product?.isUniversal }, rows };
+}
+// ponytail: per-process cache, 10 s; paging and polling read it, every write (approve, job, …) forgets it and approve / job creation always
+// compute fresh. Several API processes would each keep their own (still bounded to 10 s).
+const rowCache = new Map<string, { at: number; rows: Promise<RowSet> }>();
+export const forgetFitRows = (accessoryId: string) => { rowCache.delete(accessoryId); };
+export function fitRows(accessoryId: string, fresh = false): Promise<RowSet> {
+  const hit = rowCache.get(accessoryId);
+  if (!fresh && hit && Date.now() - hit.at < 10_000) return hit.rows;
+  const rows = computeFitRows(accessoryId);
+  rowCache.set(accessoryId, { at: Date.now(), rows });
+  rows.catch(() => rowCache.delete(accessoryId));
+  return rows;
+}
+
+/** "correction" = needs correction or a stored manual correction (both reviewed one by one). */
+export type FitFilter = { q?: string; make?: string; model?: string; generationId?: string; status?: FitStatus | "correction" };
+const text = (v: unknown, max = 100) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : undefined);
+export function parseFitFilter(v: unknown): FitFilter {
+  const o = (v && typeof v === "object" ? v : {}) as Record<string, unknown>, status = text(o.status, 40);
+  if (status && status !== "correction" && !FIT_STATUSES.includes(status as FitStatus)) return fail("INVALID_FILTER", "Unknown fit status.");
+  return { q: text(o.q), make: text(o.make), model: text(o.model), generationId: text(o.generationId, 64), status: status as FitFilter["status"] };
+}
+export function matchesFitFilter(r: FitRow, f: FitFilter, withStatus = true): boolean {
+  if (f.make && r.make !== f.make) return false;
+  if (f.model && r.model !== f.model) return false;
+  if (f.generationId && r.generationId !== f.generationId) return false;
+  if (withStatus && f.status && (f.status === "correction" ? r.status !== "needs_correction" && r.status !== "has_correction" : r.status !== f.status)) return false;
+  if (!f.q) return true;
+  const hay = `${r.make} ${r.makeAr} ${r.model} ${r.modelAr} ${r.nameEn} ${r.nameAr} ${r.code} ${r.yearFrom}-${r.yearTo}`.toLowerCase();
+  return f.q.toLowerCase().split(/\s+/).every(w => hay.includes(w));
+}
+/** A bulk selection: picked rows (ids, at most 500) or "everything matching this filter" minus a few unticked ones. Never 5,000 ids. */
+export type FitSelection = { ids: string[] } | { filter: FitFilter; exclude: Set<string> };
+const ids = (v: unknown, min: number) => Array.isArray(v) && v.length >= min && v.length <= 500 && v.every(x => typeof x === "string" && x.length <= 64) ? [...new Set(v as string[])] : null;
+export function parseFitSelection(body: unknown): FitSelection {
+  const b = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
+  if (b.generationIds !== undefined) { const list = ids(b.generationIds, 1); if (!list) return fail("INVALID_SELECTION", "Choose between 1 and 500 cars, or select all matching the filter."); return { ids: list }; }
+  if (b.filter && typeof b.filter === "object") {
+    const exclude = b.exclude === undefined ? [] : ids(b.exclude, 0);
+    if (!exclude) return fail("INVALID_SELECTION", "At most 500 cars can be left out of a filter selection.");
+    return { filter: parseFitFilter(b.filter), exclude: new Set(exclude) };
+  }
+  return fail("INVALID_SELECTION", "Choose cars, or select all matching the filter.");
+}
+export function selectFitRows(rows: FitRow[], sel: FitSelection): { rows: FitRow[]; unknown: string[] } {
+  if ("ids" in sel) { const by = new Map(rows.map(r => [r.generationId, r])); return { rows: sel.ids.flatMap(id => by.get(id) ?? []), unknown: sel.ids.filter(id => !by.has(id)) }; }
+  return { rows: rows.filter(r => matchesFitFilter(r, sel.filter) && !sel.exclude.has(r.generationId)), unknown: [] };
+}
+/** Why a car is left out of "Approve passed fits" (only "passed" is ever bulk-approved). */
+export const skipCode = (r: FitRow) => r.status === "failed" ? "FIT_FAILED" : r.status === "not_computed" ? (r.reason === "PART_MAP_STALE" ? "PART_MAP_STALE" : "FIT_NOT_READY")
+  : r.status === "needs_correction" ? "NEEDS_CORRECTION" : r.status === "has_correction" ? "HAS_CORRECTION" : "ALREADY_APPROVED";
+const publicRow = ({ stamp: _stamp, ...r }: FitRow) => r;
+
 const running = new Map<string, Promise<unknown>>();
 export const isAccessoryFitRunning = (accessoryId: string) => running.has(accessoryId);
 /** Reads only schedule work when a published fit really is stale; current approvals stay editable. */
@@ -192,6 +296,8 @@ export async function refitPublishedAccessories() {
 /** Background: fit this accessory on every generation it fits that has a published 3D car (missing or stale fits only). */
 export function autoFitAccessory(accessoryId: string) {
   if (!running.has(accessoryId)) running.set(accessoryId, (async () => {
+    // a "Run auto-fit" job owns this accessory's fits while it is queued or running (no second, untracked run over the same cars)
+    if (await prisma.accessoryFitJob.count({ where: { accessoryId, status: { in: ["QUEUED", "RUNNING"] } } })) return;
     const a = await prisma.productAccessory3D.findUnique({ where: { id: accessoryId }, include: { product: { select: { isUniversal: true } }, fits: { include: { generation: true } }, autoFits: true } });
     if (!a?.privateModelPath || (!testProviderRuntime() && (a.generationMode === "mock" || a.provider === "MOCK"))) return;
     for (const f of await fittedOn(a)) {
@@ -256,33 +362,68 @@ export function createAutoFitService(options:{compute?:typeof computeFit}={}) {
         const {needsCorrection:_old,...fit}=now.fit as Record<string,Prisma.JsonValue>;
         return tx.accessoryAutoFit.update({ where: { accessoryId_generationId: { accessoryId, generationId } }, data: body.needsCorrection ? {fit:{...fit,needsCorrection:true},approvedAt:null,approvedByUserId:null} : { fit, adj: adj ?? Prisma.DbNull, approvedAt: new Date(), approvedByUserId: uid } });
       });
+      forgetFitRows(accessoryId);
       return { fit: u.fit, adj: u.adj, approvedAt: u.approvedAt };
     },
     /** Every car this accessory is fitted on (a Universal-by-size rim: every published car with a 3D model) with its review state. */
     fitsFor: async (accessoryId: string) => {
-      const a = await prisma.productAccessory3D.findUnique({ where: { id: accessoryId }, include: { product: { select: { name: true, isUniversal: true } }, autoFits: true } });
-      if (!a) return fail("NOT_FOUND", "Accessory not found.", 404);
-      if (!["PUBLISHED", "READY_FOR_FINAL_REVIEW"].includes(a.status)) return fail("FIT_NOT_READY", "Only a published or review-ready accessory has fits.", 409);
-      const targets = await accessoryTargets(accessoryId);
-      const cars = [];
-      let stale = false;
-      for (const g of targets) {
-        if (!g.isPublished || !g.model3dKey) continue;
-        const r = a.autoFits.find(x => x.generationId === g.id) ?? null;
-        const isCurrent = !!r && r.model3dKey === g.model3dKey && typeOf(r.fit) === a.accessoryType && validFit(r.fit) && await current(r, a.privateModelPath);
-        if (!isCurrent) stale = true;
-        let blockedCode: string | null = null;
-        if (isCurrent && !(r!.fit as { failed?: string }).failed) { const e = await fitEligibility(accessoryId, g.id, a.privateModelPath); if (e.code === "PART_MAP_STALE" || e.code === "NO_VEHICLE_3D") blockedCode = e.code; }
-        const st = fitStatus({ row: r, isCurrent, blockedCode });
-        cars.push({ generationId: g.id, name: `${g.vehicle.make} ${g.nameEn}`, nameAr: `${g.vehicle.makeAr ?? g.vehicle.make} ${g.nameAr}`, make: g.vehicle.make, model3dKey: g.model3dKey, photoUrl: g.photoUrl ?? null,
-          status: st.status, reason: st.reason, approvedAt: st.status === "approved" ? r!.approvedAt : null });
-      }
-      if (stale && a.status === "PUBLISHED") void autoFitAccessory(a.id);
-      cars.sort((x, y) => x.name.localeCompare(y.name));
-      return { accessory: { id: a.id, productId: a.productId, productName: a.product?.name ?? "", type: a.accessoryType, kitPart: a.kitPart, status: a.status, universal: a.accessoryType === "RIMS" && !!a.product?.isUniversal, computing: running.has(a.id) }, cars };
+      // not-computed fits are no longer started from here: on a 5,000-car accessory that was an untracked background run. The Parts Admin
+      // starts them with "Run auto-fit" (a resumable job with progress); publishing still fits every car once.
+      const { accessory, rows } = await fitRows(accessoryId, true);
+      return { accessory: { ...accessory, computing: running.has(accessoryId) },
+        cars: rows.map(r => ({ ...publicRow(r), name: `${r.make} ${r.nameEn}`, nameAr: `${r.makeAr} ${r.nameAr}` })) };
+    },
+    /** One page of the bulk screen: rows matching the filter, the status counts (within brand / model / search, any status) and the pickers. */
+    page: async (accessoryId: string, query: Record<string, unknown>) => {
+      const f = parseFitFilter(query);
+      const int = (v: unknown, d: number, min: number, max: number) => { const n = typeof v === "string" && /^\d{1,6}$/.test(v) ? Number(v) : d; return Math.min(max, Math.max(min, n)); };
+      const offset = int(query.offset, 0, 0, 1_000_000), limit = int(query.limit, 50, 1, 100);
+      const { accessory, rows } = await fitRows(accessoryId);
+      const scope = rows.filter(r => matchesFitFilter(r, f, false)), counts = Object.fromEntries(FIT_STATUSES.map(s => [s, 0])) as Record<FitStatus, number>;
+      for (const r of scope) counts[r.status]++;
+      const matching = f.status ? scope.filter(r => matchesFitFilter(r, f)) : scope;
+      const uniq = <T,>(list: T[], key: (x: T) => string) => [...new Map(list.map(x => [key(x), x])).values()];
+      const facets = {
+        makes: uniq(rows, r => r.make).map(r => ({ value: r.make, ar: r.makeAr })),
+        models: f.make ? uniq(rows.filter(r => r.make === f.make), r => r.model).map(r => ({ value: r.model, ar: r.modelAr })) : [],
+        generations: f.make && f.model ? rows.filter(r => r.make === f.make && r.model === f.model).map(r => ({ id: r.generationId, code: r.code, yearFrom: r.yearFrom, yearTo: r.yearTo })) : [],
+      };
+      return { accessory: { ...accessory, computing: running.has(accessoryId) }, all: rows.length, total: matching.length, counts, facets, offset, limit,
+        cars: matching.slice(offset, offset + limit).map(publicRow) };
+    },
+    /** "Approve passed fits" on a selection (picked ids or a whole filter). Only fits whose state is exactly "passed" are approved, checked
+     *  here again whatever the client showed; each one only if its stored fit is still the one checked (same updatedAt, no correction).
+     *  dryRun = the counts for the confirmation sheet. Audit: one row per car + one summary row. */
+    approveMatching: async (uid: string, accessoryId: string, body: Record<string, unknown>) => {
+      const sel = parseFitSelection(body), { rows } = await fitRows(accessoryId, true), picked = selectFitRows(rows, sel);
+      const skipped: Record<string, number> = {}, skip = (code: string, n = 1) => { skipped[code] = (skipped[code] ?? 0) + n; };
+      if (picked.unknown.length) skip("NOT_A_TARGET", picked.unknown.length);
+      const passed = picked.rows.filter(r => r.status === "passed" && r.stamp);
+      for (const r of picked.rows) if (r.status !== "passed" || !r.stamp) skip(skipCode(r));
+      if (body.dryRun === true) return { approvable: passed.length, skipped };
+      if (!passed.length) return { approved: 0, skipped };
+      const now = new Date().toISOString();
+      const done = await prisma.$transaction(async tx => {
+        await tx.$queryRaw`SELECT "id" FROM "ProductAccessory3D" WHERE "id"=${accessoryId} FOR UPDATE`;
+        const gids = passed.map(r => r.generationId), stamps = passed.map(r => r.stamp!.toISOString());
+        // timestamps are UTC without a zone (Prisma's TIMESTAMP(3)): the ISO strings compare exactly
+        const updated = await tx.$queryRaw<{ generationId: string }[]>`UPDATE "AccessoryAutoFit" AS f SET "approvedAt" = ${now}::timestamp(3), "approvedByUserId" = ${uid}, "updatedAt" = ${now}::timestamp(3)
+          FROM unnest(${gids}::text[], ${stamps}::timestamp(3)[]) AS t(gid, stamp)
+          WHERE f."accessoryId" = ${accessoryId} AND f."generationId" = t.gid AND f."updatedAt" = t.stamp AND f."approvedAt" IS NULL AND (f."adj" IS NULL OR f."adj" = 'null'::jsonb)
+          RETURNING f."generationId"`;
+        const doneIds = updated.map(u => u.generationId);
+        if (doneIds.length) await tx.auditLog.createMany({ data: doneIds.map(generationId => ({ actorId: uid, action: "ACCESSORY3D_FIT_APPROVED", targetId: accessoryId, details: { generationId, adj: null, bulk: true } })) });
+        await tx.auditLog.create({ data: { actorId: uid, action: "ACCESSORY3D_FITS_BULK_APPROVED", targetId: accessoryId, details: { count: doneIds.length, requested: picked.rows.length + picked.unknown.length,
+          selection: "ids" in sel ? "picked" : { filter: sel.filter, excluded: sel.exclude.size }, generationIds: doneIds, skipped } as unknown as Prisma.InputJsonValue } });
+        return doneIds.length;
+      }, { timeout: 60_000 });
+      if (done < passed.length) skip("CHANGED", passed.length - done); // the fit changed (a running job saved a new one) after it was checked
+      forgetFitRows(accessoryId);
+      return { approved: done, skipped };
     },
     /** Take the approval off (customers stop seeing it). The correction (adj) stays as the suggestion. One audit row per car. */
     unapprove: async (uid: string, accessoryId: string, generationId: string) => {
+      forgetFitRows(accessoryId);
       return prisma.$transaction(async tx => {
         await tx.$queryRaw`SELECT "id" FROM "ProductAccessory3D" WHERE "id"=${accessoryId} FOR UPDATE`;
         const now = await tx.accessoryAutoFit.findUnique({ where: { accessoryId_generationId: { accessoryId, generationId } } });
@@ -329,7 +470,7 @@ export function createAutoFitService(options:{compute?:typeof computeFit}={}) {
         await prisma.accessoryAutoFit.updateMany({where:{accessoryId,generationId:g.id},data:{fitVersion:-1}});await saveFit(a,g.id,g.model3dKey,fit);
         await prisma.accessoryAutoFit.updateMany({where:{accessoryId,generationId:g.id},data:{approvedAt:null,approvedByUserId:null}}); // the admin reviews every explicit rerun again (a kept correction stays as the suggestion)
       }
-      await prisma.auditLog.create({data:{actorId:uid,action:"ACCESSORY3D_REFIT",targetId:accessoryId}});
+      await prisma.auditLog.create({data:{actorId:uid,action:"ACCESSORY3D_REFIT",targetId:accessoryId}});forgetFitRows(accessoryId);
       })();running.set(accessoryId,job);
       try{await job;return {success:true};}finally{running.delete(accessoryId);}
     },

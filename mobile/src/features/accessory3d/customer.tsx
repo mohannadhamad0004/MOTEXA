@@ -54,12 +54,9 @@ export function ProductAccessory3D({ productId, car, onPreview }: { productId: s
   // reload when the ACTIVE car changes (a switch from this screen, the Garage sheet or another tab), not only on the 6 s poll
   // each read also re-reads the Garage, so an active-car change made elsewhere (another device) reaches every screen within one poll
   const choices=useLoad(()=>{if(onPreview)return Promise.resolve([]);void refreshGarage();return customerAccessoryApi.garage(productId);},[productId,!!onPreview,activeId],6000);
-  const [selected,setSelected]=useState<string|null>(null);
-  // an explicit "preview another saved car" pick belongs to the active car it was made under
-  useEffect(()=>{setSelected(null);},[productId,activeId]);
   // the live active car overrides the (possibly stale) isActive flags of the last response
   const live=(choices.data??[]).map(c=>({...c,isActive:activeId?c.carId===activeId:c.isActive}));
-  const chosen=selectPreviewCar(live,selected);
+  const chosen=selectPreviewCar(live);
   const a = state.data;
   const installed = a?.installed ?? null;
   const { uris, failed: photosFailed, retry: retryPhotos } = usePhotos(installed?.photoIds ?? []);
@@ -78,9 +75,8 @@ export function ProductAccessory3D({ productId, car, onPreview }: { productId: s
     {onPreview && parts.some(x=>x.model) ? <GButton label={t("Preview published 3D", "معاينة النموذج المنشور")} onPress={onPreview}/> : null}
     {parts.length > 1 ? <View style={[row, { marginTop: 12 }]}><Badge label={`3D · ${t("Front + rear", "أمامي + خلفي")}`} tone="neutral" /></View> : null}
     {!onPreview?<View style={{gap:10,marginTop:12}}>
-      {live.length>1?live.filter(c=>c.allowed).map(c=><GButton key={c.carId} variant="secondary" label={`${chosen?.carId===c.carId?"✓ ":""}${c.make} ${c.model} ${c.year}`} onPress={()=>setSelected(c.carId)}/>):null}
-      {viewable&&parts.some(x=>x.model)?<GButton icon="cube-outline" label={t("View on my car","اعرضها على سيارتي")} onPress={()=>router.push({pathname:"/customer/car3d",params:chosen!.isActive?{product:productId}:{product:productId,carId:chosen!.carId}})}/>:<>
-        <Note>{customerThreeDReason(!parts.some(x=>x.model)?"NO_ACCESSORY_3D":chosen?.reason??"NO_COMPATIBLE_GARAGE_CAR",t)}</Note>
+      {viewable&&parts.some(x=>x.model)?<GButton icon="cube-outline" label={t("View on my car","اعرضها على سيارتي")} onPress={()=>router.push({pathname:"/customer/car3d",params:{product:productId}})}/>:<>
+        <Note>{!parts.some(x=>x.model)?customerThreeDReason("NO_ACCESSORY_3D",t):chosen?.reason==="NO_VEHICLE_3D"?t("3D for your car is not available yet.","العرض ثلاثي الأبعاد لسيارتك غير متاح بعد."):t("Not available in 3D for your car yet","غير متاح بالثلاثي الأبعاد لسيارتك بعد")}</Note>
         {chosen?.reason==="NO_VEHICLE_3D"?<GButton variant="secondary" label={t("Request my car in 3D","طلب سيارتي ثلاثية الأبعاد")} onPress={()=>router.push({pathname:"/customer/vehicle-requests/[id]",params:{id:"new",garageCarId:chosen.carId}} as never)}/>:!chosen?<GButton variant="secondary" label={t("Open Garage","فتح الكراج")} onPress={()=>router.push("/customer/garage" as never)}/>:null}
       </>}
       {choices.error?<Note tone="danger">{t("Could not check your Garage. Refresh to retry.","تعذّر فحص كراجك. حدّث لإعادة المحاولة.")}</Note>:null}

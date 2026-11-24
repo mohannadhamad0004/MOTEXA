@@ -28,10 +28,9 @@ export default function MyCar3D() {
   const { g, row, align } = useGarageTheme();
   const { t } = useL();
   const insets = useSafeAreaInsets();
-  const { product,carId } = useLocalSearchParams<{ product?: string;carId?:string }>();
-  const { activeCar,garageCars,loaded } = useGarage();
-  const savedCar=carId?garageCars.find(c=>c.id===carId):null;
-  const car=carId?(savedCar?{...savedCar,year:String(savedCar.year),trim:""}:null):activeCar;
+  const { product } = useLocalSearchParams<{ product?: string }>();
+  // only ever the ACTIVE car
+  const { activeCar:car,loaded } = useGarage();
   useFocusEffect(useCallback(()=>{void refreshGarage();void refreshRuntimeModels();},[]));
   const model = useCatalogModel(car);
   const [acc, setAcc] = useState<CustomerAccessory>(null);

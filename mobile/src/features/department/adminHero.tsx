@@ -30,6 +30,6 @@ export function AdminHero({ dept, title, line }: { dept: "tow" | "parts" | "mech
   const tab: HeroTab = dept;
   const label = { tow: t("Tow admin", "إدارة السحب"), parts: t("Parts admin", "إدارة القطع"), mechanics: t("Mechanics admin", "إدارة الميكانيكيين") }[dept];
   const mo = t("Mo, the MOTEXA mascot", "مو، تميمة موتيكسا");
-  const media = dept === "tow" ? { clip: TOW_ADMIN, framing: FRAME, label: mo } : dept === "parts" ? { clip: PARTS_ADMIN, framing: FRAME, label: mo } : moHeroMedia("admin", mo) ?? { clip: null, label: mo };
+  const media = dept === "tow" ? { clip: TOW_ADMIN, framing: FRAME, label: mo } : dept === "parts" ? { clip: PARTS_ADMIN, framing: FRAME, label: mo } : moHeroMedia("admin", mo) ?? moHeroMedia("mechanic", mo);
   return <HeroLayout config={{ tab, title, line, top: { label, actions: [] }, media }} />;
 }

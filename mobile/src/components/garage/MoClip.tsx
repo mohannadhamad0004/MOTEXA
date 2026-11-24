@@ -42,6 +42,14 @@ export const MO_CLIPS = {
     crop: { x: 0, y: 0, w: 444, h: 558 },
     blend: false,
   },
+  // 1172 x 660 landscape, no watermark: the box shows its middle
+  mechanics: {
+    video: require("../../../assets/mo/mechanic-hero.mp4"),
+    last: require("../../../assets/mo/mechanic-hero.jpg"),
+    frame: { w: 1172, h: 660 },
+    crop: { x: 0, y: 0, w: 1172, h: 660 },
+    blend: false,
+  },
   tow: {
     video: require("../../../assets/vedio/tow truck.mp4"),
     first: require("../../../assets/mo/tow/customer/tow-customer-first.jpg"),
@@ -98,7 +106,7 @@ export const HERO_CLIPS: Record<HeroTab, ({ clip: MoClipKey } & MoFraming) | nul
   home: { clip: "home", focusX: 0.55, focusY: 0.5, scale: 1.25 },
   // already framed for the box: no zoom, centred
   parts: { clip: "parts", focusX: 0.5, focusY: 0.5, scale: 1 },
-  mechanics: null,
+  mechanics: { clip: "mechanics", focusX: 0.5, focusY: 0.5, scale: 1 },
   // Mo beside the truck: raised fist ~x 450 to hand on hip ~x 900 of 1280, cap from ~y 55
   tow: { clip: "tow", focusX: 0.52, focusY: 0.52, scale: 2.45 },
 };

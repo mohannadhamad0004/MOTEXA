@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
-import { Card, Chip, ErrorState, Field, GarageHero, GaragePage, GButton, GIcon, GText, Note, SkeletonBlock, StepperHeader, StickyActionBar } from "../../../components/garage";
+import { Card, Chip, ErrorState, Field, GaragePage, HeroLayout, GButton, GIcon, GText, Note, SkeletonBlock, StepperHeader, StickyActionBar } from "../../../components/garage";
 import { cityLabel } from "../../../core/constants/cities";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
@@ -42,7 +42,7 @@ export default function NewMechanicRequest() {
 
   return (
     <GaragePage
-      hero={<GarageHero variant="detail" onBack={back} title={t("Request service", "طلب خدمة")} line={m ? `${m.name} · ${cityLabel(m.city, isArabic)}` : undefined} />}
+      hero={<HeroLayout config={{ tab: "mechanics", title: t("Request service", "طلب خدمة"), line: m ? `${m.name} · ${cityLabel(m.city, isArabic)}` : undefined, top: { label: t("Mechanic", "ميكانيكي"), back, actions: [] } }} />}
       bottom={
         m && !sentId ? (
           <StickyActionBar>

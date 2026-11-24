@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
-import { Card, ErrorState, GarageHero, GaragePage, GButton, GText, ListRow, Note, Section, SkeletonBlock, StatusChip, Timeline } from "../../../components/garage";
+import { Card, ErrorState, GaragePage, HeroLayout, GButton, GText, ListRow, Note, Section, SkeletonBlock, StatusChip, Timeline } from "../../../components/garage";
 import { cityCentre, cityLabel } from "../../../core/constants/cities";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
@@ -71,14 +71,14 @@ export default function MechanicRequestScreen() {
       }}
       refreshing={pulling}
       hero={
-        <GarageHero
-          variant="detail"
-          onBack={() => (router.canGoBack() ? router.back() : router.navigate("/customer/requests"))}
-          title={r ? headline(r.mechanic.name, r.status) : t("Service request", "طلب خدمة")}
-          line={shortId(id)}
-        >
-          {r ? <StatusChip tone={mechTone(r.status)} label={statusLabel[r.status]} /> : null}
-        </GarageHero>
+        <HeroLayout
+          config={{
+            tab: "mechanics",
+            title: r ? headline(r.mechanic.name, r.status) : t("Service request", "طلب خدمة"),
+            line: r ? `${statusLabel[r.status]} · ${shortId(id)}` : shortId(id),
+            top: { label: t("Service request", "طلب خدمة"), back: () => (router.canGoBack() ? router.back() : router.navigate("/customer/requests")), actions: [] },
+          }}
+        />
       }
     >
       {state.error && !r ? (

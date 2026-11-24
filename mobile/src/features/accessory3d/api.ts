@@ -64,10 +64,24 @@ export type AutoFitRow = { accessoryId: string; productId: string; productName: 
   size: { widthMm: number | null; lengthMm: number | null; rimInches: number | null }; generation: { id: string; name: string }; finish?: RimFinish | null;
   fit: { fit: { info?: Record<string, unknown>; failed?: string } & Record<string, unknown>; adj: FitAdjust | null; approvedAt: string | null } | null; computing: boolean; kitPart?: KitPart };
 export type FitState = "approved" | "passed" | "failed" | "not_computed" | "needs_correction" | "has_correction";
-export type AccessoryFits = {
+/** The bulk fits screen (one accessory on all its cars): filtered, paged rows; "correction" = needs correction or a manual correction. */
+export type FitFilter = { q?: string; make?: string; model?: string; generationId?: string; status?: FitState | "correction" };
+export type FitRow = { generationId: string; make: string; makeAr: string; model: string; modelAr: string; code: string; nameEn: string; nameAr: string;
+  yearFrom: number; yearTo: number; model3dKey: string; photoUrl: string | null; status: FitState; reason: string | null; approvedAt: string | null };
+export type FitsPage = {
   accessory: { id: string; productId: string; productName: string; type: AccessoryType; kitPart: KitPart; status: AccessoryStatus; universal: boolean; computing: boolean };
-  cars: { generationId: string; name: string; nameAr: string; make: string; model3dKey: string; photoUrl: string | null; status: FitState; reason: string | null; approvedAt: string | null }[];
+  /** every car of the part / the cars matching the filter */
+  all: number; total: number;
+  /** per state, within brand / model / generation / search (any state) */
+  counts: Record<FitState, number>;
+  facets: { makes: { value: string; ar: string }[]; models: { value: string; ar: string }[]; generations: { id: string; code: string; yearFrom: number; yearTo: number }[] };
+  offset: number; limit: number; cars: FitRow[];
 };
+/** picked rows (at most 500) or everything matching the filter minus a few unticked rows: never thousands of ids */
+export type FitSelectionBody = { generationIds: string[] } | { filter: FitFilter; exclude: string[] };
+export type FitJob = { id: string; status: "QUEUED" | "RUNNING" | "DONE" | "CANCELLED" | "FAILED"; total: number; position: number; done: number; skipped: number; errors: number;
+  includeApproved: boolean; error: string | null; createdAt: string; startedAt: string | null; finishedAt: string | null; etaSeconds: number | null };
+export type FitJobSummary = { toRun: number; approvedSkipped: number; approvedReset: number; notATarget: number };
 export type BulkFitsResult = { action: "approve" | "unapprove"; done: { generationId: string; name: string }[]; skipped: { generationId: string; name: string; code: string }[] };
 export type { ZoneBox } from "../car3d/modelConfig";
 /** none = not split yet (running in the background), stale = the model file changed, single = one piece (zones only). */
@@ -138,8 +152,17 @@ export const adminAccessoryApi = {
   /** approve the fit with a correction (null = the pure auto-fit: "Reset to auto-fit") */
   approveFit: (accessoryId: string, generationId: string, adj: FitAdjust | null) => api("PUT", `/admin/parts/auto-fits/${accessoryId}/${generationId}`, { adj }),
   needsCorrection: (accessoryId: string, generationId: string) => api("PUT", `/admin/parts/auto-fits/${accessoryId}/${generationId}`, { needsCorrection: true }),
-  /** bulk review: every car of one accessory with its state, then approve / unapprove a selection (the server re-checks every state) */
-  accessoryFits: (accessoryId: string) => api<AccessoryFits>("GET", `/admin/parts/accessory-3d/${accessoryId}/fits`),
+  /** bulk review: one page of the cars of one accessory (filtered on the server), approve passed fits / run auto-fit on a selection */
+  fitsPage: (accessoryId: string, f: FitFilter, offset: number, limit = 50) => {
+    const q = Object.entries({ ...f, offset: String(offset), limit: String(limit) }).filter(([, v]) => !!v).map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join("&");
+    return api<FitsPage>("GET", `${adm}/${accessoryId}/fits?${q}`);
+  },
+  approveFits: (accessoryId: string, sel: FitSelectionBody, dryRun = false) =>
+    api<{ approvable?: number; approved?: number; skipped: Record<string, number> }>("POST", `${adm}/${accessoryId}/fits/approve`, { ...sel, dryRun }),
+  startFitJob: (accessoryId: string, sel: FitSelectionBody, o: { includeApproved?: boolean; confirmApprovedReset?: number; dryRun?: boolean }) =>
+    api<{ job: FitJob | null; summary: FitJobSummary }>("POST", `${adm}/${accessoryId}/fits/jobs`, { ...sel, ...o }),
+  currentFitJob: async (accessoryId: string) => (await api<{ job: FitJob | null }>("GET", `${adm}/${accessoryId}/fits/jobs/current`)).job,
+  cancelFitJob: (accessoryId: string, jobId: string) => api("POST", `${adm}/${accessoryId}/fits/jobs/${jobId}/cancel`),
   bulkFits: (accessoryId: string, action: "approve" | "unapprove", generationIds: string[]) => api<BulkFitsResult>("POST", `/admin/parts/accessory-3d/${accessoryId}/fits/bulk`, { action, generationIds }),
   segment: async (key: string) => (await api<{ partMap: PartMapDetail }>("POST", `/admin/parts/part-maps/${key}/segment`)).partMap,
 };

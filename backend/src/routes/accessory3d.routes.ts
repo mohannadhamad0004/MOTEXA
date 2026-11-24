@@ -9,6 +9,7 @@ import { requireApprovedProvider } from "../services/provider-onboarding.js";
 import { createAccessory3DService, parseKitPart, prepareManualAccessory } from "../services/accessory3d.js";
 import { createPartMapService } from "../services/car-part-map.js";
 import { autoFitAccessory, createAutoFitService } from "../services/accessory-autofit.js";
+import { cancelFitJob, createFitJob, currentFitJob } from "../services/accessory-fit-jobs.js";
 import { Vehicle3DError } from "../services/vehicle3d-validation.js";
 
 export function createAccessory3DRouter(service = createAccessory3DService(), partMaps = createPartMapService(), autoFits = createAutoFitService(), guards = { auth: requireAuth, provider: requirePartsProvider, approved: requireApprovedProvider, admin: requirePartsAdmin, customer: requireCustomer }) {
@@ -76,8 +77,15 @@ export function createAccessory3DRouter(service = createAccessory3DService(), pa
   // auto-fits on one car model: list (+ background computing), approve with an optional correction (adj null = reset to auto-fit)
   router.get("/admin/parts/auto-fits", ...admin, handle(async (req, res) => res.json({ fits: await autoFits.list(String(req.query.model3dKey ?? "")) })));
   // bulk fit review on ONE accessory (all its cars): the grid, and approve / unapprove selected (only "passed" / "approved" fits are taken)
-  router.get(a + "/:id/fits", ...admin, handle(async (req, res) => res.json(await autoFits.fitsFor(p(req, "id")))));
+  // paged + filtered (?q&make&model&generationId&status&offset&limit); a selection is picked ids (<= 500) or { filter, exclude }, never 5,000 ids
+  const selectionJson = express.json({ limit: "64kb" });
+  router.get(a + "/:id/fits", ...admin, handle(async (req, res) => res.json(await autoFits.page(p(req, "id"), req.query as Record<string, unknown>))));
   router.post(a + "/:id/fits/bulk", ...admin, json, handle(async (req, res, uid) => res.json(await autoFits.bulk(uid, p(req, "id"), String(req.body?.action ?? ""), req.body?.generationIds))));
+  router.post(a + "/:id/fits/approve", ...admin, selectionJson, handle(async (req, res, uid) => res.json(await autoFits.approveMatching(uid, p(req, "id"), req.body ?? {}))));
+  // "Run auto-fit": a resumable background job per accessory (dryRun = the counts for the confirmation)
+  router.post(a + "/:id/fits/jobs", ...admin, selectionJson, handle(async (req, res, uid) => { const r = await createFitJob(uid, p(req, "id"), req.body ?? {}); res.status(r.job ? 202 : 200).json(r); }));
+  router.get(a + "/:id/fits/jobs/current", ...admin, handle(async (req, res) => res.json(await currentFitJob(p(req, "id")))));
+  router.post(a + "/:id/fits/jobs/:jobId/cancel", ...admin, handle(async (req, res, uid) => res.json(await cancelFitJob(uid, p(req, "id"), p(req, "jobId")))));
   router.put("/admin/parts/auto-fits/:accessoryId/:generationId", ...admin, json, handle(async (req, res, uid) => res.json({ fit: await autoFits.approve(uid, p(req, "accessoryId"), p(req, "generationId"), req.body ?? {}) })));
 
   const c = "/catalog/products/:productId/accessory-3d";

@@ -235,8 +235,28 @@ export async function modelWithZones(key: string, tx: Tx | typeof prisma = prism
   const revision=await tx.vehicle3DRevision.findUnique({where:{key},select:{viewerConfig:true}});
   const m = parseCarModel(revision?.viewerConfig)??activeModels().find(x => x.key === key); if (!m) return null;
   const rows = await tx.accessoryFitZone.findMany({ where: { model3dKey: key } }), partMap = (await confirmedPartMaps([key])).get(key);
-  const z = rows.length ? { ...m, zones: { ...(m.zones ?? {}), ...Object.fromEntries(rows.map(r => [r.accessoryType, r.zone as never])) } } : m;
   const rimProposal = partMap?.WHEELS?.length ? undefined : (await rimProposals([key])).get(key), cuts = (await partCuts([key])).get(key);
+  return assembleModel(m, rows, partMap, rimProposal, cuts);
+}
+/** The same config as modelWithZones for many keys at once (5 queries in total instead of 5 per key): the bulk fits screen. */
+export async function modelsWithZones(keys: string[]): Promise<Map<string, ViewerConfig>> {
+  const unique = [...new Set(keys)], out = new Map<string, ViewerConfig>();
+  if (!unique.length) return out;
+  const [revisions, zoneRows, maps, rims, cuts] = await Promise.all([
+    prisma.vehicle3DRevision.findMany({ where: { key: { in: unique } }, select: { key: true, viewerConfig: true } }),
+    prisma.accessoryFitZone.findMany({ where: { model3dKey: { in: unique } } }), confirmedPartMaps(unique), rimProposals(unique), partCuts(unique)]);
+  const catalog = new Map(activeModels().map(m => [m.key, m])), viewer = new Map(revisions.map(r => [r.key, r.viewerConfig]));
+  const zones = new Map<string, typeof zoneRows>();
+  for (const z of zoneRows) zones.set(z.model3dKey, [...(zones.get(z.model3dKey) ?? []), z]);
+  for (const key of unique) {
+    const m = parseCarModel(viewer.get(key)) ?? catalog.get(key); if (!m) continue;
+    const partMap = maps.get(key);
+    out.set(key, assembleModel(m, zones.get(key) ?? [], partMap, partMap?.WHEELS?.length ? undefined : rims.get(key), cuts.get(key)));
+  }
+  return out;
+}
+function assembleModel(m: NonNullable<ReturnType<typeof parseCarModel>> | ReturnType<typeof activeModels>[number], rows: { accessoryType: string; zone: unknown }[], partMap: unknown, rimProposal: unknown, cuts: unknown) {
+  const z = rows.length ? { ...m, zones: { ...(m.zones ?? {}), ...Object.fromEntries(rows.map(r => [r.accessoryType, r.zone as never])) } } : m;
   return { ...z, ...(partMap ? { partMap } : {}), ...(cuts ? { partCuts: cuts } : {}), ...(rimProposal ? { rimProposal } : {}) } as ViewerConfig;
 }
 export async function mergeZones<T extends { key: string; zones?: unknown }>(models: T[]) {

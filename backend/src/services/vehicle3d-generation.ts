@@ -124,5 +124,12 @@ export async function startVehicle3DWorker(){
     try{await processNextSketchfabImport();}catch{console.error("Vehicle import worker could not process a job.");}
     try{await processNextAccessory3DJob();}catch{console.error("Accessory 3D worker could not process a job.");}
     finally{running=false;}},5000);
-  timer.unref();return()=>clearInterval(timer);
+  timer.unref();
+  // bulk "Run auto-fit" jobs get their own loop: one job can take many minutes and must not hold up the generation pipelines above
+  const {processNextFitJob}=await import("./accessory-fit-jobs.js");
+  let fitting=false;
+  const fitTimer=setInterval(async()=>{if(fitting)return;fitting=true;
+    try{await processNextFitJob();}catch{console.error("Accessory fit job worker could not process a job.");}
+    finally{fitting=false;}},3000);
+  fitTimer.unref();return()=>{clearInterval(timer);clearInterval(fitTimer);};
 }
