@@ -6,30 +6,23 @@
 // 3D only on demand: tapping a row previews that one car (a sheet on phones, a side panel on wide screens), never several viewers at once.
 import { router, useLocalSearchParams, type Href } from "expo-router";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FlatList, Pressable, RefreshControl, View, useWindowDimensions } from "react-native";
-import { Card, Chip, EmptyState, ErrorState, GButton, GIcon, GText, ListRow, Note, OptionSheet, Rail, SearchBar, Sheet, SkeletonRows, StatusChip, Toggle, type Tone } from "../../components/garage";
-import { ActionsSheet, DotsButton, showToast, type ItemAction } from "../../components/ItemActionsMenu";
+import { View } from "react-native";
+import { Card, Chip, GButton, GIcon, GText, Note, OptionSheet, Rail, Sheet, SkeletonRows, StatusChip, Toggle, type Tone } from "../../components/garage";
+import { ActionsSheet, showToast, type ItemAction } from "../../components/ItemActionsMenu";
+import { ManageCheck, ManagePage, ManageRow, SelectBanner, useListWidth, useTwoPane } from "../../components/manage/ManagePage";
 import { useL } from "../../core/hooks/useL";
 import { useLoad } from "../../core/hooks/useLoad";
-import { gShape, gType, useGarageTheme } from "../../theme/garage";
+import { gType, useGarageTheme } from "../../theme/garage";
 import { NO_ADJUST } from "../car3d/car3d";
 import { Car3DView } from "../car3d/Car3DView";
 import { useCatalogModelKey } from "../car3d/runtimeModels";
 import { threeDError } from "../vehicleCatalog/lifecycleText";
-import { DeptHead, DeptPage } from "../department/ui";
-import { ACCESSORY_TYPE_LABELS, adminAccessoryApi, type FitFilter, type FitJob, type FitJobSummary, type FitRow, type FitsPage, type FitState } from "./api";
+import { ACCESSORY_TYPE_LABELS, FIT_STATE_LABELS, adminAccessoryApi, type FitFilter, type FitJob, type FitJobSummary, type FitRow, type FitsPage, type FitState } from "./api";
 import { MAX_PICKED, NONE, ALL_MATCHING, atLimit, etaText, isSelected, num, selectedCount, selectionBody, toggle, toggleRows, type Selection } from "./fitSelection";
 import { fitKit } from "./screens";
 
 type T = (en: string, ar: string) => string;
-const STATE: Record<FitState, { en: string; ar: string; tone: Tone }> = {
-  approved: { en: "Approved", ar: "معتمد", tone: "success" },
-  passed: { en: "Passed", ar: "اجتاز الفحص", tone: "accent" },
-  failed: { en: "Failed", ar: "فشل", tone: "danger" },
-  not_computed: { en: "Not computed", ar: "لم يُحسب", tone: "neutral" },
-  needs_correction: { en: "Needs correction", ar: "يحتاج إلى تصحيح", tone: "warning" },
-  has_correction: { en: "Manual correction", ar: "تصحيح يدوي", tone: "warning" },
-};
+const STATE = FIT_STATE_LABELS;
 /** the filter chips: "Needs manual correction" covers both a flagged fit and a stored correction (each is reviewed on its own) */
 const FILTERS: { key: FitFilter["status"] | "all"; en: string; ar: string; count: (c: Record<FitState, number>) => number }[] = [
   { key: "all", en: "All", ar: "الكل", count: c => Object.values(c).reduce((a, b) => a + b, 0) },
@@ -74,17 +67,23 @@ const ROW_H = 64;
 export function BulkFitsPicker() {
   const { t } = useL();
   const list = useLoad(adminAccessoryApi.list, [], 15000);
+  const [q, setQ] = useState("");
   const rows = (list.data ?? []).filter(a => ["PUBLISHED", "READY_FOR_FINAL_REVIEW"].includes(a.status) && !a.deactivatedAt);
+  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = rows.filter(a => words.every(w => `${a.productName} ${a.shopName}`.toLowerCase().includes(w)));
   return (
-    <DeptPage back tabs={false} onRefresh={() => void list.reload()} refreshing={list.loading && !!list.data}>
-      <DeptHead title={t("Review fits by accessory", "مراجعة التركيب حسب القطعة")} caption={t("Pick an accessory to review all its cars together.", "اختر قطعة لمراجعة كل سياراتها معًا.")} />
-      {list.error && !list.data ? <ErrorState text={list.error} onRetry={list.reload} retryLabel={t("Retry", "إعادة المحاولة")} /> : null}
-      {!list.data && !list.error ? <SkeletonRows count={4} /> : null}
-      {list.data && !rows.length ? <EmptyState photo="empty.requests" text={t("No published accessory to review.", "لا توجد قطعة منشورة للمراجعة.")} /> : null}
-      <Card pad={8}>
-        {rows.map((a, i) => <ListRow key={a.id} divider={i > 0} icon="cube-outline" title={`${a.productName}`} sub={`${a.shopName} · ${t(...ACCESSORY_TYPE_LABELS[a.accessoryType])}`} onPress={() => router.push(`/dept/accessory-fits?accessoryId=${encodeURIComponent(a.id)}` as Href)} />)}
-      </Card>
-    </DeptPage>
+    <ManagePage
+      title={t("Review by accessory", "المراجعة حسب القطعة")}
+      line={list.data ? t(`${rows.length} accessories · all their cars at once`, `${rows.length} قطع · كل سياراتها معًا`) : undefined}
+      search={{ value: q, onChange: setQ, placeholder: t("Search accessory or shop", "ابحث عن قطعة أو متجر") }}
+      items={shown} keyOf={a => a.id}
+      renderItem={a => <ManageRow title={a.productName} sub={`${a.shopName} · ${t(...ACCESSORY_TYPE_LABELS[a.accessoryType])}`}
+        status={a.status === "PUBLISHED" ? { label: t("Published", "منشورة"), tone: "success" } : { label: t("Final review", "مراجعة نهائية"), tone: "warning" }}
+        onPress={() => router.push(`/dept/accessory-fits?accessoryId=${encodeURIComponent(a.id)}` as Href)} />}
+      loading={!list.data && !list.error} error={list.error} onRetry={() => void list.reload()}
+      empty={{ text: rows.length ? t("No accessory matches.", "لا توجد قطعة مطابقة.") : t("No published accessory to review.", "لا توجد قطعة منشورة للمراجعة.") }}
+      onRefresh={() => void list.reload()} refreshing={list.loading && !!list.data}
+    />
   );
 }
 
@@ -99,10 +98,7 @@ type Confirm = { kind: "approve"; approvable: number; skipped: Record<string, nu
 function BulkFitsList({ accessoryId }: { accessoryId: string }) {
   const { t, isArabic } = useL();
   const { g, row, align } = useGarageTheme();
-  const { width } = useWindowDimensions();
-  const twoPane = width >= 900;
-  const [listW, setListW] = useState(0);
-  const table = listW >= 560; // a real table (one column per field) once the list is wide enough
+  const twoPane = useTwoPane(), { table, onListWidth } = useListWidth();
 
   // ---- filter + paged rows (the server filters; only the latest answer counts)
   const [filter, setFilter] = useState<FitFilter>({});
@@ -207,43 +203,12 @@ function BulkFitsList({ accessoryId }: { accessoryId: string }) {
   const onOpen = useCallback((r: FitRow) => setPreview(r), []);
   const onMenu = useCallback((r: FitRow) => setMenu(r), []);
   const limit = atLimit(sel);
-  const renderItem = useCallback(({ item }: { item: FitRow }) => (
+  const renderItem = useCallback((item: FitRow) => (
     <FitRowView r={item} on={isSelected(sel, item.generationId)} blocked={limit && !isSelected(sel, item.generationId)} active={twoPane && preview?.generationId === item.generationId} table={table} onToggle={onToggle} onOpen={onOpen} onMenu={onMenu} />
   ), [sel, limit, twoPane, preview?.generationId, table, onToggle, onOpen, onMenu]);
 
   const onScreen = cars.map(c => c.generationId), allOnScreen = !sel.all && cars.length > 0 && onScreen.every(id => sel.ids.has(id));
   const a = page?.accessory;
-  const header = (
-    <View style={{ gap: 12, paddingBottom: 8 }}>
-      <DeptHead title={a?.productName ?? t("Accessory fits", "تركيب القطعة")}
-        caption={a ? `${t(...ACCESSORY_TYPE_LABELS[a.type])}${a.universal ? ` · ${t("Universal by size", "عام حسب المقاس")}` : ""} · ${carsWord(page!.all, isArabic)}` : undefined} />
-      {job && hiddenJob !== job.id && (jobActive || recent(job)) ? <JobCard job={job} busy={busy} onCancel={() => void cancelJob()} onHide={() => setHiddenJob(job.id)} /> : null}
-      {a?.computing ? <Note>{t("Fits are being computed after publishing. The list follows.", "يجري حساب التركيب بعد النشر. تتحدّث القائمة تلقائيًا.")}</Note> : null}
-      {result ? <Note tone={result.tone} icon="checkmark-circle-outline">{result.text}</Note> : null}
-      <SearchBar value={q} onChangeText={setQ} placeholder={t("Search brand, model, generation, year", "ابحث بالماركة أو الطراز أو الجيل أو السنة")} />
-      <Facets page={page} filter={filter} setFilter={setFilter} />
-      <Rail gap={8}>
-        {FILTERS.map(f => <Chip key={f.key} label={t(f.en, f.ar)} count={page ? f.count(page.counts) : undefined} on={(filter.status ?? "all") === f.key}
-          onPress={() => setFilter(x => ({ ...x, status: f.key === "all" ? undefined : f.key }))} />)}
-      </Rail>
-      {/* the table head: select the rows on screen / everything matching, and the column names on wide lists */}
-      <View style={[row, { alignItems: "center", gap: 4, minHeight: 44, borderBottomWidth: 1, borderBottomColor: g.line }]}>
-        <Check on={sel.all || allOnScreen} mixed={!sel.all && !allOnScreen && sel.ids.size > 0} disabled={!cars.length} label={t("Select all on screen", "تحديد كل ما على الشاشة")} onPress={() => setSel(s => toggleRows(s, onScreen))} />
-        {table ? <Columns head /> : <GText soft style={[gType.caption, align, { flex: 1, fontWeight: "700" }]}>{t("Select all", "تحديد الكل")}</GText>}
-        {!table ? <GText soft style={[gType.caption, { fontWeight: "700" }]}>{page ? carsWord(total, isArabic) : ""}</GText> : null}
-      </View>
-      {sel.all ? (
-        <SelectBanner text={t(`All ${num(count)} matching cars are selected.`, `تم تحديد كل السيارات المطابقة (${num(count)}).`)} action={t("Clear selection", "مسح التحديد")} onPress={() => setSel(NONE)} />
-      ) : total > 0 && (allOnScreen || sel.ids.size === 0) ? (
-        <SelectBanner text={allOnScreen ? t(`The ${num(cars.length)} cars on screen are selected.`, `تم تحديد السيارات المعروضة (${num(cars.length)}).`) : null}
-          action={t(`Select all ${num(total)} matching the filter`, `تحديد كل السيارات المطابقة للفلتر (${num(total)})`)} onPress={() => setSel(ALL_MATCHING)} />
-      ) : null}
-      {limit ? <GText soft style={[gType.tiny, align]}>{t(`At most ${MAX_PICKED} cars can be picked one by one. Use "Select all matching" for more.`, `يمكن اختيار ${MAX_PICKED} سيارة كحد أقصى واحدة تلو الأخرى. استخدم «تحديد كل ما يطابق» للمزيد.`)}</GText> : null}
-      {error && cars.length ? <Note tone="danger">{error}</Note> : null}
-    </View>
-  );
-  const empty = loading ? <SkeletonRows count={6} /> : error ? <ErrorState text={error} onRetry={() => void load("reset")} retryLabel={t("Retry", "إعادة المحاولة")} />
-    : <EmptyState photo="empty.search" text={t("No cars match these filters.", "لا توجد سيارات تطابق هذه الفلاتر.")} action={hasFilter(filter) ? { label: t("Clear filters", "مسح الفلاتر"), onPress: () => { setQ(""); setFilter({}); } } : undefined} />;
   const footer = count > 0 ? (
     <View style={{ gap: 8 }}>
       <View style={[row, { alignItems: "center", gap: 8 }]}>
@@ -258,59 +223,56 @@ function BulkFitsList({ accessoryId }: { accessoryId: string }) {
     </View>
   ) : undefined;
 
-  const list = (
-    <View style={{ flex: 1, minWidth: 0 }} onLayout={e => setListW(e.nativeEvent.layout.width)}>
-      <FlatList
-        data={cars}
-        keyExtractor={r => r.generationId}
-        renderItem={renderItem}
-        getItemLayout={(_d, i) => ({ length: ROW_H, offset: ROW_H * i, index: i })}
-        ListHeaderComponent={header}
-        ListEmptyComponent={empty}
-        ListFooterComponent={<View style={{ paddingTop: 12, gap: 10 }}>
-          {loadingMore ? <SkeletonRows count={2} /> : null}
+  return (
+    <>
+      <ManagePage
+        title={a?.productName ?? t("Accessory fits", "تركيب القطعة")}
+        line={a ? `${t(...ACCESSORY_TYPE_LABELS[a.type])}${a.universal ? ` · ${t("Universal by size", "عام حسب المقاس")}` : ""} · ${carsWord(page!.all, isArabic)}` : undefined}
+        search={{ value: q, onChange: setQ, placeholder: t("Search brand, model, generation, year", "ابحث بالماركة أو الطراز أو الجيل أو السنة") }}
+        filters={<>
+          <Facets page={page} filter={filter} setFilter={setFilter} />
+          <Rail gap={8}>
+            {FILTERS.map(f => <Chip key={f.key} label={t(f.en, f.ar)} count={page ? f.count(page.counts) : undefined} on={(filter.status ?? "all") === f.key}
+              onPress={() => setFilter(x => ({ ...x, status: f.key === "all" ? undefined : f.key }))} />)}
+          </Rail>
+        </>}
+        above={<>
+          {job && hiddenJob !== job.id && (jobActive || recent(job)) ? <JobCard job={job} busy={busy} onCancel={() => void cancelJob()} onHide={() => setHiddenJob(job.id)} /> : null}
+          {a?.computing ? <Note>{t("Fits are being computed after publishing. The list follows.", "يجري حساب التركيب بعد النشر. تتحدّث القائمة تلقائيًا.")}</Note> : null}
+          {result ? <Note tone={result.tone} icon="checkmark-circle-outline">{result.text}</Note> : null}
+        </>}
+        listHead={<>
+          {/* the table head: select the rows on screen / everything matching, and the column names on wide lists */}
+          <View style={[row, { alignItems: "center", gap: 4, minHeight: 44, borderBottomWidth: 1, borderBottomColor: g.line }]}>
+            <ManageCheck on={sel.all || allOnScreen} mixed={!sel.all && !allOnScreen && sel.ids.size > 0} disabled={!cars.length} label={t("Select all on screen", "تحديد كل ما على الشاشة")} onPress={() => setSel(s => toggleRows(s, onScreen))} />
+            {table ? <Columns head /> : <GText soft style={[gType.caption, align, { flex: 1, fontWeight: "700" }]}>{t("Select all", "تحديد الكل")}</GText>}
+            {!table ? <GText soft style={[gType.caption, { fontWeight: "700" }]}>{page ? carsWord(total, isArabic) : ""}</GText> : null}
+          </View>
+          {sel.all ? (
+            <SelectBanner text={t(`All ${num(count)} matching cars are selected.`, `تم تحديد كل السيارات المطابقة (${num(count)}).`)} action={t("Clear selection", "مسح التحديد")} onPress={() => setSel(NONE)} />
+          ) : total > 0 && (allOnScreen || sel.ids.size === 0) ? (
+            <SelectBanner text={allOnScreen ? t(`The ${num(cars.length)} cars on screen are selected.`, `تم تحديد السيارات المعروضة (${num(cars.length)}).`) : null}
+              action={t(`Select all ${num(total)} matching the filter`, `تحديد كل السيارات المطابقة للفلتر (${num(total)})`)} onPress={() => setSel(ALL_MATCHING)} />
+          ) : null}
+          {limit ? <GText soft style={[gType.tiny, align]}>{t(`At most ${MAX_PICKED} cars can be picked one by one. Use "Select all matching" for more.`, `يمكن اختيار ${MAX_PICKED} سيارة كحد أقصى واحدة تلو الأخرى. استخدم «تحديد كل ما يطابق» للمزيد.`)}</GText> : null}
+        </>}
+        items={cars} keyOf={r => r.generationId} renderItem={renderItem}
+        loading={loading} error={error} onRetry={() => void load("reset")}
+        empty={{ text: t("No cars match these filters.", "لا توجد سيارات تطابق هذه الفلاتر."), action: hasFilter(filter) ? { label: t("Clear filters", "مسح الفلاتر"), onPress: () => { setQ(""); setFilter({}); } } : undefined }}
+        onEndReached={() => { if (!loading && !loadingMore && cars.length < total) void load("more"); }} loadingMore={loadingMore}
+        listFooter={<>
           {cars.length && cars.length >= total ? <GText soft style={[gType.tiny, { textAlign: "center" }]}>{t(`All ${num(total)} cars shown.`, `تم عرض كل السيارات (${num(total)}).`)}</GText> : null}
           <Note icon="eye-outline">{t("Customers only see approved fits. Failed, not computed and manually corrected fits are never approved in bulk: review them one by one.", "لا يرى العملاء إلا التركيبات المعتمدة. لا تُعتمد التركيبات الفاشلة أو غير المحسوبة أو المصححة يدويًا جماعيًا: راجعها منفردة.")}</Note>
-        </View>}
-        onEndReached={() => { if (!loading && !loadingMore && cars.length < total) void load("more"); }}
-        onEndReachedThreshold={0.6}
-        initialNumToRender={14}
-        maxToRenderPerBatch={20}
-        windowSize={9}
-        removeClippedSubviews
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={pulling} onRefresh={() => { setPulling(true); void Promise.all([load("refresh"), adminAccessoryApi.currentFitJob(accessoryId).then(setJob)]).finally(() => setPulling(false)); }} />}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: footer ? 200 : 40 }}
+        </>}
+        onRefresh={() => { setPulling(true); void Promise.all([load("refresh"), adminAccessoryApi.currentFitJob(accessoryId).then(setJob)]).finally(() => setPulling(false)); }} refreshing={pulling}
+        bulkBar={footer}
+        detail={shown ? { title: carName(shown, isArabic), onClose: () => setPreview(null), content: <FitPreview key={shown.generationId} accessoryId={accessoryId} r={shown} onReview={() => { if (!twoPane) setPreview(null); openReview(shown); }} /> } : null}
+        detailHint={t("Tap a car to preview this part on it in 3D.", "اضغط على سيارة لمعاينة هذه القطعة عليها ثلاثية الأبعاد.")}
+        onListWidth={onListWidth}
       />
-    </View>
-  );
-
-  return (
-    <DeptPage back tabs={false} list maxWidth={twoPane ? 1240 : 760} footer={footer}>
-      {twoPane ? (
-        <View style={[row, { flex: 1, gap: 4 }]}>
-          {list}
-          <View style={{ width: 400, paddingTop: 4, [isArabic ? "paddingLeft" : "paddingRight"]: 20 }}>
-            <Card>
-              {shown ? <FitPreview key={shown.generationId} accessoryId={accessoryId} r={shown} onReview={() => openReview(shown)} onClose={() => setPreview(null)} />
-                : <View style={{ minHeight: 280, alignItems: "center", justifyContent: "center", gap: 10 }}>
-                  <GIcon name="cube-outline" size={32} color={g.soft} />
-                  <GText soft style={[gType.bodySm, { textAlign: "center" }]}>{t("Tap a car to preview this part on it in 3D.", "اضغط على سيارة لمعاينة هذه القطعة عليها ثلاثية الأبعاد.")}</GText>
-                </View>}
-            </Card>
-          </View>
-        </View>
-      ) : list}
-
-      {!twoPane ? (
-        <Sheet visible={!!shown} onClose={() => setPreview(null)} tall title={shown ? carName(shown, isArabic) : ""} closeLabel={t("Close", "إغلاق")}>
-          {shown ? <FitPreview key={shown.generationId} accessoryId={accessoryId} r={shown} onReview={() => { setPreview(null); openReview(shown); }} /> : null}
-        </Sheet>
-      ) : null}
       <ActionsSheet visible={!!menu} onClose={() => setMenu(null)} title={menu ? carName(menu, isArabic) : ""} subtitle={menu ? `${menu.code} · ${years(menu)} · ${t(STATE[menu.status].en, STATE[menu.status].ar)}` : undefined} actions={menu ? rowActions(menu) : []} />
       <ConfirmSheet confirm={confirm} busy={busy} onClose={() => { if (!busy) setConfirm(null); }} setConfirm={setConfirm} onApprove={() => void approve()} onRun={c => void runFit(c)} />
-    </DeptPage>
+    </>
   );
 }
 
@@ -318,27 +280,14 @@ const hasFilter = (f: FitFilter) => !!(f.q || f.make || f.model || f.generationI
 /** a finished run stays on screen for an hour (then the list says it all) */
 const recent = (j: FitJob) => !!j.finishedAt && Date.now() - new Date(j.finishedAt).getTime() < 3_600_000;
 
-/** One car: [checkbox] brand model / generation · years [state] [⋮]. Tap = preview; the checkbox selects. Fixed height (ROW_H). */
+/** One car: [checkbox] brand model / generation · years [state] [⋮]. Tap = preview; the checkbox selects. */
 const FitRowView = memo(function FitRowView({ r, on, blocked, active, table, onToggle, onOpen, onMenu }: { r: FitRow; on: boolean; blocked: boolean; active: boolean; table: boolean; onToggle: (id: string) => void; onOpen: (r: FitRow) => void; onMenu: (r: FitRow) => void }) {
   const { t, isArabic } = useL();
-  const { g, row, align } = useGarageTheme();
   const st = STATE[r.status], name = carName(r, isArabic);
-  return (
-    <View style={[row, { height: ROW_H, alignItems: "center", gap: 4, borderBottomWidth: 1, borderBottomColor: g.line, backgroundColor: active ? g.tint : on ? g.cardSoft : "transparent" }]}>
-      <Check on={on} disabled={blocked} label={`${t("Select", "تحديد")} ${name} ${r.code}`} onPress={() => onToggle(r.generationId)} />
-      <Pressable accessibilityRole="button" accessibilityLabel={`${name} ${r.code}, ${years(r)}. ${t(st.en, st.ar)}. ${t("Preview in 3D", "معاينة ثلاثية الأبعاد")}`} onPress={() => onOpen(r)}
-        style={({ pressed }) => [row, { flex: 1, minWidth: 0, height: ROW_H, alignItems: "center", gap: 8, opacity: pressed ? 0.7 : 1 }]}>
-        {table ? <Columns r={r} /> : (
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <GText numberOfLines={1} style={[gType.label, align, { fontWeight: "700" }]}>{name}</GText>
-            <GText soft numberOfLines={1} style={[gType.caption, align]}>{`${r.code} · ${years(r)}`}</GText>
-          </View>
-        )}
-        <View style={{ width: table ? 150 : undefined, alignItems: isArabic ? "flex-end" : "flex-start" }}><StatusChip label={t(st.en, st.ar)} tone={st.tone} /></View>
-      </Pressable>
-      <DotsButton title={name} onPress={() => onMenu(r)} />
-    </View>
-  );
+  return <ManageRow title={name} sub={`${r.code} · ${years(r)}`} status={{ label: t(st.en, st.ar), tone: st.tone }} active={active} statusWidth={table ? 150 : undefined}
+    columns={table ? <Columns r={r} /> : undefined}
+    check={{ on, disabled: blocked, label: `${t("Select", "تحديد")} ${name} ${r.code}`, onToggle: () => onToggle(r.generationId) }}
+    onPress={() => onOpen(r)} pressLabel={`${name} ${r.code}, ${years(r)}. ${t(st.en, st.ar)}. ${t("Preview in 3D", "معاينة ثلاثية الأبعاد")}`} onMenu={() => onMenu(r)} />;
 });
 
 /** Wide lists: brand | model | generation | years (the head when `head`). */
@@ -350,32 +299,6 @@ function Columns({ r, head }: { r?: FitRow; head?: boolean }) {
     ? [cell("b", t("Brand", "الماركة"), 120), cell("m", t("Model", "الطراز"), undefined), cell("g", t("Generation", "الجيل"), 110), cell("y", t("Years", "السنوات"), 100), cell("s", t("Fit state", "حالة التركيب"), 150)]
     : [cell("b", isArabic ? r!.makeAr : r!.make, 120, true), cell("m", isArabic ? r!.modelAr : r!.model, undefined), cell("g", r!.code, 110), cell("y", years(r!), 100)];
   return <View style={[row, { flex: 1, minWidth: 0, alignItems: "center", gap: 8 }]}>{cells}{head ? <View style={{ width: 44 }} /> : null}</View>;
-}
-
-/** 44 px touch target, 22 px box; "mixed" = some selected. */
-function Check({ on, mixed, disabled, label, onPress }: { on: boolean; mixed?: boolean; disabled?: boolean; label: string; onPress: () => void }) {
-  const { g } = useGarageTheme();
-  const fill = on || mixed;
-  return (
-    <Pressable accessibilityRole="checkbox" accessibilityLabel={label} accessibilityState={{ checked: mixed ? "mixed" : on, disabled }} disabled={disabled} onPress={onPress} hitSlop={2}
-      style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center", opacity: disabled ? 0.35 : 1 }}>
-      <View style={{ width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: fill ? g.accent : g.soft, backgroundColor: fill ? g.accent : "transparent", alignItems: "center", justifyContent: "center" }}>
-        {on ? <GIcon name="checkmark" size={15} color={g.onAccent} /> : mixed ? <View style={{ width: 10, height: 2, borderRadius: 1, backgroundColor: g.onAccent }} /> : null}
-      </View>
-    </Pressable>
-  );
-}
-
-function SelectBanner({ text, action, onPress }: { text: string | null; action: string; onPress: () => void }) {
-  const { g, row, align } = useGarageTheme();
-  return (
-    <View style={[row, { flexWrap: "wrap", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: gShape.small, backgroundColor: g.tint }]}>
-      {text ? <GText style={[gType.caption, align]}>{text}</GText> : null}
-      <Pressable accessibilityRole="button" accessibilityLabel={action} onPress={onPress} style={{ minHeight: 36, justifyContent: "center" }}>
-        <GText style={[gType.caption, align, { fontWeight: "800", color: g.accentText, textDecorationLine: "underline" }]}>{action}</GText>
-      </Pressable>
-    </View>
-  );
 }
 
 /** Brand → model → generation pickers (each one narrows the next). */
@@ -486,7 +409,7 @@ function ConfirmSheet({ confirm, busy, onClose, setConfirm, onApprove, onRun }: 
 }
 
 /** ONE car in 3D with this part, on demand (the only viewer on the screen). */
-function FitPreview({ accessoryId, r, onReview, onClose }: { accessoryId: string; r: FitRow; onReview: () => void; onClose?: () => void }) {
+function FitPreview({ accessoryId, r, onReview }: { accessoryId: string; r: FitRow; onReview: () => void }) {
   const { t, isArabic } = useL();
   const { g, row, align } = useGarageTheme();
   const fits = useLoad(() => adminAccessoryApi.autoFits(r.model3dKey), [r.model3dKey, r.status]);
@@ -496,12 +419,6 @@ function FitPreview({ accessoryId, r, onReview, onClose }: { accessoryId: string
   const st = STATE[r.status], why = r.reason ? WHY[r.reason] : null, failed = stored?.fit?.fit.failed;
   return (
     <View style={{ gap: 10 }}>
-      {onClose ? (
-        <View style={[row, { alignItems: "center", gap: 8 }]}>
-          <GText style={[gType.title, align, { flex: 1 }]} numberOfLines={1}>{carName(r, isArabic)}</GText>
-          <Pressable accessibilityRole="button" accessibilityLabel={t("Close preview", "إغلاق المعاينة")} onPress={onClose} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}><GIcon name="close" size={20} /></Pressable>
-        </View>
-      ) : null}
       <View style={[row, { alignItems: "center", gap: 8, flexWrap: "wrap" }]}>
         <StatusChip label={t(st.en, st.ar)} tone={st.tone} />
         <GText soft style={[gType.caption, align]}>{`${r.code} · ${years(r)}`}</GText>

@@ -10,7 +10,7 @@ import {refreshRuntimeModels} from "../car3d/runtimeModels";
 import {Choice,Confirm,Entry} from "./controls";
 import {vehicleCatalog,type ModelImport,type SketchfabInspection} from "./api";
 import {ImportReview} from "./screens";
-import {importError,IMPORT_ERROR_LABELS,IMPORT_LABELS,runningImport,validYears} from "./importState";
+import {failureText,importError,IMPORT_ERROR_LABELS,IMPORT_LABELS,runningImport,trianglesShort,validYears} from "./importState";
 
 function WebLink({url,label}:{url:string|null;label:string}){
  const {t}=useL();const [failed,setFailed]=useState(false);
@@ -23,6 +23,7 @@ export function InspectionCard({inspection:s}:{inspection:SketchfabInspection}){
   <GText style={align}>{s.title}</GText><GText soft style={align}>{`${t("by","بواسطة")} ${s.author}`}</GText>
   <GText style={align}>{`${t("License","الترخيص")}: ${s.license}`}</GText>
   <GText style={align}>{`${t("Downloadable","متاح للتنزيل")}: ${s.downloadable?t("Yes","نعم"):t("No","لا")}`}</GText>
+  {s.triangles?<GText soft style={align}>{t(`About ${trianglesShort(s.triangles)[0]} triangles`,`حوالي ${trianglesShort(s.triangles)[1]} مثلث`)}</GText>:null}
   <GText soft style={align}>{t("Sketchfab UID","معرّف Sketchfab")}</GText><GText selectable style={{textAlign:"left",writingDirection:"ltr"}}>{s.uid}</GText>
   <WebLink url={s.url} label={t("View on Sketchfab","عرض على Sketchfab")}/>
   <WebLink url={s.authorUrl} label={t("Creator profile","صفحة المنشئ")}/>
@@ -56,7 +57,7 @@ export function NewSketchfabImport(){
    <Card><Entry url editable={!busy} label={t("Sketchfab model URL","رابط النموذج من Sketchfab")} value={url} onChange={value=>{request.current++;setUrl(value);setInspection(null);setError(null);}}/>
     <GText soft>{t("https://sketchfab.com/3d-models/…","https://sketchfab.com/3d-models/…")}</GText>
     <GButton label={busy?t("Inspecting…","جارٍ الفحص…"):t("Inspect link","فحص الرابط")} disabled={busy||!url.trim()} onPress={()=>void inspect()}/>
-    <Note>{t("Only downloadable CC0, CC BY and CC BY-SA models are accepted. Downloads and API access run on the backend.","تُقبل النماذج المتاحة للتنزيل بترخيص CC0 أو CC BY أو CC BY-SA فقط. ينفّذ الخادم التنزيل والوصول إلى الواجهة البرمجية.")}</Note>
+    <Note>{t("Any downloadable model with a Creative Commons license (CC0, CC BY or any other CC) is accepted. Heavy models are simplified for phones automatically. Downloads and API access run on the backend.","يُقبل أي نموذج متاح للتنزيل بترخيص المشاع الإبداعي (CC0 أو CC BY أو أي ترخيص CC آخر). تُبسَّط النماذج الثقيلة للهواتف تلقائيًا. ينفّذ الخادم التنزيل والوصول إلى الواجهة البرمجية.")}</Note>
    </Card>
    {error?<Note tone="danger">{error}</Note>:null}
    {inspection?<InspectionCard inspection={inspection}/>:null}
@@ -89,10 +90,13 @@ export function NewSketchfabImport(){
 
 export function ImportProgress({record:r}:{record:ModelImport}){
  const {t}=useL();const {g,align}=useGarageTheme();
- return <Card><GText style={align}>{t(...(IMPORT_LABELS[r.status]??IMPORT_LABELS.DRAFT))}</GText>
+ const draft=r.status==="DRAFT"&&!!r.errorCode;
+ return <Card><GText style={align}>{draft?t("Draft · needs your attention","مسودة · تحتاج إلى مراجعتك"):t(...(IMPORT_LABELS[r.status]??IMPORT_LABELS.DRAFT))}</GText>
   {typeof r.progress==="number"?<><View accessibilityRole="progressbar" accessibilityValue={{min:0,max:100,now:r.progress}} accessibilityLabel={t("Import stage progress","تقدم مراحل الاستيراد")} style={{height:8,backgroundColor:g.cardSoft,borderRadius:4,overflow:"hidden"}}><View style={{width:`${Math.max(0,Math.min(100,r.progress))}%`,height:8,backgroundColor:g.accent,alignSelf:align.textAlign==="right"?"flex-end":"flex-start"}}/></View><GText soft style={align}>{`${r.progress}% · ${t("Stage progress","تقدم المراحل")}`}</GText></>:null}
   {runningImport(r.status)?<Note>{t("Preparation continues on the server. You can leave this screen and return later.","يستمر تجهيز النموذج على الخادم. يمكنك مغادرة هذه الشاشة والعودة لاحقًا.")}</Note>:null}
-  {r.errorCode?<Note tone="danger">{t(...(IMPORT_ERROR_LABELS[r.errorCode]??IMPORT_ERROR_LABELS.VALIDATION_REJECTED))}</Note>:null}
+  {r.errorCode?<Note tone="danger">{failureText(r.failureDetail,t)??t(...(IMPORT_ERROR_LABELS[r.errorCode]??IMPORT_ERROR_LABELS.VALIDATION_REJECTED))}</Note>:null}
+  {draft?<Note>{t("Kept as a draft: customers never see it. Change the settings below and tap \"Validate again / prepare preview\", or discard it.","محفوظ كمسودة: لا يراه العملاء أبدًا. عدّل الإعدادات أدناه واضغط «التحقق مجددًا / تجهيز العرض»، أو استبعده.")}</Note>:null}
+  {r.failureDetail?<GText soft style={align}>{`${t("Stopped at","توقف عند")}: ${t(...(IMPORT_LABELS[r.failureDetail.stage]??IMPORT_LABELS.DRAFT))}`}</GText>:null}
  </Card>;
 }
 export function SketchfabImportReview(){
@@ -112,9 +116,9 @@ export function SketchfabImportReview(){
       <WebLink url={r.sourceUrl} label={t("Original model","النموذج الأصلي")}/><WebLink url={s.authorUrl} label={t("Creator profile","صفحة المنشئ")}/><WebLink url={s.licenseUrl} label={t("Read license","قراءة الترخيص")}/>
       {s.originalDownloadedBytes!==null?<GText style={align}>{`${t("Original download","التنزيل الأصلي")}: ${(s.originalDownloadedBytes/1048576).toFixed(2)} MiB`}</GText>:null}
       {r.validation?.bytes?<GText style={align}>{`${t("Prepared GLB","ملف GLB المجهّز")}: ${(Number(r.validation.bytes)/1048576).toFixed(2)} MiB`}</GText>:null}
-      {s.optimization?.warnings.map(w=><Note key={w}>{t(w,w.includes("Paint")?"يتطلب تحديد أسطح الطلاء مراجعة؛ التلوين التلقائي معطّل.":w.includes("Front")?"يتطلب اتجاه المقدمة تأكيدًا بصريًا.":"لم تُحذف المقصورة لأن أسماء العناصر غير واضحة.")}</Note>)}
+      {s.optimization?.warnings?.map(w=><Note key={w}>{t(w,w.includes("Paint")?"يتطلب تحديد أسطح الطلاء مراجعة؛ التلوين التلقائي معطّل.":w.includes("Front")?"يتطلب اتجاه المقدمة تأكيدًا بصريًا.":"لم تُحذف المقصورة لأن أسماء العناصر غير واضحة.")}</Note>)}
     </Card>:null}
-    {r.status==="READY"||r.status==="PUBLISHED"||r.status==="FAILED"&&r.hasRawModel||!r.provenance&&r.status!=="DISCARDED"?<><ImportReview key={`${r.id}-${r.status}-${r.validation?.validatedAt}-${r.existingModel3dKey}`} r={r} work={work} busy={busy}/>
+    {r.status==="READY"||r.status==="PUBLISHED"||(r.status==="FAILED"||r.status==="DRAFT")&&r.hasRawModel||!r.provenance&&r.status!=="DISCARDED"?<><ImportReview key={`${r.id}-${r.status}-${r.validation?.validatedAt}-${r.existingModel3dKey}`} r={r} work={work} busy={busy}/>
       <Card><GText style={align}>{t("Part-map proposal","اقتراح خريطة القطع")}</GText><GText style={align}>{r.partMapStatus==="CONFIRMED"?t("Confirmed for this exact GLB revision.","مؤكدة لهذه النسخة المحددة من GLB."):r.validation?.partMap?t("Saved for this exact GLB revision. Unresolved parts remain available for admin review.","حُفظ الاقتراح لهذه النسخة من GLB. تبقى القطع غير المحددة متاحة لمراجعة الإدارة."):t("No automatic proposal available.","لا يوجد اقتراح تلقائي.")}</GText>
        {r.status==="READY"?<GButton label={t("Review part map privately","مراجعة خريطة القطع بشكل خاص")} onPress={()=>router.push(`/dept/accessory-zones?key=${encodeURIComponent(`import-${r.id}`)}` as Href)}/>:null}
        {r.status==="PUBLISHED"?<><Note>{t("Published to the selected managed generation. Matching Garage cars receive it through the runtime catalog.","نُشر النموذج للجيل المحدد في الكتالوج. تستلمه سيارات الكراج المطابقة عبر كتالوج العرض.")}</Note><GText soft style={align}>{r.publishedModel3dKey}</GText><GButton label={t("Confirm part map","تأكيد خريطة القطع")} onPress={()=>router.push(`/dept/accessory-zones?model3dKey=${encodeURIComponent(r.publishedModel3dKey??"")}` as Href)}/></>:null}

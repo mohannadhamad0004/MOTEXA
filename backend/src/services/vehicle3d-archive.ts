@@ -1,4 +1,5 @@
 import {inflateRawSync, crc32} from "node:zlib";
+import {SOURCE_LIMITS} from "./vehicle3d-preparation.js";
 import path from "node:path";
 import {NodeIO, type JSONDocument} from "@gltf-transform/core";
 import {ALL_EXTENSIONS} from "@gltf-transform/extensions";
@@ -7,7 +8,7 @@ import {MAX_SOURCE_BYTES} from "./sketchfab-client.js";
 import {fail, readSafeGLB} from "./vehicle3d-validation.js";
 
 const invalid = (): never => fail("ARCHIVE_INVALID", "The model archive is invalid or exceeds safe extraction limits.",422);
-const sourceLimits={maxBytes:MAX_SOURCE_BYTES,textureSize:8192,pixels:128_000_000};
+const sourceLimits=SOURCE_LIMITS; // no triangle limit: weight is never a reason to refuse (byte / memory limits stay)
 /** ZIP reader over bounded buffers, using Node's bounded inflater. No archive entry is written to disk.
  * Only stored/deflate, single-volume, non-encrypted, non-ZIP64 regular files are admitted. */
 export function readModelArchive(bytes: Buffer): Map<string, Buffer> {
@@ -44,14 +45,14 @@ export function readModelArchive(bytes: Buffer): Map<string, Buffer> {
 }
 /** Convert only local resources supplied in this one archive. NodeIO receives no filesystem/network URI. */
 export async function convertSketchfabAsset(bytes: Buffer): Promise<Buffer> {
-  if(bytes.subarray(0,4).toString()==="glTF") {await readSafeGLB(bytes,2_000_000,sourceLimits);return bytes;}
+  if(bytes.subarray(0,4).toString()==="glTF") {await readSafeGLB(bytes,Infinity,sourceLimits);return bytes;}
   const files=readModelArchive(bytes);
   const models=[...files.keys()].filter(k=>/\.(gltf|glb)$/i.test(k));
   const preferred=models.find(k=>/(^|\/)scene\.gltf$/i.test(k));
   const name=preferred??(models.length===1?models[0]:undefined);
   if(!name)return fail("CONVERSION_FAILED","The archive has no unambiguous supported GLB or glTF model.",422);
   const main=files.get(name)!;
-  if(/\.glb$/i.test(name)){await readSafeGLB(main,2_000_000,sourceLimits);return main;}
+  if(/\.glb$/i.test(name)){await readSafeGLB(main,Infinity,sourceLimits);return main;}
   try {
     if(main.length>8*1024*1024)throw new Error();
     const data=JSON.parse(main.toString("utf8")),resources:Record<string,Uint8Array>=Object.create(null);
@@ -70,6 +71,6 @@ export async function convertSketchfabAsset(bytes: Buffer): Promise<Buffer> {
     const buffers=doc.getRoot().listBuffers();if(!buffers.length)throw new Error();
     for(const accessor of doc.getRoot().listAccessors())accessor.setBuffer(buffers[0]!);
     for(const buffer of buffers.slice(1))buffer.dispose();
-    const result=Buffer.from(await io.writeBinary(doc));await readSafeGLB(result,2_000_000,sourceLimits);return result;
+    const result=Buffer.from(await io.writeBinary(doc));await readSafeGLB(result,Infinity,sourceLimits);return result;
   }catch{return fail("CONVERSION_FAILED","The glTF model could not be converted safely.",422);}
 }

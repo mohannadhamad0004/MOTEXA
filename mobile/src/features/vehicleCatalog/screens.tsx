@@ -9,6 +9,7 @@ import {useL} from "../../core/hooks/useL";
 import {useLoad} from "../../core/hooks/useLoad";
 import {localFileToBase64} from "../../core/constants/files";
 import {Car3DView} from "../car3d/Car3DView";
+import type {CarModel} from "../car3d/models";
 import {useGarageTheme} from "../../theme/garage";
 import {refreshRuntimeModels} from "../car3d/runtimeModels";
 import {catalogService} from "../catalog/catalogService";
@@ -17,6 +18,7 @@ import {Entry,Choice,Confirm} from "./controls";
 import {threeDError} from "./lifecycleText";
 import {GenerationUsage} from "./generationUsage";
 import {vehicleCatalog,importPath,type Taxonomy,type ModelImport} from "./api";
+import {simplifiedText} from "./importState";
 export function VehicleCatalogScreen(){
  const {t}=useL();const params=useLocalSearchParams<{section?:string}>();const data=useLoad(vehicleCatalog.list,[]);const imports=useLoad(vehicleCatalog.imports,[]);const [tab,setTab]=useState(params.section==="imports"?"imports":"catalog"),[search,setSearch]=useState(""),[error,setError]=useState<string|null>(null),[busy,setBusy]=useState(false);
  const [kind,setKind]=useState("brands"),[editing,setEditing]=useState<string|null>(null),[values,setValues]=useState<Record<string,string>>({}),[active,setActive]=useState(true);
@@ -55,18 +57,145 @@ export function UploadModel({taxonomy,done,initialGeneration}:{taxonomy:Taxonomy
  <GButton label={t("Upload for technical validation","الرفع للتحقق التقني")} disabled={busy||!file||!generationId||!source.trim()||!author.trim()||!license.trim()} onPress={()=>{if(!file)return;setBusy(true);setError(null);void localFileToBase64(file.uri).then(dataBase64=>vehicleCatalog.upload({generationId,source,author,license,sourceUrl,lengthM:Number(length),dataBase64})).then(r=>done(r.id)).catch(e=>setError(threeDError(e,t))).finally(()=>setBusy(false));}}/>{error?<Note tone="danger">{error}</Note>:null}</Card>;
 }
 export function ImportReview({r,work,busy}:{r:ModelImport;work:(fn:()=>Promise<unknown>)=>Promise<void>;busy:boolean}){
- const {t}=useL();const {g}=useGarageTheme();const [length,setLength]=useState(String(r.viewerConfig?.lengthM??4.5)),[up,setUp]=useState(String(Number((r.validation?.sourceOrientation as {preRotateX?:number}|undefined)?.preRotateX??0)*180/Math.PI)),[heading,setHeading]=useState(String(Number((r.validation?.sourceOrientation as {rotateY?:number}|undefined)?.rotateY??0)*180/Math.PI)),[ground,setGround]=useState(String(r.viewerConfig?.groundOffset??0)),[paint,setPaint]=useState(r.viewerConfig?.paintMaterials.join(", ")??""),[nodes,setNodes]=useState(r.viewerConfig?.paintNodes.join(", ")??""),[verified,setVerified]=useState(false),[replace,setReplace]=useState(false),[notes,setNotes]=useState(""),[dirty,setDirty]=useState(false);
- const changed=(set:(v:string)=>void)=>(v:string)=>{set(v);setDirty(true);setVerified(false);};
- const [testPaint,setTestPaint]=useState(false);
- const loader=()=>authenticatedBase64(`${importPath}/${r.id}/model`);
- return <Card><GText>{`${r.make} ${r.model} ${r.code}`}</GText><GText>{r.status==="PUBLISHED"?t("Published","منشور"):r.status==="READY"?t("Ready for visual review","جاهز للمراجعة البصرية"):t("Awaiting viewer validation","بانتظار التحقق من العارض")}</GText><GText soft>{`${r.source} · ${r.author} · ${r.license}`}</GText>
- {r.hasModel&&r.viewerConfig?<Car3DView key={JSON.stringify([r.validation,r.viewerConfig])} model={testPaint?r.viewerConfig:{...r.viewerConfig,paintNodes:[],paintMaterials:[],bakedPaint:undefined}} assetLoader={loader} interactive color="#c62828" bg={g.cardSoft} style={{height:300}}/>:null}
- {r.hasModel?<><GButton variant="secondary" label={testPaint?t("Show original paint","عرض الطلاء الأصلي"):t("Test red paint","تجربة الطلاء الأحمر")} disabled={!r.viewerConfig?.paintMaterials.length&&!r.viewerConfig?.paintNodes.length&&!r.viewerConfig?.bakedPaint} onPress={()=>setTestPaint(v=>!v)}/><Note>{t("Compare original and red paint. Verify that only body paint changes, while windows, tyres, lights and interior keep their finish. If paint surfaces are unavailable, retain the original finish.","قارن الطلاء الأصلي بالأحمر. تحقق من تغير طلاء الهيكل فقط وبقاء الزجاج والإطارات والأضواء والمقصورة بألوانها. عند عدم توفر أسطح طلاء منفصلة، احتفظ باللون الأصلي.")}</Note></>:null}
- {r.validation?<><GText>{r.validation.valid?t("Technical validation passed","اجتاز التحقق التقني"):t("Validation failed","فشل التحقق")}</GText><GText>{`${t("Bytes / triangles","بايت / مثلثات")}: ${r.validation.bytes} / ${r.validation.triangles}`}</GText><GText>{`${t("Dimensions (m)","الأبعاد (م)")}: ${Array.isArray(r.validation.dimensions)?r.validation.dimensions.map(n=>Number(n).toFixed(2)).join(" × "):"—"}`}</GText>{r.validation.accessoryGate!==undefined?<GateSummary gate={r.validation.accessoryGate as ModelGate|null}/>:null}</>:null}
- {r.status!=="PUBLISHED"?<><Entry label={t("Vehicle length (m)","طول المركبة (م)")} value={length} onChange={changed(setLength)} numeric/><Entry label={t("Source up correction (degrees)","تصحيح المحور الرأسي للمصدر (درجات)")} value={up} onChange={changed(setUp)} numeric/><Entry label={t("Source heading correction (degrees)","تصحيح اتجاه مقدمة المصدر (درجات)")} value={heading} onChange={changed(setHeading)} numeric/><Entry label={t("Ground offset (m)","الإزاحة عن الأرض (م)")} value={ground} onChange={changed(setGround)} numeric/><Entry label={t("Paint materials (comma separated)","خامات الطلاء (مفصولة بفواصل)")} value={paint} onChange={changed(setPaint)}/><Entry label={t("Paint nodes (optional, comma separated)","عناصر الطلاء (اختيارية، مفصولة بفواصل)")} value={nodes} onChange={changed(setNodes)}/>
- <Note>{t("Orientation corrections are applied to the original source. Verify front +Z, upright body, wheels and grounding after validation. Complex mesh zones and accessory settings remain internal.","تُطبّق تصحيحات الاتجاه على المصدر الأصلي. تحقق من المقدمة +Z والاستقامة والعجلات والأرضية بعد التحقق. تبقى المناطق المعقدة وإعدادات الإضافات داخلية.")}</Note>
- <GButton variant="secondary" label={t("Validate again / prepare preview","التحقق مجددًا / تجهيز العرض")} disabled={busy} onPress={()=>void work(async()=>{setVerified(false);await vehicleCatalog.validate(r.id,{lengthM:Number(length),preRotateX:Number(up)*Math.PI/180,rotateY:Number(heading)*Math.PI/180,groundOffset:Number(ground),paintMaterials:paint.split(",").map(s=>s.trim()).filter(Boolean),paintNodes:nodes.split(",").map(s=>s.trim()).filter(Boolean)});setDirty(false);})}/>
- <Entry label={t("Review notes","ملاحظات المراجعة")} value={notes} onChange={setNotes} multiline/><Confirm label={t("I visually verified identity, production period, orientation, wheels, grounding, paint and redistribution rights.","تحققت بصريًا من الهوية وفترة الإنتاج والاتجاه والعجلات والأرضية والطلاء وحقوق إعادة التوزيع.")} value={verified} onChange={setVerified} disabled={!r.hasModel||busy||dirty}/>
- {r.existingModel3dKey?<Confirm label={t("Replace the current model: on approval the old model and its part map and fits are deleted","استبدال النموذج الحالي: عند الاعتماد يُحذف النموذج القديم مع خريطة القطع والتركيبات")} value={replace} onChange={setReplace}/>:null}
- <GButton label={t("Approve and publish to customers","اعتماد ونشر للعملاء")} disabled={busy||dirty||!verified||r.status!=="READY"||(r.validation?.accessoryGate as ModelGate|null|undefined)?.verdict==="REJECTED"||!!r.existingModel3dKey&&!replace} onPress={()=>void work(()=>vehicleCatalog.publish(r.id,{visuallyVerified:true,validationVersion:r.validation?.validatedAt,notes,...(replace?{replaceExistingKey:r.existingModel3dKey}:{})}))}/></>:null}</Card>;
+  const {t}=useL();
+  const {g}=useGarageTheme();
+  const config=r.viewerConfig;
+  // A Sketchfab import that stopped before validation has only part of its config: never assume the lists exist.
+  const paintList=config?.paintMaterials??[];
+  const nodeList=config?.paintNodes??[];
+  const orientation=r.validation?.sourceOrientation as {preRotateX?:number;rotateY?:number}|undefined;
+  const gate=r.validation?.accessoryGate as ModelGate|null|undefined;
+  const simplified=(r.validation?.simplified as {before:number;after:number}|null|undefined)??r.provenance?.optimization?.simplified;
+
+  const [length,setLength]=useState(String(config?.lengthM??4.5));
+  const [up,setUp]=useState(String(Number(orientation?.preRotateX??0)*180/Math.PI));
+  const [heading,setHeading]=useState(String(Number(orientation?.rotateY??0)*180/Math.PI));
+  const [ground,setGround]=useState(String(config?.groundOffset??0));
+  const [paint,setPaint]=useState(paintList.join(", "));
+  const [nodes,setNodes]=useState(nodeList.join(", "));
+  const [verified,setVerified]=useState(false);
+  const [replace,setReplace]=useState(false);
+  const [notes,setNotes]=useState("");
+  const [dirty,setDirty]=useState(false);
+  const [testPaint,setTestPaint]=useState(false);
+
+  const changed=(set:(v:string)=>void)=>(v:string)=>{set(v);setDirty(true);setVerified(false);};
+  const loader=()=>authenticatedBase64(`${importPath}/${r.id}/model`);
+  const names=(text:string)=>text.split(",").map(s=>s.trim()).filter(Boolean);
+  // hasModel = the import passed validation, which saves a complete config.
+  const car=r.hasModel?config as CarModel|null:null;
+  const statusLabel=r.status==="PUBLISHED"
+    ?t("Published","منشور")
+    :r.status==="READY"
+      ?t("Ready for visual review","جاهز للمراجعة البصرية")
+      :t("Awaiting viewer validation","بانتظار التحقق من العارض");
+  const dimensions=Array.isArray(r.validation?.dimensions)
+    ?(r.validation.dimensions as unknown[]).map(n=>Number(n).toFixed(2)).join(" × ")
+    :"—";
+
+  const validate=()=>void work(async()=>{
+    setVerified(false);
+    await vehicleCatalog.validate(r.id,{
+      lengthM:Number(length),
+      preRotateX:Number(up)*Math.PI/180,
+      rotateY:Number(heading)*Math.PI/180,
+      groundOffset:Number(ground),
+      paintMaterials:names(paint),
+      paintNodes:names(nodes),
+    });
+    setDirty(false);
+  });
+  const publish=()=>void work(()=>vehicleCatalog.publish(r.id,{
+    visuallyVerified:true,
+    validationVersion:r.validation?.validatedAt,
+    notes,
+    ...(replace?{replaceExistingKey:r.existingModel3dKey}:{}),
+  }));
+  const publishBlocked=busy||dirty||!verified||r.status!=="READY"||gate?.verdict==="REJECTED"||(!!r.existingModel3dKey&&!replace);
+
+  return (
+    <Card>
+      <GText>{`${r.make} ${r.model} ${r.code}`}</GText>
+      <GText>{statusLabel}</GText>
+      <GText soft>{`${r.source} · ${r.author} · ${r.license}`}</GText>
+      {simplified?<GText soft>{simplifiedText(simplified,t)}</GText>:null}
+
+      {car?(
+        <Car3DView
+          key={JSON.stringify([r.validation,car])}
+          model={testPaint?car:{...car,paintNodes:[],paintMaterials:[],bakedPaint:undefined}}
+          assetLoader={loader}
+          interactive
+          color="#c62828"
+          bg={g.cardSoft}
+          style={{height:300}}
+        />
+      ):null}
+
+      {r.hasModel?(
+        <>
+          <GButton
+            variant="secondary"
+            label={testPaint?t("Show original paint","عرض الطلاء الأصلي"):t("Test red paint","تجربة الطلاء الأحمر")}
+            disabled={!paintList.length&&!nodeList.length&&!config?.bakedPaint}
+            onPress={()=>setTestPaint(v=>!v)}
+          />
+          <Note>
+            {t(
+              "Compare original and red paint. Verify that only body paint changes, while windows, tyres, lights and interior keep their finish. If paint surfaces are unavailable, retain the original finish.",
+              "قارن الطلاء الأصلي بالأحمر. تحقق من تغير طلاء الهيكل فقط وبقاء الزجاج والإطارات والأضواء والمقصورة بألوانها. عند عدم توفر أسطح طلاء منفصلة، احتفظ باللون الأصلي.",
+            )}
+          </Note>
+        </>
+      ):null}
+
+      {r.validation?(
+        <>
+          <GText>{r.validation.valid?t("Technical validation passed","اجتاز التحقق التقني"):t("Validation failed","فشل التحقق")}</GText>
+          <GText>{`${t("Bytes / triangles","بايت / مثلثات")}: ${r.validation.bytes} / ${r.validation.triangles}`}</GText>
+          <GText>{`${t("Dimensions (m)","الأبعاد (م)")}: ${dimensions}`}</GText>
+          {r.validation.accessoryGate!==undefined?<GateSummary gate={r.validation.accessoryGate as ModelGate|null}/>:null}
+        </>
+      ):null}
+
+      {r.status!=="PUBLISHED"?(
+        <>
+          <Entry label={t("Vehicle length (m)","طول المركبة (م)")} value={length} onChange={changed(setLength)} numeric/>
+          <Entry label={t("Source up correction (degrees)","تصحيح المحور الرأسي للمصدر (درجات)")} value={up} onChange={changed(setUp)} numeric/>
+          <Entry label={t("Source heading correction (degrees)","تصحيح اتجاه مقدمة المصدر (درجات)")} value={heading} onChange={changed(setHeading)} numeric/>
+          <Entry label={t("Ground offset (m)","الإزاحة عن الأرض (م)")} value={ground} onChange={changed(setGround)} numeric/>
+          <Entry label={t("Paint materials (comma separated)","خامات الطلاء (مفصولة بفواصل)")} value={paint} onChange={changed(setPaint)}/>
+          <Entry label={t("Paint nodes (optional, comma separated)","عناصر الطلاء (اختيارية، مفصولة بفواصل)")} value={nodes} onChange={changed(setNodes)}/>
+          <Note>
+            {t(
+              "Orientation corrections are applied to the original source. Verify front +Z, upright body, wheels and grounding after validation. Complex mesh zones and accessory settings remain internal.",
+              "تُطبّق تصحيحات الاتجاه على المصدر الأصلي. تحقق من المقدمة +Z والاستقامة والعجلات والأرضية بعد التحقق. تبقى المناطق المعقدة وإعدادات الإضافات داخلية.",
+            )}
+          </Note>
+          <GButton variant="secondary" label={t("Validate again / prepare preview","التحقق مجددًا / تجهيز العرض")} disabled={busy} onPress={validate}/>
+          <Entry label={t("Review notes","ملاحظات المراجعة")} value={notes} onChange={setNotes} multiline/>
+          <Confirm
+            label={t(
+              "I visually verified identity, production period, orientation, wheels, grounding, paint and redistribution rights.",
+              "تحققت بصريًا من الهوية وفترة الإنتاج والاتجاه والعجلات والأرضية والطلاء وحقوق إعادة التوزيع.",
+            )}
+            value={verified}
+            onChange={setVerified}
+            disabled={!r.hasModel||busy||dirty}
+          />
+          {r.existingModel3dKey?(
+            <Confirm
+              label={t(
+                "Replace the current model: on approval the old model and its part map and fits are deleted",
+                "استبدال النموذج الحالي: عند الاعتماد يُحذف النموذج القديم مع خريطة القطع والتركيبات",
+              )}
+              value={replace}
+              onChange={setReplace}
+            />
+          ):null}
+          <GButton label={t("Approve and publish to customers","اعتماد ونشر للعملاء")} disabled={publishBlocked} onPress={publish}/>
+        </>
+      ):null}
+    </Card>
+  );
 }

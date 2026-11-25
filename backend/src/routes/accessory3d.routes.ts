@@ -75,7 +75,9 @@ export function createAccessory3DRouter(service = createAccessory3DService(), pa
   router.put("/admin/parts/part-maps/:key", ...admin, mapJson, handle(async (req, res, uid) => res.json({ partMap: await partMaps.confirm(uid, p(req, "key"), req.body ?? {}) })));
 
   // auto-fits on one car model: list (+ background computing), approve with an optional correction (adj null = reset to auto-fit)
-  router.get("/admin/parts/auto-fits", ...admin, handle(async (req, res) => res.json({ fits: await autoFits.list(String(req.query.model3dKey ?? "")) })));
+  // read-only: fit states counted per car model (+ one car's fits with ?model3dKey) for the "Accessory fits" list
+  router.get("/admin/parts/auto-fits/summary", ...admin, handle(async (req, res) => res.json(await autoFits.summary(typeof req.query.model3dKey === "string" && req.query.model3dKey ? req.query.model3dKey.slice(0, 120) : undefined))));
+  router.get("/admin/parts/auto-fits", ...admin,handle(async (req, res) => res.json({ fits: await autoFits.list(String(req.query.model3dKey ?? "")) })));
   // bulk fit review on ONE accessory (all its cars): the grid, and approve / unapprove selected (only "passed" / "approved" fits are taken)
   // paged + filtered (?q&make&model&generationId&status&offset&limit); a selection is picked ids (<= 500) or { filter, exclude }, never 5,000 ids
   const selectionJson = express.json({ limit: "64kb" });

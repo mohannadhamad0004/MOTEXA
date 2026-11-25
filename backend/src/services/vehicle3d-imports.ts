@@ -6,6 +6,9 @@ import {randomUUID} from "node:crypto";
 import {prisma} from "../prisma.js";
 import type {Prisma} from "../generated/prisma/client.js";
 import {normalizeVehicle,parseCarModel,MAX_MODEL_BYTES,fail,digest} from "./vehicle3d-validation.js";
+const VIEWER_REASONS=["Invalid viewer configuration","Unrelated geometry was recolored","Protected surfaces were selected for body paint","Empty viewer","Viewer errors or unexpected remote requests"];
+/** The viewer check script exits with `Error: <reason>`; keep only reasons it is known to print. */
+export const viewerFailure=(e:any)=>e?.killed?"The 3D viewer check timed out.":VIEWER_REASONS.find(m=>String(e?.stderr??"").includes(`Error: ${m}`))??"The production viewer could not render this asset.";
 import {privatePath,storePrivate,removePrivate,PRIVATE_3D_DIR} from "./vehicle3d-private-assets.js";
 import {stageCatalogPromotion,recoverCatalogJournal} from "./vehicle3d-promotion.js";
 import {REPO_ROOT,type ViewerConfig} from "./vehicle3d-catalog.js";
@@ -14,7 +17,7 @@ import {accessoryGate,autoSegment,segmentFile} from "./car-part-map.js";
 import {refitPublishedAccessories} from "./accessory-autofit.js";
 import {importInclude,importShape,IMPORT_RUNNING} from "./vehicle3d-import-state.js";
 import {linkImportActions} from "./vehicle3d-link-imports.js";
-import {FINAL_MODEL_BYTES} from "./vehicle3d-preparation.js";
+import {FINAL_MODEL_BYTES,fitForPhones} from "./vehicle3d-preparation.js";
 import {createSketchfabClient} from "./sketchfab-client.js";
 const json=(v:unknown)=>JSON.parse(JSON.stringify(v)) as Prisma.InputJsonValue;
 const include=importInclude,shape=importShape;
@@ -29,7 +32,7 @@ export function createImportService(client=createSketchfabClient()){
    const source=field(input.source,"source/provenance",2000),author=field(input.author,"rights holder/author",200),license=field(input.license,"license or redistribution permission",500),sourceUrl=input.sourceUrl?field(input.sourceUrl,"source URL",1000):null;if(sourceUrl&&!/^https:\/\/[^\s]+$/.test(sourceUrl))return fail("INVALID_SOURCE","Use an HTTPS source URL.");
    if(typeof input.dataBase64!=="string"||input.dataBase64.length>Math.ceil(MAX_MODEL_BYTES/3)*4)return fail("MODEL_SIZE","Choose a GLB within the configured limit.");const bytes=Buffer.from(input.dataBase64,"base64");
    if(bytes.includes(Buffer.from("MOCK_generic"))||await prisma.vehicle3DSubmission.findFirst({where:{generationMode:"mock",validation:{path:["sha256"],equals:digest(bytes)}},select:{id:true}}))return fail("MOCK_NOT_PUBLISHABLE","Mock previews cannot be imported into the shared catalog.");
-   try{await normalizeVehicle(bytes,Number(input.lengthM??4.5));}catch(e){if((e as Error).message!=="Model is not upright. Correct its orientation before review.")throw e;}
+   try{await normalizeVehicle((await fitForPhones(bytes)).bytes,Number(input.lengthM??4.5));}catch(e){if((e as Error).message!=="Model is not upright. Correct its orientation before review.")throw e;}
 
    const raw=storePrivate(bytes,"glb");try{const r=await prisma.$transaction(async tx=>{const r=await tx.vehicle3DImport.create({data:{generationId:g.id,uploadedByUserId:uid,rawModelPath:raw,source,author,license,sourceUrl,viewerConfig:{lengthM:Number(input.lengthM??4.5)}},include});await tx.auditLog.create({data:{actorId:uid,action:"VEHICLE3D_IMPORT_UPLOAD",targetId:r.id}});return r;});return shape(r);}catch(e){removePrivate(raw);throw e;}
   },
@@ -42,7 +45,9 @@ export function createImportService(client=createSketchfabClient()){
    if(Object.keys(input).some(k=>!["lengthM","preRotateX","rotateY","groundOffset","paintNodes","paintMaterials","bakedPaint","centerX","keepBox","zones","rimsSwappable","wing","rack"].includes(k)))return fail("CONFIG_INVALID","Unsupported viewer setting.");
    const checked=parseCarModel(rawConfig);if(!checked)return fail("CONFIG_INVALID","Invalid viewer configuration.");
    // Source corrections are baked into prepared geometry exactly once. Other viewer settings remain configuration.
-   const normalized=await normalizeVehicle(readFileSync(privatePath(r.rawModelPath)),lengthM,{preRotateX:checked.preRotateX,rotateY:checked.rotateY});
+   // a heavy model (stored before auto-simplify, or uploaded) is simplified for phones here too: weight is never a reason to refuse
+   const source=await fitForPhones(readFileSync(privatePath(r.rawModelPath)));
+   const normalized=await normalizeVehicle(source.bytes,lengthM,{preRotateX:checked.preRotateX,rotateY:checked.rotateY});
    if(r.sourceProvider==="SKETCHFAB"&&normalized.bytes.length>FINAL_MODEL_BYTES)return fail("FINAL_ASSET_TOO_LARGE","The optimized model is larger than 8 MiB.",422);
    const config:ViewerConfig={...checked,preRotateX:0,rotateY:0};const prepared=`${randomUUID()}.glb`,configFile=path.join(PRIVATE_3D_DIR,prepared+".config.json");
    if(r.sourceProvider==="SKETCHFAB"){
@@ -51,13 +56,13 @@ export function createImportService(client=createSketchfabClient()){
    }
    storePrivate(normalized.bytes,"glb",prepared);
    try{
-    writeFileSync(configFile,JSON.stringify(config));const viewerRun=await promisify(execFile)(process.execPath,[path.join(REPO_ROOT,"backend/scripts/vehicle3d-viewer-check.mjs"),privatePath(prepared),String(lengthM),`--config=${configFile}`],{timeout:65000,windowsHide:true});
+    writeFileSync(configFile,JSON.stringify(config));const viewerRun=await promisify(execFile)(process.execPath,[path.join(REPO_ROOT,"backend/scripts/vehicle3d-viewer-check.mjs"),privatePath(prepared),String(lengthM),`--config=${configFile}`],{timeout:65000,windowsHide:true}).catch(e=>fail("VALIDATION_REJECTED",viewerFailure(e),422));
     const viewerEvidence=JSON.parse(viewerRun.stdout.trim());if(viewerEvidence.valid!==true)return fail("VALIDATION_REJECTED","The production viewer rejected this asset.",422);
     // accessory quality gate (FULL / LIMITED / REJECTED) from the prepared model's own segmentation, shown before publishing
     if(workerToken){const changed=await prisma.vehicle3DImport.updateMany({where:{id,leaseToken:workerToken,importStage:{not:"DISCARDED"}},data:{importStage:"GENERATING_PART_MAP"}});if(!changed.count)return fail("IMPORT_DISCARDED","This attempt is no longer current.",409);}
     const seg=await segmentFile(privatePath(prepared),{...config,key:`manual-${id}`}).catch(()=>null);const gate=seg?accessoryGate(seg.pieces,seg.dims,seg.proposal):null;
     if(!seg)return fail("VALIDATION_REJECTED","Part detection and quality validation could not complete.",422);
-    const updated=await prisma.$transaction(async tx=>{await tx.$queryRaw`SELECT "id" FROM "Vehicle3DImport" WHERE "id"=${id} FOR UPDATE`;const current=await tx.vehicle3DImport.findUniqueOrThrow({where:{id}});if(current.status==="PUBLISHED"||current.importStage==="DISCARDED"||workerToken&&current.leaseToken!==workerToken)return fail("IMPORT_BUSY","This attempt is no longer current.",409);const row=await tx.vehicle3DImport.update({where:{id},data:{sourceMetadata:r.sourceProvider==="SKETCHFAB"?json({...r.sourceMetadata as any,pendingRawPath:null,pendingPreparedPath:null}):undefined,status:"READY",importStage:r.sourceProvider==="SKETCHFAB"?"READY":null,privateModelPath:prepared,viewerConfig:json(config),errorCode:gate?.verdict==="REJECTED"?"VALIDATION_REJECTED":null,finishedAt:new Date(),leaseToken:null,leaseUntil:null,validation:json({...normalized.report,accessoryGate:gate,partMap:seg?{...seg,sha256:normalized.report.sha256,segmentedAt:new Date().toISOString()}:null,validatedAt:new Date().toISOString(),sourceOrientation:{preRotateX:checked.preRotateX??0,rotateY:checked.rotateY},viewer:viewerEvidence}),visuallyVerifiedAt:null},include});await tx.auditLog.create({data:{actorId:uid,action:"VEHICLE3D_IMPORT_VALIDATE",targetId:id}});return{row,previous:current.privateModelPath};});removePrivate(updated.previous);return shape(updated.row);
+    const updated=await prisma.$transaction(async tx=>{await tx.$queryRaw`SELECT "id" FROM "Vehicle3DImport" WHERE "id"=${id} FOR UPDATE`;const current=await tx.vehicle3DImport.findUniqueOrThrow({where:{id}});if(current.status==="PUBLISHED"||current.importStage==="DISCARDED"||workerToken&&current.leaseToken!==workerToken)return fail("IMPORT_BUSY","This attempt is no longer current.",409);const row=await tx.vehicle3DImport.update({where:{id},data:{sourceMetadata:r.sourceProvider==="SKETCHFAB"?json({...r.sourceMetadata as any,pendingRawPath:null,pendingPreparedPath:null}):undefined,status:"READY",importStage:r.sourceProvider==="SKETCHFAB"?"READY":null,privateModelPath:prepared,viewerConfig:json(config),errorCode:gate?.verdict==="REJECTED"?"VALIDATION_REJECTED":null,finishedAt:new Date(),leaseToken:null,leaseUntil:null,validation:json({...normalized.report,simplified:source.simplified,accessoryGate:gate,partMap:seg?{...seg,sha256:normalized.report.sha256,segmentedAt:new Date().toISOString()}:null,validatedAt:new Date().toISOString(),sourceOrientation:{preRotateX:checked.preRotateX??0,rotateY:checked.rotateY},viewer:viewerEvidence}),visuallyVerifiedAt:null},include});await tx.auditLog.create({data:{actorId:uid,action:"VEHICLE3D_IMPORT_VALIDATE",targetId:id}});return{row,previous:current.privateModelPath};});removePrivate(updated.previous);return shape(updated.row);
    }catch(e){removePrivate(prepared);throw e;}finally{try{unlinkSync(configFile);}catch{}}
   },
   asset:async(uid:string,id:string)=>{const r=await get(uid,id);if(r.importStage==="DISCARDED"||!r.privateModelPath)return fail("MODEL_REQUIRED","Validate this model first.",409);return readFileSync(privatePath(r.privateModelPath));},

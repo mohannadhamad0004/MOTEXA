@@ -6,19 +6,22 @@ import { photoErrorText, pickPhoto } from "../../core/hooks/pickPhoto";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Image, Modal, Pressable, ScrollView, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Card, Chip, GarageHero, GaragePage, GButton, GIcon, GText, Note, Section, StatusChip } from "../../components/garage";
+import { Card, Chip, GarageHero, GaragePage, GButton, GIcon, GText, Note, Rail, Section, SkeletonRows, StatusChip } from "../../components/garage";
+import { ActionsSheet, type ItemAction } from "../../components/ItemActionsMenu";
+import { ManageEntry, ManageHeader, ManagePage, ManageRow, useTwoPane } from "../../components/manage/ManagePage";
 import { isoLatin } from "../../core/constants/bidi";
 import { findCategory, labelOf } from "../../core/constants/categories";
 import { useL } from "../../core/hooks/useL";
 import { useLoad } from "../../core/hooks/useLoad";
 import { useVehicleList } from "../catalog/VehiclePicker";
+import { vehicleCatalog } from "../vehicleCatalog/api";
 import { gType, useGarageTheme } from "../../theme/garage";
 import { PART_LABELS, type AccessoryType, type AccessoryZone, type PartLabel, type PartMap } from "../car3d/modelConfig";
 import { Car3DView } from "../car3d/Car3DView";
 import { refreshRuntimeModels, useCatalogModelKey } from "../car3d/runtimeModels";
 import { normalizeNumberText } from "../../core/constants/numbers";
-import { ACCESSORY_TYPE_LABELS, KIT_PART_TYPE, PREVIEW_VIEWS, REPLACES_STOCK, STATUS_LABELS, adminAccessoryApi, isBumper, shopAccessoryApi, sizeField, typesForCategory, type KitPart,
-  type Accessory, type AccessoryStatus, type AutoFitRow, type PartMapDetail, type Preview, type ZoneBox, RIM_FINISHES, RIM_FINISH_LABELS, type RimFinish } from "./api";
+import { ACCESSORY_TYPE_LABELS, FIT_STATE_LABELS, type FitState, KIT_PART_TYPE, PREVIEW_VIEWS, REPLACES_STOCK, STATUS_LABELS, adminAccessoryApi, isBumper, shopAccessoryApi, sizeField, typesForCategory, type KitPart,
+  type Accessory, type AccessoryStatus, type AutoFitRow, type PartMapDetail, type PartMapListItem, type Preview, type ZoneBox, RIM_FINISHES, RIM_FINISH_LABELS, type RimFinish } from "./api";
 import { shapeSize, sizeMismatches, SIZE_LABEL } from "./partSize";
 import { NO_ADJUST, type FitAdjust } from "../car3d/car3d";
 import { GateSummary } from "./gate";
@@ -387,7 +390,7 @@ export function AdminAccessory3DList() {
   return <DeptPage back onRefresh={() => void list.reload()} refreshing={list.loading && !!list.data}>
     <DeptSection title={d.t("3D requests", "طلبات ثلاثية الأبعاد")} caption={d.t("Every request a shop submitted, newest first. Open one to review it.", "كل طلب أرسله متجر، الأحدث أولًا. افتح طلبًا لمراجعته.")} />
     <ThreeDRequests list={list} />
-    <View style={{ marginTop: 12 }}><GButton variant="secondary" icon="options-outline" label={d.t("Fitting zones per car model", "مناطق التركيب لكل طراز")} onPress={() => router.push("/dept/accessory-zones" as Href)} /></View>
+    <View style={{ marginTop: 12 }}><GButton variant="secondary" icon="options-outline" label={d.t("Accessory fitting per car", "تركيب الإكسسوارات لكل سيارة")} onPress={() => router.push("/dept/accessory-zones" as Href)} /></View>
   </DeptPage>;
 }
 
@@ -496,19 +499,121 @@ function Swatch({ color, label }: { color: string; label: string }) {
   return <View style={[row, { alignItems: "center", gap: 6, flexShrink: 1 }]}><View style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: color }} /><GText style={[gType.caption, align, { flexShrink: 1 }]}>{label}</GText></View>;
 }
 type Mode = "parts" | "zones" | "fits";
-/** /dept/accessory-zones: the part map per car model (default), the zone cut as the fallback for unconfirmed / one-piece models. */
+type ModeTabs = { value: string; options: { key: string; label: string }[]; onChange: (k: string) => void };
+const zonesHref = (mode: Mode, key: string) => `/dept/accessory-zones?mode=${mode}&key=${encodeURIComponent(key)}` as Href;
+const fittingTitle = (t: (en: string, ar: string) => string) => t("Accessory fitting", "تركيب الإكسسوارات");
+/** /dept/accessory-zones: ONE screen, three tabs on ManagePage (Part maps · Fits · Zones), the same header and rows on each.
+ *  A car opens its part-map / zone editor as its own screen (?mode=parts|zones&key=…); one fit opens its review (?mode=fits&key&accessoryId&generationId). */
 export function AdminAccessoryZones() {
-  const params=useLocalSearchParams<{mode?:string}>();
+  const { t } = useL();
+  const params=useLocalSearchParams<{mode?:string;key?:string;model3dKey?:string;accessoryId?:string;generationId?:string;requestId?:string;car?:string}>();
   const [mode, setMode] = useState<Mode>(params.mode==="fits"?"fits":params.mode==="zones"?"zones":"parts");
-  return mode === "parts" ? <PartMapEditor mode={mode} setMode={setMode} /> : mode === "fits" ? <AutoFitEditor mode={mode} setMode={setMode} /> : <ZoneEditor mode={mode} setMode={setMode} />;
+  if (params.mode === "fits" && params.key && params.accessoryId && params.generationId) return <FitReview fitKey={params.key} accessoryId={params.accessoryId} generationId={params.generationId} requestId={params.requestId} />;
+  const carKey = params.model3dKey || params.key;
+  if (carKey && params.mode !== "fits") return params.mode === "zones" ? <ZoneEditor carKey={carKey} /> : <PartMapEditor carKey={carKey} />;
+  const tabs: ModeTabs = { value: mode, options: [{ key: "parts", label: t("Part maps", "خرائط القطع") }, { key: "fits", label: t("Fits", "التركيب") }, { key: "zones", label: t("Zones", "المناطق") }], onChange: k => setMode(k as Mode) };
+  return mode === "parts" ? <PartMapList tabs={tabs} /> : mode === "fits" ? <FitsByCar tabs={tabs} initialCar={params.car} /> : <ZoneList tabs={tabs} />;
 }
-function ModeSwitch({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }) {
-  const { t } = useL(); const { row } = useGarageTheme();
-  return <View style={[row, { gap: 8, flexWrap: "wrap" }]}>
-    <Chip label={t("Part map", "خريطة القطع")} on={mode === "parts"} onPress={() => setMode("parts")} />
-    <Chip label={t("Accessory fits", "تركيب الإكسسوارات")} on={mode === "fits"} onPress={() => setMode("fits")} />
-    <Chip label={t("Zones (fallback)", "المناطق (بديل)")} on={mode === "zones"} onPress={() => setMode("zones")} />
-  </View>;
+
+// ---------------- car names (shared by the three lists and the editors) ----------------
+type CarLabel = { title: string; sub: string; find: string };
+/** model3dKey -> "BMW 3 Series" + "E36 · 1990–2000" from the managed catalog (the 3D lists carry only the model's own name). */
+function useCarLabels() {
+  const { isArabic } = useL();
+  const tax = useLoad(vehicleCatalog.list, []);
+  return useMemo(() => {
+    const m = new Map<string, CarLabel>();
+    for (const v of tax.data?.vehicles ?? []) for (const gen of v.generations) if (gen.model3dKey) {
+      const title = isArabic ? `${v.makeAr || v.displayMake} ${v.modelAr || v.model}` : `${v.displayMake} ${v.model}`, sub = `${gen.code} · ${gen.yearFrom}–${gen.yearTo}`;
+      m.set(gen.model3dKey, { title: isArabic ? isoLatin(title) : title, sub: isArabic ? isoLatin(sub) : sub,
+        find: [v.displayMake, v.makeAr, v.model, v.modelAr, gen.code, gen.yearFrom, gen.yearTo].join(" ").toLowerCase() });
+    }
+    return m;
+  }, [tax.data, isArabic]);
+}
+/** A car the catalog does not know (a private import under review) keeps its model's own name. */
+const labelFor = (labels: Map<string, CarLabel>, key: string, name: string, t: (en: string, ar: string) => string): CarLabel => labels.get(key)
+  ?? { title: name, sub: key.startsWith("import-") ? t("Private import · not published", "استيراد خاص · غير منشور") : "", find: name.toLowerCase() };
+const matchesCar = (l: CarLabel, name: string, q: string) => { const hay = `${l.find} ${l.title.toLowerCase()} ${name.toLowerCase()}`; return q.trim().toLowerCase().split(/\s+/).filter(Boolean).every(w => hay.includes(w)); };
+type FilterChip<K extends string> = { key: K; en: string; ar: string; n: number };
+function FilterRail<K extends string>({ filters, value, onChange, counted }: { filters: FilterChip<K>[]; value: K; onChange: (k: K) => void; counted: boolean }) {
+  const { t } = useL();
+  return <Rail gap={8}>{filters.map(f => <Chip key={f.key} label={t(f.en, f.ar)} count={counted ? f.n : undefined} on={value === f.key} onPress={() => onChange(f.key)} />)}</Rail>;
+}
+
+// ---------------- Part maps tab: one row per car, "To confirm" first; tap = its editor ----------------
+type MapRow = { key: string; name: string; label: CarLabel; status: PartMapListItem["status"]; done: boolean };
+function PartMapList({ tabs }: { tabs: ModeTabs }) {
+  const { t } = useL();
+  const maps = useLoad(() => adminAccessoryApi.partMaps(), []);
+  const labels = useCarLabels();
+  const [q, setQ] = useState(""), [show, setShow] = useState<"all" | "todo" | "done">("all"), [menu, setMenu] = useState<MapRow | null>(null), [pulling, setPulling] = useState(false);
+  const rows: MapRow[] = (maps.data ?? []).map(m => ({ key: m.key, name: m.name, label: labelFor(labels, m.key, m.name, t), status: m.status, done: m.status === "confirmed" }));
+  const matching = rows.filter(r => matchesCar(r.label, r.name, q));
+  const shown = matching.filter(r => show === "all" || (show === "done") === r.done).sort((x, y) => Number(x.done) - Number(y.done) || x.label.title.localeCompare(y.label.title));
+  const todo = rows.filter(r => !r.done).length;
+  // the part map's own state, only when it is not the usual "proposed / confirmed"
+  const note = (st: string) => st === "single" ? t("one piece: uses zones", "قطعة واحدة: تستخدم المناطق") : st === "none" || st === "stale" ? t("splitting into parts…", "جارٍ التقسيم إلى قطع…") : null;
+  const open = (key: string) => router.push(zonesHref("parts", key));
+  return <>
+    <ManagePage
+      title={fittingTitle(t)}
+      line={maps.data ? t(`${rows.length} cars · ${todo} to confirm`, `${rows.length} سيارة · ${todo} بانتظار التأكيد`) : undefined}
+      tabs={tabs}
+      search={{ value: q, onChange: setQ, placeholder: t("Search car", "ابحث عن سيارة") }}
+      filters={<FilterRail value={show} onChange={setShow} counted={!!maps.data} filters={[{ key: "all", en: "All", ar: "الكل", n: matching.length },
+        { key: "todo", en: "To confirm", ar: "بانتظار التأكيد", n: matching.filter(r => !r.done).length }, { key: "done", en: "Confirmed", ar: "مؤكدة", n: matching.filter(r => r.done).length }]} />}
+      items={shown} keyOf={r => r.key}
+      renderItem={r => <ManageRow title={r.label.title} sub={[r.label.sub, note(r.status)].filter(Boolean).join(" · ")}
+        status={r.done ? { label: t("Confirmed", "مؤكدة"), tone: "success" } : { label: t("To confirm", "بانتظار التأكيد"), tone: "accent" }} onPress={() => open(r.key)} onMenu={() => setMenu(r)} />}
+      loading={!maps.data && !maps.error} error={maps.error} onRetry={() => void maps.reload()}
+      empty={{ text: rows.length ? t("No car matches.", "لا توجد سيارة مطابقة.") : t("No car has a 3D model yet.", "لا توجد سيارة بنموذج ثلاثي الأبعاد بعد."), action: q || show !== "all" ? { label: t("Clear filters", "مسح الفلاتر"), onPress: () => { setQ(""); setShow("all"); } } : undefined }}
+      onRefresh={() => { setPulling(true); void maps.reload().finally(() => setPulling(false)); }} refreshing={pulling}
+      detailHint={t("Tap a car to open its part map. Only confirmed maps reach customers.", "اضغط على سيارة لفتح خريطة قطعها. تصل الخرائط المؤكدة فقط إلى العملاء.")}
+    />
+    <ActionsSheet visible={!!menu} onClose={() => setMenu(null)} title={menu?.label.title ?? ""} subtitle={menu?.label.sub || undefined} actions={menu ? [
+      { key: "map", label: t("Open part map", "فتح خريطة القطع"), icon: "git-network-outline", run: () => open(menu.key) },
+      ...(menu.key.startsWith("import-") ? [] : [
+        { key: "fits", label: t("Its accessory fits", "تركيبات الإكسسوارات عليها"), icon: "list-outline" as const, run: () => router.push(`/dept/accessory-zones?mode=fits&car=${encodeURIComponent(menu.key)}` as Href) },
+        { key: "zones", label: t("Its zones", "مناطقها"), icon: "cube-outline" as const, run: () => router.push(zonesHref("zones", menu.key)) },
+      ]),
+    ] : []} />
+  </>;
+}
+
+// ---------------- Zones tab: still used while a car's part map is not confirmed (and for the RIMS wheel position) ----------------
+type ZoneRow = { key: string; name: string; label: CarLabel; tuned: number; uses: boolean };
+function ZoneList({ tabs }: { tabs: ModeTabs }) {
+  const { t } = useL();
+  const zones = useLoad(() => adminAccessoryApi.zones(), []), maps = useLoad(() => adminAccessoryApi.partMaps(), []);
+  const labels = useCarLabels();
+  const [q, setQ] = useState(""), [show, setShow] = useState<"all" | "uses" | "tuned">("all"), [menu, setMenu] = useState<ZoneRow | null>(null), [pulling, setPulling] = useState(false);
+  const confirmed = new Set((maps.data ?? []).filter(m => m.status === "confirmed").map(m => m.key));
+  const rows: ZoneRow[] = (zones.data ?? []).map(z => ({ key: z.key, name: z.name, label: labelFor(labels, z.key, z.name, t), tuned: Object.keys(z.zones).length, uses: !confirmed.has(z.key) }));
+  const matching = rows.filter(r => matchesCar(r.label, r.name, q));
+  const shown = matching.filter(r => show === "all" || (show === "uses" ? r.uses : r.tuned > 0)).sort((x, y) => Number(y.uses) - Number(x.uses) || x.label.title.localeCompare(y.label.title));
+  const open = (key: string) => router.push(zonesHref("zones", key));
+  return <>
+    <ManagePage
+      title={fittingTitle(t)}
+      line={t("Zones: used while a car's part map is not confirmed", "المناطق: تُستخدم حتى تأكيد خريطة قطع السيارة")}
+      tabs={tabs}
+      search={{ value: q, onChange: setQ, placeholder: t("Search car", "ابحث عن سيارة") }}
+      filters={<FilterRail value={show} onChange={setShow} counted={!!zones.data && !!maps.data} filters={[{ key: "all", en: "All", ar: "الكل", n: matching.length },
+        { key: "uses", en: "Uses zones", ar: "تستخدم المناطق", n: matching.filter(r => r.uses).length }, { key: "tuned", en: "Tuned", ar: "مضبوطة", n: matching.filter(r => r.tuned > 0).length }]} />}
+      items={shown} keyOf={r => r.key}
+      renderItem={r => <ManageRow title={r.label.title} sub={[r.label.sub, r.tuned ? t(`${r.tuned} tuned`, `${r.tuned} مضبوطة`) : null].filter(Boolean).join(" · ")}
+        status={r.uses ? { label: t("Uses zones", "تستخدم المناطق"), tone: "accent" } : { label: t("Part map", "خريطة القطع"), tone: "success" }} onPress={() => open(r.key)} onMenu={() => setMenu(r)} />}
+      loading={!zones.data && !zones.error} error={zones.error ?? maps.error} onRetry={() => { void zones.reload(); void maps.reload(); }}
+      empty={{ text: rows.length ? t("No car matches.", "لا توجد سيارة مطابقة.") : t("No car has a 3D model yet.", "لا توجد سيارة بنموذج ثلاثي الأبعاد بعد."), action: q || show !== "all" ? { label: t("Clear filters", "مسح الفلاتر"), onPress: () => { setQ(""); setShow("all"); } } : undefined }}
+      onRefresh={() => { setPulling(true); void Promise.all([zones.reload(), maps.reload()]).finally(() => setPulling(false)); }} refreshing={pulling}
+      detailHint={t("Tap a car to edit its zones. A confirmed part map comes first; zones cover the rest.", "اضغط على سيارة لتعديل مناطقها. تأتي خريطة القطع المؤكدة أولًا، وتغطي المناطق الباقي.")}
+    />
+    <ActionsSheet visible={!!menu} onClose={() => setMenu(null)} title={menu?.label.title ?? ""} subtitle={menu?.label.sub || undefined} actions={menu ? [
+      { key: "zones", label: t("Edit zones", "تعديل المناطق"), icon: "cube-outline", run: () => open(menu.key) },
+      { key: "map", label: t("Part map", "خريطة القطع"), icon: "git-network-outline", run: () => router.push(zonesHref("parts", menu.key)) },
+    ] : []} />
+  </>;
 }
 
 // ---------------- part-map editor ----------------
@@ -536,12 +641,12 @@ const SHAPE_STEPS: [string, string][] = [
 ];
 const fmtSize = (z: { widthMm: number; heightMm: number; depthMm: number }) => `${z.widthMm} × ${z.heightMm} × ${z.depthMm}`;
 const fromProposal = (d: PartMapDetail): PartMap => d.map ?? Object.fromEntries(Object.entries(d.proposal ?? {}).map(([k, v]) => [k, v!.ids]));
-function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }) {
+function PartMapEditor({ carKey: key }: { carKey: string }) {
   const { t } = useL(); const { g, row, align } = useGarageTheme();
-  const list = useLoad(() => adminAccessoryApi.partMaps(), []);
+  const labels = useCarLabels();
   const { busy, error, work } = useWork();
-  const {model3dKey, key:routeKey,label:requestedLabel,requestId}=useLocalSearchParams<{model3dKey?:string;key?:string;label?:string;requestId?:string}>();const requestedKey=model3dKey??routeKey;
-  const [key, setKey] = useState<string | null>(requestedKey??null), [label, setLabel] = useState<PartLabel>(PART_LABELS.includes(requestedLabel as PartLabel)?requestedLabel as PartLabel:"SPOILER");
+  const {label:requestedLabel,requestId}=useLocalSearchParams<{label?:string;requestId?:string}>();
+  const [label, setLabel] = useState<PartLabel>(PART_LABELS.includes(requestedLabel as PartLabel)?requestedLabel as PartLabel:"SPOILER");
   const [detail, setDetail] = useState<PartMapDetail | null>(null), [draft, setDraft] = useState<PartMap>({}), [pieces, setPieces] = useState<number | null>(null);
   const car = detail?.viewerConfig ?? null;
   const assetLoader = useMemo(() => key ? () => adminAccessoryApi.partMapAsset(key) : undefined, [key]);
@@ -562,7 +667,7 @@ function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
   const size = shapeSize(pts), saved = detail?.sizes?.[label];
   // cut mode (WAY 2): a bumper merged into the body is drawn with the 8 points and cut out of the car while a replacement is on
   const cutLabel = label === "FRONT_BUMPER" || label === "REAR_BUMPER" ? label : null, cutOn = !!(cutLabel && detail?.cuts?.[cutLabel]);
-  const merged = !!cutLabel && (list.data ?? []).find(m => m.key === key)?.gate?.limited?.[cutLabel] === "NOT_SEPARATE";
+  const merged = !!cutLabel && detail?.gate?.limited?.[cutLabel] === "NOT_SEPARATE";
   const setCut = (on: boolean) => { if (!cutLabel || !detail) return; void work(async () => { const cuts = await adminAccessoryApi.savePartCut(detail.key, cutLabel, { pts: on ? pts : null }); setDetail(d => d && { ...d, cuts }); }); };
   const applyBox = (add: boolean) => { if (!inside) return; const ids = new Set(inside); setUndo(u => [...u.slice(-19), draft]); setDraft(d => {
     const next: PartMap = {};
@@ -578,7 +683,6 @@ function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
   const cutPreview = useMemo(() => preview && cutLabel && savedCut ? { label: cutLabel, pts: savedCut.pts, ...(grow ? { sideGrow: grow / 100 } : {}) } : null, [preview, cutLabel, savedCut, grow]);
   const partEdit = useMemo(() => ({ label, labels: draft, boxPts: boxMode ? pts : null, boxTurn: boxMode && turning, resetView, cutPreview }), [label, draft, boxMode, pts, turning, resetView, cutPreview]);
   const changed = !!detail && JSON.stringify(draft) !== JSON.stringify(detail.map ?? null);
-  const confirmed = (list.data ?? []).filter(m => m.status === "confirmed").length;
   const statusText = (st: string) => st === "confirmed" ? t("Confirmed: used for customers", "مؤكدة: تُستخدم للعملاء") : st === "proposed" ? t("Proposed: not used yet (zones until confirmed)", "مقترحة: غير مستخدمة بعد (المناطق حتى التأكيد)")
     : st === "single" ? t("One piece (AI / scan model): accessories use the zone cut", "قطعة واحدة (نموذج ذكاء اصطناعي / مسح): تستخدم الإكسسوارات قص المناطق")
     : st === "stale" ? t("The model file changed: splitting again…", "تغيّر ملف النموذج: جارٍ التقسيم من جديد…") : t("Splitting into parts… pull to refresh", "جارٍ التقسيم إلى قطع… اسحب للتحديث");
@@ -633,9 +737,28 @@ function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
               </View>
             </View> : null}
   </>;
-  return <GaragePage hero={<GarageHero variant="detail" backLabel={t("Back", "رجوع")} onBack={() => router.back()} title={t("Car part maps", "خرائط قطع السيارات")} line={t("Which pieces of each car an accessory replaces. Only confirmed maps reach customers.", "أي قطع من كل سيارة يستبدلها الإكسسوار. تصل الخرائط المؤكدة فقط إلى العملاء.")} />}
-    onRefresh={() => void list.reload()} refreshing={list.loading && !!list.data}>
-    <View style={{ gap: 14 }}>
+  const name = labelFor(labels, key, detail?.name ?? "", t);
+  const short = !detail ? null : detail.status === "confirmed" ? { label: t("Confirmed", "مؤكدة"), tone: "success" as const } : detail.status === "proposed" ? { label: t("To confirm", "بانتظار التأكيد"), tone: "accent" as const }
+    : detail.status === "single" ? { label: t("One piece", "قطعة واحدة"), tone: "neutral" as const } : { label: t("Splitting…", "جارٍ التقسيم…"), tone: "neutral" as const };
+  const reload = () => work(async () => { const d = await adminAccessoryApi.partMap(key); setDetail(d); });
+  const actions: ItemAction[] = detail ? [
+    ...(car ? [{ key: "full", label: t("Full screen", "ملء الشاشة"), icon: "expand-outline" as const, run: () => setFull(true) },
+      { key: "reset", label: t("Reset view", "إعادة ضبط العرض"), icon: "refresh" as const, run: () => setResetView(n => n + 1) }] : []),
+    ...(usable ? [
+      { key: "clear", label: t("Clear this label", "مسح هذه التسمية"), icon: "close-circle-outline" as const, disabled: busy || !draft[label]?.length, run: () => setDraft(d => { const n = { ...d }; delete n[label]; return n; }) },
+      { key: "proposal", label: t("Back to the proposal", "العودة إلى الاقتراح"), icon: "arrow-undo-outline" as const, disabled: busy, run: () => setDraft(Object.fromEntries(Object.entries(detail.proposal ?? {}).map(([k, v]) => [k, v!.ids]))) },
+      ...(detail.status === "confirmed" ? [{ key: "unconfirm", label: t("Unconfirm (use zones)", "إلغاء التأكيد (استخدام المناطق)"), icon: "remove-circle-outline" as const, destructive: true, disabled: busy,
+        run: () => work(async () => { setDetail({ ...detail, ...await adminAccessoryApi.confirmPartMap(detail.key, detail.modelSha256!, null) }); }) }] : []),
+    ] : []),
+    { key: "split", label: t("Split into parts again", "التقسيم إلى قطع من جديد"), icon: "cut-outline", disabled: busy, run: () => work(async () => { const d = await adminAccessoryApi.segment(detail.key); setDetail(d); setDraft(fromProposal(d)); }) },
+    ...(key.startsWith("import-") ? [] : [{ key: "zones", label: t("Zones of this car", "مناطق هذه السيارة"), icon: "cube-outline" as const, run: () => router.push(zonesHref("zones", key)) }]),
+    ...(requestId ? [{ key: "request", label: t("Return to 3D request", "العودة إلى طلب النموذج"), icon: "document-text-outline" as const, run: () => router.replace(`/dept/accessory3d/${encodeURIComponent(requestId)}` as Href) }] : []),
+  ] : [];
+  // the one main action, sticky: confirm the map for customers
+  const footer = detail && usable ? <GButton icon="checkmark-circle-outline" label={t("Confirm part map", "تأكيد خريطة القطع")} busy={busy} disabled={busy || !detail.modelSha256 || (detail.status === "confirmed" && !changed)}
+    onPress={() => void work(async () => { setDetail({ ...detail, ...await adminAccessoryApi.confirmPartMap(detail.key, detail.modelSha256!, draft) }); })} /> : undefined;
+  return (
+    <DeptPage back tabs={false} footer={footer} onRefresh={() => void reload()} refreshing={false}>
       <Modal visible={full && !!car} animationType="fade" onRequestClose={() => setFull(false)} statusBarTranslucent>
         <SafeAreaView style={{ flex: 1, backgroundColor: g.page }}>
           <View style={[row, { alignItems: "center", gap: 10, padding: 12 }]}>
@@ -647,49 +770,33 @@ function PartMapEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
           <ScrollView style={{ maxHeight: "42%" }} contentContainerStyle={{ padding: 12, gap: 8 }}>{boxControls}</ScrollView>
         </SafeAreaView>
       </Modal>
-      <ModeSwitch mode={mode} setMode={setMode} />
-      {requestId?<GButton variant="secondary" label={t("Return to 3D request","العودة إلى طلب النموذج")} onPress={()=>router.replace(`/dept/accessory3d/${encodeURIComponent(requestId)}` as Href)}/>:null}
-      {list.error ? <Note tone="danger">{list.error}</Note> : null}
-      {list.data ? <GText soft style={[gType.caption, align]}>{`${t("Confirmed", "مؤكدة")}: ${confirmed} / ${list.data.length} · ${t("To confirm", "بانتظار التأكيد")}: ${list.data.length - confirmed}`}</GText> : null}
-      <View style={[row, { flexWrap: "wrap", gap: 8 }]}>{(list.data ?? []).map(m => <Chip key={m.key} label={m.name} on={key === m.key} icon={m.status === "confirmed" ? "checkmark-circle" : undefined} onPress={() => setKey(m.key)} />)}</View>
-      {key && detail ? <Card>
-        <StatusChip label={statusText(detail.status)} tone={detail.status === "confirmed" ? "success" : detail.status === "proposed" ? "warning" : "neutral"} />
-        <View style={{ marginTop: 8 }}><GateSummary gate={(list.data ?? []).find(m => m.key === key)?.gate} /></View>
-        {usable ? <>
-          <View style={[row, { flexWrap: "wrap", gap: 8, marginTop: 12 }]}>{PART_LABELS.map(L => {
-            const p = detail.proposal?.[L];
-            return <Chip key={L} label={`${t(...PART_LABEL_NAMES[L])} · ${draft[L]?.length ?? 0}${p ? ` (${Math.round(p.confidence * 100)}%)` : ""}`} on={label === L} onPress={() => setLabel(L)} />;
-          })}</View>
-          <View style={{ marginTop: 12, gap: 8 }}>
+      <View style={{ gap: 12 }}>
+        <ManageHeader title={name.title || t("Part map", "خريطة القطع")} line={name.sub || undefined} actions={actions} />
+        {!detail && !error ? <SkeletonRows count={4} /> : null}
+        {detail && short ? <>
+          <View style={[row, { alignItems: "center", gap: 8, flexWrap: "wrap" }]}>
+            <StatusChip label={short.label} tone={short.tone} />
+            <GText soft numberOfLines={2} style={[gType.caption, align, { flex: 1, minWidth: 160 }]}>{statusText(detail.status)}</GText>
+          </View>
+          <GateSummary gate={detail.gate} />
+          {usable ? <>
+            <Rail gap={8}>{PART_LABELS.map(L => {
+              const p = detail.proposal?.[L];
+              return <Chip key={L} label={`${t(...PART_LABEL_NAMES[L])} · ${draft[L]?.length ?? 0}${p ? ` (${Math.round(p.confidence * 100)}%)` : ""}`} on={label === L} onPress={() => setLabel(L)} />;
+            })}</Rail>
             {car ? (full ? <View style={{ height: 320, borderRadius: 16, backgroundColor: g.cardSoft, alignItems: "center", justifyContent: "center" }}><GText soft>{t("Open in full screen", "مفتوح بملء الشاشة")}</GText></View> : viewer({ height: 320, borderRadius: 16 }))
               : <Note>{t("This car's 3D model is not in the app catalog yet.", "نموذج هذه السيارة غير موجود في كتالوج التطبيق بعد.")}</Note>}
-            {car ? <View style={[row, { gap: 10 }]}>
-              <GButton flex variant="secondary" icon="expand-outline" label={t("Full screen", "ملء الشاشة")} onPress={() => setFull(true)} />
-              <GButton flex variant="secondary" icon="refresh" label={t("Reset view", "إعادة ضبط العرض")} onPress={() => setResetView(n => n + 1)} />
-            </View> : null}
             {boxControls}
             <Swatch color={PART_LABEL_COLORS[label]} label={`${t(...PART_LABEL_NAMES[label])}: ${boxMode ? t("pieces fully inside the shape", "القطع الموجودة كليًا داخل الشكل") : t("tap a piece to add or remove it", "اضغط على قطعة لإضافتها أو إزالتها")} · ${t("used by the", "يستخدمها")} ${t(...USED_BY[label])}`} />
             <GText soft style={[gType.caption, align]}>{`${t("Other labels are dimmed, grey = not mapped", "التسميات الأخرى باهتة، الرمادي = غير محدد")} · ${pieces ?? detail.pieces} ${t("pieces", "قطعة")}`}</GText>
             {detail.proposal?.[label] ? <GText soft style={[gType.caption, align]}>{`${t("Proposal", "الاقتراح")}: ${detail.proposal[label]!.ids.length} ${t("pieces", "قطعة")} · ${Math.round(detail.proposal[label]!.confidence * 100)}% · ${detail.proposal[label]!.by === "name+shape" ? t("name and shape", "الاسم والشكل") : t("shape only", "الشكل فقط")}`}</GText>
               : <GText soft style={[gType.caption, align]}>{t("No proposal for this label: tap the pieces, or leave it empty (the zone cut is used).", "لا يوجد اقتراح لهذه التسمية: اضغط على القطع، أو اتركها فارغة (يُستخدم قص المناطق).")}</GText>}
-          </View>
-          <View style={[row, { gap: 10, marginTop: 12, flexWrap: "wrap" }]}>
-            <GButton flex label={t("Confirm part map", "تأكيد خريطة القطع")} disabled={busy || !detail.modelSha256 || (detail.status === "confirmed" && !changed)}
-              onPress={() => void work(async () => { setDetail({ ...detail, ...await adminAccessoryApi.confirmPartMap(detail.key, detail.modelSha256!, draft) }); }, list.reload)} />
-            <GButton flex variant="secondary" label={t("Clear this label", "مسح هذه التسمية")} disabled={busy || !draft[label]?.length} onPress={() => setDraft(d => { const n = { ...d }; delete n[label]; return n; })} />
-          </View>
-          <View style={{ gap: 8, marginTop: 8 }}>
-            <GButton variant="secondary" label={t("Back to the proposal", "العودة إلى الاقتراح")} disabled={busy} onPress={() => setDraft(Object.fromEntries(Object.entries(detail.proposal ?? {}).map(([k, v]) => [k, v!.ids])))} />
-            {detail.status === "confirmed" ? <GButton variant="secondary" label={t("Unconfirm (use zones)", "إلغاء التأكيد (استخدام المناطق)")} disabled={busy}
-              onPress={() => void work(async () => { setDetail({ ...detail, ...await adminAccessoryApi.confirmPartMap(detail.key, detail.modelSha256!, null) }); }, list.reload)} /> : null}
-          </View>
+          </> : null}
         </> : null}
-        <View style={{ marginTop: 8 }}><GButton variant="secondary" label={t("Split into parts again", "التقسيم إلى قطع من جديد")} disabled={busy}
-          onPress={() => void work(async () => { const d = await adminAccessoryApi.segment(detail.key); setDetail(d); setDraft(fromProposal(d)); }, list.reload)} /></View>
-      </Card> : key ? <Note>{busy ? t("Loading…", "جارٍ التحميل…") : t("Could not load this car's part map.", "تعذّر تحميل خريطة قطع هذه السيارة.")}</Note> : <Note>{t("Choose a car model.", "اختر طراز سيارة.")}</Note>}
-      {error ? <Note tone="danger">{error}</Note> : null}
-    </View>
-  </GaragePage>;
+        {error ? <Note tone="danger">{error}</Note> : null}
+      </View>
+    </DeptPage>
+  );
 }
 
 // ---------------- accessory auto-fits ----------------
@@ -711,21 +818,98 @@ const BODY_NAMES: Record<string, [string, string]> = { sedan: ["boot lid", "غط
  *  live with the viewer's evidence flags so the admin sees why; `live` (a draft wheel inset) also ignores the stored fit. */
 export const fitKit = (r: AutoFitRow, baseAdj: FitAdjust, live = false) => r.hasModel && r.fit ? { type: r.type, file: r.file??`private-accessory-${r.accessoryId}-${r.modelRevision}.glb`, assetLoader:r.file?undefined:()=>adminAccessoryApi.asset(r.accessoryId,"model"),
   size: r.fit.fit.failed ? { ...r.size, forceFit: true } : r.size, ...(r.fit.fit.failed ? { qaEvidence: true } : {}), finish: r.finish ?? null, paintMatch: false, adj: NO_ADJUST, fit: live || r.fit.fit.failed ? undefined : r.fit.fit, baseAdj } : null;
-function AutoFitEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }) {
-  const { t } = useL(); const { g, row, align } = useGarageTheme();
+// Accessory fits = the cars list (one row per car with its counts) -> one car's fits (sheet / side panel) -> one fit's review (own screen).
+type FitCounts = Record<FitState, number>;
+type CarBucket = "failed" | "review" | "not_computed" | "approved" | "none";
+const pendingOf = (c: FitCounts) => c.passed + c.needs_correction + c.has_correction;
+/** a car's state = its most urgent fit: failed, then waiting for review, then not computed, then all approved */
+const bucketOf = (c: FitCounts | null): CarBucket => (!c ? "none" : c.failed ? "failed" : pendingOf(c) ? "review" : c.not_computed ? "not_computed" : c.approved ? "approved" : "none");
+const BUCKETS: CarBucket[] = ["failed", "review", "not_computed", "approved", "none"];
+const BUCKET_LABEL: Record<Exclude<CarBucket, "none">, { en: string; ar: string; tone: "neutral" | "accent" | "success" | "danger" }> = {
+  failed: { en: "Failed", ar: "فشل", tone: "danger" }, review: { en: "To review", ar: "للمراجعة", tone: "accent" },
+  not_computed: { en: "Not computed", ar: "لم يُحسب", tone: "neutral" }, approved: { en: "Approved", ar: "معتمد", tone: "success" },
+};
+function countsText(c: FitCounts | null, t: (en: string, ar: string) => string) {
+  const parts = c ? [pendingOf(c) ? t(`${pendingOf(c)} pending`, `${pendingOf(c)} بانتظار المراجعة`) : null, c.failed ? t(`${c.failed} failed`, `${c.failed} فاشلة`) : null,
+    c.not_computed ? t(`${c.not_computed} not computed`, `${c.not_computed} غير محسوبة`) : null, c.approved ? t(`${c.approved} approved`, `${c.approved} معتمدة`) : null].filter(Boolean) : [];
+  return parts.join(" · ") || t("No accessory fitted yet", "لا توجد قطع مركّبة بعد");
+}
+const fitReviewHref = (key: string, accessoryId: string, generationId: string) =>
+  `/dept/accessory-zones?mode=fits&key=${encodeURIComponent(key)}&accessoryId=${encodeURIComponent(accessoryId)}&generationId=${encodeURIComponent(generationId)}` as Href;
+type CarRow = { key: string; name: string; label: CarLabel; c: FitCounts | null; b: CarBucket };
+
+function FitsByCar({ tabs, initialCar }: { tabs: ModeTabs; initialCar?: string }) {
+  const { t, isArabic } = useL();
+  const twoPane = useTwoPane();
   const models = useLoad(() => adminAccessoryApi.partMaps(), []);
+  const labels = useCarLabels();
+  const summary = useLoad(() => adminAccessoryApi.fitSummary(), [], 15000);
+  const [q, setQ] = useState(""), [show, setShow] = useState<"all" | "review" | "failed" | "approved">("all");
+  const [open, setOpen] = useState<string | null>(initialCar ?? null), [menu, setMenu] = useState<CarRow | null>(null), [pulling, setPulling] = useState(false);
+  const counts = new Map((summary.data?.cars ?? []).map(c => [c.model3dKey, c.counts]));
+  const cars: CarRow[] = (models.data ?? []).filter(m => !m.key.startsWith("import-")).map(m => { const c = counts.get(m.key) ?? null; return { key: m.key, name: m.name, label: labelFor(labels, m.key, m.name, t), c, b: bucketOf(c) }; });
+  const matching = cars.filter(c => matchesCar(c.label, c.name, q));
+  const shown = matching.filter(c => show === "all" || c.b === show).sort((x, y) => BUCKETS.indexOf(x.b) - BUCKETS.indexOf(y.b) || x.label.title.localeCompare(y.label.title));
+  const pending = cars.reduce((n, c) => n + (c.c ? pendingOf(c.c) : 0), 0);
+  const count = (b: CarBucket) => matching.filter(c => c.b === b).length;
+  const openCar = cars.find(c => c.key === open) ?? null;
+  const filters: { key: typeof show; en: string; ar: string; n: number }[] = [
+    { key: "all", en: "All", ar: "الكل", n: matching.length }, { key: "review", en: "To review", ar: "للمراجعة", n: count("review") },
+    { key: "failed", en: "Failed", ar: "فشل", n: count("failed") }, { key: "approved", en: "Approved", ar: "معتمد", n: count("approved") },
+  ];
+  // on phones the sheet closes first: a Modal would stay on top of the next screen
+  const pick = (key: string, accessoryId: string, generationId: string) => { if (!twoPane) setOpen(null); router.push(fitReviewHref(key, accessoryId, generationId)); };
+  return <>
+    <ManagePage
+      title={fittingTitle(t)}
+      line={models.data && summary.data ? t(`${cars.length} cars · ${pending} fits to review`, `${cars.length} سيارة · ${pending} تركيب للمراجعة`) : undefined}
+      tabs={tabs}
+      search={{ value: q, onChange: setQ, placeholder: t("Search car", "ابحث عن سيارة") }}
+      filters={<FilterRail value={show} onChange={setShow} counted={!!models.data} filters={filters} />}
+      above={<ManageEntry icon="albums-outline" title={t("Review by accessory", "المراجعة حسب القطعة")} sub={summary.data ? t(`${summary.data.accessories} accessories · all their cars at once`, `${summary.data.accessories} قطع · كل سياراتها معًا`) : undefined}
+        onPress={() => router.push("/dept/accessory-fits" as Href)} />}
+      items={shown} keyOf={c => c.key}
+      renderItem={c => { const l = c.b === "none" ? null : BUCKET_LABEL[c.b]; return <ManageRow title={c.label.title} sub={[c.label.sub, summary.data ? countsText(c.c, t) : null].filter(Boolean).join(" · ")} status={l ? { label: t(l.en, l.ar), tone: l.tone } : null}
+        active={twoPane && open === c.key} onPress={() => setOpen(c.key)} onMenu={() => setMenu(c)} />; }}
+      loading={!models.data && !models.error} error={models.error ?? summary.error} onRetry={() => { void models.reload(); void summary.reload(); }}
+      empty={{ text: cars.length ? t("No car matches.", "لا توجد سيارة مطابقة.") : t("No car has a 3D model yet.", "لا توجد سيارة بنموذج ثلاثي الأبعاد بعد."), action: q || show !== "all" ? { label: t("Clear filters", "مسح الفلاتر"), onPress: () => { setQ(""); setShow("all"); } } : undefined }}
+      onRefresh={() => { setPulling(true); void Promise.all([models.reload(), summary.reload()]).finally(() => setPulling(false)); }} refreshing={pulling}
+      detail={openCar ? { title: [openCar.label.title, openCar.label.sub].filter(Boolean).join(" · "), onClose: () => setOpen(null), content: <CarFits key={openCar.key} carKey={openCar.key} onPick={pick} /> } : null}
+      detailHint={t("Tap a car to see its fits.", "اضغط على سيارة لعرض تركيباتها.")}
+    />
+    <ActionsSheet visible={!!menu} onClose={() => setMenu(null)} title={menu?.label.title ?? ""} subtitle={menu ? [menu.label.sub, countsText(menu.c, t)].filter(Boolean).join(" · ") : undefined} actions={menu ? [
+      { key: "fits", label: t("See its fits", "عرض تركيباتها"), icon: "list-outline", run: () => setOpen(menu.key) },
+      { key: "map", label: t("Part map", "خريطة القطع"), icon: "git-network-outline", run: () => router.push(zonesHref("parts", menu.key)) },
+      { key: "zones", label: t("Zones", "المناطق"), icon: "cube-outline", run: () => router.push(zonesHref("zones", menu.key)) },
+    ] : []} />
+  </>;
+}
+
+/** One car's fits, one row each; tap = that fit's review. */
+function CarFits({ carKey, onPick }: { carKey: string; onPick: (key: string, accessoryId: string, generationId: string) => void }) {
+  const { t } = useL();
+  const s = useLoad(() => adminAccessoryApi.fitSummary(carKey), [carKey]);
+  const fits = s.data?.fits ?? [];
+  if (s.error && !s.data) return <Note tone="danger">{s.error}</Note>;
+  if (!s.data) return <SkeletonRows count={3} />;
+  if (!fits.length) return <Note>{t("No accessory is fitted on this car yet.", "لا توجد قطعة مركّبة على هذه السيارة بعد.")}</Note>;
+  return <View>{fits.map(f => { const l = FIT_STATE_LABELS[f.status]; return <ManageRow key={`${f.accessoryId}|${f.generationId}`} title={f.productName}
+    sub={`${t(...ACCESSORY_TYPE_LABELS[f.type])} · ${f.generation}`} status={{ label: t(l.en, l.ar), tone: l.tone }} onPress={() => onPick(carKey, f.accessoryId, f.generationId)} />; })}</View>;
+}
+
+/** One fit on one car: the 3D view, its state, Approve / Needs correction. Rerun, the position correction and the wheel position are in ⋮. */
+function FitReview({ fitKey, accessoryId, generationId, requestId }: { fitKey: string; accessoryId: string; generationId: string; requestId?: string }) {
+  const { t } = useL(); const { g, row, align } = useGarageTheme();
   const { busy, error, work } = useWork();
-  const params=useLocalSearchParams<{key?:string;accessoryId?:string;generationId?:string;requestId?:string}>();
-  const [key, setKey] = useState<string | null>(params.key??null), [sel, setSel] = useState<string | null>(params.accessoryId&&params.generationId?`${params.accessoryId}|${params.generationId}`:null), [adj, setAdj] = useState<FitAdjust>(NO_ADJUST);
-  const [viewerFitError,setViewerFitError]=useState<string|null>(null), [fitReviewed,setFitReviewed]=useState(false);
-  const fits = useLoad(() => key ? adminAccessoryApi.autoFits(key) : Promise.resolve([]), [key]);
-  const car = useCatalogModelKey(key);
-  const rowKey = (r: AutoFitRow) => `${r.accessoryId}|${r.generation.id}`;
-  const r = (fits.data ?? []).find(x => rowKey(x) === sel) ?? null;
-  useEffect(()=>{setViewerFitError(null);setFitReviewed(false);},[sel,r?.modelRevision,r?.fit?.approvedAt,adj]);
-  useEffect(() => { setAdj(r?.fit?.adj ?? NO_ADJUST); }, [sel, r?.fit?.approvedAt]); // eslint-disable-line react-hooks/exhaustive-deps
-  // fits are computed in the background: look again while any is still computing
-  useEffect(() => { if (!(fits.data ?? []).some(x => x.computing)) return; const id = setTimeout(() => void fits.reload(), 6000); return () => clearTimeout(id); }, [fits.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  const fits = useLoad(() => adminAccessoryApi.autoFits(fitKey), [fitKey]);
+  const car = useCatalogModelKey(fitKey);
+  const r = (fits.data ?? []).find(x => x.accessoryId === accessoryId && x.generation.id === generationId) ?? null;
+  const [adj, setAdj] = useState<FitAdjust>(NO_ADJUST), [panel, setPanel] = useState<"adjust" | "wheels" | null>(null);
+  const [viewerFitError, setViewerFitError] = useState<string | null>(null), [fitReviewed, setFitReviewed] = useState(false);
+  useEffect(() => { setViewerFitError(null); setFitReviewed(false); }, [r?.modelRevision, r?.fit?.approvedAt, adj]);
+  useEffect(() => { setAdj(r?.fit?.adj ?? NO_ADJUST); }, [r?.fit?.approvedAt]); // eslint-disable-line react-hooks/exhaustive-deps
+  // a fit being computed in the background: look again until it is there
+  useEffect(() => { if (!r?.computing) return; const id = setTimeout(() => void fits.reload(), 6000); return () => clearTimeout(id); }, [fits.data]); // eslint-disable-line react-hooks/exhaustive-deps
   const info = (r?.fit?.fit.info ?? {}) as { body?: string; mount?: { body?: string; widthM?: number; bodyWidthM?: number; scaleBy?: string }; feetGapMm?: (number | null)[]; topGapMm?: (number | null)[]; spanM?: number; heightAboveM?: number; pitchDeg?: number };
   const failed = r?.fit?.fit.failed ?? null;
   // rims: each wheel is placed automatically (tyre face just inside the fender); a Parts Admin inset per axle (the car's RIMS zone, all rim
@@ -736,53 +920,93 @@ function AutoFitEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
   const mmText = (v: number | null) => `${v === null ? "—" : Math.abs(v)} ${t("mm", "مم")}`;
   const clearText = (v: number | null) => v === null ? "—" : v < 0 ? `${mmText(v)} ${t("outside", "للخارج")}` : `${mmText(v)} ${t("inside", "للداخل")}`;
   const [inset, setInset] = useState<{ front: number; rear: number } | null>(null);
-  useEffect(() => { setInset(null); }, [key]);
   const draft = inset && (inset.front !== savedInset.front || inset.rear !== savedInset.rear) ? inset : null;
   const previewCar = useMemo(() => car && draft ? { ...car, zones: { ...(car.zones ?? {}), RIMS: { ...(car.zones?.RIMS ?? {}), wheelInsetMm: draft } } } : car, [car, draft]);
   const saveInset = (v: { front: number; rear: number }) => work(async () => {
     const { wheelInsetMm: _old, ...rest } = car?.zones?.RIMS ?? {}; // eslint-disable-line @typescript-eslint/no-unused-vars
     const zone = v.front || v.rear ? { ...rest, wheelInsetMm: v } : Object.keys(rest).length ? rest : null;
-    await adminAccessoryApi.setZone(key!, "RIMS", zone);
+    await adminAccessoryApi.setZone(fitKey, "RIMS", zone);
   }, async () => { setInset(null); await Promise.all([fits.reload(), refreshRuntimeModels()]); });
   // a failed fit stores only its reason: the part is fitted live with the viewer's evidence flags (placed where the auto-fit put it, never
-  // refused), so the admin sees why and can try nudges; it still cannot be approved (here or on the server)
+  // refused), so the admin sees why; it still cannot be approved (here or on the server)
   const kit = useMemo(() => r ? fitKit(r, adj, !!draft) : null, [r, adj, draft]);
   const gaps = (info.feetGapMm ?? info.topGapMm ?? []).map(x => x === null ? "—" : `${x} mm`).join(" / ");
-  return <GaragePage hero={<GarageHero variant="detail" backLabel={t("Back", "رجوع")} onBack={() => router.back()} title={t("Accessory fits", "تركيب الإكسسوارات")} line={t("Each accessory is fitted to each car once, from the car's real shape. Check it, correct it if needed, approve.", "تُركّب كل قطعة على كل سيارة مرة واحدة، من شكل السيارة الحقيقي. افحصها وصحّحها إن لزم ثم اعتمدها.")} />}
-    onRefresh={() => { void models.reload(); void fits.reload(); }} refreshing={(models.loading && !!models.data) || (fits.loading && !!fits.data)}>
-    <View style={{ gap: 14 }}>
-      <ModeSwitch mode={mode} setMode={setMode} />
-      <GButton variant="secondary" icon="albums-outline" label={t("Review one accessory on all its cars (bulk)", "مراجعة قطعة واحدة على كل سياراتها (دفعة واحدة)")} onPress={() => router.push("/dept/accessory-fits" as Href)} />
-      {params.requestId?<GButton variant="secondary" label={t("Return to 3D request","العودة إلى طلب النموذج")} onPress={()=>router.replace(`/dept/accessory3d/${encodeURIComponent(params.requestId!)}` as Href)}/>:null}
-      {models.error ? <Note tone="danger">{models.error}</Note> : null}
-      <View style={[row, { flexWrap: "wrap", gap: 8 }]}>{(models.data ?? []).map(m => <Chip key={m.key} label={m.name} on={key === m.key} onPress={() => { setKey(m.key); setSel(null); }} />)}</View>
-      {key ? <Card>
-        {fits.error ? <Note tone="danger">{fits.error}</Note> : null}
-        {fits.data && !fits.data.length ? <Note>{t("No generated accessory is available for this vehicle.", "لا توجد قطعة مُنشأة متاحة لهذه السيارة.")}</Note> : null}
-        <View style={[row, { flexWrap: "wrap", gap: 8 }]}>{(fits.data ?? []).map(x => <Chip key={rowKey(x)} label={`${x.productName} · ${t(...ACCESSORY_TYPE_LABELS[x.type])}`} on={sel === rowKey(x)}
-          icon={x.fit?.approvedAt ? "checkmark-circle" : undefined} onPress={() => setSel(rowKey(x))} />)}</View>
-        {r ? <View style={{ marginTop: 12, gap: 8 }}>
-          <StatusChip label={r.computing ? t("Computing the fit…", "جارٍ حساب التركيب…") : failed ? t("Does not fit this car", "لا تناسب هذه السيارة") : r.fit?.approvedAt ? t("Approved", "معتمد") : r.fit?.fit.needsCorrection?t("Needs correction","يحتاج إلى تصحيح"):r.fit?t("Auto-fit, not reviewed yet", "تركيب تلقائي، لم يُراجع بعد"):t("Fit not run","لم يُنفّذ التركيب")} tone={failed ? "danger" : r.fit?.approvedAt ? "success" : "warning"} />
-          {failed ? <Note tone="danger">{`${t("Customers with this car get \"3D preview not available\" for this part. Reason", "يرى العملاء الذين يملكون هذه السيارة «المعاينة غير متاحة» لهذه القطعة. السبب")}: ${failed}`}</Note> : null}
-          <GText soft style={[gType.caption, align]}>{r.generation.name}</GText>
-          {r.fit && !failed ? <GText style={[gType.bodySm, align]}>{[
-            info.mount?.body ? `${t("On the", "على")} ${t(...(BODY_NAMES[info.mount.body] ?? ["body", "الهيكل"]))}` : null,
-            info.spanM ? `${t("width", "العرض")} ${info.spanM} m / ${t("mount", "سطح التركيب")} ${info.mount?.widthM ?? "—"} m / ${t("body", "الهيكل")} ${info.mount?.bodyWidthM ?? "—"} m` : null,
-            info.heightAboveM ? `${t("height", "الارتفاع")} ${info.heightAboveM} m` : null,
-            gaps ? `${t("gap at each foot", "الفراغ عند كل قدم")}: ${gaps}` : null,
-            info.pitchDeg !== undefined ? `${t("tilt", "الميل")} ${info.pitchDeg}°` : null,
-          ].filter(Boolean).join(" · ")}</GText> : null}
-          {kit && previewCar ? <Car3DView model={previewCar} color="#8b9baa" bg={g.cardSoft} kit={kit} onFitError={message=>setViewerFitError(message)} interactive style={{ height: 300, borderRadius: 16 }} /> : null}
-          {viewerFitError?<Note tone="danger">{viewerFitError}</Note>:null}
-          <GButton variant="secondary" label={t("Rerun automatic fit","إعادة تشغيل التركيب التلقائي")} disabled={busy||r.computing} onPress={()=>void work(()=>adminAccessoryApi.act(r.accessoryId,"refit"),fits.reload)}/>
-          {r.type === "RIMS" && r.fit && !failed ? <View style={{ gap: 6, paddingVertical: 4 }}>
-            <GText style={[gType.label, { fontWeight: "800" }, align]}>{t("Wheel position (automatic)", "موضع العجلات (تلقائي)")}</GText>
-            <GText soft style={[gType.tiny, align]}>{t("Each wheel moves along its own axle so the tyre sits just inside the fender (at most 40 mm, never into the brakes or the car). Tyre face vs fender:", "تتحرك كل عجلة على محورها ليستقر الإطار داخل الرفرف مباشرة (40 مم كحد أقصى، دون ملامسة الفرامل أو السيارة). وجه الإطار مقابل الرفرف:")}</GText>
+  const corrected = JSON.stringify(adj) !== JSON.stringify(NO_ADJUST);
+  const state = !r ? null : r.computing ? { label: t("Computing the fit…", "جارٍ حساب التركيب…"), tone: "warning" as const } : failed ? { label: t("Does not fit this car", "لا تناسب هذه السيارة"), tone: "danger" as const }
+    : r.fit?.approvedAt ? { label: t("Approved", "معتمد"), tone: "success" as const } : r.fit?.fit.needsCorrection ? { label: t("Needs correction", "يحتاج إلى تصحيح"), tone: "warning" as const }
+    : r.fit ? { label: t("Waiting for your review", "بانتظار مراجعتك"), tone: "accent" as const } : { label: t("Not computed", "لم يُحسب"), tone: "neutral" as const };
+  const measures = r?.fit && !failed ? [
+    info.mount?.body ? `${t("on the", "على")} ${t(...(BODY_NAMES[info.mount.body] ?? ["body", "الهيكل"]))}` : null,
+    info.spanM ? `${t("width", "العرض")} ${info.spanM} m` : null,
+    info.heightAboveM ? `${t("height", "الارتفاع")} ${info.heightAboveM} m` : null,
+    gaps ? `${t("gap", "الفراغ")} ${gaps}` : null,
+    info.pitchDeg !== undefined ? `${t("tilt", "الميل")} ${info.pitchDeg}°` : null,
+  ].filter(Boolean).join(" · ") : "";
+  const actions: ItemAction[] = r ? [
+    ...(r.fit && !failed ? [{ key: "rerun", label: t("Rerun automatic fit", "إعادة تشغيل التركيب التلقائي"), icon: "refresh-outline" as const, disabled: busy || r.computing, run: () => work(() => adminAccessoryApi.act(r.accessoryId, "refit"), fits.reload) }] : []),
+    ...(r.fit ? [{ key: "adjust", label: t("Correct the position", "تصحيح الموضع"), icon: "move-outline" as const, run: () => setPanel("adjust") }] : []),
+    ...(r.type === "RIMS" && r.fit && !failed ? [{ key: "wheels", label: t("Wheel position", "موضع العجلات"), icon: "disc-outline" as const, run: () => setPanel("wheels") }] : []),
+    { key: "map", label: t("Part map of this car", "خريطة قطع هذه السيارة"), icon: "git-network-outline", run: () => router.push(`/dept/accessory-zones?key=${encodeURIComponent(fitKey)}&mode=parts` as Href) },
+    ...(requestId ? [{ key: "request", label: t("Back to the 3D request", "العودة إلى طلب النموذج"), icon: "document-text-outline" as const, run: () => router.replace(`/dept/accessory3d/${encodeURIComponent(requestId)}` as Href) }] : []),
+  ] : [];
+  // the one main action: review (approve / needs correction); a failed or missing fit can only be run again
+  const rerun = () => void work(() => adminAccessoryApi.act(r!.accessoryId, "refit"), fits.reload);
+  const footer = !r ? undefined : !r.fit || failed ? (
+    <GButton icon="refresh-outline" label={r.fit ? t("Rerun automatic fit", "إعادة تشغيل التركيب التلقائي") : t("Run automatic fit", "تشغيل التركيب التلقائي")} busy={busy || r.computing} disabled={busy || r.computing} onPress={rerun} />
+  ) : (
+    <View style={{ gap: 8 }}>
+      <Check checked={fitReviewed} disabled={busy || !!failed || !!viewerFitError || !kit || !previewCar} onPress={() => setFitReviewed(v => !v)} label={t("I reviewed the part on this car.", "راجعت القطعة على هذه السيارة.")} />
+      <View style={[row, { gap: 8 }]}>
+        <GButton flex variant="secondary" label={t("Needs correction", "يحتاج إلى تصحيح")} disabled={busy || !!failed} onPress={() => void work(() => adminAccessoryApi.needsCorrection(r.accessoryId, r.generation.id), fits.reload)} />
+        <GButton flex icon="checkmark-circle-outline" label={corrected ? t("Approve with correction", "اعتماد مع التصحيح") : t("Approve fit", "اعتماد التركيب")} busy={busy} disabled={busy || r.computing || !!failed || !fitReviewed || !!viewerFitError || !kit || !previewCar}
+          onPress={() => void work(async () => { await adminAccessoryApi.approveFit(r.accessoryId, r.generation.id, corrected ? adj : null); await adminAccessoryApi.act(r.accessoryId, "preview", { generationId: r.generation.id }); }, fits.reload)} />
+      </View>
+    </View>
+  );
+  return (
+    <DeptPage back tabs={false} footer={footer} onRefresh={() => void fits.reload()} refreshing={fits.loading && !!fits.data}>
+      <View style={{ gap: 12 }}>
+        <ManageHeader title={r?.productName ?? t("Fit review", "مراجعة التركيب")} line={r ? `${r.generation.name} · ${t(...ACCESSORY_TYPE_LABELS[r.type])}` : undefined} actions={actions} />
+        {fits.error && !fits.data ? <Note tone="danger">{fits.error}</Note> : null}
+        {!fits.data && !fits.error ? <SkeletonRows count={4} /> : null}
+        {fits.data && !r ? <Note>{t("This fit is no longer available on this car.", "لم يعد هذا التركيب متاحًا على هذه السيارة.")}</Note> : null}
+        {r && state ? <>
+          <View style={[row, { alignItems: "center", gap: 8, flexWrap: "wrap" }]}>
+            <StatusChip label={state.label} tone={state.tone} />
+            {measures ? <GText soft numberOfLines={2} style={[gType.caption, align, { flex: 1, minWidth: 160 }]}>{measures}</GText> : null}
+          </View>
+          {failed ? <View style={{ gap: 4 }}>
+            <Note tone="danger">{t("Customers get \"3D preview not available\". Fix the cause (cut, part map or part), then run the fit again.", "يرى العملاء «المعاينة غير متاحة». أصلح السبب (القص أو خريطة القطع أو القطعة) ثم شغّل التركيب مجددًا.")}</Note>
+            {/* the viewer's own measurement text (English, technical): its own left-to-right line, never inside the Arabic sentence */}
+            <GText soft style={[gType.tiny, { writingDirection: "ltr", textAlign: "left" }]}>{failed}</GText>
+          </View> : null}
+          {kit && previewCar ? <Car3DView model={previewCar} color="#8b9baa" bg={g.cardSoft} kit={kit} onFitError={message => setViewerFitError(message)} interactive style={{ height: 320, borderRadius: 16 }} />
+            : !r.fit ? <Note>{t("Not computed yet for this car.", "لم يُحسب لهذه السيارة بعد.")}</Note> : null}
+          {viewerFitError ? <Note tone="danger">{viewerFitError}</Note> : null}
+          {panel === "adjust" && r.fit ? <Card style={{ gap: 6 }}>
+            <View style={[row, { alignItems: "center" }]}>
+              <GText style={[gType.label, align, { flex: 1, fontWeight: "800" }]}>{t("Correct the position", "تصحيح الموضع")}</GText>
+              <GButton variant="ghost" label={t("Done", "تم")} onPress={() => setPanel(null)} />
+            </View>
+            {FIT_NUDGE.map(([en, ar, f, step, lim]) => <View key={f} style={[row, { alignItems: "center", gap: 8 }]}>
+              <GText style={[gType.label, align, { flex: 1 }]}>{t(en, ar)}</GText>
+              <GButton variant="secondary" label="−" onPress={() => setAdj(a => ({ ...a, [f]: fitBound(f, a[f] - step, lim) }))} />
+              <GText soft style={[gType.tiny, { width: 48, textAlign: "center", writingDirection: "ltr" }]}>{adj[f].toFixed(3)}</GText>
+              <GButton variant="secondary" label="+" onPress={() => setAdj(a => ({ ...a, [f]: fitBound(f, a[f] + step, lim) }))} />
+            </View>)}
+            <GButton variant="secondary" label={t("Reset to auto-fit", "العودة إلى التركيب التلقائي")} disabled={busy || !corrected} onPress={() => setAdj(NO_ADJUST)} />
+          </Card> : null}
+          {panel === "wheels" && r.type === "RIMS" && r.fit && !failed ? <Card style={{ gap: 6 }}>
+            <View style={[row, { alignItems: "center" }]}>
+              <GText style={[gType.label, align, { flex: 1, fontWeight: "800" }]}>{t("Wheel position", "موضع العجلات")}</GText>
+              <GButton variant="ghost" label={t("Done", "تم")} onPress={() => setPanel(null)} />
+            </View>
+            <GText soft style={[gType.tiny, align]}>{t("Tyre face vs fender, before → after the automatic move (max 40 mm):", "وجه الإطار مقابل الرفرف، قبل ← بعد الحركة التلقائية (40 مم كحد أقصى):")}</GText>
             {wheels.map(w => { const notes = Object.keys(RIM_NOTES).filter(k => (w.warnings ?? []).includes(k)).map(k => t(...RIM_NOTES[k]!)); return <GText key={w.wheel} soft style={[gType.caption, align]}>
-              {[`${t(...WHEEL_NAMES[w.wheel] ?? [w.wheel, w.wheel])}: ${t("before", "قبل")} ${clearText(w.archGapBeforeMm)}`, `${t("after", "بعد")} ${clearText(w.archGapAfterMm)}`, ...notes].join(" · ")}</GText>; })}
-            <GText style={[gType.label, align]}>{t("Override (mm inward, this car, all rims)", "تعديل يدوي (مم للداخل، هذه السيارة، كل الجنوط)")}</GText>
+              {[`${t(...WHEEL_NAMES[w.wheel] ?? [w.wheel, w.wheel])}: ${clearText(w.archGapBeforeMm)} → ${clearText(w.archGapAfterMm)}`, ...notes].join(" · ")}</GText>; })}
+            <GText style={[gType.label, align, { marginTop: 4 }]}>{t("Override (mm inward, this car, all rims)", "تعديل يدوي (مم للداخل، هذه السيارة، كل الجنوط)")}</GText>
             {(["front", "rear"] as const).map(ax => { const v = (inset ?? savedInset)[ax]; return <View key={ax} style={[row, { alignItems: "center", gap: 8 }]}>
-              <GText style={[gType.label, align, { flex: 1 }]}>{ax === "front" ? t("Front axle (mm)", "المحور الأمامي (مم)") : t("Rear axle (mm)", "المحور الخلفي (مم)")}</GText>
+              <GText style={[gType.label, align, { flex: 1 }]}>{ax === "front" ? t("Front axle", "المحور الأمامي") : t("Rear axle", "المحور الخلفي")}</GText>
               <GButton variant="secondary" label="−" onPress={() => setInset({ ...(inset ?? savedInset), [ax]: Math.max(0, v - 1) })} />
               <GText soft style={[gType.tiny, { width: 40, textAlign: "center", writingDirection: "ltr" }]}>{String(v)}</GText>
               <GButton variant="secondary" label="+" onPress={() => setInset({ ...(inset ?? savedInset), [ax]: Math.min(40, v + 1) })} />
@@ -791,36 +1015,24 @@ function AutoFitEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => vo
               <GButton label={t("Save override", "حفظ التعديل")} disabled={busy || !draft || (!draft.front && !draft.rear)} onPress={() => void saveInset(draft!)} />
               <GButton variant="secondary" label={t("Back to automatic", "العودة إلى التلقائي")} disabled={busy || !hasOverride} onPress={() => void saveInset({ front: 0, rear: 0 })} />
             </View>
-            {draft ? <Note>{t("Preview of the draft override: save it to refit every rim on this car.", "معاينة التعديل المقترح: احفظه لإعادة تركيب كل الجنوط على هذه السيارة.")}</Note> : hasOverride ? <Note>{t("This car uses your override instead of the automatic position.", "تستخدم هذه السيارة تعديلك بدلاً من الموضع التلقائي.")}</Note> : null}
-          </View> : null}
-          {r.fit ? <View style={{ gap: 6 }}>
-            {failed ? <Note>{t("Failed fit, shown where the automatic fit placed it. The nudges only preview a correction: a failed fit cannot be approved. Fix the cause (cut, part map or part) and rerun the fit.", "تركيب فاشل، معروض حيث وضعه التركيب التلقائي. أزرار التحريك للمعاينة فقط: لا يمكن اعتماد تركيب فاشل. أصلح السبب (القص أو خريطة القطع أو القطعة) ثم أعد تشغيل التركيب.")}</Note> : null}
-            {FIT_NUDGE.map(([en, ar, f, step, lim]) => <View key={f} style={[row, { alignItems: "center", gap: 8 }]}>
-              <GText style={[gType.label, align, { flex: 1 }]}>{t(en, ar)}</GText>
-              <GButton variant="secondary" label="−" onPress={() => setAdj(a => ({ ...a, [f]: fitBound(f, a[f] - step, lim) }))} />
-              <GText soft style={[gType.tiny, { width: 48, textAlign: "center", writingDirection: "ltr" }]}>{adj[f].toFixed(3)}</GText>
-              <GButton variant="secondary" label="+" onPress={() => setAdj(a => ({ ...a, [f]: fitBound(f, a[f] + step, lim) }))} />
-            </View>)}
-            <Check checked={fitReviewed} disabled={busy||!!failed||!!viewerFitError||!kit||!previewCar} onPress={()=>setFitReviewed(v=>!v)} label={t("I reviewed the generated part on this vehicle.","راجعت القطعة المُنشأة على هذه السيارة.")}/>
-            <GButton label={t("Approve fit", "اعتماد التركيب")} disabled={busy||r.computing||!!failed||!fitReviewed||!!viewerFitError||!kit||!previewCar} onPress={() => void work(async()=>{await adminAccessoryApi.approveFit(r.accessoryId, r.generation.id, JSON.stringify(adj) === JSON.stringify(NO_ADJUST) ? null : adj);await adminAccessoryApi.act(r.accessoryId,"preview",{generationId:r.generation.id});}, fits.reload)} />
-            <GButton variant="secondary" label={t("Needs correction","يحتاج إلى تصحيح")} disabled={busy||!!failed} onPress={()=>void work(()=>adminAccessoryApi.needsCorrection(r.accessoryId,r.generation.id),fits.reload)}/>
-            <GButton variant="secondary" label={t("Reset to auto-fit", "العودة إلى التركيب التلقائي")} disabled={busy} onPress={() => setAdj(NO_ADJUST)} />
-          </View> : null}
-        </View> : null}
-      </Card> : <Note>{t("Choose a car model.", "اختر طراز سيارة.")}</Note>}
-      {error ? <Note tone="danger">{error}</Note> : null}
-    </View>
-  </GaragePage>;
+            {draft ? <Note>{t("Previewing the draft: save it to refit every rim on this car.", "معاينة المسودة: احفظها لإعادة تركيب كل الجنوط على هذه السيارة.")}</Note> : hasOverride ? <Note>{t("This car uses your override.", "تستخدم هذه السيارة تعديلك.")}</Note> : null}
+          </Card> : null}
+          {corrected && panel !== "adjust" ? <Note>{t("A position correction is applied. Approve to save it with the fit.", "تم تطبيق تصحيح للموضع. اعتمد لحفظه مع التركيب.")}</Note> : null}
+        </> : null}
+        {error ? <Note tone="danger">{error}</Note> : null}
+      </View>
+    </DeptPage>
+  );
 }
 
 // ---------------- zone editor (fallback) ----------------
-function ZoneEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }) {
+/** One car's zones, one task: pick a type, shape its boxes, save. Reset and the car's part map are in ⋮. */
+function ZoneEditor({ carKey: key }: { carKey: string }) {
   const { t } = useL(); const { g, row, align } = useGarageTheme();
-
+  const labels = useCarLabels();
   const list = useLoad(() => adminAccessoryApi.zones(), []);
   const { busy, error, work } = useWork();
-  const params=useLocalSearchParams<{key?:string}>();
-  const [key, setKey] = useState<string | null>(params.key??null), [type, setType] = useState<AccessoryType>("FRONT_BUMPER");
+  const [type, setType] = useState<AccessoryType>("FRONT_BUMPER");
   const [fit, setFit] = useState<string[]>([]), [fitOn, setFitOn] = useState(false), [rep, setRep] = useState<string[]>([]), [repOn, setRepOn] = useState(false);
   const [zoneInfo, setZoneInfo] = useState<{ hidden: number; how: string | null; note: string | null } | null>(null);
   const model = list.data?.find(m => m.key === key) ?? null;
@@ -856,45 +1068,45 @@ function ZoneEditor({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void 
   }, [car, shown, type]);
   useEffect(() => { setZoneInfo(null); }, [previewModel]);
   const howLabel = (h: string | null) => h === "stock meshes" ? t("the model's own separate part", "القطعة المنفصلة في النموذج") : h === "separate meshes" ? t("separate parts", "أجزاء منفصلة") : h ? t("cut out of the body", "مقصوصة من الهيكل") : "";
-  return <GaragePage hero={<GarageHero variant="detail" backLabel={t("Back", "رجوع")} onBack={() => router.back()} title={t("Fitting zones", "مناطق التركيب")} line={t("Fractions of the car's box. Saved zones reach the app without an update.", "نسب من صندوق السيارة. تصل المناطق المحفوظة للتطبيق دون تحديث.")} />}
-    onRefresh={() => void list.reload()} refreshing={list.loading && !!list.data}>
-    <View style={{ gap: 14 }}>
-      <ModeSwitch mode={mode} setMode={setMode} />
-      <Note>{t("Zones are used only for car models without a confirmed part map (or for labels the map leaves empty), and for one-piece AI / scanned models.", "تُستخدم المناطق فقط لطرازات السيارات التي ليس لها خريطة قطع مؤكدة (أو للتسميات الفارغة في الخريطة)، وللنماذج المكوّنة من قطعة واحدة.")}</Note>
-      {list.error ? <Note tone="danger">{list.error}</Note> : null}
-      <View style={[row, { flexWrap: "wrap", gap: 8 }]}>{(list.data ?? []).map(m => <Chip key={m.key} label={m.name} on={key === m.key} count={Object.keys(m.zones).length || undefined} onPress={() => setKey(m.key)} />)}</View>
-      {model ? <Card>
-        <View style={[row, { flexWrap: "wrap", gap: 8 }]}>{(Object.keys(ACCESSORY_TYPE_LABELS) as AccessoryType[]).map(k => <Chip key={k} label={t(...ACCESSORY_TYPE_LABELS[k])} on={type === k} onPress={() => setType(k)} />)}</View>
-
-        <View style={{ marginTop: 12, gap: 8 }}>
+  const name = labelFor(labels, key, model?.name ?? "", t);
+  const inset = model?.zones[type]?.wheelInsetMm; // the RIMS wheel position (Fits tab) is kept when the box is saved / reset here
+  const actions: ItemAction[] = model ? [
+    { key: "reset", label: t("Reset this zone", "إعادة ضبط هذه المنطقة"), icon: "refresh", destructive: true, disabled: busy || !model.zones[type],
+      run: () => work(() => adminAccessoryApi.setZone(model.key, type, inset ? { wheelInsetMm: inset } : null), list.reload) },
+    { key: "map", label: t("Part map of this car", "خريطة قطع هذه السيارة"), icon: "git-network-outline", run: () => router.push(zonesHref("parts", key)) },
+  ] : [];
+  const footer = model ? <GButton label={t("Save zone", "حفظ المنطقة")} busy={busy} disabled={busy || !draft}
+    onPress={() => void work(() => adminAccessoryApi.setZone(model.key, type, { ...draft, ...(inset ? { wheelInsetMm: inset } : {}) }), list.reload)} /> : undefined;
+  return (
+    <DeptPage back tabs={false} footer={footer} onRefresh={() => void list.reload()} refreshing={list.loading && !!list.data}>
+      <View style={{ gap: 12 }}>
+        <ManageHeader title={name.title || t("Zones", "المناطق")} line={name.sub || undefined} actions={actions} />
+        {list.error ? <Note tone="danger">{list.error}</Note> : null}
+        {!list.data && !list.error ? <SkeletonRows count={4} /> : null}
+        {list.data && !model ? <Note>{t("This car has no 3D model in the app catalog.", "لا يوجد نموذج ثلاثي الأبعاد لهذه السيارة في كتالوج التطبيق.")}</Note> : null}
+        {model ? <>
+          <GText soft style={[gType.caption, align]}>{t("Used while this car's part map is not confirmed, and for labels the map leaves empty.", "تُستخدم حتى تأكيد خريطة قطع هذه السيارة، وللتسميات التي تتركها الخريطة فارغة.")}</GText>
+          <Rail gap={8}>{(Object.keys(ACCESSORY_TYPE_LABELS) as AccessoryType[]).map(k => <Chip key={k} label={t(...ACCESSORY_TYPE_LABELS[k])} on={type === k} onPress={() => setType(k)} />)}</Rail>
           {previewModel ? <Car3DView model={previewModel} color="#c3c7cc" bg={g.cardSoft} zonePreview={type} onZone={setZoneInfo} interactive style={{ height: 300, borderRadius: 16 }} />
             : <Note>{t("This car's 3D model is not in the app catalog yet: no live preview.", "نموذج هذه السيارة غير موجود في كتالوج التطبيق بعد: لا توجد معاينة مباشرة.")}</Note>}
           <Swatch color="#e53935" label={t("Red: the car's own part, hidden while the accessory is on", "الأحمر: قطعة السيارة الأصلية، تُخفى أثناء تركيب الإكسسوار")} />
           <Swatch color="#2e9d4f" label={t("Green: where the accessory goes", "الأخضر: مكان تركيب الإكسسوار")} />
           {zoneInfo ? <GText soft style={[gType.caption, align]}>{(zoneInfo.hidden ? `${t("Hidden", "مخفي")}: ${zoneInfo.hidden} · ${howLabel(zoneInfo.how)}` : t("Nothing of the car is hidden for this type.", "لا يُخفى شيء من السيارة لهذا النوع.")) + (zoneInfo.note ? ` · ${zoneInfo.note}` : "")}</GText> : null}
-        </View>
-
-        <GText soft style={[gType.caption, align, { marginTop: 12 }]}>{`${t("Current", "الحالية")}: ${source}${current?.meshes ? ` · ${current.meshes.length} ${t("meshes", "أجزاء")}` : ""}`}</GText>
-        <GText style={[gType.label, align, { marginTop: 10 }]}>{bodyKit ? t("Fit box (also what is hidden)", "صندوق التركيب (وهو أيضًا ما يُخفى)") : t("Where it goes", "مكان التركيب")}</GText>
-        {fixedBox ? null : <Check label={t("Set the position with a box (else it is computed)", "حدّد المكان بصندوق (وإلا يُحسب تلقائيًا)")} checked={fitOn} onPress={() => setFitOn(v => !v)} />}
-        {fitOn || fixedBox ? <BoxFields value={fit} onChange={v => { setFit(v); setFitOn(true); }} /> : null}
-        {bodyKit ? <Note>{t("Bumpers / skirts: the car's own surface inside the box is hidden while the part is on, so keep it tight around the real part (an E36 front bumper: z 0.905–1, y 0–0.34).", "المصدات / التنانير: يُخفى سطح السيارة داخل الصندوق أثناء تركيب القطعة، فاجعله محكمًا حول القطعة الحقيقية (مصد E36 الأمامي: z 0.905–1، y 0–0.34).")}</Note> : null}
-
-        {replaces ? <View style={{ marginTop: 12 }}>
-          <GText style={[gType.label, align]}>{t("Car's own part to hide", "قطعة السيارة الأصلية المراد إخفاؤها")}</GText>
-          <Check label={t("Cut it out with a box (when the model has no separate part)", "قصّها بصندوق (إذا لم تكن قطعة منفصلة في النموذج)")} checked={repOn} onPress={() => setRepOn(v => !v)} />
-          {repOn ? <BoxFields value={rep} onChange={setRep} /> : null}
-          {current?.replace?.meshes ? <GText soft style={[gType.caption, align]}>{`${t("Also hidden by name", "يُخفى أيضًا بالاسم")}: ${current.replace.meshes.length}`}</GText> : null}
-          <Note>{t("Keep the box just above the body surface: everything of the car inside it disappears while the accessory is on, and comes back when it is off.", "اجعل الصندوق فوق سطح الهيكل مباشرة: كل ما بداخله من السيارة يختفي أثناء تركيب الإكسسوار ويعود عند إزالته.")}</Note>
-        </View> : null}
-
-        <View style={[row, { gap: 10, marginTop: 12 }]}>
-          {/* the RIMS wheel inset (Accessory fits tab) is kept when the box is saved / reset here */}
-          <GButton flex label={t("Save zone", "حفظ المنطقة")} disabled={busy || !draft} onPress={() => void work(() => adminAccessoryApi.setZone(model.key, type, { ...draft, ...(model.zones[type]?.wheelInsetMm ? { wheelInsetMm: model.zones[type]!.wheelInsetMm } : {}) }), list.reload)} />
-          <GButton flex variant="secondary" label={t("Reset", "إعادة الضبط")} disabled={busy || !model.zones[type]} onPress={() => void work(() => adminAccessoryApi.setZone(model.key, type, model.zones[type]?.wheelInsetMm ? { wheelInsetMm: model.zones[type]!.wheelInsetMm } : null), list.reload)} />
-        </View>
-      </Card> : <Note>{t("Choose a car model.", "اختر طراز سيارة.")}</Note>}
-      {error ? <Note tone="danger">{error}</Note> : null}
-    </View>
-  </GaragePage>;
+          <GText soft style={[gType.caption, align]}>{`${t("Current", "الحالية")}: ${source}${current?.meshes ? ` · ${current.meshes.length} ${t("meshes", "أجزاء")}` : ""}`}</GText>
+          <GText style={[gType.label, align]}>{bodyKit ? t("Fit box (also what is hidden)", "صندوق التركيب (وهو أيضًا ما يُخفى)") : t("Where it goes", "مكان التركيب")}</GText>
+          {fixedBox ? null : <Check label={t("Set the position with a box (else it is computed)", "حدّد المكان بصندوق (وإلا يُحسب تلقائيًا)")} checked={fitOn} onPress={() => setFitOn(v => !v)} />}
+          {fitOn || fixedBox ? <BoxFields value={fit} onChange={v => { setFit(v); setFitOn(true); }} /> : null}
+          {bodyKit ? <Note>{t("Bumpers / skirts: the car's own surface inside the box is hidden while the part is on, so keep it tight around the real part (an E36 front bumper: z 0.905–1, y 0–0.34).", "المصدات / التنانير: يُخفى سطح السيارة داخل الصندوق أثناء تركيب القطعة، فاجعله محكمًا حول القطعة الحقيقية (مصد E36 الأمامي: z 0.905–1، y 0–0.34).")}</Note> : null}
+          {replaces ? <View style={{ gap: 8 }}>
+            <GText style={[gType.label, align]}>{t("Car's own part to hide", "قطعة السيارة الأصلية المراد إخفاؤها")}</GText>
+            <Check label={t("Cut it out with a box (when the model has no separate part)", "قصّها بصندوق (إذا لم تكن قطعة منفصلة في النموذج)")} checked={repOn} onPress={() => setRepOn(v => !v)} />
+            {repOn ? <BoxFields value={rep} onChange={setRep} /> : null}
+            {current?.replace?.meshes ? <GText soft style={[gType.caption, align]}>{`${t("Also hidden by name", "يُخفى أيضًا بالاسم")}: ${current.replace.meshes.length}`}</GText> : null}
+            <Note>{t("Keep the box just above the body surface: everything of the car inside it disappears while the accessory is on, and comes back when it is off.", "اجعل الصندوق فوق سطح الهيكل مباشرة: كل ما بداخله من السيارة يختفي أثناء تركيب الإكسسوار ويعود عند إزالته.")}</Note>
+          </View> : null}
+        </> : null}
+        {error ? <Note tone="danger">{error}</Note> : null}
+      </View>
+    </DeptPage>
+  );
 }

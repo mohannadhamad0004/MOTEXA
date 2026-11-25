@@ -189,3 +189,16 @@ test("5,000 cars: the paged, filtered list and approve-by-filter stay fast (the 
     await restore(a.id, saved);
   }
 });
+
+test("Accessory fits by car (read-only summary): per-car counts use the same states as the bulk rows; one car lists its fits", async () => {
+  const r = await rim(); if (!r) return;
+  const { a, cars } = r;
+  const all = await s.summary();
+  assert.equal(all.fits, undefined, "no per-fit list without a car");
+  const byKey = new Map(all.cars.map(c => [c.model3dKey, c.counts]));
+  for (const c of cars) assert.ok((byKey.get(c.model3dKey)?.[c.status] ?? 0) >= 1, `${c.name} is counted as ${c.status}`);
+  const one = await s.summary(cars[0]!.model3dKey);
+  const mine = one.fits!.find(f => f.accessoryId === a.id && f.generationId === cars[0]!.generationId);
+  assert.equal(mine?.status, cars[0]!.status);
+  assert.ok(one.fits!.every(f => typeof f.productName === "string" && f.generation.length > 0));
+});

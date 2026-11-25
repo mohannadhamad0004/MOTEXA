@@ -6,6 +6,7 @@ import { Image, View } from "react-native";
 import { useEvent, useEventListener } from "expo";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useReduced } from "../../../motion";
+import { usePlayerCall } from "../../../core/hooks/usePlayerCall";
 
 import { ImageSourcePropType } from "react-native";
 
@@ -25,6 +26,7 @@ export const moVideoHeight = (width: number) => moClipHeight(HOME_CLIP, width);
 
 function Player({ clip, width, onEnd, onFail }: { clip: MoClipSource; width: number; onEnd: () => void; onFail: () => void }) {
   const full = layer(clip, width);
+  const call = usePlayerCall();
   const player = useVideoPlayer(clip.video, (p) => {
     p.loop = false;
     p.muted = true;
@@ -35,7 +37,7 @@ function Player({ clip, width, onEnd, onFail }: { clip: MoClipSource; width: num
   useEventListener(player, "playToEnd", onEnd);
   useEventListener(player, "statusChange", ({ status }) => {
     if (status === "error") onFail();
-    else if (status === "readyToPlay" && !player.playing && player.currentTime === 0) player.play(); // web drops a play() issued before the element is attached
+    else if (status === "readyToPlay") call(() => { if (!player.playing && player.currentTime === 0) player.play(); }); // web drops a play() issued before the element is attached
   });
   useEffect(() => {
     if (isPlaying) setStarted(true);

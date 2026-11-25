@@ -1,11 +1,56 @@
 // Shared implementation extracted from scripts/optimize-3d.ts. Preparation never publishes assets.
-import {Logger, getBounds, type Document, type Node} from "@gltf-transform/core";
-import {dedup, meshopt, prune, simplify, textureCompress, weld} from "@gltf-transform/functions";
+import {Logger, getBounds, type Document, type Node, type Primitive} from "@gltf-transform/core";
+import {compactPrimitive, dedup, dequantizePrimitive, meshopt, prune, simplify, textureCompress, weld} from "@gltf-transform/functions";
 import {MeshoptEncoder, MeshoptSimplifier} from "meshoptimizer";
 import sharp from "sharp";
 import {readSafeGLB, fail} from "./vehicle3d-validation.js";
 import {MAX_SOURCE_BYTES} from "./sketchfab-client.js";
 export const FINAL_MODEL_BYTES=8*1024*1024;
+/** Phone-friendly triangle budget for car models (the one config value; env VEHICLE3D_TRIANGLE_BUDGET). Heavier models are simplified
+ *  to it on the server. Validation still refuses more than 500,000 triangles, so the budget is kept below that. */
+export const PHONE_TRIANGLE_BUDGET=Math.min(Number(process.env.VEHICLE3D_TRIANGLE_BUDGET)||300_000,450_000);
+/** Source reads: no triangle limit (weight is never a reason to refuse); the byte, texture and memory limits stay. */
+export const SOURCE_LIMITS={maxBytes:MAX_SOURCE_BYTES,textureSize:8192,pixels:128_000_000,accessorCount:32_000_000};
+const triangles=(p:Primitive)=>(p.getIndices()?.getCount()??p.getAttribute("POSITION")?.getCount()??0)/3;
+/** gltf-transform's simplifyPrimitive, but normal-aware (meshopt simplifyWithAttributes): a collapse that bends the shading, or jumps
+ *  between the two close layers of a glass pane, costs error too. Position-only simplify (plain) left spikes in W202's windshield. */
+function simplifyPart(doc:Document,p:Primitive,ratio:number,error:number){
+  dequantizePrimitive(p);
+  const idx=p.getIndices();if(!idx)return; // weld() indexes every part
+  const pos=p.getAttribute("POSITION")!.getArray() as Float32Array,nrm=p.getAttribute("NORMAL")?.getArray() as Float32Array|undefined;
+  const src=idx.getArray() instanceof Uint32Array?idx.getArray() as Uint32Array:new Uint32Array(idx.getArray()!),target=Math.floor(ratio*src.length/3)*3;
+  const [dst]=nrm?MeshoptSimplifier.simplifyWithAttributes(src,pos,3,nrm,3,[0.5,0.5,0.5],null,target,error):MeshoptSimplifier.simplify(src,pos,3,target,error);
+  p.setIndices(doc.createAccessor().setType("SCALAR").setArray(new Uint32Array(dst)).setBuffer(idx.getBuffer()));
+  if(idx.listParents().length===1)idx.dispose();
+  compactPrimitive(p);
+}
+/** Simplifies a heavy car to the phone budget, in place. Small parts (badges, lights, bolts: up to 2,000 triangles) stay as they are
+ *  while the big surfaces take the cut; every material, node and wheel is kept. Returns the triangle counts, or null when it fits. */
+export async function simplifyForPhones(doc:Document,budget=PHONE_TRIANGLE_BUDGET){
+  const prims=()=>doc.getRoot().listMeshes().flatMap(m=>m.listPrimitives()).filter(p=>p.getMode()===4);
+  const count=()=>prims().reduce((n,p)=>n+triangles(p),0),before=count();
+  if(before<=budget)return null;
+  await MeshoptSimplifier.ready;await doc.transform(weld());
+  // ponytail: a few passes with a growing error limit (meshopt stops early when a cut would distort the shape); a smarter
+  // per-part budget (e.g. by screen size) if the result ever looks rough
+  for(const error of [0.001,0.003,0.01,0.03,0.1]){
+    const total=count();if(total<=budget)break;
+    const big=prims().filter(p=>triangles(p)>2000),bigTotal=big.reduce((n,p)=>n+triangles(p),0);
+    const cut=total-bigTotal>budget/2?prims():big,cutTotal=cut.reduce((n,p)=>n+triangles(p),0);
+    const ratio=Math.max(0.01,Math.min(1,(budget*0.95-(total-cutTotal))/cutTotal));
+    for(const p of cut)simplifyPart(doc,p,ratio,error);
+  }
+  await doc.transform(prune());
+  return {before,after:count(),budget};
+}
+/** A stored GLB above the budget, simplified and meshopt-compressed like the optimizer's output; the same bytes when it fits. */
+export async function fitForPhones(bytes:Buffer,budget=PHONE_TRIANGLE_BUDGET){
+  const {doc,io}=await readSafeGLB(bytes,Infinity,SOURCE_LIMITS);
+  const simplified=await simplifyForPhones(doc.setLogger(new Logger(Logger.Verbosity.ERROR)),budget);
+  if(!simplified)return {bytes,simplified:null};
+  await doc.transform(meshopt({encoder:MeshoptEncoder,level:"medium"}));
+  return {bytes:Buffer.from(await io.writeBinary(doc)),simplified};
+}
 const LENGTH_M: Record<string, number> = {
   "toyota|corolla": 4.6, "toyota|yaris": 3.9, "toyota|camry": 4.85, "toyota|rav4": 4.6, "toyota|hilux": 5.3, "toyota|land cruiser": 4.95, "toyota|prius": 4.5, "toyota|c-hr": 4.36,
   "hyundai|elantra": 4.6, "hyundai|accent": 4.3, "hyundai|i10": 3.65, "hyundai|i20": 4.0, "hyundai|i30": 4.3, "hyundai|tucson": 4.5, "hyundai|santa fe": 4.7, "hyundai|sonata": 4.85, "hyundai|kona": 4.2,
@@ -110,19 +155,20 @@ const wheelsSeparate = (doc: Document) => doc.getRoot().listNodes().filter((n) =
 export const vehicleLength=(make:string,model:string)=>LENGTH_M[`${make}|${model}`.toLowerCase()]??4.5;
 export async function optimizeVehicleSource(bytes:Buffer,key:string) {
   await MeshoptEncoder.ready;await MeshoptSimplifier.ready;
-  const safe=await readSafeGLB(bytes,2_000_000,{maxBytes:MAX_SOURCE_BYTES,textureSize:8192,pixels:128_000_000});
+  const safe=await readSafeGLB(bytes,Infinity,SOURCE_LIMITS);
   const io=safe.io.registerDependencies({"meshopt.encoder":MeshoptEncoder});
   let doc=safe.doc.setLogger(new Logger(Logger.Verbosity.ERROR));
   const removed=strip(doc,key),paint=findPaint(doc),front=findFront(doc),rims=wheelsSeparate(doc);
-  let output:Buffer=Buffer.alloc(0);
+  let output:Buffer=Buffer.alloc(0),simplified:Awaited<ReturnType<typeof simplifyForPhones>>=null;
   for(const size of [1024,512,0]) {
     if(size!==1024){doc=(await io.readBinary(bytes)).setLogger(new Logger(Logger.Verbosity.ERROR));strip(doc,key);}
+    simplified=await simplifyForPhones(doc);
     const thin=size===0?[simplify({simplifier:MeshoptSimplifier,ratio:0.5,error:0.001})]:[];
     await doc.transform(prune(),dedup(),weld(),...thin,textureCompress({encoder:sharp,targetFormat:"webp",resize:[size||512,size||512],quality:82}),meshopt({encoder:MeshoptEncoder,level:"medium"}),prune());
     output=Buffer.from(await io.writeBinary(doc));if(output.length<=FINAL_MODEL_BYTES)break;
   }
   if(output.length>FINAL_MODEL_BYTES)return fail("FINAL_ASSET_TOO_LARGE","The optimized model is larger than 8 MiB.",422);
   return {bytes:output,paintMaterials:paint.names,paintCertain:paint.sure,rotateY:front.rotateY,rimsSwappable:rims,
-    report:{bytesBefore:bytes.length,bytesAfter:output.length,textures:doc.getRoot().listTextures().length,removed:Math.max(0,removed),
+    report:{bytesBefore:bytes.length,bytesAfter:output.length,simplified,textures:doc.getRoot().listTextures().length,removed:Math.max(0,removed),
       warnings:[...(removed<0?["Interior kept: names are ambiguous."]:[]),...(!paint.sure?["Paint segmentation requires review; automatic recoloring is disabled."]:[]),...(!front.sure?["Front direction requires visual confirmation."]:[])]}};
 }

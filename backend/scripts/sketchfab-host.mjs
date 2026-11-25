@@ -11,15 +11,28 @@ import { pipeline } from 'node:stream/promises';
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const STAGING = resolve(ROOT, '3d-source/sketchfab-candidates');
 const PILOT = ['mercedes-c-class-w204','bmw-1-series-f20-f21','volkswagen-golf-mk7'];
-export function authorization(env) {
-  if (!env.SKETCHFAB_ACCESS_TOKEN?.trim()) throw new Error('MISSING_SKETCHFAB_ACCESS_TOKEN');
-  return { Authorization: 'Bearer ' + env.SKETCHFAB_ACCESS_TOKEN.trim() };
+/** Same rule as backend/src/services/sketchfab-client.ts sketchfabAuthorizations: the personal API token always as "Token" (Sketchfab
+ *  answers 401 to it as "Bearer"), "Bearer" only for a real OAuth access token, then the personal token once more. Never printed. */
+export function authorizations(env) {
+  const personal = env.SKETCHFAB_API_TOKEN?.trim() || null, access = env.SKETCHFAB_ACCESS_TOKEN?.trim() || null;
+  const oauth = access && access !== personal && !/^[a-f0-9]{32}$/i.test(access) ? access : null;
+  const token = personal ?? (access && !oauth ? access : null);
+  const list = [...(oauth ? [{ Authorization: 'Bearer ' + oauth }] : []), ...(token ? [{ Authorization: 'Token ' + token }] : [])];
+  if (!list.length) throw new Error('MISSING_SKETCHFAB_TOKEN');
+  return list;
 }
 export async function api(path, env=process.env, fetcher=fetch) {
   let response;
-  try { response=await fetcher('https://api.sketchfab.com/v3/'+path,{headers:authorization(env),redirect:'error',signal:AbortSignal.timeout(20000)}); }
+  try {
+    const list = authorizations(env);
+    for (const [i, headers] of list.entries()) {
+      response=await fetcher('https://api.sketchfab.com/v3/'+path,{headers,redirect:'error',signal:AbortSignal.timeout(20000)});
+      if (response.status!==401 || i===list.length-1) break;
+      await response.body?.cancel().catch(()=>{});
+    }
+  }
   catch(error) {
-    if(error.message==='MISSING_SKETCHFAB_ACCESS_TOKEN') throw error;
+    if(error.message==='MISSING_SKETCHFAB_TOKEN') throw error;
     const code=error.cause?.code || error.code;
     throw new Error('NO_HTTP_RESPONSE: '+(['EACCES','ENOTFOUND','ECONNREFUSED','ETIMEDOUT'].includes(code)?code:'NETWORK_FAILURE'));
   }
@@ -79,4 +92,4 @@ async function main() {
   writeFileSync(resolve(dir,'source.json'),JSON.stringify({...metadata(detail),format,downloadedAt:new Date().toISOString()},null,2)+'\n');
   console.log(key+' / '+uid+': source staged; preparation and visual comparison pending.');
 }
-if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(error=>{console.error(/^(MISSING_SKETCHFAB_ACCESS_TOKEN|NO_HTTP_RESPONSE:|HTTP_[0-9]|STAGE_A_NOT_COMPLETE|Choose --|TARGET_NOT_CONFIRMED_REPLACE|INVALID_PILOT_TARGET_OR_UID|UID_NOT_IN_LICENSE_FILTERED_SEARCH|DOWNLOAD_OR_LICENSE_NOT_ALLOWED|NO_SUPPORTED_GLTF_DOWNLOAD|SOURCE_ALREADY_EXISTS_PRESERVED|NON_HTTPS_DOWNLOAD_REJECTED|DOWNLOAD_NETWORK_FAILURE|DOWNLOAD_HTTP_)/.test(error.message) ? error.message : 'HOST_OPERATION_FAILED: inspect local staging and retry after resolving the cause.');process.exitCode=1;});
+if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(error=>{console.error(/^(MISSING_SKETCHFAB_TOKEN|NO_HTTP_RESPONSE:|HTTP_[0-9]|STAGE_A_NOT_COMPLETE|Choose --|TARGET_NOT_CONFIRMED_REPLACE|INVALID_PILOT_TARGET_OR_UID|UID_NOT_IN_LICENSE_FILTERED_SEARCH|DOWNLOAD_OR_LICENSE_NOT_ALLOWED|NO_SUPPORTED_GLTF_DOWNLOAD|SOURCE_ALREADY_EXISTS_PRESERVED|NON_HTTPS_DOWNLOAD_REJECTED|DOWNLOAD_NETWORK_FAILURE|DOWNLOAD_HTTP_)/.test(error.message) ? error.message : 'HOST_OPERATION_FAILED: inspect local staging and retry after resolving the cause.');process.exitCode=1;});

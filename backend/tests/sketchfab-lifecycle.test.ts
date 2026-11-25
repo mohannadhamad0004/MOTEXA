@@ -16,7 +16,7 @@ import {createVehicle3DRouter} from "../src/routes/vehicle3d.routes.js";
 import {mockVehicleGLB} from "../src/services/vehicle3d-generation.js";
 import {createGarageService} from "../src/services/garage.js";
 import {catalogFiles,readManifest,atomicWrite,REPO_ROOT} from "../src/services/vehicle3d-catalog.js";
-import {privatePath,removePrivate} from "../src/services/vehicle3d-private-assets.js";
+import {privatePath,removePrivate,storePrivate} from "../src/services/vehicle3d-private-assets.js";
 import {confirmedPartMaps,createPartMapService} from "../src/services/car-part-map.js";
 
 test("Sketchfab persistent workflow, real preparation/viewer, auth, publication and Garage (isolated mocked source)",async t=>{
@@ -98,8 +98,16 @@ test("Sketchfab persistent workflow, real preparation/viewer, auth, publication 
    const failedId=randomUUID();await prisma.vehicle3DImport.create({data:{id:failedId,generationId:otherGenerationId,uploadedByUserId:admin,status:"DRAFT",importStage:"QUEUED",sourceProvider:"SKETCHFAB",sourceUid:randomUUID().replaceAll("-",""),source:"Sketchfab",sourceUrl:url,author:"Test fixture",license:"CC BY",rawModelPath:`${randomUUID()}.glb`}});
    const {digest}=await import("../src/services/vehicle3d-validation.js");
    const distinctSource={...client,download:async(inspection:any)=>{const downloaded=await client.download(inspection),bytes=Buffer.concat([downloaded.bytes,Buffer.from("isolated malformed conversion fixture")]);return {...downloaded,bytes,sourceSha256:digest(bytes)};}};
-   await createSketchfabProcessor({client:distinctSource,convert:async()=>{throw new Error("private-filesystem-stack");}})(failedId);const failed=await service.get(admin,failedId);assert.equal(failed.status,"FAILED");assert.equal(failed.errorCode,"CONVERSION_FAILED");assert.doesNotMatch(JSON.stringify(failed),/private-filesystem-stack/);
+   await createSketchfabProcessor({client:distinctSource,convert:async()=>{throw new Error("private-filesystem-stack");}})(failedId);const failed=await service.get(admin,failedId);assert.equal(failed.status,"FAILED");assert.equal(failed.errorCode,"CONVERSION_FAILED");assert.doesNotMatch(JSON.stringify(failed),/private-filesystem-stack/);assert.deepEqual(failed.failureDetail,{stage:"CONVERTING",message:null});
    assert.equal((await service.retry(admin,failedId)).status,"QUEUED");await service.discard(admin,failedId);await processor(failedId);assert.equal((await service.get(admin,failedId)).status,"DISCARDED");
+   // a stored model that fails validation (not for weight) stays as an unpublished DRAFT with its reason; it is never downloaded again
+   const draftId=randomUUID(),draftDownloads=downloads,{Vehicle3DError}=await import("../src/services/vehicle3d-validation.js");
+   await prisma.vehicle3DImport.create({data:{id:draftId,generationId:otherGenerationId,uploadedByUserId:admin,status:"DRAFT",importStage:"QUEUED",sourceProvider:"SKETCHFAB",sourceUid:randomUUID().replaceAll("-",""),source:"Sketchfab",sourceUrl:url,author:"Test fixture",license:"CC BY",rawModelPath:storePrivate(bytes,"glb"),viewerConfig:{lengthM:4.5}}});
+   await createSketchfabProcessor({client,validate:async()=>{throw new Vehicle3DError(400,"INVALID_GLB","Model is not upright. Correct its orientation before review.");}})(draftId);
+   const draft=await service.get(admin,draftId);
+   assert.equal(downloads,draftDownloads);assert.equal(draft.status,"DRAFT");assert.equal(draft.errorCode,"VALIDATION_REJECTED");assert.equal(draft.publishedModel3dKey,null);assert.equal(draft.hasRawModel,true);
+   assert.deepEqual(draft.failureDetail,{stage:"VALIDATING",message:"Model is not upright. Correct its orientation before review."});
+   await service.discard(admin,draftId);
   });
  }finally{
   await new Promise<void>(r=>server.close(()=>r()));

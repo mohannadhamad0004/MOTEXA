@@ -64,6 +64,18 @@ export type AutoFitRow = { accessoryId: string; productId: string; productName: 
   size: { widthMm: number | null; lengthMm: number | null; rimInches: number | null }; generation: { id: string; name: string }; finish?: RimFinish | null;
   fit: { fit: { info?: Record<string, unknown>; failed?: string } & Record<string, unknown>; adj: FitAdjust | null; approvedAt: string | null } | null; computing: boolean; kitPart?: KitPart };
 export type FitState = "approved" | "passed" | "failed" | "not_computed" | "needs_correction" | "has_correction";
+/** One fit's state, as the bulk screen and the Accessory fits list show it. */
+export const FIT_STATE_LABELS: Record<FitState, { en: string; ar: string; tone: "neutral" | "accent" | "warning" | "success" | "danger" }> = {
+  approved: { en: "Approved", ar: "معتمد", tone: "success" },
+  passed: { en: "Passed", ar: "اجتاز الفحص", tone: "accent" },
+  failed: { en: "Failed", ar: "فشل", tone: "danger" },
+  not_computed: { en: "Not computed", ar: "لم يُحسب", tone: "neutral" },
+  needs_correction: { en: "Needs correction", ar: "يحتاج إلى تصحيح", tone: "warning" },
+  has_correction: { en: "Manual correction", ar: "تصحيح يدوي", tone: "warning" },
+};
+/** Accessory fits by car: states counted per car model; with a key, also that car's fits one by one. */
+export type FitSummary = { accessories: number; cars: { model3dKey: string; counts: Record<FitState, number> }[];
+  fits?: { accessoryId: string; productName: string; type: AccessoryType; kitPart: KitPart; generationId: string; generation: string; status: FitState; reason: string | null }[] };
 /** The bulk fits screen (one accessory on all its cars): filtered, paged rows; "correction" = needs correction or a manual correction. */
 export type FitFilter = { q?: string; make?: string; model?: string; generationId?: string; status?: FitState | "correction" };
 export type FitRow = { generationId: string; make: string; makeAr: string; model: string; modelAr: string; code: string; nameEn: string; nameAr: string;
@@ -152,6 +164,7 @@ export const adminAccessoryApi = {
   /** approve the fit with a correction (null = the pure auto-fit: "Reset to auto-fit") */
   approveFit: (accessoryId: string, generationId: string, adj: FitAdjust | null) => api("PUT", `/admin/parts/auto-fits/${accessoryId}/${generationId}`, { adj }),
   needsCorrection: (accessoryId: string, generationId: string) => api("PUT", `/admin/parts/auto-fits/${accessoryId}/${generationId}`, { needsCorrection: true }),
+  fitSummary: (model3dKey?: string) => api<FitSummary>("GET", `/admin/parts/auto-fits/summary${model3dKey ? `?model3dKey=${encodeURIComponent(model3dKey)}` : ""}`),
   /** bulk review: one page of the cars of one accessory (filtered on the server), approve passed fits / run auto-fit on a selection */
   fitsPage: (accessoryId: string, f: FitFilter, offset: number, limit = 50) => {
     const q = Object.entries({ ...f, offset: String(offset), limit: String(limit) }).filter(([, v]) => !!v).map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join("&");

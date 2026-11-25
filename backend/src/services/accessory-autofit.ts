@@ -373,6 +373,24 @@ export function createAutoFitService(options:{compute?:typeof computeFit}={}) {
       return { accessory: { ...accessory, computing: running.has(accessoryId) },
         cars: rows.map(r => ({ ...publicRow(r), name: `${r.make} ${r.nameEn}`, nameAr: `${r.makeAr} ${r.nameAr}` })) };
     },
+    /** Accessory fits by car (read-only): per car model (3D key), how many fits are in each state over every accessory that has fits;
+     *  with `model3dKey`, also that car's fits one by one. The same states as the bulk screen (fitRows).
+     *  ponytail: one fitRows per accessory (cached 10 s); a per-car index table if accessories x cars ever makes this slow. */
+    summary: async (model3dKey?: string) => {
+      const accessories = await prisma.productAccessory3D.findMany({ where: { status: { in: ["PUBLISHED", "READY_FOR_FINAL_REVIEW"] }, ...(!testProviderRuntime() ? { NOT: [{ generationMode: "mock" }, { provider: "MOCK" }] } : {}) },
+        select: { id: true }, orderBy: { createdAt: "asc" } });
+      const counts = new Map<string, Record<FitStatus, number>>(), fits = [];
+      for (const { id } of accessories) {
+        const { accessory, rows } = await fitRows(id);
+        for (const r of rows) {
+          const c = counts.get(r.model3dKey) ?? (Object.fromEntries(FIT_STATUSES.map(s => [s, 0])) as Record<FitStatus, number>);
+          c[r.status]++; counts.set(r.model3dKey, c);
+          if (model3dKey && r.model3dKey === model3dKey) fits.push({ accessoryId: id, productName: accessory.productName, type: accessory.type, kitPart: accessory.kitPart,
+            generationId: r.generationId, generation: `${r.make} ${r.nameEn}`, status: r.status, reason: r.reason });
+        }
+      }
+      return { accessories: accessories.length, cars: [...counts].map(([key, c]) => ({ model3dKey: key, counts: c })), ...(model3dKey ? { fits } : {}) };
+    },
     /** One page of the bulk screen: rows matching the filter, the status counts (within brand / model / search, any status) and the pickers. */
     page: async (accessoryId: string, query: Record<string, unknown>) => {
       const f = parseFitFilter(query);

@@ -3,6 +3,7 @@ import { Image,View } from "react-native";
 import { useIsFocused } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { VideoView,useVideoPlayer } from "expo-video";
+import { usePlayerCall } from "../../../core/hooks/usePlayerCall";
 import { ProviderLayout } from "../../../components/layout/ProviderLayout";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { useSessionUser,asActor } from "../../../core/session/session";
@@ -18,7 +19,7 @@ import { Async,Panel,Button,Pill,Text,EmptyState,useDT,go } from "./ui";
 const VIDEO_MAX=20*1024*1024;
 /** Reliable size: the picker's fileSize, else the file's own size on disk (Android content uris often omit fileSize). null = unknown. */
 async function videoBytes(a:{uri:string;fileSize?:number|null}):Promise<number|null>{if(a.fileSize)return a.fileSize;try{const n=new FsFile(a.uri).size;return n>0?n:null;}catch{return null;}}
-export function ProviderVideo({uri,headers}:{uri:string;headers?:Record<string,string>}){const d=useDT(),focused=useIsFocused(),player=useVideoPlayer({uri,headers},p=>{p.muted=true;});useEffect(()=>{if(!focused)player.pause();},[focused,player]);return <View style={{borderRadius:16,overflow:"hidden",backgroundColor:d.surface}}><VideoView player={player} nativeControls contentFit="contain" style={{width:"100%",height:190}}/></View>;}
+export function ProviderVideo({uri,headers}:{uri:string;headers?:Record<string,string>}){const d=useDT(),focused=useIsFocused(),call=usePlayerCall(),player=useVideoPlayer({uri,headers},p=>{p.muted=true;});useEffect(()=>{if(!focused)call(()=>player.pause());},[focused,player,call]);return <View style={{borderRadius:16,overflow:"hidden",backgroundColor:d.surface}}><VideoView player={player} nativeControls contentFit="contain" style={{width:"100%",height:190}}/></View>;}
 function MediaAsset({media,area}:{media:ProviderMedia;area:ProviderArea}){const [source,setSource]=useState<{uri:string;headers?:Record<string,string>}|null>(null);useEffect(()=>{let live=true;privateImageSource(`${portalBase(area)}/media/${media.id}/asset`).then(s=>{if(live)setSource(s);});return()=>{live=false;};},[area,media.id]);return source?(media.mimeType.startsWith("video/")?<ProviderVideo {...source}/>:<Image source={source} style={{width:"100%",height:190,borderRadius:16}}/>):null;}
 export function PublicMedia({media}:{media:ProviderMedia[]}){const d=useDT();return <>{media.map(m=><Panel key={m.id} title={m.slot==="VIDEO"?d.t("Truck / service video","فيديو الشاحنة / الخدمة"):m.slot==="PROFILE"?d.t("Profile photo","صورة الملف"):m.slot==="COVER"?d.t("Cover image","صورة الغلاف"):d.t("Business photos","صور النشاط")}>
  {m.mimeType.startsWith("video/")?<ProviderVideo uri={apiUrl(m.uri)}/>:<Image source={{uri:apiUrl(m.uri)}} style={{width:"100%",height:m.slot==="PROFILE"?140:190,borderRadius:16,resizeMode:"contain"}}/>}

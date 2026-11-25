@@ -24,7 +24,7 @@ function stripGLBMetadata(bytes:Buffer){
 }
 /** Reject external resources before parsing: validation must never fetch client-selected URLs. */
 /** Reject external resources before parsing: validation must never fetch client-selected URLs. Shared by vehicles and accessories: self-contained, bounded resources/textures/geometry, finite triangles. */
-export async function readSafeGLB(bytes: Buffer, maxTriangles: number, limits: {maxBytes?:number; textureSize?:number; pixels?:number} = {}) {
+export async function readSafeGLB(bytes: Buffer, maxTriangles: number, limits: {maxBytes?:number; textureSize?:number; pixels?:number; accessorCount?:number} = {}) {
   if (!bytes.length || bytes.length > (limits.maxBytes ?? MAX_MODEL_BYTES)) return fail("INVALID_GLB", "Model exceeds the configured size limit.");
   if (bytes.length < 20 || bytes.toString("ascii", 0, 4) !== "glTF" || bytes.readUInt32LE(4) !== 2 || bytes.readUInt32LE(8) !== bytes.length
     || bytes.readUInt32LE(16) !== 0x4e4f534a || bytes.readUInt32LE(12) > bytes.length - 20) return fail("INVALID_GLB", "Invalid GLB container.");
@@ -35,7 +35,7 @@ export async function readSafeGLB(bytes: Buffer, maxTriangles: number, limits: {
   if (json.skins?.length || json.animations?.length) return fail("INVALID_GLB", "Animated or skinned models are not supported for catalog promotion.");
   if ((json.buffers ?? []).reduce((total:number,b:any)=>total+(Number.isSafeInteger(b.byteLength)&&b.byteLength>=0?b.byteLength:Infinity),0)>128*1024*1024)
     return fail("INVALID_GLB", "Decoded geometry exceeds the safe memory limit.");
-  if ((json.buffers ?? []).some((b: any) => b.byteLength > 128 * 1024 * 1024) || (json.accessors ?? []).some((a: any) => a.count > 2_000_000)) return fail("INVALID_GLB", "Decoded geometry exceeds the safe memory limit.");
+  if ((json.buffers ?? []).some((b: any) => b.byteLength > 128 * 1024 * 1024) || (json.accessors ?? []).some((a: any) => a.count > (limits.accessorCount ?? 2_000_000))) return fail("INVALID_GLB", "Decoded geometry exceeds the safe memory limit.");
   const binStart = 20 + bytes.readUInt32LE(12) + 8;
   let pixels = 0;
   for (const image of json.images ?? []) {
@@ -66,7 +66,7 @@ export async function readSafeGLB(bytes: Buffer, maxTriangles: number, limits: {
     if (indices && Array.from(indices).some(i => i < 0 || i >= pos!.getCount())) return fail("INVALID_GLB", "Invalid geometry indices.");
     triangles += (p.getIndices()?.getCount() ?? pos!.getCount()) / 3;
   }
-  if (!triangles || triangles > maxTriangles) return fail("INVALID_GLB", `Model needs nonzero geometry and at most ${maxTriangles.toLocaleString("en")} triangles.`);
+  if (!triangles || triangles > maxTriangles) throw new Vehicle3DError(400, "INVALID_GLB", `Model needs nonzero geometry and at most ${maxTriangles.toLocaleString("en")} triangles.`, undefined, { triangles, limit: maxTriangles });
   return { doc, io, scene, triangles };
 }
 

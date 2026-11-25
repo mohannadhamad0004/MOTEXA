@@ -6,7 +6,7 @@ import {createSketchfabClient} from "./sketchfab-client.js";
 import {convertSketchfabAsset} from "./vehicle3d-archive.js";
 import {optimizeVehicleSource} from "./vehicle3d-preparation.js";
 import {createImportService} from "./vehicle3d-imports.js";
-import {IMPORT_ERRORS} from "./vehicle3d-import-state.js";
+import {IMPORT_ERRORS,failureDetail} from "./vehicle3d-import-state.js";
 import {privatePath,storePrivate,removePrivate,removeImportPreparation} from "./vehicle3d-private-assets.js";
 import {requirePartsActor} from "./vehicle-taxonomy.js";
 import {fail} from "./vehicle3d-validation.js";
@@ -63,9 +63,12 @@ export function createSketchfabProcessor(options:Options={}) {
   }catch(e){
    const proposed=(e as any)?.code;
    const code=typeof proposed==="string"&&IMPORT_ERRORS[proposed]?proposed:stage==="DOWNLOADING"?"DOWNLOAD_FAILED":stage==="CONVERTING"?"CONVERSION_FAILED":stage==="OPTIMIZING"?"OPTIMIZATION_FAILED":"VALIDATION_REJECTED";
+   // the model is downloaded and prepared: it stays as an unpublished draft (customers never get it) with its reason, so the admin
+   // can change the settings and validate again, or discard it. Download / conversion / optimization failures stay FAILED (retry).
+   const kept=stage==="VALIDATING"?"DRAFT":"FAILED";
    await prisma.$transaction(async tx=>{
-    const changed=await tx.vehicle3DImport.updateMany({where:{id:claimed.id,leaseToken:token,status:{not:"PUBLISHED"},importStage:{not:"DISCARDED"}},data:{status:"FAILED",importStage:"FAILED",errorCode:code,leaseToken:null,leaseUntil:null,finishedAt:new Date()}});
-    if(changed.count)await tx.auditLog.create({data:{actorId:claimed.uploadedByUserId,action:"VEHICLE3D_IMPORT_FAILED",targetId:claimed.id,details:{code,stage}}});
+    const changed=await tx.vehicle3DImport.updateMany({where:{id:claimed.id,leaseToken:token,status:{not:"PUBLISHED"},importStage:{not:"DISCARDED"}},data:{status:kept,importStage:kept,errorCode:code,failureDetail:failureDetail(stage,e),leaseToken:null,leaseUntil:null,finishedAt:new Date()}});
+    if(changed.count)await tx.auditLog.create({data:{actorId:claimed.uploadedByUserId,action:"VEHICLE3D_IMPORT_FAILED",targetId:claimed.id,details:{code,stage,kept}}});
    });
   }finally{clearInterval(heartbeat);removePrivate(transient);}
  };

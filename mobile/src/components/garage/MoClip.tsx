@@ -8,6 +8,7 @@ import { useFocusEffect } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useCallback, useRef, useState } from "react";
 import { Image, ImageSourcePropType, Pressable, View } from "react-native";
+import { usePlayerCall } from "../../core/hooks/usePlayerCall";
 import { useReduced } from "../../motion";
 import { SPOTLIGHT, gShape, useGarageTheme } from "../../theme/garage";
 
@@ -134,43 +135,51 @@ export function MoClip({ clip, width = HERO_BOX.w, box, framing = { focusX: 0.5,
     p.loop = false;
     p.muted = true;
   });
+  const call = usePlayerCall(); // every player call: only while mounted, and never on a released player
   const focused = useRef(false);
   const [shown, setShown] = useState(false); // the video has drawn a frame (playing, or parked on the last one)
   const [failed, setFailed] = useState(false);
   const [ended, setEnded] = useState(false);
 
   const toEnd = useCallback(() => {
-    if (player.duration > 0) player.currentTime = Math.max(0, player.duration - 0.05);
-    player.pause();
+    call(() => {
+      if (player.duration > 0) player.currentTime = Math.max(0, player.duration - 0.05);
+      player.pause();
+    });
     setShown(true);
-  }, [player]);
+  }, [player, call]);
   const played = useRef(false);
   const replay = useCallback(() => {
     if (reduced) return toEnd();
     if (once && played.current) return;
     played.current = true;
     setEnded(false);
-    player.currentTime = 0;
-    player.play();
-  }, [player, reduced, toEnd, once]);
+    call(() => {
+      player.currentTime = 0;
+      player.play();
+    });
+  }, [player, reduced, toEnd, once, call]);
 
-  // every focus plays from the start; losing focus pauses (it never loops by itself)
+  // every focus plays from the start; losing focus pauses (it never loops by itself). This cleanup also runs on unmount,
+  // after useVideoPlayer has released the player: `call` skips it then, so only a real blur pauses.
   useFocusEffect(
     useCallback(() => {
       focused.current = true;
       replay();
       return () => {
         focused.current = false;
-        player.pause();
+        call(() => player.pause());
       };
-    }, [player, replay])
+    }, [player, replay, call])
   );
   useEventListener(player, "statusChange", ({ status }) => {
     if (status === "error") setFailed(true);
     // web drops a play() issued before the element is ready: start (or park on the last frame) once it is
     else if (status === "readyToPlay" && focused.current) {
       if (reduced) toEnd();
-      else if (!player.playing && player.currentTime === 0) player.play();
+      else call(() => {
+        if (!player.playing && player.currentTime === 0) player.play();
+      });
     }
   });
   useEventListener(player, "playToEnd", () => setEnded(true));

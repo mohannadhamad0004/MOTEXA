@@ -1338,6 +1338,8 @@ model Vehicle3DImport {
  sourceMetadata Json?
  importStage String?
  errorCode String?
+ /// Why the last attempt failed: { stage, message (our own error text, never paths or provider bodies), numbers like triangles / limit }.
+ failureDetail Json?
  leaseToken String?
  leaseUntil DateTime?
  queuedAt DateTime?
