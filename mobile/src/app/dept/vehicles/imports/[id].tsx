@@ -1,1 +1,1 @@
-export {SketchfabImportReview as default} from "../../../../features/vehicleCatalog/importScreens";
+export { SketchfabImportReview as default } from "../../../../features/vehicleCatalog/importReview";

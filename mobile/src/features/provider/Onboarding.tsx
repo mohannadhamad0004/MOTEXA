@@ -8,10 +8,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { ReactNode, useCallback, useRef, useState } from "react";
 import { View } from "react-native";
-import { MechanicField, MechanicPage, useMechanicTheme } from "../../components/MechanicUI";
 import { ProviderButton, ProviderCard, ProviderChoice, ProviderNote } from "./kit";
 import { pickMechanicDocument } from "../../components/MechanicDocuments";
-import { Text } from "../../components/MotexaVisual";
+import { GText as Text } from "../../components/garage";
+import { Page } from "../../components/manage/Page";
+import { AppStatusChip, FormButton, FormPanel, IconField, cardStyle, useFormTheme } from "./formTheme";
 import { CATALOG_GROUPS } from "../../core/constants/categories";
 import { CITIES, MAX_SERVICE_CITIES, cityCentre, cityLabel } from "../../core/constants/cities";
 import { localFileToBase64, fileNameOf } from "../../core/constants/files";
@@ -23,13 +24,12 @@ import type { TruckType } from "../tow/towService";
 import { Application, Doc, Info, TruckRow, onboarding } from "./api";
 import { actionLabel, appStatusLabel, bi, docLabel, docStatusLabel, fmtDay, fmtTime, keyLabel, truckTypeLabel } from "./labels";
 import { VerticalStepper, useDocViewer } from "./ui";
-import { DButton, Panel, Pill, StatusChip, cardStyle, useDT } from "../department/ui";
 import { useSessionUser } from "../shared/session";
-import { ProviderAccountNote } from "../work/ProviderAccountNote";
+import { ProviderAccountNote, applicationStatus } from "../work/ProviderAccountNote";
 
 /** A customer applicant (Work with MOTEXA) goes back to their customer account from here; providers have their own area. */
 function CustomerExit() {
-  const m = useMechanicTheme();
+  const m = useFormTheme();
   if (useSessionUser().role !== "CUSTOMER") return null;
   return (
     <View style={{ marginTop: 18 }}>
@@ -44,7 +44,7 @@ const iso = /^\d{4}-\d{2}-\d{2}$/;
 
 /** A tinted note under a field the reviewer flagged. */
 function Flag({ show }: { show: boolean }) {
-  const d = useDT();
+  const d = useFormTheme();
   if (!show) return null;
   const c = d.chip("amber");
   return (
@@ -56,18 +56,18 @@ function Flag({ show }: { show: boolean }) {
 }
 
 function Label({ children }: { children: ReactNode }) {
-  const m = useMechanicTheme();
+  const m = useFormTheme();
   return <Text style={{ fontSize: 12, lineHeight: 19, fontWeight: "600", color: m.ink, textAlign: m.align }}>{children}</Text>;
 }
 
 function Wrap({ children }: { children: ReactNode }) {
-  const m = useMechanicTheme();
+  const m = useFormTheme();
   return <View style={{ flexDirection: m.row, flexWrap: "wrap", gap: 8 }}>{children}</View>;
 }
 
 // ================================================================= step 1: information
 function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: Application) => void; onNext: () => void }) {
-  const m = useMechanicTheme();
+  const m = useFormTheme();
   const tow = app.kind === "TOW";
   const i = app.info;
   const flagged = new Set(app.flaggedFields);
@@ -123,11 +123,11 @@ function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: App
     <ProviderCard>
       <View style={{ gap: 13 }}>
         {error ? <ProviderNote error>{error}</ProviderNote> : null}
-        <MechanicField label={tow ? m.t("Company name", "اسم الشركة") : m.t("Shop name", "اسم المتجر")} icon="business-outline" value={f.name} onChangeText={set("name")} maxLength={120} />
-        <MechanicField label={tow ? m.t("Company name in Arabic", "اسم الشركة بالعربية") : m.t("Shop name in Arabic", "اسم المتجر بالعربية")} icon="text-outline" value={f.nameAr} onChangeText={set("nameAr")} maxLength={120} />
-        <MechanicField label={m.t("Owner name", "اسم المالك")} icon="person-outline" value={f.ownerName} onChangeText={set("ownerName")} maxLength={120} />
+        <IconField label={tow ? m.t("Company name", "اسم الشركة") : m.t("Shop name", "اسم المتجر")} icon="business-outline" value={f.name} onChangeText={set("name")} maxLength={120} />
+        <IconField label={tow ? m.t("Company name in Arabic", "اسم الشركة بالعربية") : m.t("Shop name in Arabic", "اسم المتجر بالعربية")} icon="text-outline" value={f.nameAr} onChangeText={set("nameAr")} maxLength={120} />
+        <IconField label={m.t("Owner name", "اسم المالك")} icon="person-outline" value={f.ownerName} onChangeText={set("ownerName")} maxLength={120} />
         <Flag show={flagged.has("ownerName")} />
-        <MechanicField label={m.t("Phone", "الهاتف")} icon="call-outline" value={f.phone} onChangeText={set("phone")} keyboardType="phone-pad" maxLength={24} />
+        <IconField label={m.t("Phone", "الهاتف")} icon="call-outline" value={f.phone} onChangeText={set("phone")} keyboardType="phone-pad" maxLength={24} />
         <Flag show={flagged.has("phone")} />
         <Label>{m.t("City", "المدينة")}</Label>
         <Wrap>
@@ -136,7 +136,7 @@ function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: App
           ))}
         </Wrap>
         <Flag show={flagged.has("city")} />
-        <MechanicField label={m.t("Address", "العنوان")} icon="location-outline" value={f.address} onChangeText={set("address")} maxLength={200} />
+        <IconField label={m.t("Address", "العنوان")} icon="location-outline" value={f.address} onChangeText={set("address")} maxLength={200} />
         <Flag show={flagged.has("address")} />
 
         <Label>{m.t("Location on the map", "الموقع على الخريطة")}</Label>
@@ -154,7 +154,7 @@ function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: App
             <Flag show={flagged.has("serviceCities")} />
             <Label>{m.t("Working hours", "ساعات العمل")}</Label>
             <ProviderChoice label={m.t("Open 24/7", "يعمل على مدار الساعة")} selected={open24} onPress={() => setOpen24(!open24)} icon={open24 ? "checkmark-circle" : "ellipse-outline"} />
-            {!open24 ? <MechanicField label={m.t("Hours (for example Sat-Thu 08:00-18:00)", "الساعات (مثال: السبت-الخميس 08:00-18:00)")} icon="time-outline" value={f.workingHours} onChangeText={set("workingHours")} maxLength={100} /> : null}
+            {!open24 ? <IconField label={m.t("Hours (for example Sat-Thu 08:00-18:00)", "الساعات (مثال: السبت-الخميس 08:00-18:00)")} icon="time-outline" value={f.workingHours} onChangeText={set("workingHours")} maxLength={100} /> : null}
             <Flag show={flagged.has("workingHours")} />
             <Label>{m.t("Truck types you operate", "أنواع الشاحنات لديك")}</Label>
             <Wrap>
@@ -163,7 +163,7 @@ function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: App
               ))}
             </Wrap>
             <Flag show={flagged.has("truckTypes")} />
-            <MechanicField label={m.t("Number of trucks", "عدد الشاحنات")} icon="car-sport-outline" value={f.count} onChangeText={(v) => set("count")(v.replace(/[^0-9]/g, ""))} keyboardType="number-pad" maxLength={3} />
+            <IconField label={m.t("Number of trucks", "عدد الشاحنات")} icon="car-sport-outline" value={f.count} onChangeText={(v) => set("count")(v.replace(/[^0-9]/g, ""))} keyboardType="number-pad" maxLength={3} />
             <TrucksEditor app={app} onChanged={onSaved} />
             <Flag show={flagged.has("truck")} />
           </>
@@ -181,9 +181,9 @@ function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: App
               </View>
             ))}
             <Flag show={flagged.has("categories")} />
-            <MechanicField label={m.t("Main brands (separate with commas)", "العلامات التجارية الرئيسية (افصل بفواصل)")} icon="pricetags-outline" value={f.brands} onChangeText={set("brands")} maxLength={300} />
+            <IconField label={m.t("Main brands (separate with commas)", "العلامات التجارية الرئيسية (افصل بفواصل)")} icon="pricetags-outline" value={f.brands} onChangeText={set("brands")} maxLength={300} />
             <Flag show={flagged.has("brands")} />
-            <MechanicField label={m.t("Opening hours (for example Sat-Thu 08:00-19:00)", "ساعات العمل (مثال: السبت-الخميس 08:00-19:00)")} icon="time-outline" value={f.workingHours} onChangeText={set("workingHours")} maxLength={100} />
+            <IconField label={m.t("Opening hours (for example Sat-Thu 08:00-19:00)", "ساعات العمل (مثال: السبت-الخميس 08:00-19:00)")} icon="time-outline" value={f.workingHours} onChangeText={set("workingHours")} maxLength={100} />
             <Flag show={flagged.has("workingHours")} />
           </>
         )}
@@ -195,7 +195,7 @@ function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: App
 
 /** Trucks of the company (at least one is required): plate, type, make, model, year and the truck photo. */
 function TrucksEditor({ app, onChanged }: { app: Application; onChanged: (a: Application) => void }) {
-  const m = useMechanicTheme();
+  const m = useFormTheme();
   const [adding, setAdding] = useState(false);
   const [plate, setPlate] = useState("");
   const [type, setType] = useState<TruckType>("FLATBED");
@@ -243,15 +243,15 @@ function TrucksEditor({ app, onChanged }: { app: Application; onChanged: (a: App
       {adding ? (
         <View style={{ gap: 12, padding: 12, borderRadius: 20, borderWidth: 1, borderColor: m.border }}>
           {error ? <ProviderNote error>{error}</ProviderNote> : null}
-          <MechanicField label={m.t("Plate number", "رقم اللوحة")} icon="reader-outline" value={plate} onChangeText={setPlate} maxLength={20} autoCapitalize="characters" />
+          <IconField label={m.t("Plate number", "رقم اللوحة")} icon="reader-outline" value={plate} onChangeText={setPlate} maxLength={20} autoCapitalize="characters" />
           <Wrap>
             {TRUCK_TYPES.map((k) => (
               <ProviderChoice key={k} label={truckTypeLabel(m.t, k)} selected={type === k} onPress={() => setType(k)} />
             ))}
           </Wrap>
-          <MechanicField label={m.t("Make", "الصنع")} icon="car-outline" value={make} onChangeText={setMake} maxLength={60} />
-          <MechanicField label={m.t("Model", "الطراز")} icon="car-outline" value={model} onChangeText={setModel} maxLength={60} />
-          <MechanicField label={m.t("Year (optional)", "السنة (اختياري)")} icon="calendar-outline" value={year} onChangeText={(v) => setYear(v.replace(/[^0-9]/g, ""))} keyboardType="number-pad" maxLength={4} />
+          <IconField label={m.t("Make", "الصنع")} icon="car-outline" value={make} onChangeText={setMake} maxLength={60} />
+          <IconField label={m.t("Model", "الطراز")} icon="car-outline" value={model} onChangeText={setModel} maxLength={60} />
+          <IconField label={m.t("Year (optional)", "السنة (اختياري)")} icon="calendar-outline" value={year} onChangeText={(v) => setYear(v.replace(/[^0-9]/g, ""))} keyboardType="number-pad" maxLength={4} />
           <ProviderButton secondary label={photo ? m.t("Photo chosen · change", "تم اختيار صورة · تغيير") : m.t("Add a truck photo", "أضف صورة الشاحنة")} onPress={async () => setPhoto((await pickImage()) ?? photo)} />
           <ProviderButton label={m.t("Add this truck", "إضافة هذه الشاحنة")} onPress={add} busy={busy} disabled={busy} />
           <ProviderButton secondary label={m.t("Cancel", "إلغاء")} onPress={() => setAdding(false)} />
@@ -266,7 +266,7 @@ function TrucksEditor({ app, onChanged }: { app: Application; onChanged: (a: App
 // ================================================================= step 2: documents
 /** One document: icon, translated kind, status chip, the file, the reviewer's reason when rejected, and Upload / Replace. */
 function DocCard({ title, doc, flagged, busy, onPick, expiry, setExpiry }: { title: string; doc?: Doc; flagged: boolean; busy: boolean; onPick: () => void; expiry?: string; setExpiry?: (v: string) => void }) {
-  const d = useDT();
+  const d = useFormTheme();
   const rejected = doc?.status === "REJECTED";
   const tone = rejected ? "bad" : doc ? (doc.status === "ACCEPTED" ? "ok" : "amber") : "neutral";
   const c = d.chip(tone);
@@ -282,7 +282,7 @@ function DocCard({ title, doc, flagged, busy, onPick, expiry, setExpiry }: { tit
             {doc ? `${doc.fileName}${doc.expiresAt ? ` · ${d.t("expires", "ينتهي")} ${fmtDay(doc.expiresAt)}` : ""}` : d.t("Not uploaded yet", "لم يُرفع بعد")}
           </Text>
         </View>
-        {doc ? <StatusChip kind="doc" status={doc.status} /> : null}
+        {doc ? <AppStatusChip kind="doc" status={doc.status} /> : null}
       </View>
       {rejected && doc?.reason ? (
         <View style={{ flexDirection: d.row, gap: 8, padding: 10, borderRadius: 14, borderWidth: 1, borderColor: d.chip("bad").border, backgroundColor: d.chip("bad").bg }}>
@@ -291,14 +291,14 @@ function DocCard({ title, doc, flagged, busy, onPick, expiry, setExpiry }: { tit
         </View>
       ) : null}
       <Flag show={flagged && !rejected} />
-      {setExpiry ? <MechanicField label={d.t("Expiry date (optional, YYYY-MM-DD)", "تاريخ الانتهاء (اختياري، YYYY-MM-DD)")} icon="calendar-outline" value={expiry ?? ""} onChangeText={setExpiry} maxLength={10} keyboardType="numbers-and-punctuation" /> : null}
-      <DButton variant={doc && !rejected ? "ghost" : "primary"} icon="cloud-upload-outline" label={busy ? d.t("Uploading…", "جارٍ الرفع…") : doc ? d.t("Replace file", "استبدال الملف") : d.t("Upload photo or PDF", "رفع صورة أو PDF")} onPress={onPick} disabled={busy} />
+      {setExpiry ? <IconField label={d.t("Expiry date (optional, YYYY-MM-DD)", "تاريخ الانتهاء (اختياري، YYYY-MM-DD)")} icon="calendar-outline" value={expiry ?? ""} onChangeText={setExpiry} maxLength={10} keyboardType="numbers-and-punctuation" /> : null}
+      <FormButton variant={doc && !rejected ? "ghost" : "primary"} icon="cloud-upload-outline" label={busy ? d.t("Uploading…", "جارٍ الرفع…") : doc ? d.t("Replace file", "استبدال الملف") : d.t("Upload photo or PDF", "رفع صورة أو PDF")} onPress={onPick} disabled={busy} />
     </View>
   );
 }
 
 function DocumentsStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: Application) => void; onNext: () => void }) {
-  const m = useMechanicTheme();
+  const m = useFormTheme();
   const tow = app.kind === "TOW";
   const flagged = new Set(app.flaggedFields);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -395,7 +395,7 @@ function DocumentsStep({ app, onSaved, onNext }: { app: Application; onSaved: (a
 
 // ================================================================= step 3: review and submit
 function ReviewStep({ app, onEdit, onSubmitted }: { app: Application; onEdit: (step: "info" | "documents") => void; onSubmitted: (a: Application) => void }) {
-  const m = useMechanicTheme();
+  const m = useFormTheme();
   const i = app.info;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -463,7 +463,7 @@ function ReviewStep({ app, onEdit, onSubmitted }: { app: Application; onEdit: (s
 
 // ================================================================= status screen
 function Timeline({ app }: { app: Application }) {
-  const m = useMechanicTheme();
+  const m = useFormTheme();
   return (
     <View style={{ gap: 0 }}>
       {[...app.timeline].reverse().map((e, i, all) => (
@@ -485,8 +485,8 @@ function Timeline({ app }: { app: Application }) {
 }
 
 function StatusView({ app, onFix }: { app: Application; onFix: () => void }) {
-  const m = useMechanicTheme();
-  const d = useDT();
+  const m = useFormTheme();
+  const d = useFormTheme();
   const viewer = useDocViewer();
   const companyFlagged = app.documents.filter((x) => x.status === "REJECTED");
   // a truck's problem is shown under that truck's plate, never as a problem of the whole company
@@ -518,9 +518,9 @@ function StatusView({ app, onFix }: { app: Application; onFix: () => void }) {
   return (
     <View style={{ gap: 12 }}>
       {viewer.element}
-      <Panel>
+      <FormPanel>
         <View style={{ alignItems: "center", gap: 10, paddingVertical: 6 }}>
-          <StatusChip status={app.status} size="l" />
+          <AppStatusChip status={app.status} size="l" />
           {headline ? <Text accessibilityRole="header" style={{ fontSize: 19, lineHeight: 28, fontWeight: "800", color: c.fg, textAlign: "center" }}>{headline}</Text> : null}
           <Text style={{ fontSize: 15, lineHeight: 22, fontWeight: "700", color: d.ink, textAlign: "center" }}>{app.info.name}</Text>
           <Text style={{ fontSize: 14, lineHeight: 23, color: d.muted, textAlign: "center" }}>{next}</Text>
@@ -557,25 +557,25 @@ function StatusView({ app, onFix }: { app: Application; onFix: () => void }) {
           </View>
         ) : null}
         <View style={{ gap: 10, marginTop: 14 }}>
-          {app.status === "NEEDS_CHANGES" ? <DButton label={m.t("Update application", "تحديث الطلب")} icon="create-outline" onPress={onFix} /> : null}
-          {app.status === "APPROVED" ? <DButton variant="success" icon="speedometer-outline" label={m.t("Open my dashboard", "افتح لوحتي")} onPress={() => router.replace(home as never)} /> : null}
-          <DButton
+          {app.status === "NEEDS_CHANGES" ? <FormButton label={m.t("Update application", "تحديث الطلب")} icon="create-outline" onPress={onFix} /> : null}
+          {app.status === "APPROVED" ? <FormButton variant="success" icon="speedometer-outline" label={m.t("Open my dashboard", "افتح لوحتي")} onPress={() => router.replace(home as never)} /> : null}
+          <FormButton
             variant="ghost"
             icon="chatbubbles-outline"
             label={`${app.status === "APPROVED" ? m.t("Contact MOTEXA", "تواصل مع MOTEXA") : m.t("Messages", "الرسائل")}${app.unreadMessages ? ` (${app.unreadMessages})` : ""}`}
             onPress={() => router.push("/provider/onboarding/messages" as never)}
           />
         </View>
-      </Panel>
-      <Panel title={m.t("What happened", "ما الذي حدث")} icon="time-outline">
+      </FormPanel>
+      <FormPanel title={m.t("What happened", "ما الذي حدث")} icon="time-outline">
         <Timeline app={app} />
-      </Panel>
+      </FormPanel>
     </View>
   );
 }
 
 function Flagged({ text, reason }: { text: string; reason?: string | null }) {
-  const d = useDT();
+  const d = useFormTheme();
   const c = d.chip("amber");
   return (
     <View style={{ flexDirection: d.row, alignItems: "flex-start", gap: 10, padding: 12, borderRadius: 16, borderWidth: 1, borderColor: c.border, backgroundColor: c.bg }}>
@@ -590,7 +590,7 @@ function Flagged({ text, reason }: { text: string; reason?: string | null }) {
 
 // ================================================================= the screen
 export default function Onboarding() {
-  const m = useMechanicTheme();
+  const m = useFormTheme();
   const [app, setApp] = useState<Application | null>(null);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
@@ -620,9 +620,9 @@ export default function Onboarding() {
 
   if (!app)
     return (
-      <MechanicPage prefs title={m.t("Your application", "طلبك")}>
+      <Page title={m.t("Your application", "طلبك")}>
         {error ? <ProviderNote error>{error}</ProviderNote> : <Text style={{ color: m.muted, textAlign: "center" }}>{m.t("Loading…", "جارٍ التحميل…")}</Text>}
-      </MechanicPage>
+      </Page>
     );
 
   const tow = app.kind === "TOW";
@@ -632,7 +632,7 @@ export default function Onboarding() {
 
   if (!canEdit)
     return (
-      <MechanicPage prefs title={title} subtitle={m.t("Follow your application here.", "تابع طلبك هنا.")}>
+      <Page title={title} line={applicationStatus(m.t, app.status)[0]}>
         <StatusView
           app={app}
           onFix={() => {
@@ -641,11 +641,12 @@ export default function Onboarding() {
           }}
         />
         <CustomerExit />
-      </MechanicPage>
+      </Page>
     );
 
   return (
-    <MechanicPage prefs title={title} subtitle={m.t("Your progress is saved on the server after each step. You can come back any time.", "يُحفظ تقدمك على الخادم بعد كل خطوة. يمكنك العودة في أي وقت.")}>
+    <Page title={title} line={applicationStatus(m.t, app.status)[0]}>
+      <ProviderNote>{m.t("Your progress is saved on the server after each step. You can come back any time.", "يُحفظ تقدمك على الخادم بعد كل خطوة. يمكنك العودة في أي وقت.")}</ProviderNote>
       {app.status === "NEEDS_CHANGES" ? <ProviderNote>{m.t("Items flagged by MOTEXA are marked in red.", "العناصر التي حددتها MOTEXA مُعلَّمة بالأحمر.")}</ProviderNote> : null}
       <View style={{ height: 12 }} />
       <VerticalStepper
@@ -675,6 +676,6 @@ export default function Onboarding() {
         }
       </VerticalStepper>
       <CustomerExit />
-    </MechanicPage>
+    </Page>
   );
 }

@@ -10,7 +10,7 @@ import type {GarageCar} from "../catalog/catalogService";
 import {threeDError} from "../vehicleCatalog/lifecycleText";
 import {catalogService} from "../catalog/catalogService";
 import {refreshRuntimeModels} from "../car3d/runtimeModels";
-import {ModelPreview,Photo} from "../vehicle3d/screens";
+import {ModelPreview,Photo} from "../vehicle3d/submission";
 import {submissionApi} from "../vehicle3d/api";
 import {Choice,Confirm,Entry} from "../vehicleCatalog/controls";
 import {vehicleCatalog} from "../vehicleCatalog/api";

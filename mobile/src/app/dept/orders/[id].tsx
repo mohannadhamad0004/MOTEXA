@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
-import { Card, ErrorState, GText, ListRow, Note, Section, SkeletonBlock, StatusChip } from "../../../components/garage";
-import { DeptHead, DeptPage } from "../../../features/department/ui";
+import { Card, ErrorState, GText, Note, Section, SkeletonBlock, StatusChip } from "../../../components/garage";
+import { Block, Facts, Page } from "../../../components/manage/Page";
 import { cityLabel } from "../../../core/constants/cities";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
@@ -23,12 +23,8 @@ export default function AdminOrderDetail() {
   const shop = o?.shop.lat != null && o.shop.lng != null ? { lat: o.shop.lat, lng: o.shop.lng } : null;
 
   return (
-    <DeptPage back tabs={false} onRefresh={state.reload} refreshing={state.loading && !!o}>
-      <DeptHead
-        title={o ? o.shop.name : t("Order", "الطلب")}
-        caption={o ? `${o.customer.firstName} · ${o.id.slice(0, 8).toUpperCase()}` : undefined}
-        end={o ? <StatusChip tone={orderTone(o.status)} label={L.status[o.status]} /> : undefined}
-      />
+    <Page title={o ? o.shop.name : t("Order", "الطلب")} line={o ? `${o.customer.firstName} · ${o.id.slice(0, 8).toUpperCase()}` : undefined} onRefresh={state.reload} refreshing={state.loading && !!o}>
+      {o ? <View style={[row]}><StatusChip tone={orderTone(o.status)} label={L.status[o.status]} /></View> : null}
       {state.error && !o ? <ErrorState text={state.error} onRetry={state.reload} retryLabel={t("Retry", "إعادة المحاولة")} /> : null}
       {!o && !state.error ? <SkeletonBlock height={220} radius={gShape.card} /> : null}
       {o ? (
@@ -39,13 +35,9 @@ export default function AdminOrderDetail() {
               <OrderTimeline o={o} />
             </Card>
           </Section>
-          <Section title={L.fulfilment[o.fulfilment]}>
-            <Card pad={12}>
-              <ListRow icon="storefront-outline" title={o.shop.name} sub={cityLabel(o.shop.city, isArabic)} />
-              <ListRow divider icon="person-outline" title={o.customer.firstName} sub={o.delivery?.area ? cityLabel(o.delivery.area, isArabic) : undefined} />
-              <ListRow divider icon="cash-outline" title={L.payment[o.payment]} />
-            </Card>
-          </Section>
+          <Block title={L.fulfilment[o.fulfilment]}>
+            <Facts rows={[[t("Shop", "المتجر"), `${o.shop.name} · ${cityLabel(o.shop.city, isArabic)}`], [t("Customer", "الزبون"), [o.customer.firstName, o.delivery?.area ? cityLabel(o.delivery.area, isArabic) : null].filter(Boolean).join(" · ")], [t("Payment", "الدفع"), L.payment[o.payment]]]} />
+          </Block>
           {o.fulfilment === "DELIVERY" ? (
             <Section title={t("Map", "الخريطة")}>
               <OrderMap orderId={o.id} height={260} delivery={delivery} shop={shop} courier={o.live ? { lat: o.live.lat, lng: o.live.lng } : null} />
@@ -69,6 +61,6 @@ export default function AdminOrderDetail() {
           </Section>
         </>
       ) : null}
-    </DeptPage>
+    </Page>
   );
 }

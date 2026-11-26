@@ -5,8 +5,7 @@ import { AppState, Platform } from "react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import MotexaDialog from "../../components/MotexaDialog";
 import { isFreshLocation, LocationFix, Point, rememberLocation } from "../../core/constants/geo";
-import { Button } from "../../components/ui/Button";
-import { Notice } from "../../components/ui/Feedback";
+import { GButton, Note } from "../../components/garage";
 import { useL } from "../../core/hooks/useL";
 import { getForegroundPermission, hasLocationServices, LocationIssue, openLocationSettings, toLocationFix, watchForegroundLocation, WatchPurpose } from "./locationService";
 
@@ -373,8 +372,8 @@ export function LocationProblem({ loc }: { loc: ProblemState }) {
   if (!loc.message) return null;
   return (
     <>
-      <Notice tone="danger" icon="location-outline">{loc.message}</Notice>
-      {loc.canOpenSettings ? <Button variant="ghost" icon="settings-outline" label={t("Open Settings", "فتح الإعدادات")} onPress={() => void loc.openSettings()} /> : null}
+      <Note tone="danger" icon="location-outline">{loc.message}</Note>
+      {loc.canOpenSettings ? <GButton variant="ghost" icon="settings-outline" label={t("Open Settings", "فتح الإعدادات")} onPress={() => void loc.openSettings()} /> : null}
     </>
   );
 }

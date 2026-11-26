@@ -5,34 +5,24 @@
 // Garage tokens (light / dark), RTL through `row` / `align`, 390 px without overflow.
 import { useState, type ReactElement, type ReactNode } from "react";
 import { FlatList, Pressable, RefreshControl, View, useWindowDimensions } from "react-native";
-import { DeptPage } from "../../features/department/ui";
 import { useL } from "../../core/hooks/useL";
 import { gShape, gType, useGarageTheme } from "../../theme/garage";
-import { Card, EmptyState, ErrorState, GIcon, GText, SearchBar, Sheet, SkeletonRows, StatusChip, Tabs, type GIconName, type Tone } from "../garage";
+import { Card, Chip, EmptyState, ErrorState, GIcon, GText, Rail, SearchBar, Sheet, SkeletonRows, StatusChip, Tabs, type GIconName, type Tone } from "../garage";
 import { ItemActionsMenu, type ItemAction } from "../ItemActionsMenu";
+import type { Crumb } from "../../core/nav/crumbs";
+import { ManageHeader, Page } from "./Page";
+export { ManageHeader };
 
 export const MANAGE_ROW_H = 64;
 /** side panel instead of a sheet from this width */
 export const MANAGE_WIDE = 900;
 export const useTwoPane = () => useWindowDimensions().width >= MANAGE_WIDE;
 
-/** Back is the page's top bar; this is the title (max 2 lines), one short line and an optional ⋮ with the page's secondary tasks. */
-export function ManageHeader({ title, line, actions }: { title: string; line?: string; actions?: ItemAction[] }) {
-  const { row, align } = useGarageTheme();
-  return (
-    <View style={[row, { alignItems: "flex-start", gap: 8 }]}>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <GText accessibilityRole="header" numberOfLines={2} style={[gType.display, align, { fontSize: 24, lineHeight: 31 }]}>{title}</GText>
-        {line ? <GText soft numberOfLines={1} style={[gType.caption, align, { marginTop: 2 }]}>{line}</GText> : null}
-      </View>
-      {actions?.length ? <ItemActionsMenu title={title} actions={actions} /> : null}
-    </View>
-  );
-}
-
 type Tabbed = { value: string; options: { key: string; label: string; count?: number }[]; onChange: (k: string) => void };
 export function ManagePage<T>(p: {
   title: string; line?: string; actions?: ItemAction[];
+  /** false on tab roots; `tabBar` when the floating tab bar sits under the list; `trail` = extra crumbs (see Page) */
+  back?: boolean; tabBar?: boolean; trail?: Crumb[];
   tabs?: Tabbed;
   search?: { value: string; onChange: (v: string) => void; placeholder: string };
   /** chip rails (Rail) under the search */
@@ -91,12 +81,12 @@ export function ManagePage<T>(p: {
         showsVerticalScrollIndicator={false}
         refreshControl={p.onRefresh ? <RefreshControl refreshing={!!p.refreshing} onRefresh={p.onRefresh} /> : undefined}
         // the gutter lives here (not on the page) so a full-bleed Rail in the header is not clipped
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: p.bulkBar ? 200 : 40 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: p.bulkBar ? 200 : p.tabBar ? 130 : 40 }}
       />
     </View>
   );
   return (
-    <DeptPage back tabs={false} list maxWidth={twoPane ? 1240 : 760} footer={p.bulkBar}>
+    <Page title={p.title} back={p.back ?? true} trail={p.trail} list maxWidth={twoPane ? 1240 : 760} footer={p.bulkBar}>
       {twoPane ? (
         <View style={[row, { flex: 1, gap: 4 }]}>
           {list}
@@ -125,7 +115,7 @@ export function ManagePage<T>(p: {
           {p.detail?.content ?? null}
         </Sheet>
       ) : null}
-    </DeptPage>
+    </Page>
   );
 }
 
@@ -139,11 +129,12 @@ function ErrorNote({ text }: { text: string }) {
   );
 }
 
-/** One item: [checkbox] main text / secondary text [status] [⋮]. Fixed height; tap opens it. `columns` replace the two texts on wide lists. */
-export function ManageRow({ title, sub, status, check, onPress, pressLabel, onMenu, active, columns, statusWidth, height = MANAGE_ROW_H }: {
+/** One item: [checkbox] [small photo] main text / secondary text [status] [⋮]. Fixed height; tap opens it. `columns` replace the two texts on
+ *  wide lists. ⋮ = `actions` (the shared actions menu, with its sheet and toasts) or `onMenu` (the screen opens its own sheet). */
+export function ManageRow({ title, sub, status, check, onPress, pressLabel, onMenu, actions, leading, active, columns, statusWidth, height = MANAGE_ROW_H }: {
   title: string; sub?: string; status?: { label: string; tone: Tone } | null;
   check?: { on: boolean; disabled?: boolean; label: string; onToggle: () => void };
-  onPress?: () => void; pressLabel?: string; onMenu?: () => void; active?: boolean;
+  onPress?: () => void; pressLabel?: string; onMenu?: () => void; actions?: ItemAction[]; leading?: ReactNode; active?: boolean;
   columns?: ReactNode; statusWidth?: number; height?: number;
 }) {
   const { t, isArabic } = useL();
@@ -153,6 +144,7 @@ export function ManageRow({ title, sub, status, check, onPress, pressLabel, onMe
       {check ? <ManageCheck on={check.on} disabled={check.disabled} label={check.label} onPress={check.onToggle} /> : null}
       <Pressable accessibilityRole="button" accessibilityLabel={pressLabel ?? [title, sub, status?.label].filter(Boolean).join(". ")} onPress={onPress} disabled={!onPress}
         style={({ pressed }) => [row, { flex: 1, minWidth: 0, height, alignItems: "center", gap: 8, paddingHorizontal: check ? 0 : 4, opacity: pressed ? 0.7 : 1 }]}>
+        {leading}
         {columns ?? (
           <View style={{ flex: 1, minWidth: 0 }}>
             <GText numberOfLines={1} style={[gType.label, align, { fontWeight: "700" }]}>{title}</GText>
@@ -161,7 +153,7 @@ export function ManageRow({ title, sub, status, check, onPress, pressLabel, onMe
         )}
         {status ? <View style={{ width: statusWidth, alignItems: isArabic ? "flex-end" : "flex-start" }}><StatusChip label={status.label} tone={status.tone} /></View> : null}
       </Pressable>
-      {onMenu ? (
+      {actions?.length ? <ItemActionsMenu title={title} actions={actions} /> : onMenu ? (
         <Pressable accessibilityRole="button" accessibilityLabel={`${t("More actions for", "المزيد من الإجراءات لـ")} ${title}`} onPress={onMenu} hitSlop={4}
           style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? g.tint : "transparent" })}>
           <GIcon name="ellipsis-vertical" size={22} color={g.soft} />
@@ -216,3 +208,19 @@ export function ManageEntry({ icon, title, sub, onPress }: { icon: GIconName; ti
 
 /** Keeps the list width for "table" rows (one column per field once the list is wide enough). */
 export function useListWidth() { const [w, setW] = useState(0); return { table: w >= 560, onListWidth: setW }; }
+
+/** The list's ONE chip row (docs/guide/10-ui-system.md §3): "All" first, a count on each, at most ~5; scrolls sideways, never wraps. */
+export function FilterChips<K extends string>({ filters, value, onChange }: { filters: { key: K; label: string; count?: number }[]; value: K; onChange: (k: K) => void }) {
+  return <Rail gap={8}>{filters.map(f => <Chip key={f.key} label={f.label} count={f.count} on={value === f.key} onPress={() => onChange(f.key)} />)}</Rail>;
+}
+
+/** Application / company / shop / truck status (and document status): the same words and colours on every provider / admin screen. */
+const APP_STATUS: Record<string, [Tone, string, string]> = {
+  DRAFT: ["neutral", "Draft", "مسودة"], PENDING: ["accent", "Submitted", "تم الإرسال"], NEEDS_CHANGES: ["warning", "Needs changes", "مطلوب تعديلات"],
+  APPROVED: ["success", "Approved", "معتمد"], REJECTED: ["danger", "Rejected", "مرفوض"],
+};
+const DOC_STATUS: Record<string, [Tone, string, string]> = { PENDING: ["warning", "Waiting", "بانتظار المراجعة"], ACCEPTED: ["success", "Accepted", "مقبول"], REJECTED: ["danger", "Rejected", "مرفوض"] };
+export function appStatus(status: string, t: (en: string, ar: string) => string, kind: "app" | "doc" = "app") {
+  const [tone, en, ar] = (kind === "doc" ? DOC_STATUS : APP_STATUS)[status] ?? APP_STATUS.DRAFT!;
+  return { label: t(en, ar), tone };
+}

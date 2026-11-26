@@ -1,150 +1,71 @@
-import { Async, Notice } from "../../../components/ui/Feedback";
-import { Button, PCard as Card, SectionHeader } from "../../../features/provider/portal/ui";
-import { Input } from "../../../components/ui/Input";
-import { ProviderLayout as DashboardLayout } from "../../../components/layout/ProviderLayout";
-import { ImageTile } from "../../../components/ui/Rows";
-import { goBack } from "../../../core/hooks/nav";
-import { TruckWizard } from "../../../features/fleet/TruckWizard";
-import { useL } from "../../../core/hooks/useL";
-import { useLoad } from "../../../core/hooks/useLoad";
-import { Text } from "../../../components/ui/Text";
-import { useTheme } from "../../../theme/useTheme";
+// One truck = Detail: approval + work status, vehicle facts, private documents, history. ONE primary: Edit truck (the step form);
+// ⋮ = set out of service / available, remove (asks first). A truck on an active job cannot be edited or removed. /provider/tow/new
+// opens the add-truck step form directly.
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
-import { HistoryList, KV, PrivateDocs, VerificationBadge } from "../../../features/shared/blocks";
+import { GButton, Note, StatusChip, type Tone } from "../../../components/garage";
+import type { ItemAction } from "../../../components/ItemActionsMenu";
+import { appStatus } from "../../../components/manage/ManagePage";
+import { Block, DocRows, Facts, History, Loaded, Page } from "../../../components/manage/Page";
+import { goBack } from "../../../core/hooks/nav";
+import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
+import { TruckWizard } from "../../../features/fleet/TruckWizard";
 import { asActor, useSessionUser } from "../../../features/shared/session";
-import { DocKind, TRUCK_TYPES, Truck, TruckInput, TruckType, towFleetService } from "../../../features/tow/towService";
-import { ExpiredNotice, OperationalBadge, TruckSummary, docLabel, useTruckLabels } from "../../../features/tow/truckBits";
-import { isRealDate } from "../../../core/constants/files";
+import { towFleetService, type Operational } from "../../../features/tow/towService";
+import { docLabel, expiredList, useTruckLabels } from "../../../features/tow/truckBits";
 
-function TruckView({ truck, onChange }: { truck: Truck; onChange: () => void }) {
-  const user = useSessionUser();
-  const { t } = useL();
-  const { type } = useTruckLabels();
-  const [editing, setEditing] = useState(false);
-  const [confirm, setConfirm] = useState(false);
-  const [statusBusy, setStatusBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  const wizard = editing ? <TruckWizard truck={truck} onSaved={() => { setEditing(false); onChange(); }} onClose={() => setEditing(false)} /> : null;
-
-  const remove = async () => {
-    try {
-      await towFleetService.removeTruck(asActor(user), truck.id);
-      goBack("/provider/tow");
-    } catch (e: any) {
-      setErr(e.message);
-    }
-  };
-
-  const setOperational = async (value: "AVAILABLE" | "OUT_OF_SERVICE") => {
-    setStatusBusy(true);
-    setErr(null);
-    try {
-      await towFleetService.setOperational(asActor(user), truck.id, value);
-      onChange();
-    } catch (e: any) {
-      setErr(e.message);
-    } finally {
-      setStatusBusy(false);
-    }
-  };
-
-  return (
-    <>
-      {wizard}
-      <ExpiredNotice truck={truck} />
-      <Card>
-        <TruckSummary truck={truck} />
-      </Card>
-
-      <SectionHeader title={t("Vehicle", "المركبة")} />
-      <Card>
-        <KV k={t("Type", "النوع")} v={type[truck.type]} />
-        <KV k={t("Plate", "اللوحة")} v={truck.plate} />
-        <KV k={t("Make / model", "الشركة / الطراز")} v={`${truck.make} ${truck.model}`} />
-        <KV k={t("Year", "السنة")} v={truck.year} />
-        {truck.maxWeightKg ? <KV k={t("Max load", "الحمل الأقصى")} v={`${truck.maxWeightKg} ${t("kg", "كغ")}`} /> : null}
-      </Card>
-
-      <SectionHeader title={t("Status", "الحالة")} />
-      <Card>
-        <View style={{ gap: 10, alignItems: "flex-start" }}>
-          <VerificationBadge value={truck.verification} prefix={t("Approval", "الاعتماد")} />
-          <OperationalBadge value={truck.operational} />
-        </View>
-        {truck.verification === "APPROVED" && !truck.hasActiveJob && (
-          <View style={{ marginTop: 12 }}>
-            <Button
-              variant="ghost"
-              icon={truck.operational === "AVAILABLE" ? "pause-circle-outline" : "play-circle-outline"}
-              label={truck.operational === "AVAILABLE" ? t("Set out of service", "تعيين خارج الخدمة") : t("Set available", "تعيين كمتاح")}
-              disabled={statusBusy}
-              onPress={() => setOperational(truck.operational === "AVAILABLE" ? "OUT_OF_SERVICE" : "AVAILABLE")}
-            />
-          </View>
-        )}
-        {truck.hasActiveJob && (
-          <View style={{ marginTop: 12 }}>
-            <Notice icon="navigate-outline">{t("This truck is on an active job. Its status changes when the job ends.", "هذه الشاحنة في مهمة نشطة. تتغير حالتها عند انتهاء المهمة.")}</Notice>
-          </View>
-        )}
-        {truck.rejectionReason ? (
-          <View style={{ marginTop: 12 }}>
-            <Notice tone="danger" icon="close-circle-outline">{truck.rejectionReason}</Notice>
-          </View>
-        ) : null}
-      </Card>
-
-      <PrivateDocs
-        title={t("Documents", "المستندات")}
-        docs={truck.documents.map((d) => ({ label: docLabel(t, d.kind), fileName: d.fileName, expiresAt: d.expiresAt, uri: d.uri }))}
-      />
-      <SectionHeader title={t("History", "السجل")} />
-      <HistoryList items={truck.history} />
-
-      <View style={{ height: 20 }} />
-      {err ? <Notice tone="danger" icon="alert-circle-outline">{err}</Notice> : null}
-      <View style={{ gap: 8 }}>
-        <Button icon="create-outline" label={t("Edit truck", "تعديل الشاحنة")} disabled={truck.hasActiveJob} onPress={() => setEditing(true)} />
-        {truck.hasActiveJob && (
-          <Notice icon="lock-closed-outline">
-            {t("This truck is engaged in a service and cannot be removed until it finishes.", "هذه الشاحنة منشغلة بخدمة ولا يمكن إزالتها حتى تنتهي.")}
-          </Notice>
-        )}
-        {!confirm ? (
-          <Button variant="danger" icon="trash-outline" label={t("Remove truck", "إزالة الشاحنة")} disabled={truck.hasActiveJob} onPress={() => setConfirm(true)} />
-        ) : (
-          <>
-            <Button variant="danger" label={t("Yes, remove this truck", "نعم، أزل هذه الشاحنة")} onPress={remove} />
-            <Button variant="ghost" label={t("Cancel", "إلغاء")} onPress={() => setConfirm(false)} />
-          </>
-        )}
-      </View>
-    </>
-  );
-}
+const OPS: Record<Operational, [Tone, string, string]> = { AVAILABLE: ["success", "Available", "متاح"], BUSY: ["warning", "Busy", "مشغولة"], OUT_OF_SERVICE: ["neutral", "Out of service", "خارج الخدمة"] };
+const HISTORY: Record<string, [string, string]> = { SUBMITTED: ["Submitted", "تم التقديم"], APPROVED: ["Approved", "تمت الموافقة"], REJECTED: ["Rejected", "تم الرفض"] };
 
 export default function TruckDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useSessionUser();
   const { t } = useL();
+  const { type } = useTruckLabels();
   const isNew = id === "new";
-  const state = useLoad<Truck | null>(
-    () => (isNew ? Promise.resolve(null) : towFleetService.getMyTruck(asActor(user), id)),
-    [id, user.id]
-  );
-
+  const state = useLoad(() => (isNew ? Promise.resolve(null) : towFleetService.getMyTruck(asActor(user), id)), [id, user.id]);
+  const [editing, setEditing] = useState(false);
+  if (isNew) return <Page title={t("Add truck", "إضافة شاحنة")}><TruckWizard onSaved={() => goBack("/provider/tow/fleet")} onClose={() => goBack("/provider/tow/fleet")} /></Page>;
+  const truck = state.data;
+  const ops = truck ? OPS[truck.operational] : null;
+  const actions: ItemAction[] = !truck ? [] : [
+    ...(truck.verification === "APPROVED" && !truck.hasActiveJob ? [{ key: "ops", icon: truck.operational === "AVAILABLE" ? "pause-circle-outline" as const : "play-circle-outline" as const,
+      label: truck.operational === "AVAILABLE" ? t("Set out of service", "تعيين خارج الخدمة") : t("Set available", "تعيين كمتاح"),
+      run: () => towFleetService.setOperational(asActor(user), truck.id, truck.operational === "AVAILABLE" ? "OUT_OF_SERVICE" : "AVAILABLE").then(() => state.reload()) }] : []),
+    { key: "remove", label: t("Remove truck", "إزالة الشاحنة"), icon: "trash-outline", destructive: true, disabled: truck.hasActiveJob,
+      hint: truck.hasActiveJob ? t("It is on a job: it can be removed when the job ends.", "إنها في مهمة: يمكن إزالتها عند انتهاء المهمة.") : undefined,
+      confirm: { title: t("Remove this truck?", "إزالة هذه الشاحنة؟"), confirmLabel: t("Yes, remove this truck", "نعم، أزل هذه الشاحنة") },
+      run: () => towFleetService.removeTruck(asActor(user), truck.id).then(() => goBack("/provider/tow/fleet")) },
+  ];
   return (
-    <DashboardLayout title={isNew ? t("Add truck", "إضافة شاحنة") : t("Truck", "الشاحنة")} back>
-      {isNew ? (
-        <TruckWizard onSaved={() => goBack("/provider/tow")} onClose={() => goBack("/provider/tow")} />
-      ) : (
-        <Async state={state as { data: Truck | null; error: string | null; loading: boolean; reload: () => void }}>
-          {(tr) => <TruckView truck={tr} onChange={state.reload} />}
-        </Async>
-      )}
-    </DashboardLayout>
+    <Page title={truck ? `${type[truck.type]} · ${truck.plate}` : t("Truck", "الشاحنة")} line={truck ? [truck.make, truck.model, truck.year].filter(Boolean).join(" ") : undefined}
+      actions={actions.length ? actions : undefined} onRefresh={() => void state.reload()} refreshing={false}
+      footer={truck ? <GButton icon="create-outline" label={t("Edit truck", "تعديل الشاحنة")} disabled={truck.hasActiveJob} onPress={() => setEditing(true)} /> : undefined}>
+      <Loaded state={state}>{(truck) => (
+        <>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            <StatusChip {...appStatus(truck.verification, t)} />
+            {ops ? <StatusChip tone={ops[0]} label={t(ops[1], ops[2])} /> : null}
+          </View>
+          {truck.expiredDocuments?.length ? <Note tone="danger" icon="alert-circle-outline">{`${t("Truck documents expired: this truck cannot take new work until they are renewed. Your company and your other trucks are not affected.", "انتهت صلاحية مستندات الشاحنة: لا يمكنها استلام أعمال جديدة حتى يتم تجديدها. شركتك وشاحناتك الأخرى غير متأثرة.")} ${expiredList(t, truck).join(t(", ", "، "))}`}</Note> : null}
+          {truck.hasActiveJob ? <Note icon="navigate-outline">{t("This truck is on an active job. Its status changes when the job ends; it cannot be edited or removed until then.", "هذه الشاحنة في مهمة نشطة. تتغير حالتها عند انتهاء المهمة، ولا يمكن تعديلها أو إزالتها حتى ذلك.")}</Note> : null}
+          {truck.rejectionReason ? <Note tone="danger" icon="close-circle-outline">{truck.rejectionReason}</Note> : null}
+          <Block title={t("Vehicle", "المركبة")}>
+            <Facts rows={[[t("Type", "النوع"), type[truck.type]], [t("Plate", "اللوحة"), truck.plate], [t("Make / model", "الشركة / الطراز"), `${truck.make} ${truck.model}`], [t("Year", "السنة"), truck.year ? String(truck.year) : null],
+              [t("Max load", "الحمل الأقصى"), truck.maxWeightKg ? `${truck.maxWeightKg} ${t("kg", "كغ")}` : null]]} />
+          </Block>
+          <Block title={t("Documents", "المستندات")}>
+            <DocRows docs={truck.documents.map((d) => ({ label: docLabel(t, d.kind), fileName: d.fileName, expiresAt: d.expiresAt, uri: d.uri }))} />
+          </Block>
+          <Block title={t("History", "السجل")}>
+            {truck.history.length ? <History items={[...truck.history].reverse().map((h) => ({ title: HISTORY[h.action] ? t(...HISTORY[h.action]!) : h.action, at: h.at.slice(0, 10), who: h.actor, note: h.reason }))} />
+              : <Note>{t("No history yet. Approvals and changes will show here.", "لا يوجد سجل بعد. ستظهر هنا الموافقات والتغييرات.")}</Note>}
+          </Block>
+          {editing ? <TruckWizard truck={truck} onSaved={() => { setEditing(false); void state.reload(); }} onClose={() => setEditing(false)} /> : null}
+        </>
+      )}</Loaded>
+    </Page>
   );
 }

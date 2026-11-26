@@ -1,82 +1,32 @@
-import { Async } from "../../../../components/ui/Feedback";
-import { Button } from "../../../../features/provider/portal/ui";
-import { Card } from "../../../../components/garage";
-import { ProviderLayout as DashboardLayout } from "../../../../components/layout/ProviderLayout";
-import { KV } from "../../../../components/ui/Rows";
-import { useL } from "../../../../core/hooks/useL";
-import { useLoad } from "../../../../core/hooks/useLoad";
-import { Text } from "../../../../components/ui/Text";
-import { useTheme } from "../../../../theme/useTheme";
+// One customer question = Inbox thread: the messages with the customer, the message box at the bottom; "Close this question" in ⋮
+// (asks first). A closed question shows a note instead of the message box.
 import { useLocalSearchParams } from "expo-router";
-import { useState } from "react";
-import { View } from "react-native";
-import { InquiryStatusBadge, Thread } from "../../../../features/requests/requestBits";
-import { shopInquiries } from "../../../../features/requests/requestsService";
+import { useCallback, useState } from "react";
+import { StatusChip } from "../../../../components/garage";
+import { ThreadPage } from "../../../../components/manage/Thread";
+import { useL } from "../../../../core/hooks/useL";
+import type { Message } from "../../../../features/provider/api";
+import { inquiryStatus } from "../../../../features/requests/inquiryStatus";
+import { shopInquiries, type ShopInquiry } from "../../../../features/requests/requestsService";
+
+/** the inquiry's messages in the thread's shape: the shop is "PROVIDER", the customer the other side */
+const asMessages = (q: ShopInquiry): Message[] => (q.messages ?? []).map((m) => ({ id: m.id, from: m.mine ? "PROVIDER" : "ADMIN", author: "", body: m.body, at: m.createdAt, attachments: [] }));
 
 export default function ShopInquiryThread() {
-  const { c: col } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { t, row, align } = useL();
-  const state = useLoad(() => shopInquiries.get(id), [id]);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState(false);
-
-  const act = async (fn: () => Promise<unknown>) => {
-    setBusy(true);
-    setErr(null);
-    try {
-      await fn();
-      state.reload();
-      return true;
-    } catch (e: any) {
-      setErr(e.message);
-      return false;
-    } finally {
-      setBusy(false);
-    }
-  };
-
+  const { t } = useL();
+  const [q, setQ] = useState<ShopInquiry | null>(null);
+  const load = useCallback(async () => { const x = await shopInquiries.get(id); setQ(x); return { messages: asMessages(x), unread: 0 }; }, [id]);
+  const send = useCallback(async (body: string) => { const x = await shopInquiries.reply(id, body); setQ(x); return asMessages(x); }, [id]);
+  const markRead = useCallback(async () => undefined, []);
   return (
-    <DashboardLayout title={t("Customer question", "سؤال عميل")} back>
-      <Async state={state}>
-        {(q) => (
-          <>
-            <Card style={{ marginBottom: 14, gap: 6 }}>
-              <View style={[row, { justifyContent: "space-between", alignItems: "flex-start", gap: 10 }]}>
-                <View style={{ flex: 1 }}>
-                  <Text numberOfLines={2} style={[{ color: col.text, fontSize: 15, fontWeight: "800" }, align]}>{q.product.name}</Text>
-                  <Text numberOfLines={1} style={[{ color: col.textMuted, fontSize: 12, marginTop: 3 }, align]}>{q.product.partNumber}</Text>
-                </View>
-                <InquiryStatusBadge value={q.status} />
-              </View>
-              <KV k={t("Customer", "العميل")} v={q.customerName} />
-              <KV k={t("Quantity", "الكمية")} v={q.quantity} />
-            </Card>
-
-            <Thread
-              messages={q.messages ?? []}
-              canReply={q.status !== "CLOSED"}
-              busy={busy}
-              error={err}
-              onSend={(body) => act(() => shopInquiries.reply(q.id, body))}
-            />
-
-            {q.status !== "CLOSED" && (
-              <View style={{ marginTop: 16, gap: 8 }}>
-                {!confirm ? (
-                  <Button variant="ghost" icon="lock-closed-outline" label={t("Close this question", "إغلاق هذا السؤال")} disabled={busy} onPress={() => setConfirm(true)} />
-                ) : (
-                  <>
-                    <Button variant="danger" label={t("Yes, close it", "نعم، أغلقه")} disabled={busy} onPress={async () => { if (await act(() => shopInquiries.close(q.id))) setConfirm(false); }} />
-                    <Button variant="ghost" label={t("Cancel", "إلغاء")} onPress={() => setConfirm(false)} />
-                  </>
-                )}
-              </View>
-            )}
-          </>
-        )}
-      </Async>
-    </DashboardLayout>
+    <ThreadPage title={q?.product.name ?? t("Customer question", "سؤال عميل")} mine="PROVIDER" attachments={false}
+      line={q ? [q.customerName, t(`Quantity ${q.quantity}`, `الكمية ${q.quantity}`), q.product.partNumber].filter(Boolean).join(" · ") : undefined}
+      badge={q ? <StatusChip {...inquiryStatus(q.status, t)} /> : undefined}
+      names={{ me: t("You", "أنت"), other: q?.customerName ?? t("Customer", "العميل") }} load={load} markRead={markRead} send={send}
+      closed={q?.status === "CLOSED" ? t("This question is closed.", "هذا السؤال مغلق.") : undefined}
+      actions={q && q.status !== "CLOSED" ? [{ key: "close", label: t("Close this question", "إغلاق هذا السؤال"), icon: "lock-closed-outline", destructive: true,
+        confirm: { title: t("Close this question?", "إغلاق هذا السؤال؟"), confirmLabel: t("Yes, close it", "نعم، أغلقه") },
+        run: () => shopInquiries.close(id).then(setQ), success: t("Question closed.", "تم إغلاق السؤال.") }] : undefined} />
   );
 }

@@ -7,7 +7,8 @@ import { Href, router } from "expo-router";
 import { ReactNode, useState } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { GButton, GIcon, GIconName, GText, Rail } from "../../components/garage";
+import { GButton, GIcon, GIconName, GText, Rail, StatusChip } from "../../components/garage";
+import { appStatus } from "../../components/manage/ManagePage";
 import { api } from "../../core/config/api";
 import { cityLabel } from "../../core/constants/cities";
 import { useL } from "../../core/hooks/useL";
@@ -21,7 +22,6 @@ import { MAPS_AVAILABLE, ServiceMap, ServicePin } from "../shared/maps";
 import { LayerChip, OverlayButton } from "../shared/ServiceMapScreen";
 import { adminTows, liveLabel, TowJob } from "../tow/dispatchService";
 import { CompanyRow, towAdminService } from "../tow/towService";
-import { StatusChip } from "./ui";
 
 const NOACTOR = { id: "", email: "", fullName: "", role: "ADMIN", permissions: [] as string[] };
 const ltr = (v: string) => "⁦" + v + "⁩";
@@ -67,7 +67,7 @@ export function AdminMapScreen({ mode }: { mode: "tow" | "parts" }) {
     const out: Place[] = [];
     for (const c of companies)
       if (c.baseLat != null && c.baseLng != null)
-        out.push({ pin: { id: `c:${c.id}`, name: c.name, lat: c.baseLat, lng: c.baseLng, kind: "hq", dim: false }, layer: "company", title: c.name, line: [c.contactName, cityLabel(c.city, isArabic)].filter(Boolean).join(" · "), status: <StatusChip status={c.verification} />, details: [`${c.truckCount} ${c.truckCount === 1 ? t("truck", "شاحنة") : t("trucks", "شاحنات")}`], open: { label: ["Open company", "فتح الشركة"], href: `/dept/review/company/${c.id}` } });
+        out.push({ pin: { id: `c:${c.id}`, name: c.name, lat: c.baseLat, lng: c.baseLng, kind: "hq", dim: false }, layer: "company", title: c.name, line: [c.contactName, cityLabel(c.city, isArabic)].filter(Boolean).join(" · "), status: <StatusChip {...appStatus(c.verification, t)} />, details: [`${c.truckCount} ${c.truckCount === 1 ? t("truck", "شاحنة") : t("trucks", "شاحنات")}`], open: { label: ["Open company", "فتح الشركة"], href: `/dept/review/company/${c.id}` } });
     for (const j of jobs) {
       const step = j.stage === "ARRIVED" ? L.ARRIVED : L[j.status];
       const open = { label: ["Open tow", "فتح عملية السحب"] as [string, string], href: `/dept/tows/${j.id}` };
@@ -80,7 +80,7 @@ export function AdminMapScreen({ mode }: { mode: "tow" | "parts" }) {
   function shopPlaces(shops: Shop[]) {
     const places: Place[] = shops
       .filter((s) => s.baseLat != null && s.baseLng != null)
-      .map((s) => ({ pin: { id: s.id, name: s.shopName, lat: s.baseLat!, lng: s.baseLng!, kind: "shop" as const, dim: false, color: SHOP_LAYERS.find((l) => l.key === s.verificationStatus)?.color }, layer: s.verificationStatus, title: s.shopName, line: [s.ownerName, cityLabel(s.city, isArabic)].filter(Boolean).join(" · "), status: <StatusChip status={s.verificationStatus} />, details: [`${s.productCount} ${s.productCount === 1 ? t("product", "منتج") : t("products", "منتجات")}${s.hiddenProductCount ? ` · ${s.hiddenProductCount} ${t("hidden", "مخفية")}` : ""}`], open: { label: ["Open shop", "فتح المتجر"] as [string, string], href: `/dept/review/shop/${s.id}` } }));
+      .map((s) => ({ pin: { id: s.id, name: s.shopName, lat: s.baseLat!, lng: s.baseLng!, kind: "shop" as const, dim: false, color: SHOP_LAYERS.find((l) => l.key === s.verificationStatus)?.color }, layer: s.verificationStatus, title: s.shopName, line: [s.ownerName, cityLabel(s.city, isArabic)].filter(Boolean).join(" · "), status: <StatusChip {...appStatus(s.verificationStatus, t)} />, details: [`${s.productCount} ${s.productCount === 1 ? t("product", "منتج") : t("products", "منتجات")}${s.hiddenProductCount ? ` · ${s.hiddenProductCount} ${t("hidden", "مخفية")}` : ""}`], open: { label: ["Open shop", "فتح المتجر"] as [string, string], href: `/dept/review/shop/${s.id}` } }));
     return { places, missing: shops.length - places.length };
   }
 

@@ -1,118 +1,69 @@
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+// The driver's home = Dashboard (docs/guide/10-ui-system.md): the Mo hero (name, company, the ONE action = the Online switch), the
+// jobs that need him (new ones to answer, the active one), his truck, recent jobs, appearance and Log out. Refreshed every 15 s.
+import { router } from "expo-router";
+import { useState } from "react";
 import { View } from "react-native";
-import { Card, EmptyState, ErrorState, GarageHero,  GButton, GIcon, GText, ListRow, Note, Section, SkeletonRows, StatusChip, Tap, Toggle, Tone } from "../../components/garage";
-import { ProviderLayout as GaragePage } from "../../components/layout/ProviderLayout";
+import { HeroLayout, Note, Section, type Tone } from "../../components/garage";
+import { ManageRow } from "../../components/manage/ManagePage";
+import { Block, Facts, LogOut, Page } from "../../components/manage/Page";
 import { useL } from "../../core/hooks/useL";
-import { DriverMe, TowJob, driverApi } from "../../features/tow/dispatchService";
-import { fmtDateTime, useTowStatusLabels } from "../../features/requests/requestBits";
+import { useLoad } from "../../core/hooks/useLoad";
 import { towTone } from "../../features/requests/garageBits";
-import { signOut } from "../../features/shared/session";
-import { useTruckLabels } from "../../features/tow/truckBits";
+import { fmtDateTime, useTowStatusLabels } from "../../features/requests/requestBits";
 import { AppearanceSection } from "../../features/providerhub/AppearanceSection";
-import { gShape, gType, useGarageTheme } from "../../theme/garage";
+import { TowJob, driverApi } from "../../features/tow/dispatchService";
+import { useTruckLabels } from "../../features/tow/truckBits";
 
 const WAITING = ["REQUESTED"];
 const ACTIVE = ["ACCEPTED", "EN_ROUTE", "IN_PROGRESS"];
 
-/** The driver's home: online / offline, his truck, new jobs to answer, the active job, recent jobs. Refreshed every 15 s. */
 export default function DriverHome() {
-  const { g, shadow, row, align } = useGarageTheme();
   const { t } = useL();
   const L = useTowStatusLabels();
   const { type } = useTruckLabels();
-  const [data, setData] = useState<{ driver: DriverMe; jobs: TowJob[] } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const load = useCallback(async () => {
-    try {
-      setData(await driverApi.me());
-      setError(null);
-    } catch (e: any) {
-      setError(e.message);
-    }
-  }, []);
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-      const h = setInterval(load, 15_000);
-      return () => clearInterval(h);
-    }, [load])
-  );
-  const toggle = async (online: boolean) => {
-    setBusy(true);
-    try {
-      await driverApi.setOffline(!online);
-      await load();
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
+  const state = useLoad(() => driverApi.me(), [], 15_000);
+  const [busy, setBusy] = useState(false), [error, setError] = useState<string | null>(null);
+  const d = state.data?.driver;
+  const toggle = async () => {
+    if (!d || busy) return;
+    setBusy(true); setError(null);
+    try { await driverApi.setOffline(!d.offline); await state.reload(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
-  const d = data?.driver;
   const statusTone: Record<string, Tone> = { FREE: "success", BUSY: "accent", OFFLINE: "neutral", NO_TRUCK: "warning", UNAPPROVED: "warning" };
   const statusLabel: Record<string, string> = { FREE: t("Free", "متاح"), BUSY: t("Busy", "مشغول"), OFFLINE: t("Offline", "غير متصل"), NO_TRUCK: t("No truck ready", "لا شاحنة جاهزة"), UNAPPROVED: t("Licence not approved", "الرخصة غير معتمدة") };
-  const row_ = (j: TowJob) => (
-    <Tap key={j.id} label={`${j.customer.firstName}, ${L[j.status]}`} onPress={() => router.push({ pathname: "/driver/job/[id]", params: { id: j.id } })} style={[{ padding: 14, borderRadius: gShape.card, backgroundColor: g.card, gap: 6 }, shadow(1)]}>
-      <View style={[row, { alignItems: "center", gap: 8 }]}>
-        <GIcon name="car-outline" size={18} />
-        <GText numberOfLines={1} style={[gType.label, { fontWeight: "800", flex: 1 }, align]}>{`${j.customer.firstName} · ${j.vehicle.make} ${j.vehicle.model}`}</GText>
-        <GIcon name="chevron-forward" size={16} color={g.soft} flip />
-      </View>
-      <GText soft numberOfLines={2} style={[gType.caption, align]}>{j.pickupAddress}</GText>
-      <View style={[row, { alignItems: "center", justifyContent: "space-between" }]}>
-        <StatusChip tone={towTone(j.status)} label={j.status === "EN_ROUTE" && j.arrivedAt ? L.ARRIVED : L[j.status]} />
-        <GText soft style={[gType.tiny, { writingDirection: "ltr" }]}>{fmtDateTime(j.updatedAt)}</GText>
-      </View>
-    </Tap>
-  );
-  const waiting = (data?.jobs ?? []).filter((j) => WAITING.includes(j.status));
-  const active = (data?.jobs ?? []).filter((j) => ACTIVE.includes(j.status));
-  const past = (data?.jobs ?? []).filter((j) => !WAITING.includes(j.status) && !ACTIVE.includes(j.status));
-
+  const jobs = state.data?.jobs ?? [];
+  const now = jobs.filter((j) => WAITING.includes(j.status) || ACTIVE.includes(j.status)).sort((a, b) => Number(ACTIVE.includes(b.status)) - Number(ACTIVE.includes(a.status)));
+  const past = jobs.filter((j) => !WAITING.includes(j.status) && !ACTIVE.includes(j.status));
+  const row = (j: TowJob) => <ManageRow key={j.id} title={`${j.customer.firstName} · ${j.vehicle.make} ${j.vehicle.model}`} sub={`${j.pickupAddress} · ${fmtDateTime(j.updatedAt)}`}
+    status={{ label: j.status === "EN_ROUTE" && j.arrivedAt ? L.ARRIVED : L[j.status], tone: towTone(j.status) }} onPress={() => router.push({ pathname: "/driver/job/[id]", params: { id: j.id } })} />;
   return (
-    <GaragePage
-      onRefresh={load}
-      hero={
-        <GarageHero variant="main" title={d ? d.name : t("My jobs", "مهامي")} line={d ? d.company : undefined} action={{ icon: "log-out-outline", label: t("Sign out", "تسجيل الخروج"), onPress: () => void signOut() }}>
-          {d ? <StatusChip tone={statusTone[d.status]} label={statusLabel[d.status]} /> : null}
-        </GarageHero>
-      }
-    >
-      {error && !data ? <ErrorState text={error} onRetry={load} retryLabel={t("Retry", "إعادة المحاولة")} /> : null}
-      {!data && !error ? <SkeletonRows count={3} /> : null}
-      {d ? (
-        <>
-          {error ? <Note tone="danger" icon="alert-circle-outline">{error}</Note> : null}
-          {d.approval && d.approval !== "APPROVED" ? (
-            <Note tone={d.approval === "PENDING" ? "warning" : "danger"} icon="shield-checkmark-outline">
-              {d.approval === "PENDING"
-                ? t("Your licence is waiting for MOTEXA's review. You cannot go free or take jobs until it is approved.", "رخصتك بانتظار مراجعة موتكسا. لا يمكنك أن تصبح متاحًا أو تستلم مهام قبل الموافقة.")
-                : `${d.approval === "REJECTED" ? t("Your licence was rejected", "تم رفض رخصتك") : t("You were suspended", "تم إيقافك")}${d.approvalReason ? `: ${d.approvalReason}` : ""}. ${t("Talk to your company.", "تحدث مع شركتك.")}`}
-            </Note>
-          ) : null}
-          <Card>
-            <Toggle label={t("Online", "متصل")} sub={d.status === "BUSY" ? t("You are on a job", "أنت في مهمة") : t("Customers can choose you when you are free", "يمكن للزبائن اختيارك عندما تكون متاحًا")} value={!d.offline} onChange={(v) => !busy && void toggle(v)} />
-            <ListRow divider icon="car-outline" title={d.truck ? `${type[d.truck.type]} · ${d.truck.make} ${d.truck.model}` : t("No truck linked", "لا توجد شاحنة مرتبطة")} sub={d.truck ? d.truck.plate : t("Ask your company to link one", "اطلب من شركتك ربط شاحنة")} />
-          </Card>
-          {waiting.length ? (
-            <Section title={t("New jobs", "مهام جديدة")}>
-              <View style={{ gap: 10 }}>{waiting.map(row_)}</View>
-            </Section>
-          ) : null}
-          <Section title={t("Active job", "المهمة الحالية")}>
-            {active.length ? <View style={{ gap: 10 }}>{active.map(row_)}</View> : <EmptyState photo="empty.requests" text={t("No active job.", "لا توجد مهمة حالية.")} />}
-          </Section>
-          {past.length ? (
-            <Section title={t("Recent", "الأخيرة")}>
-              <View style={{ gap: 10 }}>{past.map(row_)}</View>
-            </Section>
-          ) : null}
-          <AppearanceSection />
-          <GButton variant="ghost" icon="log-out-outline" label={t("Sign out", "تسجيل الخروج")} onPress={() => void signOut()} style={{ marginTop: 20 }} />
-        </>
+    <Page title={d?.name ?? t("My jobs", "مهامي")} back={false} onRefresh={() => void state.reload()} refreshing={false}
+      hero={<HeroLayout config={{
+        tab: "tow", title: d?.name ?? t("My jobs", "مهامي"), line: d ? [d.company, statusLabel[d.status]].filter(Boolean).join(" · ") : undefined,
+        top: { label: t("Driver", "السائق"), actions: [] },
+        action: d ? { kind: "toggle", label: d.offline ? t("Go online", "اتصل الآن") : t("Online", "متصل"), icon: "radio-outline", on: !d.offline, busy, onPress: () => void toggle() } : undefined,
+      }} />}>
+      {error ? <Note tone="danger" icon="alert-circle-outline">{error}</Note> : null}
+      {state.error && !d ? <Note tone="danger" icon="alert-circle-outline">{state.error}</Note> : null}
+      {d?.approval && d.approval !== "APPROVED" ? (
+        <Note tone={d.approval === "PENDING" ? "warning" : "danger"} icon="shield-checkmark-outline">
+          {d.approval === "PENDING"
+            ? t("Your licence is waiting for MOTEXA's review. You cannot go free or take jobs until it is approved.", "رخصتك بانتظار مراجعة موتكسا. لا يمكنك أن تصبح متاحًا أو تستلم مهام قبل الموافقة.")
+            : `${d.approval === "REJECTED" ? t("Your licence was rejected", "تم رفض رخصتك") : t("You were suspended", "تم إيقافك")}${d.approvalReason ? `: ${d.approvalReason}` : ""}. ${t("Talk to your company.", "تحدث مع شركتك.")}`}
+        </Note>
       ) : null}
-    </GaragePage>
+      <Section title={t("Needs you now", "بحاجة إليك الآن")}>
+        {now.length ? <View>{now.map(row)}</View> : d ? <Note tone="success" icon="checkmark-circle-outline">{t("No new or active job.", "لا توجد مهمة جديدة أو حالية.")}</Note> : null}
+      </Section>
+      {d ? (
+        <Block title={t("My truck", "شاحنتي")}>
+          <Facts rows={[[t("Status", "الحالة"), statusLabel[d.status]], [t("Truck", "الشاحنة"), d.truck ? `${type[d.truck.type]} · ${d.truck.make} ${d.truck.model}` : t("No truck linked: ask your company to link one", "لا توجد شاحنة مرتبطة: اطلب من شركتك ربط شاحنة")],
+            [t("Plate", "اللوحة"), d.truck?.plate]]} />
+        </Block>
+      ) : null}
+      {past.length ? <Section title={t("Recent", "الأخيرة")}><View>{past.map(row)}</View></Section> : null}
+      <AppearanceSection />
+      <LogOut />
+    </Page>
   );
 }

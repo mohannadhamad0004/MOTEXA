@@ -7,11 +7,12 @@ import * as DocumentPicker from "expo-document-picker";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, BackHandler, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Press, Rise } from "../../components/blueprint/motion";
-import { Card, GButton, GIcon, GText, IconButton, Note, Sheet, StickyActionBar } from "../../components/garage";
+import { Card, GButton, GIcon, GText, Note, Sheet } from "../../components/garage";
+import { StepFooter } from "../../components/manage/Form";
+import { ManageHeader, Page } from "../../components/manage/Page";
 import { apiUrl } from "../../core/config/api";
 import { localFileToBase64 } from "../../core/constants/files";
 import { isoLatin, rtl } from "../../core/constants/bidi";
@@ -50,7 +51,7 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
   const [knowSize, setKnowSize] = useState(false), [sizeText, setSizeText] = useState(""), [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState<string | null>(null), [errors, setErrors] = useState<Record<number, string[]>>({}), [sent, setSent] = useState(false);
   const [pick, setPick] = useState<null | { kind: "PART"; slot: number; photoId?: string; replace?: boolean } | { kind: "INSTALLED" }>(null), [search, setSearch] = useState("");
-  const [leaving, setLeaving] = useState(false), [dir, setDir] = useState<1 | -1>(1);
+  const [dir, setDir] = useState<1 | -1>(1);
   const insets = useSafeAreaInsets(), reduced = useReduced();
   const scroll = useRef<ScrollView>(null);
   const go = (to: number) => { setDir(to >= step ? 1 : -1); setStep(to); };
@@ -68,14 +69,8 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
     else if (t0) setStep(1); // only one part fits this product: it is chosen, start at the car
   }, [state.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // leaving: the draft is saved as it goes, so only confirm when there is one (Android back included)
+  // leaving: the draft is saved as it goes, so ← and Android back simply leave (the same on every page)
   const exit = () => (router.canGoBack() ? router.back() : router.navigate("/provider/parts/products" as never));
-  const leave = () => { if (a && !sent) setLeaving(true); else exit(); };
-  useEffect(() => {
-    const sub = BackHandler.addEventListener("hardwareBackPress", () => { if (leaving || pick) return false; leave(); return true; });
-    return () => sub.remove();
-  }); // eslint-disable-line react-hooks/exhaustive-deps
-
   const rims = type === "RIMS", bySize = rims && !!state.data?.isUniversal, universalBumper = !!type && isBumper(type) && !!state.data?.isUniversal;
   const gens: Gen[] = useMemo(() => (vehicles.list ?? []).flatMap(v => (v.generations ?? []).map(x => ({ id: x.id, en: `${v.make} ${x.nameEn}`, ar: `${v.makeAr} ${x.nameAr}`, years: `${x.yearFrom}–${x.yearTo}`, photo: x.photoUrl, has3d: !!x.model3dKey }))), [vehicles.list]);
   const shown = (x: Gen) => (isArabic ? isoLatin(x.ar) : x.en);
@@ -137,7 +132,7 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
     setErrors(e => ({ ...e, [step]: [] })); go(step + 1); top();
   };
   const first = types.length === 1 ? 1 : 0; // one fitting part: its step is skipped
-  const back = () => { if (step <= first) leave(); else { go(step - 1); top(); } };
+  const back = () => { if (step <= first) exit(); else { go(step - 1); top(); } };
 
   const addPhoto = async (from: "camera" | "library") => {
     const target = pick; setPick(null); if (!target) return;
@@ -166,7 +161,7 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
     {title("What part is it?", "ما القطعة؟", t("Pick the one you sell. Customers will see it on their own car.", "اختر القطعة التي تبيعها. سيراها العملاء على سياراتهم."))}
     {!types.length ? <Note tone="warning">{t("This product's category has no 3D parts. Body, Exterior accessories and Wheels products can be shown in 3D.", "فئة هذا المنتج لا تدعم القطع ثلاثية الأبعاد. منتجات الهيكل والإكسسوارات الخارجية والجنوط فقط.")}</Note> : null}
     <View style={[row, { flexWrap: "wrap", gap: 12 }]}>
-      {types.map(k => { const on = type === k, wide = types.length % 2 === 1; return <Press key={k} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={t(...ACCESSORY_TYPE_LABELS[k])}
+      {types.map(k => { const on = type === k, wide = types.length % 2 === 1; return <Pressable key={k} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={t(...ACCESSORY_TYPE_LABELS[k])}
         onPress={() => { if (a && a.accessoryType !== k && fits.length) setInstalledGen(null); setType(k); setErrors(e => ({ ...e, 0: [] })); }}
         style={{ width: wide ? "100%" : "47.5%", padding: 8, paddingBottom: 12, gap: 8, borderRadius: gShape.card, backgroundColor: on ? g.tint : g.card, borderWidth: 2, borderColor: on ? g.accent : g.line }}>
         <Image source={PART_IMAGES[k]} contentFit="contain" style={{ width: "100%", aspectRatio: 3 / 2 }} accessibilityIgnoresInvertColors />
@@ -174,7 +169,7 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
           {on ? <Enter from={0.7} ms={200}><GIcon name="checkmark-circle" size={20} color={g.accent} /></Enter> : null}
           <GText style={[gType.title, { textAlign: "center" }]}>{t(...ACCESSORY_TYPE_LABELS[k])}</GText>
         </View>
-      </Press>; })}
+      </Pressable>; })}
     </View>
   </>;
 
@@ -273,8 +268,8 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
     </Card>
   </>;
 
-  const stepBtn = (icon: "add" | "remove", label: string, by: 1 | -1) => <Press accessibilityLabel={label} onPress={() => { if (!type) return; setSizeText(String(Math.max(1, Math.min(999, (Number(sizeText) || TYPICAL[type]) + by)))); setErrors(e => ({ ...e, 3: [] })); }}
-    style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 1.5, borderColor: g.line, alignItems: "center", justifyContent: "center", backgroundColor: g.card }}><GIcon name={icon} size={26} color={g.ink} /></Press>;
+  const stepBtn = (icon: "add" | "remove", label: string, by: 1 | -1) => <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={() => { if (!type) return; setSizeText(String(Math.max(1, Math.min(999, (Number(sizeText) || TYPICAL[type]) + by)))); setErrors(e => ({ ...e, 3: [] })); }}
+    style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 1.5, borderColor: g.line, alignItems: "center", justifyContent: "center", backgroundColor: g.card }}><GIcon name={icon} size={26} color={g.ink} /></Pressable>;
   const stepDetails = <>
     {title("A few optional details", "تفاصيل اختيارية", t("Skip anything you don't know: the MOTEXA team fills it in.", "تخطَّ ما لا تعرفه: يكمله فريق موتكسا."))}
     <GText style={[gType.title, align, { marginBottom: 4 }]}>{t("Photos on a car", "صور على سيارة")}<GText soft style={gType.caption}>{`  ${t("optional · up to 3", "اختياري · حتى ٣")}`}</GText></GText>
@@ -346,52 +341,48 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
         <GText style={[gType.body, align]}>{knowSize && sizeValue ? (rims ? t(`${sizeValue}-inch rims`, `جنوط ${sizeValue} إنش`) : `${sizeValue} ${t("cm", "سم")} · ${metres(sizeValue, t)}`) : t("Size: the admin will measure it", "المقاس: سيقيسه المسؤول")}</GText>
       </View>)}
     </Card>
-    <Press accessibilityRole="checkbox" accessibilityState={{ checked: consent }} onPress={() => { setConsent(v => !v); setErrors(e => ({ ...e, 4: [] })); }}
+    <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: consent }} onPress={() => { setConsent(v => !v); setErrors(e => ({ ...e, 4: [] })); }}
       style={[row, { marginTop: 14, minHeight: 64, padding: 16, gap: 14, alignItems: "center", borderRadius: gShape.card, borderWidth: 2, borderColor: consent ? g.accent : g.line, backgroundColor: consent ? g.tint : g.card }]}>
       <View style={{ width: 28, height: 28, borderRadius: 8, borderWidth: 2, borderColor: consent ? g.accent : g.soft, backgroundColor: consent ? g.accent : "transparent", alignItems: "center", justifyContent: "center" }}>
         {consent ? <Enter from={0.7} ms={200}><GIcon name="checkmark" size={20} color={g.onAccent} /></Enter> : null}
       </View>
       <GText style={[gType.bodySm, align, { flex: 1, minWidth: 0 }]}>{consentText}</GText>
-    </Press>
+    </Pressable>
   </>;
 
   const sentView = <View style={{ alignItems: "center", gap: 14, paddingVertical: 40 }}>
     <Enter from={0.85} ms={420} settle style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: g.tint, alignItems: "center", justifyContent: "center" }}><GIcon name="checkmark-circle" size={64} color={g.success} /></Enter>
-    <Rise i={2}><GText accessibilityRole="header" style={[gType.display, { textAlign: "center" }]}>{t("Sent for review", "أُرسل للمراجعة")}</GText></Rise>
-    <Rise i={3}><GText soft style={[gType.body, { textAlign: "center", maxWidth: 320 }]}>{t("The MOTEXA team checks your photos and creates the 3D model. We'll notify you when customers can see it on their cars.", "يفحص فريق موتكسا صورك وينشئ النموذج ثلاثي الأبعاد. سنُعلمك عندما يستطيع العملاء رؤيته على سياراتهم.")}</GText></Rise>
-    <Rise i={4} style={{ alignSelf: "stretch", gap: 10, marginTop: 10 }}>
+    <Enter ms={270}><GText accessibilityRole="header" style={[gType.display, { textAlign: "center" }]}>{t("Sent for review", "أُرسل للمراجعة")}</GText></Enter>
+    <Enter ms={270}><GText soft style={[gType.body, { textAlign: "center", maxWidth: 320 }]}>{t("The MOTEXA team checks your photos and creates the 3D model. We'll notify you when customers can see it on their cars.", "يفحص فريق موتكسا صورك وينشئ النموذج ثلاثي الأبعاد. سنُعلمك عندما يستطيع العملاء رؤيته على سياراتهم.")}</GText></Enter>
+    <Enter ms={270} style={{ alignSelf: "stretch", gap: 10, marginTop: 10 }}>
       <GButton icon="eye-outline" label={t("See the request status", "عرض حالة الطلب")} onPress={onDone} />
       <GButton variant="secondary" label={t("Back to my products", "العودة إلى منتجاتي")} onPress={() => router.navigate("/provider/parts/products" as never)} />
-    </Rise>
+    </Enter>
   </View>;
 
   const busyLabel = busy === "submit" ? t("Sending…", "جارٍ الإرسال…") : busy === "save" ? t("Saving…", "جارٍ الحفظ…") : null;
   const needConsent = step === 4 && !consent;
-  const bar = sent || !state.data ? null : <StickyActionBar note={busyLabel ?? (step === 2 && filled < 2 && !a?.shopModel ? t("Add 2 photos to continue", "أضف صورتين للمتابعة") : needConsent ? t("Tick the box above to send your request.", "ضع علامة على الخانة أعلاه لإرسال طلبك.") : undefined)}>
-    <GButton flex variant="secondary" icon={isArabic ? "arrow-forward" : "arrow-back"} label={step <= first ? t("Cancel", "إلغاء") : t("Back", "رجوع")} disabled={!!busy} onPress={back} />
-    <GButton flex icon={step === 4 ? "paper-plane-outline" : undefined} label={step === 4 ? t("Submit", "إرسال") : t("Next", "التالي")} busy={busy === "save" || busy === "submit"} disabled={!!busy || needConsent} onPress={() => void next()} />
-  </StickyActionBar>;
+  const note = busyLabel ?? (step === 2 && filled < 2 && !a?.shopModel ? t("Add 2 photos to continue", "أضف صورتين للمتابعة") : needConsent ? t("Tick the box above to send your request.", "ضع علامة على الخانة أعلاه لإرسال طلبك.") : undefined);
+  const bar = sent || !state.data ? undefined : <View style={{ gap: 8 }}>
+    {note ? <GText soft style={[gType.caption, align]}>{note}</GText> : null}
+    <StepFooter back={step > first ? { label: t("Back", "رجوع"), onPress: back } : undefined}
+      primary={{ icon: step === 4 ? "paper-plane-outline" : undefined, label: step === 4 ? t("Submit", "إرسال") : t("Next", "التالي"), busy: busy === "save" || busy === "submit", disabled: !!busy || needConsent, onPress: () => void next() }} />
+  </View>;
 
-  // focused flow: no shop tabs, no settings gear; only close, the step and the product
+  // a focused step flow on the common frame: ← back + trail, then the step, its progress and the product
   const n = steps.length - first, at = step - first;
-  const header = <View style={{ paddingTop: insets.top + 6, paddingHorizontal: 12, paddingBottom: 10, gap: 10, backgroundColor: g.page, borderBottomWidth: 1, borderBottomColor: g.line }}>
-    <View style={[row, { alignItems: "center", gap: 8 }]}>
-      <IconButton icon="close" label={t("Close", "إغلاق")} onPress={leave} />
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <GText accessibilityRole="header" numberOfLines={1} style={[gType.title, align]}>{sent ? t("Show it in 3D", "اعرضها ثلاثية الأبعاد") : t(`Step ${at + 1} of ${n} · ${steps[step]}`, `الخطوة ${at + 1} من ${n} · ${steps[step]}`)}</GText>
-        {state.data?.productName ? <GText soft numberOfLines={1} style={[gType.caption, align]}>{state.data.productName}</GText> : null}
-      </View>
-    </View>
-    {sent || !state.data ? null : <View style={[row, { gap: 6, paddingHorizontal: 6 }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+  const header = <View style={{ gap: 10, marginBottom: 14 }}>
+    <ManageHeader title={sent ? t("Show it in 3D", "اعرضها ثلاثية الأبعاد") : t(`Step ${at + 1} of ${n} · ${steps[step]}`, `الخطوة ${at + 1} من ${n} · ${steps[step]}`)} line={state.data?.productName ?? undefined} />
+    {sent || !state.data ? null : <View style={[row, { gap: 6 }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       {Array.from({ length: n }, (_, i) => <View key={i} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: g.line, overflow: "hidden" }}><Bar to={i <= at ? 1 : 0} color={g.accent} /></View>)}
     </View>}
   </View>;
   const dx = (isArabic ? -1 : 1) * dir * 16;
   const viewing = pick?.kind === "PART" && pick.photoId && !pick.replace ? pick : null;
 
-  return <View style={{ flex: 1, backgroundColor: g.page }}>
-    {header}
-    <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={{ width: "100%", maxWidth: 760, alignSelf: "center", paddingHorizontal: 18, paddingTop: 16, paddingBottom: insets.bottom + 40 }}>
+  return <Page title={t("Show it in 3D", "اعرضها ثلاثية الأبعاد")} list footer={bar}>
+    <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: insets.bottom + 40 }}>
+      {header}
       {state.error && !state.data ? <Note tone="danger">{state.error}</Note> : null}
       {!state.data ? <ActivityIndicator color={g.accent} style={{ marginTop: 40 }} /> : sent ? sentView : <>
         {a ? <View style={[row, { alignItems: "center", gap: 6, marginBottom: 12 }]}><GIcon name="cloud-done-outline" size={16} color={g.success} /><GText soft style={gType.caption}>{t("Draft saved automatically", "تُحفظ المسودة تلقائيًا")}</GText></View> : null}
@@ -399,10 +390,9 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
           {[stepPart, stepCar, stepPhotos, stepDetails, stepReview][step]}
           {errorBox}
         </Enter>
-        <View style={{ height: 130 }} />
+        <View style={{ height: 160 }} />
       </>}
     </ScrollView>
-    {bar}
     <Sheet visible={!!pick} onClose={() => setPick(null)} title={pick?.kind === "PART" ? t(...SLOT_LABELS[slots][pick.slot]!) : t("Photo on a car", "صورة على سيارة")} closeLabel={t("Close", "إغلاق")}>
       {viewing ? <View style={{ gap: 10 }}>
         <PrivateImage load={load(viewing.photoId!)} label={viewing.photoId!} height={280} />
@@ -416,14 +406,7 @@ export function ShopWizard({ productId, onDone }: { productId: string; onDone: (
         <GButton variant="secondary" icon="images-outline" label={t("Choose from gallery", "اختر من المعرض")} onPress={() => void addPhoto("library")} />
       </View>}
     </Sheet>
-    <Sheet visible={leaving} onClose={() => setLeaving(false)} title={t("Save draft and leave?", "حفظ المسودة والخروج؟")} closeLabel={t("Keep editing", "متابعة التعديل")}>
-      <View style={{ gap: 10 }}>
-        <GText soft style={[gType.body, align]}>{t("Everything you added is already saved as a draft. Finish it any time from 3D parts.", "كل ما أضفته محفوظ كمسودة. يمكنك إكمالها في أي وقت من القطع ثلاثية الأبعاد.")}</GText>
-        <GButton icon="exit-outline" label={t("Save draft and leave", "حفظ المسودة والخروج")} onPress={() => { setLeaving(false); exit(); }} />
-        <GButton variant="secondary" label={t("Keep editing", "متابعة التعديل")} onPress={() => setLeaving(false)} />
-      </View>
-    </Sheet>
-  </View>;
+  </Page>;
 }
 
 /** A progress fill that slides to its new value (220 ms ease-out; instant with reduced motion). */

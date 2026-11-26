@@ -256,7 +256,7 @@ export function Rail({ children, gap = 12 }: { children: ReactNode; gap?: number
 }
 
 /** Labelled text field (forms, price range). */
-export function Field({ label, value, onChangeText, placeholder, error, multiline, keyboardType, maxLength, autoCapitalize }: { label: string; value: string; onChangeText: (v: string) => void; placeholder?: string; error?: string; multiline?: boolean; keyboardType?: "default" | "decimal-pad" | "number-pad" | "phone-pad"; maxLength?: number; autoCapitalize?: "none" | "characters" | "sentences" }) {
+export function Field({ label, value, onChangeText, placeholder, error, multiline, keyboardType, maxLength, autoCapitalize }: { label: string; value: string; onChangeText: (v: string) => void; placeholder?: string; error?: string; multiline?: boolean; keyboardType?: "default" | "decimal-pad" | "number-pad" | "phone-pad" | "numbers-and-punctuation" | "email-address"; maxLength?: number; autoCapitalize?: "none" | "characters" | "sentences" }) {
   const { g, align } = useGarageTheme();
   return (
     <View style={{ marginBottom: 12 }}>

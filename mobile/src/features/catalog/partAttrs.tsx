@@ -1,3 +1,4 @@
+import { useL } from "../../core/hooks/useL";
 
 export type PartCondition = "NEW" | "USED" | "REFURBISHED";
 export type PartType = "OEM" | "AFTERMARKET";
@@ -18,12 +19,3 @@ export function usePartLabels() {
   };
   return { condition, type, notSpecified: t("Not specified", "غير محدد") };
 }
-
-/** "Used" / "Refurbished". Nothing for a new part. */
-export function ConditionBadge({ value }: { value: PartCondition }) {
-  const { condition } = usePartLabels();
-  if (value === "NEW") return null;
-  return <Badge tone={"neutral"} icon={value === "USED" ? "time-outline" : "refresh-outline"} label={condition[value]} />;
-}import { Badge } from "../../components/ui/Badge";
-import { useL } from "../../core/hooks/useL";
-

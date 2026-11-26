@@ -1,65 +1,47 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { View } from "react-native";
-import { Chip, EmptyState, ErrorState, GIcon, GText, IconButton, Rail, SkeletonRows, StatusChip, Tap } from "../../../components/garage";
-import { DeptHead, DeptPage } from "../../../features/department/ui";
+import { FilterChips, ManagePage, ManageRow } from "../../../components/manage/ManagePage";
 import { formatPrice } from "../../../core/constants/money";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
-import { OrderStatus, adminOrders } from "../../../features/orders/ordersService";
+import { type OrderStatus, adminOrders } from "../../../features/orders/ordersService";
 import { orderTone, useOrderLabels } from "../../../features/orders/orderBits";
 import { fmtDateTime } from "../../../features/requests/requestBits";
-import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 
-const FILTERS: (OrderStatus | null)[] = [null, "PLACED", "ACCEPTED", "PREPARING", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY", "PICKED_UP", "DELIVERED", "CANCELLED", "REJECTED"];
+/** one chip row (max ~5): the order statuses grouped by what they mean for the admin */
+const GROUPS: { key: string; en: string; ar: string; of: OrderStatus[] | null }[] = [
+  { key: "ALL", en: "All", ar: "الكل", of: null },
+  { key: "NEW", en: "New", ar: "جديدة", of: ["PLACED"] },
+  { key: "ACTIVE", en: "In progress", ar: "قيد التنفيذ", of: ["ACCEPTED", "PREPARING", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY", "PICKED_UP"] },
+  { key: "DONE", en: "Delivered", ar: "تم التسليم", of: ["DELIVERED"] },
+  { key: "STOPPED", en: "Cancelled", ar: "ملغاة", of: ["CANCELLED", "REJECTED"] },
+];
+const OPEN: OrderStatus[] = ["PLACED", "ACCEPTED", "PREPARING", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY", "PICKED_UP"];
 
-/** Parts admins: every order (read only) with status, shop and time; filter by status; the active-deliveries map. */
+/** Parts admins: every order (read only), what is still moving first; the active-deliveries map is in ⋮. */
 export default function AdminOrdersList() {
-  const { g, shadow, row, align } = useGarageTheme();
   const { t } = useL();
   const L = useOrderLabels();
-  const [status, setStatus] = useState<OrderStatus | null>(null);
-  const state = useLoad(() => adminOrders.list(status ?? undefined), [status], 15000);
-
+  const [group, setGroup] = useState("ALL"), [q, setQ] = useState("");
+  const state = useLoad(() => adminOrders.list(undefined), [], 15000);
+  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const matching = (state.data ?? []).filter(o => { const hay = `${o.shop.name} ${o.customer.firstName}`.toLowerCase(); return words.every(w => hay.includes(w)); });
+  const g = GROUPS.find(x => x.key === group)!;
+  const rows = matching.filter(o => !g.of || g.of.includes(o.status))
+    .sort((a, b) => Number(OPEN.includes(b.status)) - Number(OPEN.includes(a.status)) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  const moving = (state.data ?? []).filter(o => OPEN.includes(o.status)).length;
   return (
-    <DeptPage back tabs={false} onRefresh={state.reload} refreshing={state.loading && !!state.data}>
-      <DeptHead
-        title={t("Parts orders", "طلبات القطع")}
-        caption={state.data ? `${state.data.length} ${t("orders", "طلبات")}` : undefined}
-        end={<IconButton icon="map-outline" label={t("Active deliveries", "التوصيلات الجارية")} onPress={() => router.push("/dept/orders/map")} />}
-      />
-      {/* flexGrow 0: the rail must not absorb the free height of the page body; marginHorizontal 2 = the Rail's -20 gutter minus this page's 18 */}
-      <View style={{ flexGrow: 0, marginHorizontal: 2 }}>
-      <Rail gap={8}>
-        {FILTERS.map((s) => (
-          <Chip key={s ?? "all"} label={s ? L.status[s] : t("All", "الكل")} on={status === s} onPress={() => setStatus(s)} />
-        ))}
-      </Rail>
-      </View>
-      <View style={{ marginTop: 16, gap: 12 }}>
-        {state.loading && !state.data ? (
-          <SkeletonRows count={4} />
-        ) : state.error && !state.data ? (
-          <ErrorState text={state.error} onRetry={state.reload} retryLabel={t("Retry", "إعادة المحاولة")} />
-        ) : !state.data?.length ? (
-          <EmptyState photo="empty.requests" text={t("No orders.", "لا توجد طلبات.")} />
-        ) : (
-          state.data.map((o) => (
-            <Tap key={o.id} label={`${o.shop.name}, ${L.status[o.status]}`} onPress={() => router.push({ pathname: "/dept/orders/[id]", params: { id: o.id } })} style={[{ padding: 14, borderRadius: gShape.card, backgroundColor: g.card, gap: 6 }, shadow(1)]}>
-              <View style={[row, { alignItems: "center", gap: 8 }]}>
-                <GIcon name={o.fulfilment === "DELIVERY" ? "bicycle-outline" : "storefront-outline"} size={18} />
-                <GText numberOfLines={1} style={[gType.label, { fontWeight: "800", flex: 1 }, align]}>{o.shop.name}</GText>
-                <GText style={[gType.label, { fontWeight: "800", writingDirection: "ltr" }]}>{formatPrice(o.total)}</GText>
-              </View>
-              <GText soft numberOfLines={1} style={[gType.caption, align]}>{`${o.customer.firstName} · ${o.items.reduce((n, i) => n + i.quantity, 0)} ${t("items", "قطع")} · ${L.fulfilment[o.fulfilment]}`}</GText>
-              <View style={[row, { alignItems: "center", justifyContent: "space-between" }]}>
-                <StatusChip tone={orderTone(o.status)} label={L.status[o.status]} />
-                <GText soft style={[gType.tiny, { writingDirection: "ltr" }]}>{fmtDateTime(o.updatedAt)}</GText>
-              </View>
-            </Tap>
-          ))
-        )}
-      </View>
-    </DeptPage>
+    <ManagePage title={t("Parts orders", "طلبات القطع")} line={state.data ? t(`${state.data.length} orders · ${moving} in progress`, `${state.data.length} طلب · ${moving} قيد التنفيذ`) : undefined}
+      actions={[{ key: "map", label: t("Active deliveries", "التوصيلات الجارية"), icon: "map-outline", run: () => router.push("/dept/orders/map") }]}
+      search={{ value: q, onChange: setQ, placeholder: t("Search shop or customer", "ابحث عن متجر أو عميل") }}
+      filters={<FilterChips value={group} onChange={setGroup} filters={GROUPS.map(x => ({ key: x.key, label: t(x.en, x.ar), count: state.data ? matching.filter(o => !x.of || x.of.includes(o.status)).length : undefined }))} />}
+      items={rows} keyOf={o => o.id}
+      renderItem={o => <ManageRow title={`${o.shop.name} · ${formatPrice(o.total)}`} status={{ label: L.status[o.status], tone: orderTone(o.status) }}
+        sub={[o.customer.firstName, `${o.items.reduce((n, i) => n + i.quantity, 0)} ${t("items", "قطع")}`, L.fulfilment[o.fulfilment], fmtDateTime(o.updatedAt)].join(" · ")}
+        onPress={() => router.push({ pathname: "/dept/orders/[id]", params: { id: o.id } })} />}
+      loading={!state.data && !state.error} error={state.error} onRetry={() => void state.reload()}
+      empty={{ text: q || group !== "ALL" ? t("No orders here.", "لا توجد طلبات هنا.") : t("No orders yet.", "لا توجد طلبات بعد."), action: q || group !== "ALL" ? { label: t("Clear filters", "مسح الفلاتر"), onPress: () => { setQ(""); setGroup("ALL"); } } : undefined }}
+      onRefresh={() => void state.reload()} refreshing={state.loading && !!state.data}
+      detailHint={t("Tap an order to see it.", "اضغط على طلب لعرضه.")} />
   );
 }

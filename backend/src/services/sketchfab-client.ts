@@ -9,6 +9,8 @@ export type SketchfabInspection = {
   refusalCode: "NOT_DOWNLOADABLE" | "LICENSE_NOT_ALLOWED" | null; inspectedAt: string;
   /** Sketchfab's face count: shown as info only, never a reason to refuse (heavy models are simplified for phones). */
   triangles: number | null;
+  /** the model's Sketchfab tags (plain text, at most 30): the app suggests the car's brand / model / generation from them and the title */
+  tags: string[];
 };
 /** Exact hosts and model-page paths only. Query/fragment are discarded, never fetched. */
 export function parseSketchfabUrl(value: unknown): {uid: string; url: string} {
@@ -72,7 +74,8 @@ export function inspectMetadata(m: any, uid: string, now = new Date()): Sketchfa
     thumbnail,license:text(m.license?.label) || text(m.license?.slug) || "Unknown",
     licenseUrl:/^https?:\/\/creativecommons\.org\//.test(licenseUrl)?licenseUrl:null,
     licenseClass,downloadable,allowed:!refusalCode,refusalCode,inspectedAt:now.toISOString(),
-    triangles:Number.isSafeInteger(m.faceCount)&&m.faceCount>0?m.faceCount:null};
+    triangles:Number.isSafeInteger(m.faceCount)&&m.faceCount>0?m.faceCount:null,
+    tags:[...new Set<string>((Array.isArray(m.tags)?m.tags:[]).map((x:any)=>text(typeof x==="string"?x:x?.name??x?.slug,60)).filter(Boolean))].slice(0,30)};
 }
 export function assertImportAllowed(m: SketchfabInspection) {
   if (!m.downloadable) return fail("MODEL_NOT_DOWNLOADABLE", "The creator has not allowed downloads of this model on Sketchfab, so MOTEXA cannot import it.",409);

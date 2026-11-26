@@ -3,8 +3,7 @@ import { PanResponder, ScrollView, View, useWindowDimensions } from "react-nativ
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { ease, M, useReduced } from "../../motion";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "../../theme/useTheme";
-import { useGarageTheme } from "../../theme/garage";
+import { gShape, useGarageTheme } from "../../theme/garage";
 
 export const WIDE_MIN_WIDTH = 700;
 export const SIDE_PANEL_WIDTH = 380;
@@ -35,9 +34,8 @@ export function MapPanel({
 }) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { r, isArabic } = useTheme();
   // customer map panel: garage colours (card surface, warm line)
-  const { g } = useGarageTheme();
+  const { g, isArabic } = useGarageTheme();
   const c = { sheet: g.card, line: g.line };
   const wide = width >= WIDE_MIN_WIDTH;
   const collapsedH = Math.min(360, Math.round(height * 0.46));
@@ -123,8 +121,8 @@ export function MapPanel({
         bottom: 0,
         overflow: "hidden",
         backgroundColor: c.sheet,
-        borderTopLeftRadius: r.sheet,
-        borderTopRightRadius: r.sheet,
+        borderTopLeftRadius: gShape.hero,
+        borderTopRightRadius: gShape.hero,
         borderTopWidth: 1,
         borderColor: c.line,
         zIndex: 30,

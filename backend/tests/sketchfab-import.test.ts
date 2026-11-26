@@ -42,6 +42,8 @@ test("license gate accepts any Creative Commons license (CC0 and every CC BY var
  for(const slug of ["cc0","by","by-sa","by-nc","by-nd","by-nc-sa","by-nc-nd"])assert.equal(inspectMetadata(model({license:{slug}}),uid).allowed,true,slug);
  for(const faceCount of [1_186_481,2_000_000,25_000_000]){const heavy=inspectMetadata(model({faceCount}),uid);assert.equal(heavy.allowed,true);assert.equal(heavy.refusalCode,null);assert.equal(heavy.triangles,faceCount);}
  assert.equal(inspectMetadata(model(),uid).triangles,null);
+ assert.deepEqual(inspectMetadata(model({tags:[{name:"Mercedes",slug:"mercedes"},{slug:"w202"},"c-class",{name:"bad\u0000tag"},{name:"Mercedes"},null,{}]}),uid).tags,["Mercedes","w202","c-class","bad tag"]);
+ assert.deepEqual(inspectMetadata(model(),uid).tags,[]);
 });
 test("inspection makes no download request; credentials/signed URLs never enter the safe DTO",async()=>{
  let requests=0;const client=createSketchfabClient({token:"test-secret-only",fetcher:(async(request,options)=>{requests++;assert.equal(String(request),`https://api.sketchfab.com/v3/models/${uid}`);assert.equal((options?.headers as any).Authorization,"Token test-secret-only");return Response.json(model({token:"test-secret-only",download:{url:"https://example.test/?secret=signed"}}));})as typeof fetch});

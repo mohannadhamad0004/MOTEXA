@@ -1,12 +1,12 @@
 import { router, type Href } from "expo-router";
-import { useState } from "react";
 import { AppearanceSection } from "./AppearanceSection";
 import { View } from "react-native";
-import { Card, ErrorState, GButton, GText, ListRow, Note, Section } from "../../components/garage";
-import { ProviderLayout } from "../../components/layout/ProviderLayout";
+import { ErrorState, GText, Section } from "../../components/garage";
+import { ManageEntry } from "../../components/manage/ManagePage";
+import { LogOut, Page } from "../../components/manage/Page";
 import { useL } from "../../core/hooks/useL";
 import { useLoad } from "../../core/hooks/useLoad";
-import { signOut, useSessionUser } from "../../core/session/session";
+import { useSessionUser } from "../../core/session/session";
 import { gType, useGarageTheme } from "../../theme/garage";
 import { portalApi } from "../provider/portal/api";
 import type { ProviderArea } from "../provider/portal/types";
@@ -54,14 +54,13 @@ const GROUPS: Record<ProviderArea, { en: string; ar: string; rows: Row[] }[]> = 
 };
 
 /**
- * Profile of both provider roles, in groups: business info, location (small map), documents, work / catalog tools, preferences
- * (language and theme, log out with a confirmation). Every screen that used to be on Home is one row here.
+ * Profile of both provider roles = entry rows (docs/guide/10-ui-system.md): business, work / catalog tools, location (small map),
+ * documents, appearance & language, more settings, Log out (asks first). Every screen that is not a tab is one row here.
  */
 export function ProfileHub({ area }: { area: ProviderArea }) {
   const { t } = useL();
   const user = useSessionUser();
   const { align } = useGarageTheme();
-  const [confirm, setConfirm] = useState(false);
   const where = useLoad(async () => {
     if (area === "tow") {
       const { company } = await towFleetService.getMyFleet(asActor(user));
@@ -73,56 +72,31 @@ export function ProfileHub({ area }: { area: ProviderArea }) {
   const w = where.data;
   const pin = w && w.lat !== null && w.lng !== null ? { id: "me", name: w.name, lat: w.lat, lng: w.lng, kind: (area === "tow" ? "tow" : "hq") as "tow" | "hq", dim: false } : null;
   const loc = area === "tow" ? "/provider/tow/service-area" : "/provider/parts/business";
-
   return (
-    <ProviderLayout area={area} title={w?.name ?? t("Profile", "الملف")} subtitle={w ? w.city : undefined}>
+    <Page title={w?.name ?? t("Profile", "الملف")} line={w?.city} back={false} tabBar onRefresh={() => void where.reload()} refreshing={false}>
       {where.error && !w ? <ErrorState text={where.error} onRetry={where.reload} retryLabel={t("Retry", "إعادة المحاولة")} /> : null}
-      {GROUPS[area].map((gr, gi) => (
-        <Section key={gr.en} title={t(gr.en, gr.ar)} style={{ marginTop: gi === 0 ? 4 : 24 }}>
-          <Card pad={8}>
-            {gr.rows.map((r, i) => <ListRow key={r.path} divider={i > 0} icon={r.icon} title={t(r.en, r.ar)} onPress={() => go(r.path)} />)}
-          </Card>
+      {GROUPS[area].map((gr) => (
+        <Section key={gr.en} title={t(gr.en, gr.ar)}>
+          <View style={{ gap: 8 }}>{gr.rows.map((r) => <ManageEntry key={r.path} icon={r.icon} title={t(r.en, r.ar)} onPress={() => go(r.path)} />)}</View>
         </Section>
       ))}
-
       <Section title={t("Location", "الموقع")}>
-        <Card pad={12}>
+        <View style={{ gap: 8 }}>
           {pin && MAPS_AVAILABLE ? (
-            <View style={{ borderRadius: 16, overflow: "hidden", marginBottom: 8 }}>
+            <View style={{ borderRadius: 16, overflow: "hidden" }}>
               <MiniMap pins={[pin]} me={null} height={150} fitKey={`${pin.lat},${pin.lng}`} onOpen={() => go(loc)} label={t("Open location settings", "فتح إعدادات الموقع")} />
             </View>
           ) : null}
-          {w ? <GText soft style={[gType.caption, align, { marginBottom: 4 }]}>{pin ? [w.address, w.city].filter(Boolean).join(" · ") : t("No map point yet. Set your location so customers can find you.", "لا توجد نقطة على الخريطة بعد. حدّد موقعك ليجدك الزبائن.")}</GText> : null}
-          <ListRow icon="locate-outline" title={area === "tow" ? t("Service area and map point", "منطقة الخدمة ونقطة الخريطة") : t("Address and map point", "العنوان ونقطة الخريطة")} onPress={() => go(loc)} />
-        </Card>
-      </Section>
-
-      <Section title={t("Documents", "المستندات")}>
-        <Card pad={8}>
-          <ListRow icon="document-text-outline" title={t("Application and documents", "الطلب والمستندات")} sub={t("Private: only you and MOTEXA see them.", "خاصة: لا يراها إلا أنت وموتكسا.")} onPress={() => go("/provider/onboarding")} />
-        </Card>
-      </Section>
-
-      <AppearanceSection />
-
-      <Section title={t("Preferences", "التفضيلات")}>
-        <Card pad={8}>
-          <ListRow icon="settings-outline" title={t("More settings", "المزيد من الإعدادات")} onPress={() => go(`/provider/${area}/settings`)} />
-        </Card>
-        <View style={{ marginTop: 12, gap: 8 }}>
-          {!confirm ? (
-            <GButton variant="danger" icon="log-out-outline" label={t("Log out", "تسجيل الخروج")} onPress={() => setConfirm(true)} />
-          ) : (
-            <Card>
-              <Note tone="warning" icon="alert-circle-outline">{t("Log out of MOTEXA on this phone?", "تسجيل الخروج من موتكسا على هذا الهاتف؟")}</Note>
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <GButton flex variant="secondary" label={t("Stay", "البقاء")} onPress={() => setConfirm(false)} />
-                <GButton flex variant="danger" label={t("Yes, log out", "نعم، سجّل الخروج")} onPress={() => void signOut()} />
-              </View>
-            </Card>
-          )}
+          {w ? <GText soft style={[gType.caption, align]}>{pin ? [w.address, w.city].filter(Boolean).join(" · ") : t("No map point yet. Set your location so customers can find you.", "لا توجد نقطة على الخريطة بعد. حدّد موقعك ليجدك الزبائن.")}</GText> : null}
+          <ManageEntry icon="locate-outline" title={area === "tow" ? t("Service area and map point", "منطقة الخدمة ونقطة الخريطة") : t("Address and map point", "العنوان ونقطة الخريطة")} onPress={() => go(loc)} />
         </View>
       </Section>
-    </ProviderLayout>
+      <Section title={t("Documents", "المستندات")}>
+        <ManageEntry icon="document-text-outline" title={t("Application and documents", "الطلب والمستندات")} sub={t("Private: only you and MOTEXA see them.", "خاصة: لا يراها إلا أنت وموتكسا.")} onPress={() => go("/provider/onboarding")} />
+      </Section>
+      <AppearanceSection />
+      <ManageEntry icon="settings-outline" title={t("More settings", "المزيد من الإعدادات")} onPress={() => go(`/provider/${area}/settings`)} />
+      <LogOut />
+    </Page>
   );
 }

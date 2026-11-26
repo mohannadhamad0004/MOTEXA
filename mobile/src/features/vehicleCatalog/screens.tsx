@@ -1,201 +1,134 @@
-import {router,useLocalSearchParams,type Href} from "expo-router";
-import {GateSummary} from "../accessory3d/gate";
-import type {ModelGate} from "../accessory3d/api";
-import {useState} from "react";
-import {View} from "react-native";
-import * as DocumentPicker from "expo-document-picker";
-import {Card,GarageHero,GaragePage,GButton,GText,Note} from "../../components/garage";
-import {useL} from "../../core/hooks/useL";
-import {useLoad} from "../../core/hooks/useLoad";
-import {localFileToBase64} from "../../core/constants/files";
-import {Car3DView} from "../car3d/Car3DView";
-import type {CarModel} from "../car3d/models";
-import {useGarageTheme} from "../../theme/garage";
-import {refreshRuntimeModels} from "../car3d/runtimeModels";
-import {catalogService} from "../catalog/catalogService";
-import {authenticatedBase64} from "../vehicle3d/api";
-import {Entry,Choice,Confirm} from "./controls";
-import {threeDError} from "./lifecycleText";
-import {GenerationUsage} from "./generationUsage";
-import {vehicleCatalog,importPath,type Taxonomy,type ModelImport} from "./api";
-import {simplifiedText} from "./importState";
-export function VehicleCatalogScreen(){
- const {t}=useL();const params=useLocalSearchParams<{section?:string}>();const data=useLoad(vehicleCatalog.list,[]);const imports=useLoad(vehicleCatalog.imports,[]);const [tab,setTab]=useState(params.section==="imports"?"imports":"catalog"),[search,setSearch]=useState(""),[error,setError]=useState<string|null>(null),[busy,setBusy]=useState(false);
- const [kind,setKind]=useState("brands"),[editing,setEditing]=useState<string|null>(null),[values,setValues]=useState<Record<string,string>>({}),[active,setActive]=useState(true);
- const set=(key:string)=>(v:string)=>setValues(s=>({...s,[key]:v}));
- const work=async(fn:()=>Promise<unknown>)=>{setBusy(true);setError(null);try{await fn();await data.reload();await imports.reload();catalogService.invalidateVehicleList();await refreshRuntimeModels();}catch(e){setError(t((e as Error).message,"تعذّر إكمال الإجراء. تحقق من التفاصيل والتكرار والمراجع التاريخية."));}finally{setBusy(false);}};
- const edit=(k:string,id:string|null,v:Record<string,string>,isActive=true)=>{setKind(k);setEditing(id);setValues(v);setActive(isActive);setTab("edit");};
- const field=(key:string,en:string,ar:string,numeric=false)=><Entry key={key} label={t(en,ar)} value={values[key]??""} onChange={set(key)} numeric={numeric}/>;
- const records=data.data;
- const matches=(...names:string[])=>!search||names.join(" ").toLocaleLowerCase().includes(search.trim().toLocaleLowerCase());
- return <GaragePage key={`${tab}-${editing??"new"}`} hero={<GarageHero variant="detail" title={t("Vehicle catalog","كتالوج المركبات")} line={t("Brands, models, generations and verified 3D assets.","الشركات والطرازات والأجيال والنماذج ثلاثية الأبعاد المعتمدة.")} backLabel={t("Back","رجوع")} onBack={()=>router.back()}/>} onRefresh={()=>{void data.reload();void imports.reload();}}>
- <View style={{gap:14}}><GButton variant="secondary" label={t("3D workspace","مساحة العمل ثلاثية الأبعاد")} onPress={()=>router.push("/dept/3d" as Href)}/><GButton variant="secondary" label={t("Customer vehicle requests","طلبات مركبات العملاء")} onPress={()=>router.push("/dept/vehicles/requests" as Href)}/>
- <View style={{flexDirection:"row",flexWrap:"wrap",gap:8}}><GButton variant={tab==="catalog"?"primary":"secondary"} label={t("Catalog","الكتالوج")} onPress={()=>setTab("catalog")}/><GButton variant={tab==="imports"?"primary":"secondary"} label={t("3D models","النماذج ثلاثية الأبعاد")} onPress={()=>router.push("/dept/3d/vehicles" as Href)}/></View>
- {data.error||imports.error?<Note tone="danger">{t("Could not load catalog. Parts Admin permission is required.","تعذّر تحميل الكتالوج. يلزم صلاحية إدارة قطع الغيار.")}</Note>:null}
- {error?<Note tone="danger">{error}</Note>:null}
- {tab==="catalog"&&records?<><Entry label={t("Search brand, model or generation","البحث عن شركة أو طراز أو جيل")} value={search} onChange={setSearch}/>
- <GButton label={t("Add brand","إضافة شركة")} disabled={busy} onPress={()=>edit("brands",null,{})}/><GButton label={t("Add model","إضافة طراز")} disabled={busy} onPress={()=>edit("models",null,{})}/><GButton label={t("Add generation","إضافة جيل")} disabled={busy} onPress={()=>edit("generations",null,{})}/>
- {records.brands.filter(b=>matches(b.name,b.nameAr,...b.aliases)||records.vehicles.some(v=>v.brandId===b.id&&matches(v.model,v.modelAr,...v.generations.flatMap(g=>[g.code,g.nameEn,g.nameAr])))).map(b=><Card key={b.id}><GText>{`${b.name} · ${b.isActive?t("Active","نشط"):t("Inactive","غير نشط")}`}</GText><GButton variant="secondary" label={t("Edit brand","تعديل الشركة")} onPress={()=>edit("brands",b.id,{name:b.name,nameAr:b.nameAr,aliases:b.aliases.join(", ")},b.isActive)}/>
- {records.vehicles.filter(v=>v.brandId===b.id&&matches(b.name,b.nameAr,...b.aliases,v.model,v.modelAr,...v.generations.flatMap(g=>[g.code,g.nameEn,g.nameAr]))).map(v=><View key={v.id} style={{gap:8,marginTop:18}}><GText>{`${v.model} · ${v.isActive?t("Active","نشط"):t("Inactive","غير نشط")}`}</GText><GButton variant="ghost" label={t("Edit model","تعديل الطراز")} onPress={()=>edit("models",v.id,{brandId:b.id,model:v.model,modelAr:v.modelAr,yearFrom:String(v.yearFrom),yearTo:String(v.yearTo)},v.isActive)}/>
- {v.generations.map(g=><View key={g.id} style={{gap:5,paddingVertical:8}}><GText>{`${g.code} · ${g.yearFrom}–${g.yearTo} · ${g.effectiveAvailable?t("3D available","نموذج ثلاثي الأبعاد متاح"):t("No published 3D","لا يوجد نموذج منشور")}${!g.isActive?` · ${t("Inactive","غير نشط")}`:""}`}</GText><GButton variant="ghost" label={t("Edit generation","تعديل الجيل")} onPress={()=>edit("generations",g.id,{vehicleId:v.id,code:g.code,nameEn:g.nameEn,nameAr:g.nameAr,yearFrom:String(g.yearFrom),yearTo:String(g.yearTo)},g.isActive)}/></View>)}</View>)}</Card>)}</>:null}
- {tab==="edit"&&records?<Card><GText>{editing?t("Edit record","تعديل السجل"):t("New record","سجل جديد")}</GText>
- {kind==="brands"?<>{field("name","Brand name","اسم الشركة")}{field("nameAr","Arabic brand name","اسم الشركة بالعربية")}{field("aliases","Aliases (comma separated)","الأسماء البديلة (مفصولة بفواصل)")}</>:null}
- {kind==="models"?<><Choice label={t("Brand","الشركة")} options={records.brands.map(b=>({id:b.id,label:b.name}))} value={values.brandId??""} onChange={set("brandId")}/>{field("model","Model name","اسم الطراز")}{field("modelAr","Arabic model name","اسم الطراز بالعربية")}</>:null}
- {kind==="generations"?<><Choice label={t("Model","الطراز")} options={records.vehicles.map(v=>({id:v.id,label:`${v.displayMake} ${v.model}`}))} value={values.vehicleId??""} onChange={set("vehicleId")}/>{field("code","Generation code","رمز الجيل")}{field("nameEn","Display name (optional)","اسم العرض (اختياري)")}{field("nameAr","Arabic display name (optional)","اسم العرض بالعربية (اختياري)")}</>:null}
- {kind!=="brands"?<>{field("yearFrom","Production start year","بداية الإنتاج",true)}{field("yearTo","Production end year","نهاية الإنتاج",true)}</>:null}
- <Confirm label={t("Active","نشط")} value={active} onChange={setActive}/><GButton label={t("Save","حفظ")} disabled={busy} onPress={()=>void work(async()=>{const body:Record<string,unknown>={...values,isActive:active};for(const key of Object.keys(body))if(body[key]==="")delete body[key];if(kind==="brands")body.aliases=(values.aliases??"").split(",").map(s=>s.trim()).filter(Boolean);else{if(values.yearFrom)body.yearFrom=Number(values.yearFrom);if(values.yearTo)body.yearTo=Number(values.yearTo);}await vehicleCatalog.save(kind,editing,body);setTab("catalog");})}/>
- {editing&&kind==="generations"?<GenerationUsage key={editing} id={editing} isActive={active} onDone={()=>setTab("catalog")}/>:null}
- {editing&&kind!=="generations"?<><Note>{t("Deactivate referenced records. Delete succeeds only when there are no dependent records or historical references.","عطّل السجلات المرتبطة. ينجح الحذف فقط عند عدم وجود سجلات تابعة أو مراجع تاريخية.")}</Note><GButton variant="danger" label={t("Delete unused record","حذف سجل غير مستخدم")} disabled={busy} onPress={()=>void work(async()=>{await vehicleCatalog.remove(kind,editing);setTab("catalog");})}/></>:null}</Card>:null}
- {tab==="imports"&&records?<><GButton label={t("Import from Sketchfab","استيراد من Sketchfab")} onPress={()=>router.push("/dept/vehicles/imports/new" as Href)}/><UploadModel taxonomy={records} done={()=>void imports.reload()}/>{imports.data?.map(r=>r.provenance?<Card key={r.id}><GText>{`${r.make} ${r.model} ${r.code}`}</GText><GText soft>{`${r.provenance.title} · ${r.author}`}</GText><GButton variant="secondary" label={t("Open Sketchfab import","فتح استيراد Sketchfab")} onPress={()=>router.push(`/dept/vehicles/imports/${r.id}` as Href)}/></Card>:<ImportReview key={JSON.stringify([r.id,r.status,r.validation?.validatedAt,r.existingModel3dKey])} r={r} work={work} busy={busy}/>)}</>:null}
- </View></GaragePage>;
-}
-export function UploadModel({taxonomy,done,initialGeneration}:{taxonomy:Taxonomy;done:(importId:string)=>unknown;initialGeneration?:string}){
- const {t}=useL();const [generationId,setGenerationId]=useState(initialGeneration??""),[source,setSource]=useState(""),[author,setAuthor]=useState(""),[license,setLicense]=useState(""),[sourceUrl,setSourceUrl]=useState(""),[length,setLength]=useState("4.5"),[file,setFile]=useState<{uri:string;name:string;size?:number}|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null);
- const sizeMsg=t("Choose a .glb file up to 20 MB.","اختر ملف .glb بحجم أقصاه 20 ميجابايت.");
- return <Card><GText>{t("Upload a private GLB for review","رفع ملف GLB خاص للمراجعة")}</GText><Choice label={t("Generation","الجيل")} options={taxonomy.vehicles.flatMap(v=>v.generations.map(g=>({id:g.id,label:`${v.displayMake} ${v.model} ${g.code} (${g.yearFrom}–${g.yearTo})`})))} value={generationId} onChange={setGenerationId}/><Entry label={t("Vehicle length (metres)","طول المركبة (متر)")} value={length} onChange={setLength} numeric/><Entry label={t("Source / provenance","المصدر / أصل النموذج")} value={source} onChange={setSource}/><Entry label={t("Author / rights holder","المؤلف / صاحب الحقوق")} value={author} onChange={setAuthor}/><Entry label={t("License / redistribution permission","الترخيص / إذن إعادة التوزيع")} value={license} onChange={setLicense}/><Entry label={t("Source HTTPS URL (optional)","رابط المصدر HTTPS (اختياري)")} value={sourceUrl} onChange={setSourceUrl}/>
- <GButton variant="secondary" label={file?file.name:t("Choose GLB","اختيار ملف GLB")} disabled={busy} onPress={()=>{setError(null);void DocumentPicker.getDocumentAsync({type:["model/gltf-binary","application/octet-stream","*/*"],copyToCacheDirectory:true}).then(result=>{if(!result.canceled){const a=result.assets[0];if(!a.name.toLowerCase().endsWith(".glb")||(a.size??0)>20*1024*1024){setError(sizeMsg);return;}setFile(a);}}).catch(e=>setError(threeDError(e,t)));}}/>
- <GButton label={t("Upload for technical validation","الرفع للتحقق التقني")} disabled={busy||!file||!generationId||!source.trim()||!author.trim()||!license.trim()} onPress={()=>{if(!file)return;setBusy(true);setError(null);void localFileToBase64(file.uri).then(dataBase64=>vehicleCatalog.upload({generationId,source,author,license,sourceUrl,lengthM:Number(length),dataBase64})).then(r=>done(r.id)).catch(e=>setError(threeDError(e,t))).finally(()=>setBusy(false));}}/>{error?<Note tone="danger">{error}</Note>:null}</Card>;
-}
-export function ImportReview({r,work,busy}:{r:ModelImport;work:(fn:()=>Promise<unknown>)=>Promise<void>;busy:boolean}){
-  const {t}=useL();
-  const {g}=useGarageTheme();
-  const config=r.viewerConfig;
-  // A Sketchfab import that stopped before validation has only part of its config: never assume the lists exist.
-  const paintList=config?.paintMaterials??[];
-  const nodeList=config?.paintNodes??[];
-  const orientation=r.validation?.sourceOrientation as {preRotateX?:number;rotateY?:number}|undefined;
-  const gate=r.validation?.accessoryGate as ModelGate|null|undefined;
-  const simplified=(r.validation?.simplified as {before:number;after:number}|null|undefined)??r.provenance?.optimization?.simplified;
+// Vehicle catalog (/dept/vehicles) on the one UI system: a List with three views (generations · models · brands), search and one chip
+// row; tap or ⋮ opens the record in a sheet (Form). Adding uses the brand -> model -> generation smart pickers ("+ Add '…'"), no
+// separate Create buttons. Uploads and imports live in "Add 3D model" and the import pages.
+import { router, type Href } from "expo-router";
+import { useMemo, useState } from "react";
+import { View } from "react-native";
+import { Field, GButton, GText, Note, Sheet, Toggle } from "../../components/garage";
+import { SmartPicker } from "../../components/manage/Form";
+import { FilterChips, ManageEntry, ManagePage, ManageRow } from "../../components/manage/ManagePage";
+import { type ItemAction } from "../../components/ItemActionsMenu";
+import { useL } from "../../core/hooks/useL";
+import { useLoad } from "../../core/hooks/useLoad";
+import { refreshRuntimeModels } from "../car3d/runtimeModels";
+import { catalogService } from "../catalog/catalogService";
+import { vehicleCatalog, type Brand, type Generation, type Model, type Taxonomy } from "./api";
+import { GenerationUsage } from "./generationUsage";
+import { NO_CAR, VehiclePickers, type CarPick } from "./VehiclePickers";
 
-  const [length,setLength]=useState(String(config?.lengthM??4.5));
-  const [up,setUp]=useState(String(Number(orientation?.preRotateX??0)*180/Math.PI));
-  const [heading,setHeading]=useState(String(Number(orientation?.rotateY??0)*180/Math.PI));
-  const [ground,setGround]=useState(String(config?.groundOffset??0));
-  const [paint,setPaint]=useState(paintList.join(", "));
-  const [nodes,setNodes]=useState(nodeList.join(", "));
-  const [verified,setVerified]=useState(false);
-  const [replace,setReplace]=useState(false);
-  const [notes,setNotes]=useState("");
-  const [dirty,setDirty]=useState(false);
-  const [testPaint,setTestPaint]=useState(false);
+type Kind = "brands" | "models" | "generations";
+type Open = { kind: Kind; id: string | null; values: Record<string, string>; active: boolean };
+type GenRow = { g: Generation; v: Model };
 
-  const changed=(set:(v:string)=>void)=>(v:string)=>{set(v);setDirty(true);setVerified(false);};
-  const loader=()=>authenticatedBase64(`${importPath}/${r.id}/model`);
-  const names=(text:string)=>text.split(",").map(s=>s.trim()).filter(Boolean);
-  // hasModel = the import passed validation, which saves a complete config.
-  const car=r.hasModel?config as CarModel|null:null;
-  const statusLabel=r.status==="PUBLISHED"
-    ?t("Published","منشور")
-    :r.status==="READY"
-      ?t("Ready for visual review","جاهز للمراجعة البصرية")
-      :t("Awaiting viewer validation","بانتظار التحقق من العارض");
-  const dimensions=Array.isArray(r.validation?.dimensions)
-    ?(r.validation.dimensions as unknown[]).map(n=>Number(n).toFixed(2)).join(" × ")
-    :"—";
-
-  const validate=()=>void work(async()=>{
-    setVerified(false);
-    await vehicleCatalog.validate(r.id,{
-      lengthM:Number(length),
-      preRotateX:Number(up)*Math.PI/180,
-      rotateY:Number(heading)*Math.PI/180,
-      groundOffset:Number(ground),
-      paintMaterials:names(paint),
-      paintNodes:names(nodes),
-    });
-    setDirty(false);
-  });
-  const publish=()=>void work(()=>vehicleCatalog.publish(r.id,{
-    visuallyVerified:true,
-    validationVersion:r.validation?.validatedAt,
-    notes,
-    ...(replace?{replaceExistingKey:r.existingModel3dKey}:{}),
-  }));
-  const publishBlocked=busy||dirty||!verified||r.status!=="READY"||gate?.verdict==="REJECTED"||(!!r.existingModel3dKey&&!replace);
-
+export function VehicleCatalogScreen() {
+  const { t, isArabic } = useL();
+  const data = useLoad(vehicleCatalog.list, []);
+  const [view, setView] = useState<Kind>("generations"), [q, setQ] = useState(""), [show, setShow] = useState("ALL");
+  const [open, setOpen] = useState<Open | null>(null), [adding, setAdding] = useState(false), [car, setCar] = useState<CarPick>(NO_CAR);
+  const tax = data.data;
+  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const hit = (...xs: (string | number | null | undefined)[]) => { const hay = xs.join(" ").toLowerCase(); return words.every(w => hay.includes(w)); };
+  const gens: GenRow[] = useMemo(() => (tax?.vehicles ?? []).flatMap(v => v.generations.map(g => ({ g, v }))), [tax]);
+  const brandOf = (id: string | null) => tax?.brands.find(b => b.id === id);
+  const editGen = ({ g, v }: GenRow) => setOpen({ kind: "generations", id: g.id, active: g.isActive, values: { vehicleId: v.id, code: g.code, nameEn: g.nameEn, nameAr: g.nameAr, yearFrom: String(g.yearFrom), yearTo: String(g.yearTo) } });
+  const editModel = (v: Model) => setOpen({ kind: "models", id: v.id, active: v.isActive, values: { brandId: v.brandId ?? "", model: v.model, modelAr: v.modelAr, yearFrom: String(v.yearFrom), yearTo: String(v.yearTo) } });
+  const editBrand = (b: Brand) => setOpen({ kind: "brands", id: b.id, active: b.isActive, values: { name: b.name, nameAr: b.nameAr, aliases: b.aliases.join(", ") } });
+  const genFilters = [{ key: "ALL", en: "All", ar: "الكل", f: (_: GenRow) => true }, { key: "3D", en: "With 3D", ar: "بنموذج", f: (x: GenRow) => x.g.effectiveAvailable },
+    { key: "NO3D", en: "No 3D", ar: "بلا نموذج", f: (x: GenRow) => !x.g.effectiveAvailable }, { key: "OFF", en: "Inactive", ar: "غير نشط", f: (x: GenRow) => !x.g.isActive }];
+  const genMatching = gens.filter(x => hit(x.v.displayMake, x.v.model, x.v.modelAr, x.g.code, x.g.nameEn, x.g.nameAr, x.g.yearFrom, x.g.yearTo));
+  const rowsGen = genMatching.filter(genFilters.find(f => f.key === show)?.f ?? (() => true)).sort((a, b) => `${a.v.displayMake} ${a.v.model} ${a.g.yearFrom}`.localeCompare(`${b.v.displayMake} ${b.v.model} ${b.g.yearFrom}`));
+  const rowsModel = (tax?.vehicles ?? []).filter(v => hit(v.displayMake, v.model, v.modelAr) && (show !== "OFF" || !v.isActive)).sort((a, b) => `${a.displayMake} ${a.model}`.localeCompare(`${b.displayMake} ${b.model}`));
+  const rowsBrand = (tax?.brands ?? []).filter(b => hit(b.name, b.nameAr, ...b.aliases) && (show !== "OFF" || !b.isActive)).sort((a, b) => a.name.localeCompare(b.name));
+  const items: { key: string; node: () => React.ReactElement }[] = view === "generations"
+    ? rowsGen.map(x => ({ key: x.g.id, node: () => <ManageRow title={`${x.v.displayMake} ${isArabic ? x.v.modelAr || x.v.model : x.v.model}`} sub={[`${x.g.code} · ${x.g.yearFrom}–${x.g.yearTo}`, !x.g.isActive ? t("inactive", "غير نشط") : null].filter(Boolean).join(" · ")}
+        status={x.g.effectiveAvailable ? { label: t("3D", "ثلاثي الأبعاد"), tone: "success" } : { label: t("No 3D", "بلا نموذج"), tone: "neutral" }} onPress={() => editGen(x)}
+        actions={[{ key: "gen", label: t("Edit generation", "تعديل الجيل"), icon: "create-outline", run: () => editGen(x) }, { key: "model", label: t("Edit model", "تعديل الطراز"), icon: "car-outline", run: () => editModel(x.v) },
+          ...(brandOf(x.v.brandId) ? [{ key: "brand", label: t("Edit brand", "تعديل الشركة"), icon: "pricetag-outline" as const, run: () => editBrand(brandOf(x.v.brandId)!) }] : []),
+          { key: "add3d", label: x.g.effectiveAvailable ? t("Replace its 3D model", "استبدال نموذجه") : t("Add its 3D model", "إضافة نموذجه"), icon: "cube-outline", run: () => router.push(`/dept/3d/add?generationId=${x.g.id}` as Href) }] as ItemAction[]} /> }))
+    : view === "models"
+      ? rowsModel.map(v => ({ key: v.id, node: () => <ManageRow title={`${v.displayMake} ${isArabic ? v.modelAr || v.model : v.model}`} sub={`${v.generations.length} ${t("generations", "أجيال")} · ${v.yearFrom}–${v.yearTo}`}
+          status={v.isActive ? null : { label: t("Inactive", "غير نشط"), tone: "neutral" }} onPress={() => editModel(v)} /> }))
+      : rowsBrand.map(b => ({ key: b.id, node: () => <ManageRow title={isArabic ? b.nameAr || b.name : b.name} sub={[b.nameAr, b.aliases.join(", "), `${(tax?.vehicles ?? []).filter(v => v.brandId === b.id).length} ${t("models", "طرازات")}`].filter(Boolean).join(" · ")}
+          status={b.isActive ? null : { label: t("Inactive", "غير نشط"), tone: "neutral" }} onPress={() => editBrand(b)} /> }));
+  const chipFilters = view === "generations" ? genFilters.map(f => ({ key: f.key, label: t(f.en, f.ar), count: tax ? genMatching.filter(f.f).length : undefined }))
+    : [{ key: "ALL", label: t("All", "الكل") }, { key: "OFF", label: t("Inactive", "غير نشط") }];
   return (
-    <Card>
-      <GText>{`${r.make} ${r.model} ${r.code}`}</GText>
-      <GText>{statusLabel}</GText>
-      <GText soft>{`${r.source} · ${r.author} · ${r.license}`}</GText>
-      {simplified?<GText soft>{simplifiedText(simplified,t)}</GText>:null}
+    <>
+      <ManagePage title={t("Vehicle catalog", "كتالوج المركبات")} line={tax ? t(`${tax.brands.length} brands · ${tax.vehicles.length} models · ${gens.length} generations`, `${tax.brands.length} شركة · ${tax.vehicles.length} طراز · ${gens.length} جيل`) : undefined}
+        tabs={{ value: view, onChange: k => { setView(k as Kind); setShow("ALL"); }, options: [{ key: "generations", label: t("Generations", "الأجيال") }, { key: "models", label: t("Models", "الطرازات") }, { key: "brands", label: t("Brands", "الشركات") }] }}
+        search={{ value: q, onChange: setQ, placeholder: t("Search brand, model or generation", "البحث عن شركة أو طراز أو جيل") }}
+        filters={<FilterChips value={show} onChange={setShow} filters={chipFilters} />}
+        above={<ManageEntry icon="add-circle-outline" title={t("Add brand, model or generation", "إضافة شركة أو طراز أو جيل")} sub={t("Pick or type a name; missing ones are added from the list", "اختر أو اكتب اسمًا؛ يُضاف الناقص من القائمة")} onPress={() => { setCar(NO_CAR); setAdding(true); }} />}
+        items={items} keyOf={x => x.key} renderItem={x => x.node()}
+        loading={!tax && !data.error} error={data.error ? t("Could not load catalog. Parts Admin permission is required.", "تعذّر تحميل الكتالوج. يلزم صلاحية إدارة قطع الغيار.") : null} onRetry={() => void data.reload()}
+        empty={{ text: q || show !== "ALL" ? t("Nothing matches.", "لا توجد نتائج مطابقة.") : t("The catalog is empty.", "الكتالوج فارغ."), action: q || show !== "ALL" ? { label: t("Clear filters", "مسح الفلاتر"), onPress: () => { setQ(""); setShow("ALL"); } } : undefined }}
+        onRefresh={() => void data.reload()} refreshing={false}
+        detailHint={t("Tap a record to edit it.", "اضغط على سجل لتعديله.")} />
+      <Sheet visible={adding} onClose={() => setAdding(false)} tall title={t("Add to the catalog", "إضافة إلى الكتالوج")} closeLabel={t("Close", "إغلاق")}>
+        {tax ? <View style={{ gap: 12 }}>
+          <Note>{t("Choose an existing brand / model, or type a new name and tap \"+ Add\" at the end of the list.", "اختر شركة / طرازًا موجودًا، أو اكتب اسمًا جديدًا واضغط «+ إضافة» في آخر القائمة.")}</Note>
+          <VehiclePickers tax={tax} value={car} onChange={setCar} reload={async () => { await data.reload(); catalogService.invalidateVehicleList(); }} />
+          <GButton label={t("Done", "تم")} onPress={() => setAdding(false)} />
+        </View> : null}
+      </Sheet>
+      {open && tax ? <RecordSheet key={`${open.kind}-${open.id}`} open={open} tax={tax} onClose={() => setOpen(null)} reload={data.reload} /> : null}
+    </>
+  );
+}
 
-      {car?(
-        <Car3DView
-          key={JSON.stringify([r.validation,car])}
-          model={testPaint?car:{...car,paintNodes:[],paintMaterials:[],bakedPaint:undefined}}
-          assetLoader={loader}
-          interactive
-          color="#c62828"
-          bg={g.cardSoft}
-          style={{height:300}}
-        />
-      ):null}
-
-      {r.hasModel?(
-        <>
-          <GButton
-            variant="secondary"
-            label={testPaint?t("Show original paint","عرض الطلاء الأصلي"):t("Test red paint","تجربة الطلاء الأحمر")}
-            disabled={!paintList.length&&!nodeList.length&&!config?.bakedPaint}
-            onPress={()=>setTestPaint(v=>!v)}
-          />
-          <Note>
-            {t(
-              "Compare original and red paint. Verify that only body paint changes, while windows, tyres, lights and interior keep their finish. If paint surfaces are unavailable, retain the original finish.",
-              "قارن الطلاء الأصلي بالأحمر. تحقق من تغير طلاء الهيكل فقط وبقاء الزجاج والإطارات والأضواء والمقصورة بألوانها. عند عدم توفر أسطح طلاء منفصلة، احتفظ باللون الأصلي.",
-            )}
-          </Note>
-        </>
-      ):null}
-
-      {r.validation?(
-        <>
-          <GText>{r.validation.valid?t("Technical validation passed","اجتاز التحقق التقني"):t("Validation failed","فشل التحقق")}</GText>
-          <GText>{`${t("Bytes / triangles","بايت / مثلثات")}: ${r.validation.bytes} / ${r.validation.triangles}`}</GText>
-          <GText>{`${t("Dimensions (m)","الأبعاد (م)")}: ${dimensions}`}</GText>
-          {r.validation.accessoryGate!==undefined?<GateSummary gate={r.validation.accessoryGate as ModelGate|null}/>:null}
-        </>
-      ):null}
-
-      {r.status!=="PUBLISHED"?(
-        <>
-          <Entry label={t("Vehicle length (m)","طول المركبة (م)")} value={length} onChange={changed(setLength)} numeric/>
-          <Entry label={t("Source up correction (degrees)","تصحيح المحور الرأسي للمصدر (درجات)")} value={up} onChange={changed(setUp)} numeric/>
-          <Entry label={t("Source heading correction (degrees)","تصحيح اتجاه مقدمة المصدر (درجات)")} value={heading} onChange={changed(setHeading)} numeric/>
-          <Entry label={t("Ground offset (m)","الإزاحة عن الأرض (م)")} value={ground} onChange={changed(setGround)} numeric/>
-          <Entry label={t("Paint materials (comma separated)","خامات الطلاء (مفصولة بفواصل)")} value={paint} onChange={changed(setPaint)}/>
-          <Entry label={t("Paint nodes (optional, comma separated)","عناصر الطلاء (اختيارية، مفصولة بفواصل)")} value={nodes} onChange={changed(setNodes)}/>
-          <Note>
-            {t(
-              "Orientation corrections are applied to the original source. Verify front +Z, upright body, wheels and grounding after validation. Complex mesh zones and accessory settings remain internal.",
-              "تُطبّق تصحيحات الاتجاه على المصدر الأصلي. تحقق من المقدمة +Z والاستقامة والعجلات والأرضية بعد التحقق. تبقى المناطق المعقدة وإعدادات الإضافات داخلية.",
-            )}
-          </Note>
-          <GButton variant="secondary" label={t("Validate again / prepare preview","التحقق مجددًا / تجهيز العرض")} disabled={busy} onPress={validate}/>
-          <Entry label={t("Review notes","ملاحظات المراجعة")} value={notes} onChange={setNotes} multiline/>
-          <Confirm
-            label={t(
-              "I visually verified identity, production period, orientation, wheels, grounding, paint and redistribution rights.",
-              "تحققت بصريًا من الهوية وفترة الإنتاج والاتجاه والعجلات والأرضية والطلاء وحقوق إعادة التوزيع.",
-            )}
-            value={verified}
-            onChange={setVerified}
-            disabled={!r.hasModel||busy||dirty}
-          />
-          {r.existingModel3dKey?(
-            <Confirm
-              label={t(
-                "Replace the current model: on approval the old model and its part map and fits are deleted",
-                "استبدال النموذج الحالي: عند الاعتماد يُحذف النموذج القديم مع خريطة القطع والتركيبات",
-              )}
-              value={replace}
-              onChange={setReplace}
-            />
-          ):null}
-          <GButton label={t("Approve and publish to customers","اعتماد ونشر للعملاء")} disabled={publishBlocked} onPress={publish}/>
-        </>
-      ):null}
-    </Card>
+/** One brand / model / generation: its fields, Active, Save; Delete when unused (brands, models) or the usage panel (generations). */
+function RecordSheet({ open, tax, onClose, reload }: { open: Open; tax: Taxonomy; onClose: () => void; reload: () => Promise<unknown> }) {
+  const { t, isArabic } = useL();
+  const [values, setValues] = useState(open.values), [active, setActive] = useState(open.active), [busy, setBusy] = useState(false), [error, setError] = useState<string | null>(null);
+  const set = (k: string) => (v: string) => setValues(s => ({ ...s, [k]: v }));
+  const work = async (fn: () => Promise<unknown>) => {
+    setBusy(true); setError(null);
+    try { await fn(); await reload(); catalogService.invalidateVehicleList(); await refreshRuntimeModels(); onClose(); }
+    catch (e) { setError(t((e as Error).message, "تعذّر إكمال الإجراء. تحقق من التفاصيل والتكرار والمراجع التاريخية.")); }
+    finally { setBusy(false); }
+  };
+  const save = () => work(async () => {
+    const body: Record<string, unknown> = { ...values, isActive: active };
+    for (const k of Object.keys(body)) if (body[k] === "") delete body[k];
+    if (open.kind === "brands") body.aliases = (values.aliases ?? "").split(",").map(x => x.trim()).filter(Boolean);
+    else { if (values.yearFrom) body.yearFrom = Number(values.yearFrom); if (values.yearTo) body.yearTo = Number(values.yearTo); }
+    await vehicleCatalog.save(open.kind, open.id, body);
+  });
+  const title = open.kind === "brands" ? t("Brand", "الشركة") : open.kind === "models" ? t("Model", "الطراز") : t("Generation", "الجيل");
+  const years = <>
+    <Field label={t("Production start year", "بداية الإنتاج")} value={values.yearFrom ?? ""} onChangeText={set("yearFrom")} keyboardType="number-pad" />
+    <Field label={t("Production end year", "نهاية الإنتاج")} value={values.yearTo ?? ""} onChangeText={set("yearTo")} keyboardType="number-pad" />
+  </>;
+  return (
+    <Sheet visible onClose={onClose} tall title={open.id ? `${t("Edit", "تعديل")} · ${title}` : title} closeLabel={t("Close", "إغلاق")}>
+      <View style={{ gap: 12 }}>
+        {open.kind === "brands" ? <>
+          <Field label={t("Brand name", "اسم الشركة")} value={values.name ?? ""} onChangeText={set("name")} />
+          <Field label={t("Arabic brand name", "اسم الشركة بالعربية")} value={values.nameAr ?? ""} onChangeText={set("nameAr")} />
+          <Field label={t("Aliases (comma separated)", "الأسماء البديلة (مفصولة بفواصل)")} value={values.aliases ?? ""} onChangeText={set("aliases")} />
+        </> : null}
+        {open.kind === "models" ? <>
+          <SmartPicker label={t("Brand", "الشركة")} value={values.brandId} options={tax.brands.map(b => ({ id: b.id, label: isArabic ? b.nameAr || b.name : b.name, find: [b.name, b.nameAr, ...b.aliases].join(" ") }))} onChange={set("brandId")} />
+          <Field label={t("Model name", "اسم الطراز")} value={values.model ?? ""} onChangeText={set("model")} />
+          <Field label={t("Arabic model name", "اسم الطراز بالعربية")} value={values.modelAr ?? ""} onChangeText={set("modelAr")} />
+          {years}
+        </> : null}
+        {open.kind === "generations" ? <>
+          <SmartPicker label={t("Model", "الطراز")} value={values.vehicleId} options={tax.vehicles.map(v => ({ id: v.id, label: `${v.displayMake} ${v.model}`, find: v.modelAr }))} onChange={set("vehicleId")} />
+          <Field label={t("Generation code", "رمز الجيل")} value={values.code ?? ""} onChangeText={set("code")} />
+          <Field label={t("Display name (optional)", "اسم العرض (اختياري)")} value={values.nameEn ?? ""} onChangeText={set("nameEn")} />
+          <Field label={t("Arabic display name (optional)", "اسم العرض بالعربية (اختياري)")} value={values.nameAr ?? ""} onChangeText={set("nameAr")} />
+          {years}
+        </> : null}
+        <Toggle label={t("Active", "نشط")} value={active} onChange={setActive} />
+        {error ? <Note tone="danger">{error}</Note> : null}
+        <GButton label={t("Save", "حفظ")} busy={busy} disabled={busy} onPress={() => void save()} />
+        {open.id && open.kind === "generations" ? <GenerationUsage key={open.id} id={open.id} isActive={active} onDone={onClose} /> : null}
+        {open.id && open.kind !== "generations" ? <>
+          <GText soft>{t("Deactivate referenced records. Delete succeeds only when there are no dependent records or historical references.", "عطّل السجلات المرتبطة. ينجح الحذف فقط عند عدم وجود سجلات تابعة أو مراجع تاريخية.")}</GText>
+          <GButton variant="danger" label={t("Delete unused record", "حذف سجل غير مستخدم")} disabled={busy} onPress={() => void work(() => vehicleCatalog.remove(open.kind, open.id!))} />
+        </> : null}
+      </View>
+    </Sheet>
   );
 }

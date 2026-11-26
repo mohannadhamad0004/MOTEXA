@@ -1,6 +1,20 @@
+// The shared category list = List (read only): MOTEXA manages the taxonomy; a shop picks one while editing a product.
 import { useState } from "react";
-import { ProviderLayout } from "../../../components/layout/ProviderLayout";
-import { SearchBar } from "../../../components/ui/Input";
-import { ALL_CATEGORIES,labelOf } from "../../../core/constants/categories";
-import { Panel,Text,useDT } from "../../provider/portal/ui";
-export default function CategoriesPage(){const d=useDT(),[q,setQ]=useState("");return <ProviderLayout area="parts" title={d.t("Categories","الفئات")}><Panel><Text style={{color:d.muted,textAlign:d.align,lineHeight:22}}>{d.t("MOTEXA manages the shared taxonomy. Choose an existing category while editing a product.","تدير موتكسا تصنيف الفئات المشترك. اختر فئة موجودة عند تعديل المنتج.")}</Text></Panel><SearchBar value={q} onChange={setQ} placeholder={d.t("Search categories","ابحث عن فئة")}/>{ALL_CATEGORIES.filter(c=>labelOf(c,d.ar).toLowerCase().includes(q.toLowerCase())).map(c=><Panel key={c.key}><Text style={{color:d.ink,textAlign:d.align}}>{labelOf(c,d.ar)}</Text></Panel>)}</ProviderLayout>;}
+import { ManagePage, ManageRow } from "../../../components/manage/ManagePage";
+import { CATALOG_GROUPS, labelOf } from "../../../core/constants/categories";
+import { useL } from "../../../core/hooks/useL";
+
+export default function CategoriesPage() {
+  const { t, isArabic } = useL();
+  const [q, setQ] = useState("");
+  const all = CATALOG_GROUPS.flatMap((g) => g.categories.flatMap((c) => (c.children ?? [c]).map((k) => ({ key: k.key, title: labelOf(k, isArabic), sub: [labelOf(g, isArabic), c.children ? labelOf(c, isArabic) : null].filter(Boolean).join(" · "), find: [k.en, k.ar, c.en, c.ar, g.en, g.ar].join(" ").toLowerCase() }))));
+  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const rows = all.filter((r) => words.every((w) => r.find.includes(w)));
+  return (
+    <ManagePage title={t("Categories", "الفئات")} line={t("Managed by MOTEXA · choose one while editing a product", "تديرها موتكسا · اختر فئة عند تعديل المنتج")}
+      search={{ value: q, onChange: setQ, placeholder: t("Search categories", "ابحث عن فئة") }}
+      items={rows} keyOf={(r) => r.key} renderItem={(r) => <ManageRow title={r.title} sub={r.sub} />}
+      loading={false} error={null} onRetry={() => undefined}
+      empty={{ text: t("No category matches.", "لا توجد فئة مطابقة."), action: { label: t("Clear search", "مسح البحث"), onPress: () => setQ("") } }} />
+  );
+}

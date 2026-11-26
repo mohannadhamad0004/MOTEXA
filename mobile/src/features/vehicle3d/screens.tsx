@@ -10,71 +10,8 @@ import { Car3DView } from "../car3d/Car3DView";
 import { refreshRuntimeModels } from "../car3d/runtimeModels";
 import { gType, useGarageTheme } from "../../theme/garage";
 import { privateAssetBase64, submissionApi, submissionModel, views, type Submission, type ViewName } from "./api";
+import { Check, ModelPreview, Photo, stageLabels, statusLabels, validationArabic } from "./submission";
 
-const labels = {
-  front: ["Front", "الأمام"], rear: ["Rear", "الخلف"], left: ["Left side", "الجانب الأيسر"], right: ["Right side", "الجانب الأيمن"],
-} as const;
-const statusLabels = {
-  DRAFT: ["Add four photos", "أضف أربع صور"], PROCESSING: ["Creating your private model…", "جارٍ إنشاء نموذجك الخاص…"],
-  READY: ["Your private model is ready", "نموذجك الخاص جاهز"], SUBMITTED: ["Under review", "قيد المراجعة"],
-  APPROVED: ["Approved for MOTEXA catalog", "معتمد لكتالوج موتكسا"], REJECTED: ["Submission rejected", "تم رفض الطلب"],
-  FAILED: ["Generation failed", "تعذّر إنشاء النموذج"],
-} as const;
-const stageLabels:Record<string,readonly [string,string]>={UPLOAD:["Upload photos","رفع الصور"],QUEUED:["Ready to generate","جاهز للإنشاء"],REQUESTING:["Starting generation","بدء إنشاء النموذج"],GENERATING:["Generating","جارٍ إنشاء النموذج"],DOWNLOADING:["Downloading private model","تنزيل النموذج الخاص"],PREPARING:["Preparing model","تجهيز النموذج"],READY:["Ready to preview","جاهز للعرض"],FAILED:["Generation failed","تعذّر إنشاء النموذج"]};
-
-function Check({ label, checked, onPress, disabled }: { label: string; checked: boolean; onPress: () => void; disabled?: boolean }) {
-  const { g, row, align } = useGarageTheme();
-  return <Pressable accessibilityRole="checkbox" accessibilityState={{ checked, disabled }} accessibilityLabel={label} disabled={disabled} onPress={onPress} style={[row,{ minHeight: 48, gap: 12, alignItems: "center", paddingVertical: 10, opacity: disabled ? .5 : 1 }]}>
-    <GText style={{ color: g.accentText, fontSize: 22 }}>{checked ? "☑" : "☐"}</GText>
-    <GText style={[gType.bodySm,align,{ flex: 1, minWidth: 0 }]}>{label}</GText>
-  </Pressable>;
-}
-const validationArabic: Record<string,string> = {
-  "Model exceeds the configured size limit.": "يتجاوز حجم النموذج الحد المسموح.",
-  "Invalid GLB container.": "ملف GLB غير صالح.",
-  "Invalid GLB JSON.": "بيانات ملف GLB غير صالحة.",
-  "Model must be self-contained, with no resource URLs.": "يجب أن يحتوي الملف على موارده كاملة دون روابط خارجية.",
-  "Animated or skinned models are not supported for catalog promotion.": "لا يمكن اعتماد النماذج المتحركة أو ذات الهياكل العظمية.",
-  "Vehicle length must be between 2.5 and 8 metres.": "يجب أن يكون طول السيارة بين ٢٫٥ و٨ أمتار.",
-  "GLB could not be loaded.": "تعذّر تحميل ملف النموذج.",
-  "Model must contain one nonempty scene.": "يجب أن يحتوي النموذج على مشهد واحد غير فارغ.",
-  "Only finite triangle geometry is supported.": "يجب أن تكون هندسة النموذج مثلثات ذات إحداثيات صالحة.",
-  "Invalid geometry indices.": "فهارس هندسة النموذج غير صالحة.",
-  "Model needs nonzero geometry and at most 500,000 triangles.": "يجب أن يحتوي النموذج على هندسة فعلية وبحد أقصى ٥٠٠ ألف مثلث.",
-  "Invalid or extreme model bounds.": "أبعاد النموذج غير صالحة أو متطرفة.",
-  "Model is not upright. Correct its orientation before review.": "النموذج غير قائم. صحّح اتجاهه قبل المراجعة.",
-  "Bounds do not have sensible vehicle proportions.": "نسب أبعاد النموذج لا تناسب مركبة.",
-  "Model scale is extreme.": "مقياس النموذج متطرف.",
-  "Normalized model exceeds the configured size limit.": "يتجاوز النموذج الحد المسموح بعد ضبط المقياس.",
-  "Decoded geometry exceeds the safe memory limit.": "تتجاوز هندسة النموذج الحد الآمن للذاكرة بعد فك الضغط.",
-  "Only embedded JPEG, PNG and WebP textures are supported.": "يُسمح فقط بخامات JPEG وPNG وWebP المضمّنة داخل الملف.",
-  "Texture buffer is invalid.": "بيانات خامات النموذج غير صالحة.",
-  "Textures exceed safe decoding limits or cannot be loaded.": "خامات النموذج تتجاوز حدود فك الضغط الآمنة أو تعذّر تحميلها.",
-  "The MOTEXA viewer could not render this model. Check the local Three.js r160/browser setup and model materials.": "تعذّر عرض النموذج في عارض موتكسا. تحقق من إعداد Three.js r160 والمتصفح وخامات النموذج.",
-};
-
-export function Photo({ s, view, admin }: { s: Submission; view: ViewName; admin: boolean }) {
-  const [uri, setUri] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
-  const { t } = useL();
-  const hasPhoto = s.photos[view];
-  useEffect(() => {
-    let current = true;
-    if (hasPhoto) void privateAssetBase64(s.id,view,admin).then(b64 => { if (current) setUri(`data:image/jpeg;base64,${b64}`); }, () => { if (current) setFailed(true); });
-    return () => { current = false; };
-  }, [s.id, hasPhoto, s.photoRevision, view, admin]);
-  return <View style={{ gap: 6 }}>
-    <GText style={gType.label}>{t(labels[view][0],labels[view][1])}</GText>
-    {uri ? <Image accessibilityLabel={t(labels[view][0],labels[view][1])} source={{ uri }} style={{ width: "100%", height: 160, borderRadius: 12 }} resizeMode="contain" /> : <GText soft>{failed ? t("Could not load photo. Refresh to retry.", "تعذّر تحميل الصورة. حدّث للمحاولة.") : s.photos[view] ? t("Loading private photo…", "جارٍ تحميل الصورة الخاصة…") : t("Photo required", "الصورة مطلوبة")}</GText>}
-  </View>;
-}
-export function ModelPreview({ s, admin }: { s: Submission; admin: boolean }) {
-  const { g } = useGarageTheme();
-  const { id, lengthM, make, model: name, generationName } = s;
-  const model = useMemo(() => submissionModel({id,lengthM,make,model:name,generationName}), [id,lengthM,make,name,generationName]);
-  const loader = useCallback(() => privateAssetBase64(s.id,"model",admin), [s.id,admin]);
-  return <Car3DView model={model} assetLoader={loader} color="#c3c7cc" bg={g.cardSoft} interactive style={{ height: 300, borderRadius: 16 }} />;
-}
 function SubmissionBody({ s, admin, reload }: { s: Submission; admin: boolean; reload: () => Promise<unknown> }) {
   const { t } = useL(); const { g, align } = useGarageTheme();
   const [busy,setBusy] = useState(false), [error,setError] = useState<string | null>(null);
@@ -176,34 +113,5 @@ export function CustomerVehicle3DScreen() {
       }} /> : null}
       {submissions.filter(s => s.id !== current?.id).map(s => <Card key={s.id}><GText>{`${s.make} ${s.model} ${s.year}`}</GText><GText>{t(statusLabels[s.status][0],statusLabels[s.status][1])}</GText>{s.reviewNotes ? <GText soft>{s.reviewNotes}</GText> : null}<GButton variant="secondary" label={t("Open submission", "فتح الطلب")} onPress={() => setSelected(s.id)} /></Card>)}
     </View>
-  </GaragePage>;
-}
-export function AdminVehicle3DList() {
-  const { t } = useL(); const list = useLoad(() => submissionApi.list(true), [],15000);
-  const [filter,setFilter]=useState("SUBMITTED");
-  const filters:readonly [string,string,string][]=[["SUBMITTED","Pending review","قيد المراجعة"],["PROCESSING","Generating","جارٍ الإنشاء"],["FAILED","Failed","فشل الإنشاء"],["APPROVED","Approved","معتمد"],["REJECTED","Rejected","مرفوض"],["ALL","All","الكل"]];
-  const filtered=(list.data??[]).filter(s=>filter==="ALL"||s.status===filter);
-  return <GaragePage hero={<GarageHero variant="detail" backLabel={t("Back", "رجوع")} onBack={() => router.back()} title={t("Customer 3D submissions", "طلبات النماذج ثلاثية الأبعاد")} line={t("Verify before sharing with the catalog.", "تحقق قبل المشاركة في الكتالوج.")} />} onRefresh={() => void list.reload()} refreshing={list.loading && !!list.data}>
-    <View style={{ gap: 14 }}>
-      <View style={{flexDirection:"row",flexWrap:"wrap",gap:8}}>{filters.map(([key,en,ar])=><Chip key={key} label={t(en,ar)} on={filter===key} onPress={()=>setFilter(key)}/>)}</View>
-      {list.error ? <Note tone="danger">{t("Could not load submissions. Parts Admin access is required.", "تعذّر تحميل الطلبات. يلزم صلاحية إدارة قطع الغيار.")}</Note> : null}
-      {list.loading && !list.data ? <GText>{t("Loading…", "جارٍ التحميل…")}</GText> : null}
-      {list.data&&filtered.length === 0 ? <Note>{t("No models in this state.", "لا توجد نماذج بهذه الحالة.")}</Note> : null}
-      {filtered.map(s => <Card key={s.id}>
-        <GText style={gType.title}>{`${s.make} ${s.model} ${s.year}`}</GText>
-        <GText soft>{s.generationName}</GText><GText selectable style={gType.caption}>{s.id}</GText>
-        <GText>{t(statusLabels[s.status][0],statusLabels[s.status][1])}</GText>
-        <GText soft>{s.submittedAt ? new Date(s.submittedAt).toLocaleDateString() : "—"}</GText>
-        <GText soft>{s.hasModel ? t("Generated GLB available", "النموذج المُنشأ متاح") : t("No generated model", "لا يوجد نموذج مُنشأ")}</GText>
-        <GButton style={{ marginTop: 10 }} label={t("Inspect submission", "فحص الطلب")} onPress={() => router.push(`/dept/3d-submissions/${s.id}` as Href)} />
-      </Card>)}
-    </View>
-  </GaragePage>;
-}
-export function AdminVehicle3DDetail() {
-  const { id } = useLocalSearchParams<{id: string}>(); const { t } = useL();
-  const item = useLoad(() => submissionApi.get(id,true), [id]);
-  return <GaragePage hero={<GarageHero variant="detail" backLabel={t("Back", "رجوع")} onBack={() => router.back()} title={t("Verify vehicle model", "التحقق من نموذج المركبة")} line={t("Parts Admin review", "مراجعة إدارة قطع الغيار")} />} onRefresh={() => void item.reload()} refreshing={item.loading && !!item.data}>
-    {item.data ? <SubmissionBody key={JSON.stringify([item.data.id,item.data.modelRevision,item.data.existingModel3dKey])} s={item.data} admin reload={item.reload} /> : item.error ? <Note tone="danger">{t("Submission unavailable or access denied.", "الطلب غير متاح أو لا تملك الصلاحية.")}</Note> : <GText>{t("Loading…", "جارٍ التحميل…")}</GText>}
   </GaragePage>;
 }

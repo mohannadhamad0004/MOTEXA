@@ -11,7 +11,7 @@ import { useLanguage } from "../../../i18n/LanguageContext";
 import { api } from "../../../core/config/api";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { adminAccessoryApi } from "../../../features/accessory3d/api";
-import { NEEDS_ACTION } from "../../../features/department/ThreeDRequests";
+import { NEEDS_ACTION } from "../../../features/department/partsAdmin";
 import { rememberDepartment } from "../../../features/department/DepartmentContext";
 import type { DeptKey } from "../../../features/department/departments";
 

@@ -1,5 +1,6 @@
 // Work with MOTEXA: one account has one role. Said before applying and again before submitting (only to customer applicants).
-import { MechanicNote, useMechanicTheme } from "../../components/MechanicUI";
+import { Note } from "../../components/garage";
+import { useL } from "../../core/hooks/useL";
 import { useSessionUser } from "../../core/session/session";
 
 export type WorkKind = "MECHANIC" | "TOW" | "PARTS";
@@ -26,7 +27,7 @@ export function applicationStatus(t: T, s: string): [string, "neutral" | "accent
 
 /** In the application wizards, before Submit: shown to a customer applicant only. */
 export function ProviderAccountNote({ kind }: { kind: WorkKind }) {
-  const m = useMechanicTheme();
+  const { t } = useL();
   if (useSessionUser().role !== "CUSTOMER") return null;
-  return <MechanicNote>{providerAccountText(m.t, kind)}</MechanicNote>;
+  return <Note icon="person-circle-outline">{providerAccountText(t, kind)}</Note>;
 }

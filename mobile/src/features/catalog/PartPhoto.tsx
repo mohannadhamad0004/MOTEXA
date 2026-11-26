@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import { useEffect, useState } from "react";
 import { View, ViewStyle } from "react-native";
-import { Text } from "../../components/ui/Text";
+import { GText } from "../../components/garage";
 import { isDevSeedTile } from "../../core/constants/files";
 
 /** Clean light studio background for product photos, in both themes (photos are shot on white / light grey). */
@@ -34,7 +34,7 @@ export function PartPhoto({ uri, style, onFail }: { uri?: string | null; style?:
           onLoad={(e) => isDevSeedTile(e.source.width, e.source.height) && fail()}
         />
       ) : (
-        <Text accessibilityElementsHidden style={{ color: "#B9AFA3", fontSize: 30, fontWeight: "800" }}>M</Text>
+        <GText accessibilityElementsHidden style={{ color: "#B9AFA3", fontSize: 30, fontWeight: "800" }}>M</GText>
       )}
     </View>
   );

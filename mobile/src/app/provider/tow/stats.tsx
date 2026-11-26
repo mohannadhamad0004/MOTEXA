@@ -1,54 +1,33 @@
-import { router } from "expo-router";
+// The company's numbers = Dashboard (a sub-page: no hero), counted from its real jobs and reviews (nothing estimated).
 import { View } from "react-native";
-import { Card, ErrorState, GarageHero, GText, ListRow, Section, SkeletonRows } from "../../../components/garage";
-import { ProviderLayout as GaragePage } from "../../../components/layout/ProviderLayout";
+import { GText } from "../../../components/garage";
+import { gType } from "../../../theme/garage";
+import { Block, Facts, Kpis, Loaded, Page } from "../../../components/manage/Page";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { companyStatsApi } from "../../../features/tow/dispatchService";
 import { RatingText } from "../../../features/tow/DriverCard";
-import { gType, useGarageTheme } from "../../../theme/garage";
 
-/** The company's numbers, counted from its real jobs and reviews (nothing estimated). */
 export default function CompanyStats() {
   const { t } = useL();
-  const { g, row, align } = useGarageTheme();
   const state = useLoad(() => companyStatsApi.get(), []);
-  const s = state.data;
-  const tile = (label: string, value: string | number) => (
-    <Card pad={12} style={{ flexBasis: "47%", flexGrow: 1 }}>
-      <GText soft style={[gType.caption, align]}>{label}</GText>
-      <GText style={[gType.title, { fontSize: 24, color: g.ink }, align]}>{String(value)}</GText>
-    </Card>
-  );
   return (
-    <GaragePage onRefresh={state.reload} hero={<GarageHero variant="detail" onBack={() => (router.canGoBack() ? router.back() : router.navigate("/provider/tow"))} title={t("Statistics", "الإحصائيات")} line={s ? t(`${s.total} requests`, `${s.total} طلب`) : undefined} />}>
-      {state.error && !s ? <ErrorState text={state.error} onRetry={state.reload} retryLabel={t("Retry", "إعادة المحاولة")} /> : null}
-      {!s && !state.error ? <SkeletonRows count={3} /> : null}
-      {s ? (
+    <Page title={t("Statistics", "الإحصائيات")} line={state.data ? t(`${state.data.total} requests`, `${state.data.total} طلب`) : undefined} onRefresh={() => void state.reload()} refreshing={false}>
+      <Loaded state={state}>{(s) => (
         <>
-          <View style={[row, { flexWrap: "wrap", gap: 10 }]}>
-            {tile(t("Completed", "مكتملة"), s.completed)}
-            {tile(t("Open now", "مفتوحة الآن"), s.open)}
-            {tile(t("Cancelled", "ملغاة"), s.cancelled)}
-            {tile(t("Declined", "مرفوضة"), s.declined)}
-            {tile(t("Not answered in time", "لم يُرد عليها في الوقت"), s.timeouts)}
-            {tile(t("Distance towed (km)", "المسافة المسحوبة (كم)"), s.distanceKm)}
-          </View>
-          <Card pad={12} style={{ marginTop: 12 }}>
-            <View style={[row, { alignItems: "center", justifyContent: "space-between" }]}>
-              <GText style={[gType.label, { fontWeight: "800" }]}>{t("Company rating", "تقييم الشركة")}</GText>
-              <RatingText rating={s.rating} />
-            </View>
-          </Card>
-          <Section title={t("Drivers", "السائقون")}>
-            <Card pad={12}>
-              {s.drivers.map((d, i) => (
-                <ListRow key={d.id} divider={i > 0} icon="person-outline" title={d.name} sub={t(`${d.completed} completed`, `${d.completed} مكتملة`)} end={<RatingText rating={d.rating} />} />
-              ))}
-            </Card>
-          </Section>
+          <Kpis items={[
+            { label: t("Completed", "مكتملة"), value: s.completed, icon: "checkmark-done-outline" }, { label: t("Open now", "مفتوحة الآن"), value: s.open, icon: "time-outline" },
+            { label: t("Cancelled", "ملغاة"), value: s.cancelled }, { label: t("Declined", "مرفوضة"), value: s.declined },
+            { label: t("Not answered in time", "لم يُرد عليها في الوقت"), value: s.timeouts }, { label: t("Distance towed (km)", "المسافة المسحوبة (كم)"), value: s.distanceKm },
+          ]} />
+          <Block><Facts rows={[[t("Company rating", "تقييم الشركة"), <RatingText key="r" rating={s.rating} />]]} /></Block>
+          {s.drivers.length ? (
+            <Block title={t("Drivers", "السائقون")}>
+              <Facts rows={s.drivers.map((d) => [d.name, <View key={d.id} style={{ gap: 2 }}><GText style={gType.bodySm}>{t(`${d.completed} completed`, `${d.completed} مكتملة`)}</GText><RatingText rating={d.rating} /></View>] as [string, React.ReactNode])} />
+            </Block>
+          ) : null}
         </>
-      ) : null}
-    </GaragePage>
+      )}</Loaded>
+    </Page>
   );
 }

@@ -1,265 +1,158 @@
-# RUN-LOG — unattended run, 2026-11-18 (E-03 refresh tokens, login security, D-05, admin prisma, direction style)
+# RUN-LOG — one UI system for every provider / admin role (started 2026-11-25)
 
-## EVENING FIXES (2026-11-18, 18:15–18:45 UTC, your backend :5000 + Expo web :8081)
-- Privacy: live as mechanic.nablus@ (EN + AR): before accepting, "Near Nablus (approximate)", no phone, API point 32.23/35.24, no exact text anywhere in the response or page. After accepting: exact address, pin and phone. Another mechanic gets 404. Test request deleted afterwards.
-- Signup photo: a 4000×3000 38 MB PNG attaches in the mechanic signup form (AR); not submitted.
-- Dashboard: tow 6 approved / 2 pending, parts 10 / 0, both match the DB; EN + AR.
-- Requests tab: 6 waiting (2 tow companies, 3 trucks, 0 drivers, 0 shops, 1 3D, 0 mechanics); rows open /dept/requests (right department), /dept/tows/drivers, /dept/requests?seg=3d.
-- Cleanup: see STATUS.md (3 TEST_DATA_REMOVED audit rows).
-- Found, not fixed: MechanicReviewScreen logs "Unexpected text node: ." on web.
+Brief (approved): `docs/guide/10-ui-system.md` (rules + template map). Reference: Accessory fitting on `ManagePage`.
+Order: foundation → parts admin → parts shop (+ provider onboarding) → tow (company, driver, tow admin) → mechanic + mechanics admin → super admin.
+Each role is finished completely (tsc + tests) before the next. A new session continues from the first unticked line below.
+Live checks: backend :5000 (never start another), Expo web on :8095 (mine; :8081 belongs to the human's phone Expo), dev accounts `*@motexa.test`;
+refresh-token rows created by my logins are removed afterwards (+ one TEST_DATA_REMOVED audit row). Screenshots go OUTSIDE the project:
+`C:\Users\mohan\AppData\Local\Temp\claude\motexa-ui-run\<role>\before|after\`.
 
-## LIVE VERIFICATION (2026-11-18, 17:53–18:12 UTC, your backend :5000 + Expo web :8081)
-- :8081 had a fresh bundle; :8090 is still serving an old one (no `getAccessToken` in it). Tests used :8081.
-- Refresh: on the polling tow-status page (customer@, request c1a3da96, polls every 5 s) I replaced the access token with an invalid one. Result: 401 → 1 `POST /auth/refresh` 200 → same request retried 200; polling continued, no dialog, refresh token rotated.
-- Parallel: customer home fires 14–15 calls. With an expired-looking token, 1 refresh and 0 × 401. With an invalid token, 1 refresh and 1 × 401. No sign-out.
-- Logout: `POST /auth/logout` sent; both tokens gone from storage; the old refresh token then gets 401 from the server; `/customer` goes to login.
-- Rate limit (throwaway `throwaway.ratelimit.1118@motexa.test`, made for this and deleted afterwards): 5 × 401, then 429 even with the right password. EN dialog "Too many sign-in attempts. Please wait 15 minutes and try again."; AR dialog "محاولات تسجيل دخول كثيرة…" (390 px, RTL). Unlocked at 18:10 (correct password → 200). Wrong email and wrong password → identical body `INVALID_CREDENTIALS` / "Invalid email or password.".
-- D-05 / direction: superadmin → `/admin`: `/api/auth/me` + `/api/admin-management/dashboard` 200, no `/api/api`, no direction warning.
-- Regression: customer@ → /customer, shop@ → /provider/parts, tow@ → /provider/tow, admin.parts@ → /dept, audit.tow@ (its own password) → /dept. No API errors. Note: I first tried audit.tow@ with the dev password (one 401); the later successful login cleared that.
-- Then: the D-05 URL pattern was fixed with `apiUrl()` in 7 Diala files + login.tsx (listed in STATUS.md). Live: dashboard, providers, profile, invitations and activation-verify each call `/api/...` once. Mobile tsc 0, tests 84/84.
-- Cleanup: throwaway user deleted; 11 revoked refresh-token rows from my test sessions deleted (0 active ones left from me).
+Templates: **Dashboard** · **List** · **Detail** (maps = Detail with a map body) · **Form** (step flow when needed) · **Inbox** (thread list → thread).
+"Entry rows" = a List of `ManageEntry` rows (profile / settings hubs).
 
-## FINAL REPORT (2026-11-18, run finished; all 5 fixes done, none failed twice)
+## 0. Foundation
+- [x] Page frame + PageHeader (← back, trail, title, one line, ⋮) + crumbs (`useCrumb`, route table, Android back) — `components/manage/*`
+- [x] ManagePage (List) moved onto the new frame
+- [x] Detail helpers (facts rows, sections, sticky primary) · Form helpers (Stepper, fields, `StepFooter`, `useDiscardGuard`) · SmartPicker (brand → model → generation, "+ Add …")
+- [x] InboxPage + ThreadPage · DashboardPage (Mo hero, Needs-you rows, KPI tiles, shortcut rows)
+- [x] Backend: Sketchfab `tags` in the inspection result (+ test)
+- [x] Guard test `mobile/tests/ui-system.test.mjs` (provider/admin screens never use the old frames)
+- [ ] `docs/guide/10-ui-system.md` finalized
 
-**Fixed and how it was verified**
-| # | What | Verified how |
-|---|---|---|
-| 1 | E-03: 15-min access token + 30-day rotating refresh token (SecureStore on the phone, session storage on web); `api()` refreshes once on 401 and retries; tokens are also refreshed ahead of time (< 60 s left) for screens that fetch directly; single-flight refresh so polling screens can't race; reuse of a rotated token revokes that sign-in; logout clears both and revokes on the server | backend `tests/auth-session.test.mjs` (rotate, reuse → revoked, parallel → one winner, logout revoke); mobile `tests/session-refresh.test.mjs` (expiry decode, single flight, 401 clears, offline keeps you signed in, sign-out not undone by a late refresh) |
-| 2 | Login security: 5 failures per email / 20 per IP in 15 min → 429; unknown email compared against a dummy hash; identical 401 for wrong email or wrong password; login screen shows both messages in EN + AR | 3 HTTP tests (identical bodies, timing, lockout) + limiter unit test |
-| 3 | D-05: admin tabs layout uses `apiUrl("/auth/me")` | tsc; code path checked (works with or without `/api` in the env URL) |
-| 4 | `admin.routes.ts` uses the shared `prisma` (test-DB guard applies) | HTTP test: super-admin dashboard 200 on motexa_test; source has no `new PrismaClient` |
-| 5 | `direction` moved out of `StyleSheet.create` in `admin/(tabs)/index.tsx` | web 390 px on a fresh Expo bundle: 0 console errors (the stale :8090 bundle still shows the error) |
+## 1. Parts admin (`dept/*`, MANAGE_SPARE_PARTS)
+- [x] `dept/(tabs)/index` Home → Dashboard (`PartsAdminHome`)
+- [x] `dept/(tabs)/requests` Applications + 3D requests → List (`PartsRequests`, `ApplicationsList`, `ThreeDRequests`)
+- [x] `dept/review/[kind]/[id]` application review → Detail (`applications.tsx`, `review.tsx`)
+- [x] `dept/(tabs)/directory` Shops → List (`PartsShopsPage`)
+- [x] `dept/directory-map`, `dept/map` → Detail (map body)
+- [x] `dept/(tabs)/messages` → Inbox · `dept/thread/[kind]/[id]` → Inbox thread
+- [x] `dept/(tabs)/profile` → entry rows (`DeptProfile`)
+- [x] `dept/edit/shop/[id]`, `dept/edit/product/[id]` → Form (`manage.tsx`)
+- [x] `dept/orders` → List · `dept/orders/[id]` → Detail · `dept/orders/map` → Detail (map)
+- [x] `dept/3d` 3D workspace → Dashboard (hub)
+- [x] `dept/3d/add` + `dept/vehicles/imports/new` → ONE Form "Add 3D model" (auto-check link, preview card, smart pickers, Upload GLB secondary); old route removed
+- [x] `dept/vehicles/imports/[id]` import review → Detail
+- [x] `dept/3d/vehicles` → List · `dept/3d/vehicles/[key]` → Detail
+- [x] `dept/3d/accessories`, `dept/3d/requests` → List
+- [x] `dept/accessory3d` → List · `dept/accessory3d/[id]` → Detail
+- [x] `dept/3d-submissions` → List · `[id]` → Detail
+- [x] `dept/vehicle3d` → List · `[id]` → Detail
+- [x] `dept/vehicles` Vehicle catalog → List + record Form (smart pickers, no "Create missing …" buttons)
+- [x] `dept/vehicles/requests` → List · `dept/vehicles/[id]` → Detail
+- [x] `dept/accessory-zones` (Part maps · Fits · Zones) → List ×3 on the new frame; part-map / zone editors, fit review → Detail
+- [x] `dept/accessory-fits` bulk fits → List (check)
+- [x] Role done: parts admin
 
-Final checks: backend tsc 0, mobile tsc 0, `prisma validate` ok, backend `npm test` **320/320** (isolated motexa_test), mobile tests **84/84**. No git commands were run. Nothing committed.
+## 2. Parts shop (`provider/parts/*`) + provider onboarding
+- [x] tab bar (`ProviderTabs`) check
+- [x] `(tabs)/index` → Dashboard (`ProviderHome`) · `analytics` → Dashboard
+- [x] `(tabs)/products`, `inventory`, `fitment` → List (`ProductsPage`)
+- [x] `(tabs)/orders`, `orders/list` → List (`OrdersPage`) · `orders/[id]` → Detail · `orders/map/[id]` → Detail (map)
+- [x] `(tabs)/messages` → Inbox · `orders/chat/[id]` → Inbox thread
+- [x] `(tabs)/profile` → entry rows (`ProfileHub`) · `settings` → entry rows / Form
+- [x] `[id]` add / edit part, `products/edit/[id]` → Form · `products/[id]` → Detail
+- [x] `inquiries` → List · `inquiries/[id]` → Detail
+- [x] `accessory-3d/[productId]` 3D wizard → Form (step flow)
+- [x] `3d`, `3d/submissions` → List · `3d/preview/[productId]` → Detail
+- [x] `business`, `categories`, `delivery`, `media` → Form
+- [x] `preview` stays in the customer look (on purpose)
+- [x] `provider/onboarding` → Form (step flow) · `onboarding/location` → Form · `onboarding/messages` → Inbox thread
+- [x] Role done: parts shop
 
-**Before you test, on the laptop**
-- Your backend was **not running** on :5000 when I started (connection refused). I didn't start it. Start it with `cd backend; npm run dev`. The migration is already applied to motexa_dev and the Prisma client is already generated.
-- Your Expo web on :8090 is serving an old bundle (it has none of today's changes). Restart Expo with `-c` before testing on the phone.
-- One-time effect: anyone signed in from before this change has no refresh token, so they are asked to sign in once more when their current 15-minute token runs out. After that sign-in they stay signed in.
+## 3. Tow (company, driver, tow admin)
+- [x] tow company tab bar check · `(tabs)/index` → Dashboard · `stats` → Dashboard
+- [x] `(tabs)/jobs`, `requests` → List · `requests/[id]` → Detail
+- [x] `dispatch` (+ `active`, `history`) → List · `dispatch/[id]` → Detail · `live` → Detail (map)
+- [x] `(tabs)/fleet`, `drivers`, `trucks` → List · driver / truck wizards, `[id]` truck → Form
+- [x] `(tabs)/messages` → Inbox · `(tabs)/profile` → entry rows
+- [x] `availability`, `service-area`, `company`, `media`, `settings` → Form
+- [x] `preview` stays in the customer look (on purpose)
+- [x] driver `driver/index` → Dashboard · `driver/job/[id]` → Detail (steps) · `driver/job/chat` → Inbox thread
+- [x] tow admin `dept/(tabs)/index` → Dashboard (`TowAdminHome`) · requests (applications) → List · directory (`TowCompaniesPage`) → List
+- [x] tow admin `dept/tows`, `tows/drivers`, `tows/history`, `tows/reports` → List · `tows/[id]` → Detail · `edit/company`, `edit/truck` → Form
+- [ ] Role done: tow — all tow screens done; left: remove the old UI pieces from 4 shared helper files (see STOP NOTE at the end)
 
-**Database:** one additive migration, `20261118090000_refresh_tokens` (new empty table `RefreshToken`). No dev rows were created or changed; every test ran on motexa_test.
+## 4. Mechanic + mechanics admin
+- [ ] `mechanic/index` (`MechanicApplication`) → Form (step flow) while applying, Dashboard once approved
+- [ ] `mechanic/requests` → List · `mechanic/requests/[id]` → Detail
+- [ ] mechanics admin `dept/(tabs)/index` → Dashboard · requests (`MechanicsRequests`, `MechanicReviewScreen`) → List / Detail · directory → List · `dept/mechanic-requests/[id]` → Detail
+- [ ] Role done: mechanic + mechanics admin
 
-**Left (not fixed, logged in detail below):** the same raw `EXPO_PUBLIC_API_URL + "/api"` pattern (the cause of D-05) is still in 7 more Diala files. Small E-03 edge cases: a duplicated browser tab, the app being killed mid-refresh, a phone clock off by more than 14 minutes on Diala's raw-fetch admin screens, and an offline logout. The four LIST items are below.
+## 5. Super admin (`admin/*`)
+- [ ] tab bar (`admin/(tabs)/_layout`) → the Garage tab bar
+- [ ] `(tabs)/index` → Dashboard · `(tabs)/providers`, `(tabs)/requests` → List · `(tabs)/more` → entry rows
+- [ ] `admin-management` → List (+ invite as a Form) · `departments` → List · `profile` → Form
+- [ ] `shops`, `tow` → List · `shops/[id]`, `tow/[id]` → Detail
+- [ ] Role done: super admin
 
-**Needs your phone:** the whole flow on a real device. SecureStore, waking after idle, and Arabic + light on the login errors have not been checked on a phone. I could not run anything against a live backend because none was running.
+## 6. Cleanup and end
+- [ ] Delete old frames / components no screen uses any more (customer usage checked first); remove unused routes
+- [ ] Guard test passing for every role · tsc + full tests (backend + mobile) · before / after screenshots per role · final report
 
-**Changed in Diala's files** (also in STATUS.md): `mobile/src/app/auth/login.tsx`, `mobile/src/app/admin/(tabs)/_layout.tsx`, `.../(tabs)/index.tsx`, `.../(tabs)/more.tsx`, `.../(tabs)/providers.tsx`, `mobile/src/app/admin/admin-management.tsx`, `mobile/src/app/admin/profile.tsx`, `mobile/src/components/mechanic-api.ts`, `mobile/src/components/MechanicApplication.tsx`, `mobile/src/components/MechanicReviewScreen.tsx`, `backend/src/routes/auth.routes.ts` (shared), `backend/src/routes/admin.routes.ts`.
-
-**Other files changed:** backend `prisma/schema.prisma`, `prisma/migrations/20261118090000_refresh_tokens/`, `src/services/auth-session.service.ts` (new), `tests/auth-session.test.mjs` (new); mobile `src/core/config/api.ts`, `src/core/session/session.tsx`, `src/core/session/sessionExpiry.ts`, `src/features/provider/ui.tsx`, `src/features/vehicle3d/api.ts`, `tests/session-refresh.test.mjs` (new); docs `AGENTS.md` (§3 rule), `docs/agents/STATUS.md`, this file.
-
-**Phone checklist (10)**
-1. Log in as customer@motexa.test, then close Expo Go fully, reopen it: you are still signed in.
-2. Log in and leave the phone idle for **20+ minutes**. Then open Parts, a product and My requests: everything loads and you are not sent to login.
-3. Open a tow request status (or a driver job / chat), leave it open for 20+ minutes: it keeps updating with no "session expired" alert.
-4. Admin (superadmin@motexa.test): leave it idle for 20+ minutes, then switch tabs and open Profile: no sign-in screen.
-5. Log out from Profile, then press Back: you can't get into the app. Log back in: it works.
-6. Log in on two phones (or Expo Go + web) with the same account. Log out on one: the other stays signed in.
-7. Enter a wrong password 5 times for one account. The 6th try shows "Too many sign-in attempts. Please wait 15 minutes…", even with the right password. (That email stays locked for 15 minutes, or until the backend restarts. Use a test account.)
-8. Repeat 7 in Arabic + light mode: the Arabic message is readable and right-aligned at phone width.
-9. Wrong password vs an email that doesn't exist: both show the same "Invalid email or password" (EN + AR).
-10. Admin home tab in dark + light, EN + AR: the top bar (wordmark + language switch) looks as before, with no red "direction" error in the Expo terminal.
-
-**LIST (not fixed) — recommendations**
-- **D-04, admin Requests tab is a "Coming soon" placeholder** (`app/admin/(tabs)/requests.tsx`). Recommendation: either hide the tab until there is content, or make it a read-only overview that links to what already exists (tow admin requests/drivers waiting, provider applications, mechanic applications, 3D requests) with real counts. Diala's file, so it needs her decision.
-- **Mechanic signup photos aren't resized** (`app/auth/mechanic-signup.tsx` uses `launchImageLibraryAsync({quality:0.5, base64:true})`, which compresses but keeps the full pixel size, and rejects anything over MAX_BYTES). Recommendation: use the existing `core/hooks/pickPhoto.ts` (JPEG, at most 1600 px, quality 0.75). That is a few lines, and big phone photos would stop failing the size check.
-- **The super admin dashboard ignores tow/parts providers** (`admin.routes.ts` `/dashboard` only counts admins, mechanics, mechanic profiles and invitations). Recommendation: add counts for TOW_PROVIDER / PARTS_PROVIDER (active vs pending review), trucks and active tow jobs, using the same `prisma.*.count` pattern. Add matching tiles on the admin home.
-- **A mechanic sees the customer's exact location before accepting** (`mechanic-requests.routes.ts` `common()` returns `location.point` at 6 decimals and the full `locationText` in every status, including REQUESTED). Recommendation: until ACCEPTED, send only the city/area and a rounded point (about 2 decimals, roughly 1 km) or a distance. Send the exact pin after Accept, the same way tow handles privacy. This is a privacy rule (AGENTS.md §4.6), so it's worth doing soon.
-
-## Progress
-- Access check: backend NOT listening on :5000 (connection refused; no `tsx watch` process). Per instructions I did not start one. Verification = tsc + `npm test` (it starts its own backend on a random port against the isolated `motexa_test` DB) + mobile tests.
-- AGENTS.md §3: the rule text "never edit partner-owned files" did not exist literally; the equivalent was the §3 heading "(do not cross without the owner's OK)". Replaced it with the new rule (partner files only for listed bugs, minimal, listed in STATUS.md).
-
-### 1. E-03 refresh tokens — DONE
-- Backend: additive migration `20261118090000_refresh_tokens` (table `RefreshToken`: SHA-256 hash only, familyId, sessionVersion, expiresAt, revokedAt) applied to motexa_dev with `prisma migrate deploy`; `prisma validate` ok; DB-vs-schema diff has no RefreshToken lines (the other diff lines are old `updatedAt` default drift, not touched).
-- `services/auth-session.service.ts`: access JWT stays 15 min; refresh token = 32 random bytes, 30 days, rotated on every use (atomic claim, so two parallel refreshes → one wins); a reused (already rotated/revoked) token revokes the whole family; a password change (sessionVersion) or inactive account ends it.
-- `auth.routes.ts`: login also returns `refreshToken`; new `POST /api/auth/refresh` and `POST /api/auth/logout` (revokes the family; works with an expired access token; never fails).
-- Mobile: `core/session/sessionExpiry.ts` (pure: `expiresSoon`, single-flight `createRefresher`), `core/config/api.ts` (`getAccessToken` refreshes when < 60 s left, `api()` refreshes once on 401 and retries, `saveSession`, `clearSession` = both tokens + server revoke, best effort), `core/session/session.tsx` (sign-out/session check). Every direct token reader now uses `getAccessToken()`, every sign-out `clearSession()`.
-- Storage: SecureStore on native; web keeps the existing session-storage fallback (tab-scoped, gone when the tab closes).
-- Polling screens (tow tracking, driver job, dispatch, chat) all go through `api()` → single-flight refresh, so a 15 s poll that hits the expiry refreshes once and retries.
-- Decision: refresh only when an access token exists (code that deletes the access token still means "signed out").
-- Known limits (logged, not fixed): (a) a duplicated browser tab copies session storage; both tabs then share one refresh token and the second refresh is treated as reuse → both signed out. (b) If the app is killed between the server rotating and the phone saving the new token, the next refresh is "reuse" → sign in again. (c) A phone clock off by > 14 min: `api()` and the session check still recover via the 401 retry; Diala's admin screens that use raw `fetch` would show their own error/sign-in instead. (d) Logout revoke is fire-and-forget: offline logout leaves the server token valid until it expires (30 days) but it is gone from the phone.
-- Tests added: backend `tests/auth-session.test.mjs` (3: rotate + reuse revokes family, parallel single winner, logout revoke) — PASS; mobile `tests/session-refresh.test.mjs` (4) — PASS. Mobile tsc 0, mobile tests 84/84.
-- E-03 checkpoint: backend tsc 0, full `npm test` 316/316 pass (isolated motexa_test), mobile tsc 0, mobile tests 84/84.
-
-### 2. Login security — details
-- `auth.routes.ts` login: failed attempts limited per email (5 / 15 min, case-insensitive) and per IP (20 / 15 min), in-process like the password-reset limiter (`createFailureLimiter` in auth-session.service.ts; a success clears the email counter; the check runs before the password). 429 `{code:"RATE_LIMITED"}`.
-- Unknown email → argon2.verify against a dummy hash made at startup, so it costs the same as a wrong password; both get the identical 401 body `{code:"INVALID_CREDENTIALS", message:"Invalid email or password."}`. The 403 "not active" reply still only comes after a correct password (unchanged).
-- Mobile `login.tsx`: 429 → "Too many sign-in attempts. Please wait 15 minutes and try again." / Arabic; 401 → localized neutral "Invalid email or password." (it showed the English server text in Arabic before).
-- Tests (3 more in `tests/auth-session.test.mjs`): identical 401s + timing (unknown email not < 50 % of wrong-password time), lockout after 5 → 429, unit test of the window/clear. 6/6 PASS.
-- Decision: per-IP counts only failures, so a whole campus behind one NAT is not blocked by normal sign-ins.
-
-### 3. D-05 — DONE
-- `app/admin/(tabs)/_layout.tsx` uses `apiUrl("/auth/me")` (right with or without `/api` in EXPO_PUBLIC_API_URL). Your current `.env` has no `/api` suffix, which is why it worked on this laptop.
-- Same raw `${EXPO_PUBLIC_API_URL}/api/...` pattern still in Diala's `admin/(tabs)/index.tsx`, `providers.tsx`, `admin-management.tsx`, `admin/profile.tsx`, `auth/admin-activation.tsx`, `components/mechanic-api.ts`, `PasswordRecoveryScreen.tsx` (and `login.tsx` builds its own base). NOT changed (not listed); recommendation: switch them to `apiUrl()` in one pass.
-- mobile tsc 0, mobile tests 84/84.
-
-### 5. "Invalid style property direction" — DONE (done before 4 because it is mobile-only and could run while the backend suite was busy)
-- `app/admin/(tabs)/index.tsx`: `direction:'ltr'` moved from `StyleSheet.create` (react-native-web validates only there) to the topbar's inline style; same layout.
-- Verified on web 390 px: your Expo web on :8090 is stale (its bundle contains none of today's edits; its file watcher isn't picking up changes) and still logs the error. A fresh temporary Expo web on :8095 (started by me, stopped afterwards) loads `/auth/login` with 0 console errors (the same page logged the error on :8090). Your :8081 / :8090 Expo processes are untouched.
-- Same pattern still inside `StyleSheet`-free inline objects in LanguageSwitch/more/profile/Mechanic* (inline, so no warning) — nothing to do.
-
-### 2. Login security — DONE
-- Full `npm test` 319/319, backend tsc 0, mobile tsc 0, mobile tests 84/84.
-
-### 4. admin.routes.ts shared prisma — DONE
-- Removed its own `PrismaClient`/`PrismaPg`; imports `prisma` from `src/prisma.ts`. Only one client is left in `src/` (besides type-only uses).
-- New HTTP test: super-admin `/admin-management/dashboard` 200 on motexa_test. Final `npm test` 320/320.
-
----
-
-# RUN-LOG — unattended run, 2026-11-13
-
-## FINAL REPORT (2026-11-13, run finished; no hard stop hit)
-
-**Fixed and verified**
-| ID | What | Verified how |
-|---|---|---|
-| T-05 | Published accessories disappeared for customers after "Render final preview" (`preview()` cleared `visualVerifiedAt`) | Code fix + approved wing repair → customer API wing × E36 `allowed=true`, model + autoFit present |
-| T-04 | "Couldn't load the 3D view" over a loaded car (Accessory fits, rims × E36) | Web 390: rims load via the admin asset (200) and draw on the E36, no overlay |
-| T-01 | New driver invisible to the tow admin | Web 390: "Drivers waiting for licence review (1)" on Requests → driver with photo + licence; KPI counts drivers |
-| T-02 / D-01 | Admin couldn't Approve / Request changes (labels cut at 390 px; photo edit didn't resubmit) | Web + API: Request changes → company sees reason + notification → photo resubmit → PENDING → Approve; Reject needs a reason |
-| T-03 | Drivers saw the company's navigation | Web 390: driver home + job without company links |
-| Tow workflow | Steps 1–7 end to end | API on the real backend + web screens (see Part 2 table) |
-
-**Still broken / owner decisions**
-- ~~E36 front bumper + rims~~ **resolved later the same morning** (repairs + owner re-approval/reactivation; all three `allowed=true`). Original note: the bumper and rims were still `allowed=false` for the customer: the bumper has no `reviewedAt` to restore from; the rims are unpublished and **rims × E36 is NOT approved in the DB** (no FIT_APPROVED after the 17:15 Refit). Your call: a one-row repair (`visualVerifiedAt = publishedAt`) or unpublish → final review → publish; Reactivate + approve the rims.
-- **Grey photos:** your phone-browser result arrived as the placeholder `<shows / doesn't show>`, so per the plan I didn't change anything. From the PC all three photos load over the LAN IP.
-- **Seeded Al-Noor demo job** (`c1a3da96…`, EN_ROUTE since 2026-10-30) blocks customer@motexa.test from requesting Al-Noor. Untouched.
-- 🟡 B-01, B-02, B-03, C-01; ⬜ A-04, D-03; partner files D-04, D-05, E-03, DIRECTION-STYLE. Full list in KNOWN-ISSUES.md.
-
-**Needs your phone:** maps + routes, location permission and live tracking, camera photo upload, Arabic + light on the new driver rows, the grey photos.
-
-**Phone checklist (max 15)**
-Parts (one phone):
-1. admin.parts: Accessory fits → E36 → rims, wing, bumper each draw on the car, no error overlay.
-2. customer: rear wing product → photo visible → **View on my car** → wing on the E36.
-3. customer: phone browser `http://<LAN-IP>:5000/api/files/public/db40b665-d480-40cb-93e6-7d2c15778a65` → does the wing photo show?
-4. customer: front bumper / rims → "coming soon" until you do the owner actions above.
-5. Arabic + light on the product page.
-
-Tow (two phones; A = company/admin/customer, B = driver):
-6. A e2e.tow.1794038749: **Add driver** with a camera photo + licence.
-7. A admin.tow: Requests → "Drivers waiting…" → Request changes → (company edits photo) → Approve.
-8. A customer: request E2E Towing, pick "Run T.", set the destination pin; plate masked, no phone.
-9. B run.driver2.840323: Accept → On the way (allow location) → map route to the pickup.
-10. A customer: truck moving on the map, ETA, chat both ways.
-11. B: Arrived → Loading → A: can't cancel.
-12. B: Towing (route to destination) → Delivered → Completed.
-13. A customer: rate → rating shown on the driver/company card.
-14. A admin.tow: active tows map during the job; Tow history after.
-15. Arabic + light on the driver job screen.
-
-**Records created:** see Part 2 "Test data" (2 trucks, 2 drivers, 3 tow requests, chat, notifications), plus the audit row for the wing repair and the T-02 test decisions on driver@motexa.test (left APPROVED; its photo file re-uploaded with the same bytes).
-
-**Left running:** your backend (port 5000, untouched). I also started Expo web on port 8085 for the checks; it's still running (stop it with Ctrl+C in its window, or end the `expo start --web --port 8085` node process).
-
-**Files changed this run:** backend `services/accessory3d.ts` (preview), `services/accessory-autofit.ts`, `routes/tow.routes.ts`, `services/tow-dispatch.ts`; mobile `car3d/useCar3D.ts`, `car3d/Overlay.tsx`, `department/TowAdminHome.tsx`, `department/applications.tsx`, `app/dept/tows/drivers.tsx`, `components/layout/ProviderLayout.tsx`; docs `RUN-LOG.md`, `DEMO-CHECKLIST.md`, `KNOWN-ISSUES.md`, `BUGS-ADMIN-3D.md`, `STATUS.md`. Nothing committed. tsc: backend 0, mobile 0.
-
----
-
-## Access check (06:35 UTC)
-- Backend: `http://127.0.0.1:5000/api/health` OK, also on the LAN IP `192.168.88.8:5000`. Your own `npm run dev` (`tsx watch`) keeps running; I did not start another one.
-- PostgreSQL: reachable through the backend Prisma client.
-
-## PART 0 — accessory "coming soon" + photos
-
-### Cause (found earlier this session)
-- `preview()` in `backend/src/services/accessory3d.ts` set `visualVerifiedAt = null` even on a PUBLISHED accessory. The customer gate (`forProduct` → `live`) needs `visualVerifiedAt`, and publish only runs from READY_FOR_FINAL_REVIEW, so the part was stuck: still PUBLISHED in admin, but hidden from customers with no way back. Final review requires a new preview after every fit approval, so each approval at 17:06–17:07 cleared it.
-- **Fix:** `preview()` keeps `visualVerifiedAt` when the status is PUBLISHED. `tsx watch` reloaded it at 08:28:10 local time; confirmed by comparing process start time with the file write time.
-
-### Approved one-time repair (owner approved): `visualVerifiedAt = reviewedAt`
-- Ran in one transaction, with an audit row `ACCESSORY3D_VISUAL_VERIFICATION_RESTORED` (actorId null, details: source + reason) per changed row.
-- **Result: only the wing changed** (`e6fefd78…` → 2026-11-05T10:21:48Z). The bumper (`3329a3e2…`) and rims (`9359edf8…`) have **`reviewedAt = null`**: the demo seeds set `visualVerifiedAt` but never `reviewedAt`, and neither has a PUBLISH audit row. As agreed, rows with null `reviewedAt` stay unchanged. **Decision:** I did not pick another source value (that would be an unapproved publish decision). → **Owner action.**
-- Read-only check after the repair: wing `visualVerifiedAt` set; bumper and rims still null.
-
-### Fits × E36 (read-only, 06:35 UTC)
-| part | fitVersion | approvedAt |
-|---|---|---|
-| wing | 4 | 2026-11-12 17:06:53 |
-| front bumper | 6 | 2026-11-12 17:07:08 |
-| rims | 8 | **null** |
-- The owner said the rims were re-approved, but the DB has **no FIT_APPROVED audit for rims after the 17:15:41 REFIT**, and `approvedAt` is still null. The rims are also **deactivated** (unpublished at 2026-11-12 15:57). → **Owner action** (rules: I don't approve fits).
-
-### Customer API as customer@motexa.test, E36 generation `6e4a77ca…` (after the repair)
-| product | allowed | reason | model | autoFit |
-|---|---|---|---|---|
-| Rear wing | **true** | – | accessories/acc-7e40b463d76777b8.glb | yes |
-| Front bumper | false | NO_ACCESSORY_3D | null | no |
-| Mesh rims 17″ | false | NO_ACCESSORY_3D | null | no |
-
-### What the owner must do for bumper + rims (2–3 taps, then check again)
-- **Bumper:** `visualVerifiedAt` is null and there's no admin path back to a PUBLISHED part, so it needs either (a) the owner's approval for a one-row repair with `visualVerifiedAt = publishedAt` (2026-11-06 11:23) plus audit, or (b) Unpublish → re-run final review → Publish in Parts admin.
-- **Rims:** Reactivate (blocked until a current fit is approved) → approve rims × E36 → same `visualVerifiedAt` question as the bumper.
-
-### Grey photos
-- PC tests over the LAN IP: all three product photos return 200 with real images, no auth, ~7 ms; installed-look photos return 200 with the customer token. Firewall allows Node on the Public Wi-Fi profile. No client cache.
-- The phone-browser result in the owner's message was left as the placeholder `<shows / doesn't show>`. The run plan says to fix grey photos **only if the phone browser showed the image**, which isn't confirmed. **Decision: not changed.** Open for the phone checklist.
-
-### "Couldn't load the 3D view" overlay over a loaded view
-- **Reproduced** on Expo web (admin.parts, Accessory fits → BMW E36 → Mesh rims): the car rendered, but the console showed `404 /api/3d/accessories/acc-b463a391bdd04dfb.glb` and the full "Couldn't load the 3D view… Retry" overlay covered the car. The rims never drew, so the fit couldn't actually be reviewed.
-- **Root cause:** `autoFits.list` (`backend/src/services/accessory-autofit.ts`) returned the public `file` for any PUBLISHED accessory, but the public asset route only serves visually verified, active ones. The rims are deactivated and unverified, so the request 404'd. `useCar3D` treated any failed asset (even an accessory's) as "the 3D view failed", and `Overlay` showed errors even after the first frame.
-- **Fix:**
-  - `accessory-autofit.ts`: `file` only when published + `visualVerifiedAt` + not deactivated (same rule as `isPublic3DAsset`); otherwise the screen uses its existing private admin loader.
-  - `mobile/src/features/car3d/useCar3D.ts`: a failed **accessory** asset goes to `onFitError` (all three accessory viewers show it as a note, and on the fits screen it blocks Approve). Only the car file failing sets the view error.
-  - `mobile/src/features/car3d/Overlay.tsx`: once a frame has been drawn, no error overlay.
-- **Verified** (web 390): rims × E36 loads the model via `GET /admin/parts/accessory-3d/9359…/assets/model` → 200; the rims draw on the E36; no overlay. tsc: mobile 0, backend 0. The rims × E36 still shows "Auto-fit, not reviewed yet" → owner approves (rules).
-
-### Follow-up (2026-11-13 ~07:07 UTC, owner approved)
-- Front bumper `3329a3e2…`: `visualVerifiedAt = publishedAt` (2026-11-06T11:23:11.663Z) + audit `ACCESSORY3D_VISUAL_VERIFICATION_RESTORED` (source publishedAt). Read-only check OK.
-- Customer API (E36): wing **true**, front bumper **true**, rims **false / NO_ACCESSORY_3D**. Rims at check time: still deactivated, E36 `approvedAt` null, `visualVerifiedAt` null. Reactivating doesn't set `visualVerifiedAt`, so the rims also need the same one-row repair (owner approval).
-
-- Rims (~07:20 UTC, owner approved): owner re-approved rims × E36 (07:13:17, fitVersion 8); `visualVerifiedAt = publishedAt` (2026-11-06T13:06:52Z) + audit row; owner tapped **Reactivate model**.
-- **Final customer API (E36): wing true · front bumper true · rims true.** Owner confirmed "View on my car" for all three on the phone.
-
-## PART 1 — tow drivers
-
-### T-01 (driver added by the company not visible to the tow admin)
-- Read-only SQL: newest driver `driver@motexa.test` ("Mah"), created 2026-11-12 11:02 UTC, company Al-Noor (APPROVED), `approval = PENDING`, licence number 13467, files DRIVER_LICENCE + DRIVER_PHOTO saved.
-- API `GET /admin/tow/drivers?status=PENDING` as admin.tow@motexa.test returns the driver with photo + licence. **The backend list was fine.**
-- **Cause (app):** the tow admin's review queue only covers companies and trucks. The "Waiting for review" KPI = pendingCompanies + pendingTrucks and opens `/dept/requests`, and the Requests tab lists company applications only. Pending drivers are never counted or listed; the only way in was a plain "Review drivers' licences" card further down the home screen, with no count.
-- **Fix:**
-  - `backend/src/routes/tow.routes.ts` `/admin/tow/stats`: + `pendingDrivers` (count of PENDING drivers; additive field).
-  - `mobile/src/features/department/TowAdminHome.tsx`: "Waiting for review" includes pendingDrivers; the drivers card shows a CountBadge.
-  - `mobile/src/features/department/applications.tsx`: tow Requests tab gets a "Drivers waiting for licence review (n)" row at the top → `/dept/tows/drivers` (hidden when 0).
-- tsc: mobile 0, backend 0.
-- **Verified** (Expo web 390 px, admin.tow@motexa.test): Requests tab shows "Drivers waiting for licence review (1)" → drivers screen lists Mah with photo + licence. AR layout OK. The row hides once nothing is pending.
-- Side note: my first Expo web start used `CI=1`, which turns off Metro's file watching, so edits didn't show up. Restarted without it (my own process on 8085; not yours).
-
-### T-02 (admin can't Approve / Request changes)
-- **Cause 1 (UI):** at 390 px the four actions (Approve, Request changes, Reject, Edit) shared one row; their labels were cut to "A" / "Re…" / "Rej…". **Fix:** `drivers.tsx` wraps them two per row (`HALF`).
-- **Cause 2 (resubmit loop):** a company edit counted as a resubmission only if it changed the licence number or licence photo; a new driver photo or phone left the "changes requested" reason in place forever. **Fix:** `tow-dispatch.ts` updateDriver clears `approvalReason` on a photo/phone edit while PENDING + reason (stays PENDING).
-- **Verified (real backend, driver@motexa.test):** Request changes from the screen (reason required) → company sees PENDING + reason + notification → company re-uploaded the same driver photo (PATCH `/tow/me/drivers/:id`) → PENDING, reason null → Approve from the screen → APPROVED + "Driver approved" notification. Reject: no reason → 400; with reason → company sees REJECTED + reason → re-approved. **Final state: APPROVED** (needed for Part 2).
-- Data touched: driver@motexa.test's approval (created by you on the phone for testing; left APPROVED). Its DRIVER_PHOTO file id changed (same bytes, new upload): `65ca4484…` → `d3a6a8c9…`.
-- Bug file: T-01, T-02 → ✅ (web + API); D-01 → ✅.
-
-## PART 2 — full tow workflow (real backend + DB; API + Expo web 390 px)
-
-**Decision:** customer@motexa.test already has a seeded **demo** job with Al-Noor (`c1a3da96…`, EN_ROUTE since 2026-10-30, driver Samer, notes "(demo)"), and the server allows one active request per customer + company. There's no other usable customer account and I won't change demo data, so steps 2–7 ran against **E2E Towing 1794038749** (approved test company from an earlier e2e run, owner `e2e.tow.1794038749@motexa.test`). Step 1 was done in both companies.
-
-| Step | Result | How verified |
-|---|---|---|
-| 1. Company adds truck + driver (photo) → admin approves | ✅ | Al-Noor (tow@motexa.test): truck RUN-735923 + driver run.driver.736112 → PENDING in admin list with photo + licence, `pendingDrivers`=1 → truck + driver approved, truck linked. Same in E2E: truck RUN-840195 + driver run.driver2.840323 (created with the truck). |
-| 2. Customer request WITH destination pin → driver/company card | ✅ | `POST /requests/tow` mode DRIVER: dropoff pin stored (32.2275, 35.2223); card: "Run T." (first name + initial), photo, real rating (none yet), truck type, **plate "•••• 95"** (masked), responsible company + city; no phone anywhere in the JSON. Free-driver list (customer) same rules. |
-| 3. Company accepts + assigns (and customer picks a driver) | ✅ | (a) customer-picked driver → driver accepts; (b) mode COMPANY → company inbox → `POST /tow/me/requests/:id/assign` → driver sees it → accepts. |
-| 4. Driver statuses in order + location | ✅ | EN_ROUTE → ARRIVED → LOADING → IN_PROGRESS → DELIVERED → COMPLETED all 200; COMPLETED before DELIVERED → 409. Pings → customer `driver.live` and admin active map follow (5 s server throttle is intended; pings <5 s apart are dropped). Distance 990 m in the summary. UI: driver job screen "Arrived" works (tap + confirm tap). |
-| 5. Customer live status + chat; no cancel after loading | ✅ | Full plate shown only after acceptance; timeline + "About 1 min to you" from the live point (web screenshot). Chat both ways. Cancel while ACCEPTED → 200; cancel after LOADING → 409 CANCEL_NOT_ALLOWED, `canCancel=false`. |
-| 6. Completion + rating; ratings update | ✅ | `canReview` true → 5★ → 201; second rating → 409 ALREADY_RATED. Driver 5.0 (1), 1 tow; company 5.0 (1), shown on the next request's card. |
-| 7. Tow admin active map + history | ✅ (API) | Job in `/admin/tow/active-jobs` with live point while active; gone after completion; in `/admin/tow/jobs?status=COMPLETED`. |
-| Map, routes (pickup → destination) | 📱 phone | Maps are native-only by design (`maps.web.tsx`: `MAPS_AVAILABLE=false`); web shows "The map is not available on this platform." |
-
-### T-03 (found): tow drivers saw the company's navigation
-- `ProviderLayout` (used by `/driver` screens) showed the company link chips (Dashboard, Jobs, Trucks, Drivers, Media, Settings…) and "back" to the company dashboard for a pure driver.
-- **Fix:** `mobile/src/components/layout/ProviderLayout.tsx`: on `/driver` paths base = `/driver`, no company links. **Verified** web: driver home + job screen show no company links. tsc mobile 0.
-
-### Test data created in Part 2 (all through the app's APIs)
-| Record | Where | State left |
-|---|---|---|
-| Truck RUN-735923 (Isuzu NPR) | Al-Noor | APPROVED, **OUT_OF_SERVICE** (unused, kept out of customer view) |
-| Driver run.driver.736112@motexa.test "Run Test Driver" (pw = dev password) | Al-Noor | APPROVED, **offline**, truck RUN-735923 |
-| Truck RUN-840195 (Mitsubishi Canter) | E2E Towing 1794038749 | APPROVED, AVAILABLE |
-| Driver run.driver2.840323@motexa.test "Run Test Driver Two" (pw = dev password) | E2E Towing 1794038749 | APPROVED, FREE, truck RUN-840195 (usable for the demo) |
-| Tow request A `70a98041…` | customer@motexa.test → E2E | COMPLETED, rated 5★ |
-| Tow request B `cc79b76d…` | customer → E2E (company mode) | CANCELLED (before loading) |
-| Tow request C `314c373e…` | customer → E2E | COMPLETED, not rated |
-| Chat messages (3 on A, 1 on C), notifications | — | — |
-Images used for the truck/driver/licence uploads: `mobile/assets/images/motexa-mercedes-coastal.png` and `motexa-profile-membership.png` (app artwork, clearly not real documents).
+## Log (one line per finished screen; decisions made alone are marked DECISION)
+- Foundation: `components/manage/Page.tsx` (Page frame: ← back + trail + title block + sticky footer; `AreaProvider`; `Block`, `Facts`, `NeedsRow`, `Kpis`; `ManageHeader` moved here), `core/nav/crumbs.ts` (trail table + logical parents, `router.dismissTo` on tap, back falls back to the parent). DECISION: the department switcher shows only on tab roots (pages without back), as the Tabs control.
+- Foundation: `ManagePage` now runs on `Page` (props `back`, `tabBar`, `trail`). `app/dept/_layout.tsx` gives the department's own name as the trail root.
+- Foundation: `components/manage/Form.tsx` `SmartPicker` (sheet on phones, panel under the field ≥ 900 px; suggestions on top; "+ Add '…' as a new …" with only the missing fields). `features/vehicleCatalog/VehiclePickers.tsx` (brand → model → generation, children cleared, add via the existing taxonomy save calls).
+- Foundation: `components/manage/Thread.tsx` (`ThreadPage` = Inbox thread on the new frame with Garage bubbles, same load / poll 15 s / mark-read / attach / send logic as `ChatScreen`; `ThreadRow` for Inbox lists). `ChatScreen` stays for the customer's order chat.
+- Foundation: backend `sketchfab-client.ts` inspection now carries `tags` (plain text, max 30, deduped) + test; backend tsc 0, sketchfab-import tests 11/11.
+- Foundation: guard test `mobile/tests/ui-system.test.mjs` (import graph from every provider/admin route, previews excluded; old frames by name + old kits by path). PENDING started with 92 files; it must reach 0.
+- Parts admin: Add 3D model = ONE Form (`features/vehicleCatalog/AddModel.tsx`): link checked ~0.5 s after typing stops, preview card (thumbnail, name, creator, license chip, triangle info, refusal / duplicate in plain words), car pre-filled from title + tags (`carGuess.ts` + `/admin/parts/vehicles/suggestions`) and editable with the smart pickers, Import as the one primary; "Upload a GLB instead" switches the same screen. Old `AddModel` (modelScreens) removed, route `dept/vehicles/imports/new` deleted, the catalog button points to `/dept/3d/add`. Test `mobile/tests/car-guess.test.mjs`. DECISION: the replace note now says the old model is deleted on approval (AGENTS 4a: no revision history).
+- Parts admin Home → Dashboard (`features/department/partsAdmin.tsx` `PartsAdminHome`): Mo hero, "Needs you now" rows (shop applications, 3D requests, unread, hidden products; real counts, hidden at 0), KPI tiles, shortcut rows. Old `PartsAdminHome.tsx` deleted.
+- Parts admin Requests → List (`PartsRequests`): segmented Shop applications | 3D requests; applications = `ApplicationsList` (one status chip row with counts, unread first, ⋮ = the same `providerActions`); 3D requests = `ThreeDRequestsList` (All · Needs you · In progress · Published · Changes requested; needs-you first; small part photo; ⋮ = `accessoryActions`). DECISION: "Waiting for review" + "Final check" merged into one "Needs you" chip (max ~5 chips). `/dept/accessory3d` shows the same list. Old `ThreeDRequests.tsx` deleted (`useThreeDCount`, `NEEDS_ACTION` moved to partsAdmin.tsx). Tow admin keeps its old applications list until the tow role.
+- Application review → Detail (`features/department/applicationReview.tsx`, used for shops and tow companies): facts rows, messages entry, storefront photo, location, document tiles (accept / reject with a required reason), checklist, trucks / products (search + one chip row, details sheet, ⋮ = `productActions` / `truckActions`), history. Footer: Approve (primary, enabled when the checklist passes) + Request changes; Reject, edit details, messages in ⋮. Old review code removed from applications.tsx. `LocationRow.tsx` rewritten in Garage tokens (same props).
+- Parts admin Shops → List (`PartsShopsPage` in partsAdmin.tsx): search incl. categories, one status chip row with counts, to-review first, Show on map in ⋮, ⋮ per row = `providerActions`. Old `PartsShopsPage.tsx` deleted.
+- Shared kit additions: `ManageRow` `actions` (the shared ⋮ menu) + `leading` (small photo); `FilterChips`; `appStatus` (one status vocabulary); `CheckRow`, `History` (Page.tsx); `ReasonSheet` (Form.tsx); `tests/ui-system-prune.mjs` removes migrated files from PENDING (92 → 88).
+- DECISION: the guard test now also forbids `components/ui/*` + `theme/useTheme` (the "Blueprint Editorial" kit of docs/guide/04-mobile.md §4), so forms move to Garage fields too; the old kit folders are flagged where imported. PENDING went 88 → 99 (shared helpers such as `parts/ProductForm.tsx`, `tow/truckBits.tsx`, `shared/maps.tsx`, `layout/RoleGate.tsx`).
+- STATUS (checkpoint 1): foundation done except `docs/guide/10-ui-system.md` finalization; parts admin Home, Requests (applications + 3D requests), review, Shops, Add 3D model done. tsc 0, guard test passing (PENDING 99). Expo web :8095 running (mine). Before-screenshots for ALL roles were being captured into C:\Users\mohan\AppData\Local\Temp\claude\motexa-ui-run\<role>\before (script `motexa-ui-run\shots.mjs before|after [role]`, started 2026-11-25T12:46Z): parts-admin complete; do NOT change tow-admin / mechanics-admin shared dept tabs (`DeptMessages`, `DeptProfile`, `screens.tsx` tow / mechanics branches, `applications.tsx` list) before their shots exist (check the folders).
+- NEXT (parts admin, in this order): `dept/edit/*` editors (`department/manage.tsx` → Form with Garage `Field`; needs `parts/ProductForm.tsx` on the Garage kit — shared with the parts shop product form) · `dept/orders` List / Detail / map (`app/dept/orders/*`) · `dept/3d` hub → Dashboard and `dept/3d/vehicles` + `[key]` (`vehicleCatalog/modelScreens.tsx`) · `dept/3d/accessories`, `dept/3d/requests` (`accessory3d/management.tsx`) · `dept/3d-submissions`, `dept/vehicle3d` (`vehicle3d/screens.tsx`) · `dept/vehicles` catalog (`vehicleCatalog/screens.tsx`: List + record Form with VehiclePickers / SmartPicker; delete its `UploadModel`, the old `ImportReview` moves into the import Detail) · `dept/vehicles/requests` + `[id]` (`vehicleRequests/screens.tsx`) · `dept/vehicles/imports/[id]` (`importScreens.tsx` → Detail; delete `NewSketchfabImport` / `InspectionCard`) · accessory-zones editors + fit review + `AdminAccessory3DDetail` + `ShopAccessory3DScreen` (`accessory3d/screens.tsx`: replace `DeptPage` / `ProviderLayout` / `GaragePage` with `Page`) · maps (`department/MapPage.tsx`, `AdminMapScreen.tsx`) · then the shared dept tabs Messages (Inbox: `ManagePage` + `ThreadRow`, thread = `ThreadPage`) and Profile (entry rows) once the before-shots of tow-admin and mechanics-admin exist. After each screen: run `node tests/ui-system-prune.mjs`, tsc, tick here.
+- Parts admin orders: `app/dept/orders/index.tsx` → List (search shop / customer; DECISION: 10 status chips grouped into 5 — All · New · In progress · Delivered · Cancelled (+ rejected) — filtered locally from one list read; moving orders first; deliveries map in ⋮). `[id].tsx` → Detail (Page, status chip, shop / customer / payment as facts, timeline, map, items, chat transcript; read only, no primary action). `map.tsx` → Detail with the map body (frame only). PENDING 96.
+- Parts admin 3D: `vehicleCatalog/modelScreens.tsx` rewritten. Hub → Dashboard (Needs-you rows: 3D requests, car imports to review; entry rows; DECISION: the dead "Add by Link" (deleted route) and "Manual Import" entries are replaced by "Add 3D model"). Car 3D models → List (catalog models + open imports, All · Published · Hidden · In review · Failed, review first, ⋮ = `modelActions` / `importActions`, Add 3D model as an entry row; `?filter=` deep link). Model → Detail (facts, preview block, provenance + quality gate, viewer configuration form with its own save, generation usage; footer = Show / Hide to customers (+ preview-and-approve toggle when the geometry changed); ⋮ = edit details (sheet), part map, zones, replace, source validation, delete (sheet: impact first, confirm, permanent)). PENDING 95.
+- Parts admin `accessory3d/management.tsx`: `dept/3d/requests` → a small hub (entry rows with the real waiting count); `dept/3d/accessories` → List (DECISION: the 9-option status dropdown became one chip row All · In progress · Published · Unpublished · Failed; failed first; ⋮ = `accessoryActions`). PENDING 94.
+- Parts admin customer car 3D (`/dept/3d-submissions`, `/dept/vehicle3d`): new `features/vehicle3d/adminScreens.tsx`. List: one chip row (Pending review · Generating · Failed · Approved · All; DECISION: Rejected folds into All), pending first, search. Detail: facts, 3D preview block, photos, optional review notes; footer = verified toggle (+ replace toggle) + Validate and approve; ⋮ = validate again, turn front 180°, up-axis −90°, request regeneration, reject (reason sheets). Shared photo / preview / labels moved to `features/vehicle3d/submission.tsx` (no frame); the customer screen stays in `screens.tsx` unchanged.
+- Before-screenshots: ALL roles captured (C:/Users/mohan/AppData/Local/Temp/claude/motexa-ui-run/<role>/before; the driver with `driver1@motexa.test`, because `driver@motexa.test` rejects the dev password). Shared dept tabs may now change.
+- Parts admin vehicle requests: new `features/vehicleRequests/adminScreens.tsx`. List: All · Pending review · Generating · Final review · Done, pending first, search, linked generation / demand in the second line. Detail: facts, catalog assignment (SmartPicker over every generation with the suggestions endpoint on top, corrected year, Save corrected assignment, optional notes), 3D model block, photos; ONE primary per state (Approve for generation · Start generation / retry · Begin final visual review · Open final review); ⋮ = reject (reason sheet), prepare a new attempt, vehicle catalog. Customer screens untouched (`screens.tsx`). PENDING 92.
+- Dept Messages → Inbox (`applications.tsx` `DeptMessages`: ManagePage + `ThreadRow`: name, last message, time, unread dot, status chip; search; All · Unread; unread first). Thread → `ThreadPage` (`DeptThread`). Shared by all three department admins.
+- Dept Profile → `ProfilePage.tsx` on `Page`: account facts, departments, appearance & language, Log out (asks first). `providerhub/AppearanceSection.tsx` rewritten with the Garage segmented `Tabs` (was the blueprint `SettingsControls`; used by every provider / admin profile).
+- Parts admin `accessory3d/screens.tsx`: part-map editor, fit review and zone editor moved from `DeptPage` to `Page` (title / line / ⋮ in the frame, extra crumb "Accessory fitting"). 3D request detail (`AdminAccessory3DDetail`) → Detail on `Page`: ONE primary per state (Approve for 3D generation · Resume the same task · Start 3D generation with its paid-confirmation toggle in the body); ⋮ = reject (reason sheet, notes required), unpublish / reactivate (asks first), delete the private model. DECISION: the paid replacement generation keeps its own confirm card in the body (a paid, two-step action). The shop's own 3D screen in this file is the parts-shop role (file stays in PENDING).
+- Parts admin import review: new `features/vehicleCatalog/importReview.tsx` (Detail: status + progress + saved failure reason / draft note, source and rights facts incl. "Simplified for phones", 3D check with original / red paint, settings with Validate again, review notes, part-map proposal; footer = verified toggle (+ replace) + Approve and publish; ⋮ = retry, private part-map review / confirm part map, discard (inline confirm)). Old `importScreens.tsx` deleted (InspectionCard / NewSketchfabImport / old SketchfabImportReview / ImportProgress).
+- Parts admin vehicle catalog: `vehicleCatalog/screens.tsx` rewritten → List with segmented Generations | Models | Brands, search, one chip row (All · With 3D · No 3D · Inactive), rows with ⋮ (edit generation / model / brand, add or replace its 3D model); record Form in a sheet (smart pickers for brand / model, Active toggle, Save, Delete unused / generation usage); "Add brand, model or generation" = the brand → model → generation smart pickers with "+ Add …" (no Create buttons). DECISION: the old Imports tab (manual GLB upload + inline review) is gone; uploads are in Add 3D model and every import opens its own review. Old `UploadModel` / `ImportReview` deleted. Mobile tests 93/93, PENDING 88.
+- Admin edit forms (`department/manage.tsx`, also the tow admin's company + truck editors): rewritten on `Page` + Garage `Field` / `Toggle` / `Chip`, Save as the sticky primary, loading / error pages; base city = SmartPicker; DECISION: multi-selects (service cities, shop categories, truck type) stay as chips inside the form (they are form choices, not list filters). The product editor frames the shared `parts/ProductForm.tsx`, which is still on the old kit until the parts-shop role (it stays in PENDING). PENDING 87.
+- Parts admin `dept/map`: `MapPage.tsx` on the Garage kit (BackButton kept as export for the onboarding LocationPicker). tsc 0, mobile tests 93/93, PENDING 86.
+- STOP NOTE (2026-11-25, usage limit): run paused inside the parts admin role; NOT yet "Role done". Left for parts admin: shared map helpers reachable from admin routes (`shared/maps.tsx`, `useCurrentLocation.tsx`, `MapPanel.tsx`, `useRoute.tsx`, `blocks.tsx` — shared with the customer side, decide Garage swap without changing the customer look), `department/ui.tsx` (old dept kit: remove its last users), `parts/ProductForm.tsx` (shared with the parts shop), BulkFits check (`dept/accessory-fits`), then prune + tsc + tests + "Role done: parts admin". Then roles 2–6 as in the checklist (86 files in PENDING). End-of-run steps still open: after-screenshots (`node shots.mjs after` in C:\Users\mohan\AppData\Local\Temp\claude\motexa-ui-run), backend `npm test`, delete my refresh-token rows from the screenshot logins (keep human sessions) + one TEST_DATA_REMOVED audit row, finalize `docs/guide/10-ui-system.md`, STATUS entry, final report. My Expo web on :8095 was stopped.
+- RESUMED 2026-11-25 (new session). Parts admin finish:
+- Shared map / location pieces on the Garage kit (also used by customer screens; same sizes, Garage colours — the customer screens are Garage already): `shared/maps.tsx` (fallback box, skeleton, retry), `useCurrentLocation.tsx` (`LocationProblem` = Garage `Note` + `GButton`), `useRoute.tsx` (`RouteSummary`: GText instead of blueprint `Mono` / `RoadLoader`), `MapPanel.tsx` (radius `gShape.hero` = the old 32). DECISION: shared helpers are converted in place, never copied per side.
+- `AdminMapScreen` status chips → Garage `StatusChip` + `appStatus` (no dept kit). `accessory3d/screens.tsx`: dead `DeptPage` / `useDT` import removed (the shop's own 3D screen in the file is the parts-shop role).
+- `components/layout/RoleGate.tsx` (gate of every area) on the Garage kit (skeleton rows, Access denied + Sign out); `Screen.tsx` is no longer reached from provider / admin areas.
+- Dead UI removed from pure helper files: `ConditionBadge` (partAttrs), `StockBadge` / `StockStateBadge` (partsBits) were unused; `PartPhoto` fallback "M" → GText.
+- Form kit: `StepFooter` (optional Back + the ONE primary) and `useDiscardGuard(dirty)` ("Discard changes?" sheet on ← / Android back / crumb; `release()` after a save) in `components/manage/Form.tsx`.
+- `features/parts/ProductForm.tsx` → Form step flow on `Page` (used by the admin product editor and the shop's add / edit part): stepper, sticky Back + Next / Save, Garage fields, category = SmartPicker over the leaf categories (was a wall of chip groups), Universal = Toggle, cars as Blocks, discard guard. DECISION: the 3D step only exists for a saved part whose category can be shown in 3D (for a new part it only said "save first"); "Show it in 3D" on the shop's edit page moved to ⋮. Callers: `department/manage.tsx` `ProductEditor`, `app/provider/parts/[id].tsx` (now a Form page too).
+- Role done: parts admin, tsc + tests passing (tsc 0, mobile 93/93, guard PENDING 86 → 75). Shared files still in PENDING because of OTHER roles' code: `department/applications.tsx` (old tow applications list), `review.tsx` (truck review), `screens.tsx` (mechanics branches), `provider/Chat.tsx` + `provider/ui.tsx` (onboarding / shop chat), `department/ui.tsx`, `requestBits` / `mechanicBits` / `garageBits` / `truckBits` / `blocks` / `catalogBits` (their old UI pieces are used only by tow / shop / mechanic screens; removed when those move).
+- Parts shop, shared kit additions: `Page` `Loaded` (skeleton / error + Retry / content) and `LogOut` (asks first; DeptProfile uses it too), `Page.scrollRef`; `ThreadPage` `actions` (header ⋮) + `closed` (a note instead of the message box).
+- Parts shop Home → Dashboard (`providerhub/ProviderHome.tsx`, shared with the tow company): Page + Mo hero (`HeroLayout`; the hub's one action is the hero action: Add product / Open jobs), Needs-you rows with real counts (sold out, low stock, need a photo, customer questions, MOTEXA messages; tow: new requests, active jobs → `/provider/tow/jobs?filter=`), KPI tiles from `hub.ts` stats, 3 shortcut rows. DECISION: "Add product" moved from a big body button to the hero action.
+- Parts shop Profile → entry rows (`ProfileHub.tsx`, shared): Page tab root, groups of `ManageEntry`, location block (MiniMap), documents, appearance, More settings, `LogOut`.
+- `providerhub/inTabs.tsx`: its own `useInTabs()` context (was ProviderLayout's); Products / Orders / Jobs read it for back vs tab root.
+- Parts shop Messages → Inbox (new `providerhub/inbox.tsx` `ProviderInbox`, shared with tow): MOTEXA team thread + the shop's order chats (new + active orders, finished ones with unread), All · Unread, unread first. Threads: new routes `/provider/parts/motexa`, `/provider/tow/motexa` (`MotexaThread` = ThreadPage); `onboarding/messages` = the same thread; `orders/chat/[id]` = ThreadPage (text only). Crumbs: motexa → messages. DECISION: order chats are listed in the shop Inbox (they were only reachable from each order).
+- Products (+ Inventory, Fitment) → List (`ProductsPage.tsx`): search, chips All · Sold out · Low stock · No photo with counts from the shop summary, rows with a 40 px photo / price / free stock / visibility chip, sold out first, ⋮ = `shopProductActions`, "Add product" entry row, pages add up on scroll (was Previous / Next). DECISION: a row opens the product Detail (Edit is its primary).
+- Product → Detail (`ProductDetailPage.tsx`): visibility chip, photo, facts, description, fits; footer = Edit product; ⋮ = 3D request, 3D preview, customer preview.
+- Add / edit part (`app/provider/parts/[id].tsx`) → the ProductForm step flow (see parts admin); "Show it in 3D" in ⋮.
+- Orders (+ orders/list) → List (`OrdersPage.tsx`): chips New · Active · Done (server counts), unread first, ⋮ = `shopOrderActions`, Delivery settings in the header ⋮. Order → Detail (`orders/[id].tsx`): footer = the next step the server allows; other steps + Reject / Cancel (reason required) in ⋮; chat + delivery map as entry rows; facts, timeline, items. Delivery map → map Detail (`orders/map/[id].tsx`), footer = Out for delivery / Delivered; location sharing unchanged.
+- Customer questions → List (`inquiries/index.tsx`: one read + local chips with counts, open first) and → Inbox thread (`inquiries/[id].tsx` on ThreadPage, Close in ⋮, closed = note). New `features/requests/inquiryStatus.ts`.
+- Shop info → Form (`ProfilePage.tsx`: identity facts, address / hours / lat / lng, Save in the footer, discard guard). Delivery → Form (`app/provider/parts/delivery.tsx`). Performance → Dashboard sub-page (`AnalyticsPage.tsx`: KPI tiles + coverage facts). Categories → read-only List with search (`CategoriesPage.tsx`). Settings → entry rows (`portal/SettingsPage.tsx`, shared with tow). Photos and videos → Form (`portal/MediaPage.tsx`, shared with tow: slot / truck chips, Choose and upload in the footer, Replace / Remove in each item's ⋮). DECISION: `PublicMedia` (customer profiles) moved unchanged to `portal/publicMedia.tsx`; `ProviderVideo` is Garage now and shared.
+- 3D parts / 3D submissions → List (`accessory3d/ProviderOverview.tsx`: one row per product, worst state first, ⋮ = `shop3dActions`, pages on scroll). 3D preview → Detail with the viewer (`ProviderPreview.tsx`: chips for alone / each car and colours, toggles per piece and paint-to-match).
+- Shop 3D request: `ShopWizard.tsx` on the common frame (Page top bar + trail, ManageHeader with step + progress, sticky StepFooter Back / Next / Submit); blueprint `Press` / `Rise` → Pressable / the file's own `Enter`. DECISION: the "Save draft and leave?" sheet and the custom Android back are gone: drafts save as they go, so ← and Android back simply leave (same as every page); the footer Back = previous step. Classic form (`ShopAccessory3DScreen` in `screens.tsx`: body kits, other types, submitted requests): Page with ONE primary per state (Create request · Submit for 3D · Edit and resubmit), Save details + Delete draft in ⋮. DECISION: its 6 numbered sections stay on one page (the "N things need fixing, tap to go" list already guides it; the common single-part case is the stepper wizard).
+- Provider onboarding: `provider/ui.tsx` (doc viewer + VerticalStepper) on Garage tokens; `kit.tsx` and `work/ProviderAccountNote.tsx` on Garage; new `provider/formTheme.tsx` (Garage tokens under the old short names + `IconField`, `FormButton`, `FormPanel`, `AppStatusChip`, `cardStyle`) so the 680-line wizard keeps its logic; `Onboarding.tsx` on `Page` (header line = the application status; "saved after each step" is a Note). `LocationPicker.tsx` → map Detail (Confirm location in the footer). DECISION: each step of the vertical stepper keeps its own Save / Continue at the end of the open step (the only primary on screen).
+- Deleted: `features/parts/provider/Dashboard.tsx` (old shop dashboard, imported by nothing).
+- Role done: parts shop, tsc + tests passing (tsc 0, mobile 93/93, guard PENDING 75 → 50). Still in PENDING for other roles only: `requestBits` / `mechanicBits` (reached through `fmtDateTime` / skill labels; their old UI pieces are used by tow / mechanic screens).
+- Tow company Jobs (`dispatch/index.tsx`, also `active` / `history` routes) → List: search, chips New · Active · Done with counts, `?filter=` deep link (Home Needs-you rows), no-driver first, ⋮ = `companyJobActions`, Live map in the header ⋮.
+- Tow company job (`dispatch/[id].tsx`) → Detail: footer = Assign / Transfer a driver (sheet of FREE drivers) or, for a company without drivers, "Answer and choose a truck"; Decline / Cancel (reason) in ⋮; driver facts, map, timeline, details.
+- Classic answer screen (`requests/[id].tsx`) → Detail: footer per state (Accept → truck sheet · On the way · In progress · Completed); Decline / Cancel (reason) + Google Maps links in ⋮. DECISION: the unlinked duplicate list `app/provider/tow/requests/index.tsx` was removed (Jobs is the list); crumbs: `/provider/tow/(requests|dispatch)/…` → Jobs, the "Requests" label is gone.
+- Live map (`live.tsx`) → map Detail. Statistics (`stats.tsx`) → Dashboard sub-page (KPI tiles, rating, drivers).
+- Fleet tab (`providerhub/FleetTab.tsx`) → List: segmented Drivers | Trucks with counts, rows with photo / ONE status chip / reason or job in the 2nd line, can't-work first, ⋮ = `companyDriverActions` / `companyTruckActions`, Add driver / I drive too / Add truck as entry rows (the existing step-form sheets). `drivers.tsx` and `trucks.tsx` now open this list on the right tab. DECISION: the old 212-line drivers page and `tow/provider/TrucksPage.tsx` were replaced by the Fleet list (same actions through ⋮ + the wizards); `tow/provider/Dashboard.tsx` (old dashboard, imported by nothing) deleted.
+- Truck (`[id].tsx`, + `/provider/tow/new`) → Detail: approval + work chips, expired / on-a-job / rejected notes, facts, private documents (new kit piece `DocRows` in Page.tsx), history; footer = Edit truck; ⋮ = out of service / available, Remove (asks first).
+- Business info (`company.tsx`) → Form (about, base location map, service-city chips, Save in footer, discard guard). Availability (`tow/provider/AvailabilityPage.tsx`) → Form of per-truck switches saved on flip. Service area (`ServiceAreaPage.tsx`) → map Detail, Edit in footer. Tow company Messages = the shared `ProviderInbox` (MOTEXA thread). Home / Profile / Settings / Media = shared pages (parts shop lines).
+- Driver home (`app/driver/index.tsx`) → Dashboard: Mo hero with the Online switch as its one action (HeroAction toggle), Needs-you job rows, truck facts, recent jobs, appearance, LogOut. DECISION: no KPI tiles (the driver API gives no counted numbers).
+- Driver job (`app/driver/job/[id].tsx`) → Detail with its steps: sticky footer = Accept / the next step with the same "tap again to confirm" (+ "Not yet"); Decline / Cancel (reason) in ⋮; location sharing unchanged. Driver chat (`job/chat.tsx`) → ThreadPage (new `pollMs` prop: 4 s; closed note when the job is over). `features/tow/TowChat.tsx` stays for the customer only.
+- Tow admin: new `features/department/towAdmin.tsx` (Home → Dashboard with Needs-you rows: company applications, drivers' licences, pending trucks, unread; KPI tiles; shortcut rows · Requests → the shared `ApplicationsList` with a "drivers waiting" Needs-you row above · Companies → List with search, status chips with counts, to-review first, map in ⋮). Old `TowAdminHome.tsx`, `TowCompaniesPage.tsx` deleted; old ApplicationsList / PendingDrivers removed from `applications.tsx` (now Messages + Thread + ReviewScreen only).
+- Tow admin `dept/tows/index` → map Detail; `tows/drivers` → List (chips with counts from the 4 lists, details + edit in the sheet / side panel); `tows/history` → List (ONE chip row All · Active · Completed · Cancelled · Declined; company / driver / dates moved to a "Filters" sheet with smart pickers — DECISION, it was 3 chip walls); `tows/reports` → List (Open · All with counts); `tows/[id]` → Detail (read only, Cancel with reason in ⋮). Truck review (`department/review.tsx`) → Detail: footer = Approve (checklist must pass), ⋮ = reject (reason), edit, archive (reason) / restore; the dead `ProductLine` removed.
+- Checks: mobile tsc 0, backend tsc 0, mobile tests 93/93, guard PENDING 50 → 22, `npx expo export --platform android` bundles (output in the session scratchpad, not the project).
+- STOP NOTE (2026-11-25, stopped on the user's request, at a clean point): every tow company, driver and tow admin SCREEN is on the new templates; nothing is half-done or broken. NOT yet "Role done: tow", because 4 shared helper files are still in PENDING: `features/requests/requestBits.tsx`, `features/requests/garageBits.tsx`, `features/shared/blocks.tsx`, `features/tow/truckBits.tsx` — they still contain old-kit UI pieces (`Timeline`, `TowStatusBadge`, `InquiryStatusBadge`, `Thread`, `GarageThread`/`SkillChips`/`InitialBubble`, `VerificationBadge`/`HistoryList`/`PrivateDocs`/`DocViewer`, `OperationalBadge`/`ExpiredNotice`/`TruckSummary`) next to pure helpers that tow screens import. NEXT STEP: for each of the 4 files, grep every importer; delete the UI pieces no screen uses any more, and for the ones the customer side still uses keep them but move the pure helpers (`fmtDateTime`, `useTowStatusLabels`, `useProblemLabels`, `buildTimeline`, `towTone`, `toSteps`, `mechTone`, `useTruckLabels`, `docLabel`, `expiredList`) out only if the file cannot become pure; then `node tests/ui-system-prune.mjs`, tsc, tests, and write "Role done: tow". Then role 4 (mechanic + mechanics admin: `app/mechanic/requests/*`, `components/MechanicApplication.tsx` (use `provider/formTheme.tsx` like Onboarding), `MechanicReviewScreen.tsx`, `features/mechanics/mechanicBits.tsx`, `app/dept/mechanic-requests/[id].tsx`, the mechanics branches of `department/screens.tsx`, then `department/ui.tsx` should have no provider / admin importer left), role 5 (super admin: the 9 `app/admin/*` files + `components/layout/DashboardLayout.tsx`), and section 6 (cleanup: delete unused `components/layout/DashboardLayout.tsx`, `components/blueprint/mascot/MoHomeVideo.tsx`, `components/layout/tabBarOptions.ts`, `features/catalog/homeBits.tsx`, `theme/makeStyles.ts` after re-checking they have no importer; finalize `docs/guide/10-ui-system.md`; after-screenshots `node shots.mjs after` in C:\Users\mohan\AppData\Local\Temp\claude\motexa-ui-run; backend `npm test`; remove my screenshot-login refresh-token rows + one TEST_DATA_REMOVED audit row; STATUS entry; final report). Nothing of mine is running (no Expo / backend started this session).

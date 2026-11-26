@@ -1,5 +1,5 @@
 // UI shared by the provider onboarding and the department review: vertical stepper, document viewer (full-screen image with
-// pinch / double-tap zoom, PDF opened with the system viewer) and chat bubbles. Colours come from Diala's mechanic theme.
+// pinch / double-tap zoom, PDF opened with the system viewer). Garage tokens.
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as Sharing from "expo-sharing";
@@ -8,18 +8,20 @@ import { ReactNode, useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Modal, Platform, Pressable, SafeAreaView, View } from "react-native";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { MechanicNote, useMechanicTheme } from "../../components/MechanicUI";
-import { Text } from "../../components/MotexaVisual";
+import { GText as Text, Note } from "../../components/garage";
 import { API_URL, getAccessToken } from "../../core/config/api";
+import { useL } from "../../core/hooks/useL";
+import { useGarageTheme } from "../../theme/garage";
 import { privateImageSource } from "../shared/api";
-import { useDT } from "../department/ui";
 
 // ---------------------------------------------------------------- vertical stepper
 export type Step = { key: string; label: string; hint?: string; done: boolean };
 
 /** Numbered steps joined by a line; the active step opens its content right under its title. Done = bronze with a check. */
 export function VerticalStepper({ steps, current, onSelect, children }: { steps: Step[]; current: string; onSelect?: (key: string) => void; children: (key: string) => ReactNode }) {
-  const d = useDT();
+  const { t } = useL();
+  const { g, isArabic } = useGarageTheme();
+  const d = { t, row: isArabic ? ("row-reverse" as const) : ("row" as const), align: isArabic ? ("right" as const) : ("left" as const), ink: g.ink, muted: g.soft, border: g.line, fill: g.accent, fillInk: g.onAccent, track: g.line, tint: g.tint, tintInk: g.accentText };
   const at = Math.max(0, steps.findIndex((x) => x.key === current));
   const doneCount = steps.filter((x) => x.done).length;
   return (
@@ -29,7 +31,7 @@ export function VerticalStepper({ steps, current, onSelect, children }: { steps:
           <Text style={{ color: d.ink, fontSize: 12, fontWeight: "700" }}>{d.t(`Step ${at + 1} of ${steps.length}`, `الخطوة ${at + 1} من ${steps.length}`)}</Text>
           <Text style={{ color: d.muted, fontSize: 12 }}>{d.t(`${doneCount} done`, `${doneCount} مكتملة`)}</Text>
         </View>
-        <View style={{ height: 6, borderRadius: 3, backgroundColor: d.chip("neutral").bg, overflow: "hidden", flexDirection: d.row }}>
+        <View style={{ height: 6, borderRadius: 3, backgroundColor: d.track, overflow: "hidden", flexDirection: d.row }}>
           <View style={{ width: `${(Math.max(doneCount, at) / steps.length) * 100}%`, backgroundColor: d.fill, borderRadius: 3 }} />
         </View>
       </View>
@@ -40,9 +42,9 @@ export function VerticalStepper({ steps, current, onSelect, children }: { steps:
           <View key={s.key} style={{ flexDirection: d.row, gap: 12 }}>
             <View style={{ alignItems: "center", width: 34 }}>
               <View
-                style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: s.done ? d.fill : active ? d.chip("bronze").bg : "transparent", borderWidth: 2, borderColor: s.done || active ? d.fill : d.border }}
+                style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: s.done ? d.fill : active ? d.tint : "transparent", borderWidth: 2, borderColor: s.done || active ? d.fill : d.border }}
               >
-                {s.done ? <Ionicons name="checkmark" size={18} color={d.fillInk} /> : <Text style={{ fontSize: 13, fontWeight: "800", color: active ? d.chip("bronze").fg : d.muted }}>{i + 1}</Text>}
+                {s.done ? <Ionicons name="checkmark" size={18} color={d.fillInk} /> : <Text style={{ fontSize: 13, fontWeight: "800", color: active ? d.tintInk : d.muted }}>{i + 1}</Text>}
               </View>
               {!last ? <View style={{ flex: 1, width: 2, minHeight: 18, backgroundColor: s.done ? d.fill : d.border, marginVertical: 4, borderRadius: 1 }} /> : null}
             </View>
@@ -131,7 +133,9 @@ async function openPdf(uri: string, t: (en: string, ar: string) => string) {
 
 /** `open(doc)` shows an image full screen (pinch or double-tap to zoom) or opens a PDF. Render `element` once in the screen. */
 export function useDocViewer() {
-  const m = useMechanicTheme();
+  const { t } = useL();
+  const { row, align } = useGarageTheme();
+  const m = { t, row: row.flexDirection, align: align.textAlign };
   const [doc, setDoc] = useState<{ uri: string; label: string } | null>(null);
   const [src, setSrc] = useState<{ uri: string; headers: Record<string, string> } | null>(null);
   const [failed, setFailed] = useState(false);
@@ -158,7 +162,7 @@ export function useDocViewer() {
   }, [doc]);
   const element = (
     <>
-      {note ? <MechanicNote error>{note}</MechanicNote> : null}
+      {note ? <Note tone="danger" icon="alert-circle-outline">{note}</Note> : null}
       <Modal visible={!!doc} animationType="fade" onRequestClose={() => setDoc(null)}>
         <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#120D0A" }}>
           <SafeAreaView style={{ flex: 1 }}>

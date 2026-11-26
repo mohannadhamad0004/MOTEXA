@@ -1,97 +1,51 @@
-import { SearchBar } from "../../../../components/ui/Input";
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
-import { View } from "react-native";
-import { ItemRow } from "../../../../components/ItemActionsMenu";
-import { companyJobActions } from "../../../../features/tow/provider/companyActions";
-import { EmptyState, ErrorState, GarageHero,  GIcon, GText, SkeletonRows, StatusChip, Tabs, Tap } from "../../../../components/garage";
-import { ProviderLayout as GaragePage } from "../../../../components/layout/ProviderLayout";
+// Every request of the company and its drivers = List (the Jobs tab; Active jobs and History are the same list on another chip):
+// search, ONE chip row New · Active · Done with counts, compact rows (customer, car, who drives it, live state), ⋮ per row. Every 10 s.
+import { router, useLocalSearchParams, type Href } from "expo-router";
+import { useEffect, useState } from "react";
+import { FilterChips, ManagePage, ManageRow } from "../../../../components/manage/ManagePage";
 import { useL } from "../../../../core/hooks/useL";
+import { useLoad } from "../../../../core/hooks/useLoad";
+import { useInTabs } from "../../../../features/providerhub/inTabs";
 import { towTone } from "../../../../features/requests/garageBits";
 import { fmtDateTime, useTowStatusLabels } from "../../../../features/requests/requestBits";
-import { CompanyTowRequest, companyTowRequests } from "../../../../features/requests/requestsService";
+import { companyTowRequests } from "../../../../features/requests/requestsService";
 import { liveLabel } from "../../../../features/tow/dispatchService";
-import { gShape, gType, useGarageTheme } from "../../../../theme/garage";
+import { companyJobActions } from "../../../../features/tow/provider/companyActions";
 
 type Bucket = "new" | "active" | "done";
 const OF: Record<Bucket, string[]> = { new: ["REQUESTED"], active: ["ACCEPTED", "EN_ROUTE", "IN_PROGRESS"], done: ["COMPLETED", "CANCELLED", "DECLINED"] };
+const isBucket = (b?: string): b is Bucket => b === "new" || b === "active" || b === "done";
 
-/** Every request of the company and its drivers: New / Active / Done with counts, who has it, the live state. Every 10 s. */
-export default function CompanyDispatch({ initialBucket = "new" }: {initialBucket?:Bucket}) {
-  const { g, shadow, row, align } = useGarageTheme();
+export default function CompanyDispatch({ initialBucket = "new" }: { initialBucket?: Bucket }) {
   const { t } = useL();
   const L = useTowStatusLabels();
-  const [q,setQ]=useState("");
-  const [bucket, setBucket] = useState<Bucket>(initialBucket);
-  const [list, setList] = useState<CompanyTowRequest[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const load = useCallback(async () => {
-    try {
-      setList(await companyTowRequests.list());
-      setError(null);
-    } catch (e: any) {
-      setError(e.message);
-    }
-  }, []);
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-      const h = setInterval(load, 10_000);
-      return () => clearInterval(h);
-    }, [load])
-  );
-  const count = (b: Bucket) => (list ?? []).filter((r) => OF[b].includes(r.status)).length;
-  const shown = (list ?? []).filter((r) => OF[bucket].includes(r.status) && (!q.trim() || `${r.customerName} ${r.pickupAddress} ${r.vehicle.make} ${r.vehicle.model}`.toLowerCase().includes(q.trim().toLowerCase())));
-
+  const tabRoot = useInTabs();
+  const params = useLocalSearchParams<{ filter?: string }>();
+  const [q, setQ] = useState("");
+  const [bucket, setBucket] = useState<Bucket>(isBucket(params.filter) ? params.filter : initialBucket);
+  useEffect(() => { if (isBucket(params.filter)) setBucket(params.filter); }, [params.filter]);
+  const list = useLoad(() => companyTowRequests.list(), [], 10_000);
+  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const found = (list.data ?? []).filter((r) => words.every((w) => `${r.customerName} ${r.pickupAddress} ${r.vehicle.make} ${r.vehicle.model} ${r.driver?.name ?? ""}`.toLowerCase().includes(w)));
+  const count = (b: Bucket) => found.filter((r) => OF[b].includes(r.status)).length;
+  // no driver yet first (it needs the owner), then the newest
+  const rows = found.filter((r) => OF[bucket].includes(r.status)).sort((a, b) => Number(!!a.driver) - Number(!!b.driver) || b.updatedAt.localeCompare(a.updatedAt));
   return (
-    <GaragePage
-      onRefresh={load}
-      hero={
-        <GarageHero
-          variant="detail"
-          onBack={() => (router.canGoBack() ? router.back() : router.navigate("/provider/tow"))}
-          title={t("Tow requests", "طلبات السحب")}
-          line={list ? t(`${count("new")} new · ${count("active")} active`, `${count("new")} جديدة · ${count("active")} نشطة`) : undefined}
-          action={{ icon: "map-outline", label: t("Live map", "الخريطة المباشرة"), onPress: () => router.push("/provider/tow/live") }}
-        />
-      }
-    >
-      <SearchBar value={q} onChange={setQ} placeholder={t("Search jobs","ابحث في المهام")}/>
-      <Tabs
-        value={bucket}
-        onChange={setBucket}
-        options={[
-          { key: "new", label: t("New", "جديدة"), count: list ? count("new") : undefined },
-          { key: "active", label: t("Active", "نشطة"), count: list ? count("active") : undefined },
-          { key: "done", label: t("Done", "منتهية"), count: list ? count("done") : undefined },
-        ]}
-      />
-      <View style={{ marginTop: 16, gap: 12 }}>
-        {!list && !error ? (
-          <SkeletonRows count={4} />
-        ) : error && !list ? (
-          <ErrorState text={error} onRetry={load} retryLabel={t("Retry", "إعادة المحاولة")} />
-        ) : !shown.length ? (
-          <EmptyState photo="empty.requests" text={bucket === "new" ? t("No new requests.", "لا توجد طلبات جديدة.") : bucket === "active" ? t("No active jobs.", "لا توجد مهام نشطة.") : t("No finished requests yet.", "لا توجد طلبات منتهية بعد.")} />
-        ) : (
-          shown.map((r) => (
-            <ItemRow key={r.id} title={`${r.customerName}, ${L[r.status]}`} subtitle={`${r.vehicle.make} ${r.vehicle.model}`} onPress={() => router.push({ pathname: "/provider/tow/dispatch/[id]", params: { id: r.id } })} actions={companyJobActions(t, r, { reload: load })} box={[{ padding: 14, borderRadius: gShape.card, backgroundColor: g.card, gap: 6 }, shadow(1)]}>
-              <View style={[row, { alignItems: "center", gap: 8 }]}>
-                <GIcon name="car-outline" size={18} />
-                <GText numberOfLines={1} style={[gType.label, { fontWeight: "800", flex: 1 }, align]}>{`${r.customerName} · ${r.vehicle.make} ${r.vehicle.model}`}</GText>
-              </View>
-              <GText soft numberOfLines={1} style={[gType.caption, align]}>{r.pickupAddress}</GText>
-              <GText style={[gType.caption, align, { color: r.driver ? g.ink : g.warning, fontWeight: "700" }]}>
-                {r.driver ? `${t("Driver", "السائق")}: ${r.driver.name}${r.driver.live ? ` · ${liveLabel(r.driver.live, t)}` : ""}` : r.status === "REQUESTED" ? t("No driver yet: assign one", "لا يوجد سائق بعد: أسند واحدًا") : t("No driver (company handled)", "بدون سائق (تديره الشركة)")}
-              </GText>
-              <View style={[row, { alignItems: "center", justifyContent: "space-between" }]}>
-                <StatusChip tone={towTone(r.status)} label={r.status === "EN_ROUTE" && r.arrivedAt ? L.ARRIVED : L[r.status]} />
-                <GText soft style={[gType.tiny, { writingDirection: "ltr" }]}>{fmtDateTime(r.updatedAt)}</GText>
-              </View>
-            </ItemRow>
-          ))
-        )}
-      </View>
-    </GaragePage>
+    <ManagePage title={t("Tow requests", "طلبات السحب")} back={!tabRoot} tabBar={tabRoot}
+      line={list.data ? t(`${count("new")} new · ${count("active")} active`, `${count("new")} جديدة · ${count("active")} نشطة`) : undefined}
+      actions={[{ key: "live", label: t("Live map", "الخريطة المباشرة"), icon: "map-outline", run: () => router.push("/provider/tow/live" as Href) }]}
+      search={{ value: q, onChange: setQ, placeholder: t("Customer, place, car or driver", "العميل أو المكان أو السيارة أو السائق") }}
+      filters={<FilterChips value={bucket} onChange={setBucket} filters={[
+        { key: "new", label: t("New", "جديدة"), count: list.data ? count("new") : undefined }, { key: "active", label: t("Active", "نشطة"), count: list.data ? count("active") : undefined },
+        { key: "done", label: t("Done", "منتهية"), count: list.data ? count("done") : undefined },
+      ]} />}
+      items={rows} keyOf={(r) => r.id}
+      renderItem={(r) => <ManageRow title={`${r.customerName} · ${r.vehicle.make} ${r.vehicle.model}`}
+        sub={[r.driver ? `${t("Driver", "السائق")}: ${r.driver.name}${r.driver.live ? ` · ${liveLabel(r.driver.live, t)}` : ""}` : r.status === "REQUESTED" ? t("No driver yet: assign one", "لا يوجد سائق بعد: أسند واحدًا") : t("No driver (company handled)", "بدون سائق (تديره الشركة)"), r.pickupAddress, fmtDateTime(r.updatedAt)].filter(Boolean).join(" · ")}
+        status={{ label: r.status === "EN_ROUTE" && r.arrivedAt ? L.ARRIVED : L[r.status], tone: towTone(r.status) }}
+        onPress={() => router.push({ pathname: "/provider/tow/dispatch/[id]", params: { id: r.id } })} actions={companyJobActions(t, r, { reload: list.reload })} />}
+      loading={!list.data && !list.error} error={list.error} onRetry={() => void list.reload()}
+      empty={{ text: q ? t("No job matches.", "لا توجد مهمة مطابقة.") : bucket === "new" ? t("No new requests.", "لا توجد طلبات جديدة.") : bucket === "active" ? t("No active jobs.", "لا توجد مهام نشطة.") : t("No finished requests yet.", "لا توجد طلبات منتهية بعد."), action: q ? { label: t("Clear search", "مسح البحث"), onPress: () => setQ("") } : undefined }}
+      onRefresh={() => void list.reload()} refreshing={false} detailHint={t("Tap a job to open it.", "اضغط على مهمة لفتحها.")} />
   );
 }

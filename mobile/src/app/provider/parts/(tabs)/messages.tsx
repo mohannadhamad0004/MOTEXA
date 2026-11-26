@@ -1,4 +1,5 @@
-import Messages from "../../onboarding/messages";
-import { inTabs } from "../../../../features/providerhub/inTabs";
+import { ProviderInbox } from "../../../../features/providerhub/inbox";
 
-export default inTabs(Messages);
+export default function Messages() {
+  return <ProviderInbox area="parts" />;
+}

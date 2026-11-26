@@ -1,79 +1,44 @@
-import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useState } from "react";
+// The owner's delivery map = Detail with the map as its body: the customer's pin and the road route from where he is (or from the
+// shop before he leaves); the ONE primary is the next delivery step. While the order is OUT_FOR_DELIVERY and this screen is open, his
+// location is sent every ~10 s (foreground only) so the customer can follow; it stops when delivered or when the screen closes.
+import { useLocalSearchParams } from "expo-router";
+import { useState } from "react";
 import { View, useWindowDimensions } from "react-native";
-import { ErrorState, GarageHero,  GButton, Note, SkeletonBlock, StatusChip } from "../../../../../components/garage";
-import { ProviderLayout as GaragePage } from "../../../../../components/layout/ProviderLayout";
+import { GButton, Note, StatusChip } from "../../../../../components/garage";
+import { Loaded, Page } from "../../../../../components/manage/Page";
 import { useL } from "../../../../../core/hooks/useL";
-import { ORDER_REFRESH_MS, OrderStatus, ShopOrder, shopOrders } from "../../../../../features/orders/ordersService";
+import { useLoad } from "../../../../../core/hooks/useLoad";
+import { ORDER_REFRESH_MS, OrderStatus, shopOrders } from "../../../../../features/orders/ordersService";
 import { OrderMap, orderTone, useOrderLabels, useShareLocation } from "../../../../../features/orders/orderBits";
-import { gShape } from "../../../../../theme/garage";
 
-/**
- * The owner's delivery map: the customer's pin and the road route from where he is (or from the shop before he leaves), distance
- * + time and the status buttons. While the order is OUT_FOR_DELIVERY and this screen is open, his location is sent every ~10 s
- * (foreground only) so the customer can follow; it stops when the order is delivered or the screen closes.
- */
 export default function ShopDeliveryMap() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useL();
   const L = useOrderLabels();
   const { height } = useWindowDimensions();
-  const [o, setO] = useState<ShopOrder | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<OrderStatus | null>(null);
-  const load = useCallback(async () => {
-    try {
-      setO(await shopOrders.get(id));
-      setError(null);
-    } catch (e: any) {
-      setError(e.message);
-    }
-  }, [id]);
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-      const h = setInterval(load, ORDER_REFRESH_MS);
-      return () => clearInterval(h);
-    }, [load])
-  );
+  const state = useLoad(() => shopOrders.get(id), [id], ORDER_REFRESH_MS);
+  const [busy, setBusy] = useState(false), [error, setError] = useState<string | null>(null);
+  const o = state.data;
   const sharing = o?.status === "OUT_FOR_DELIVERY";
   const { me, meFresh, problem, canOpenSettings, openSettings } = useShareLocation(id, sharing, (p) => shopOrders.ping(id, p));
   const move = async (to: OrderStatus) => {
-    setBusy(to);
-    try {
-      setO(await shopOrders.move(id, to));
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setBusy(null);
-    }
+    setBusy(true); setError(null);
+    try { await shopOrders.move(id, to); await state.reload(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
-  const delivery = o?.delivery?.lat != null && o.delivery.lng != null ? { lat: o.delivery.lat, lng: o.delivery.lng } : null;
-  const steps = (o?.next ?? []).filter((s) => s === "OUT_FOR_DELIVERY" || s === "DELIVERED");
-
+  const step = (o?.next ?? []).find((s) => s === "OUT_FOR_DELIVERY" || s === "DELIVERED");
   return (
-    <GaragePage
-      onRefresh={load}
-      hero={
-        <GarageHero variant="detail" onBack={() => (router.canGoBack() ? router.back() : router.navigate({ pathname: "/provider/parts/orders/[id]", params: { id } }))} title={t("Delivery map", "خريطة التوصيل")} line={o ? `${o.customer.firstName}${o.delivery?.note ? ` · ${o.delivery.note}` : ""}` : undefined}>
-          {o ? <StatusChip tone={orderTone(o.status)} label={L.status[o.status]} /> : null}
-        </GarageHero>
-      }
-    >
-      {error && !o ? <ErrorState text={error} onRetry={load} retryLabel={t("Retry", "إعادة المحاولة")} /> : null}
-      {!o && !error ? <SkeletonBlock height={Math.round(height * 0.55)} radius={gShape.card} /> : null}
-      {o ? (
+    <Page title={t("Delivery map", "خريطة التوصيل")} line={o ? `${o.customer.firstName}${o.delivery?.note ? ` · ${o.delivery.note}` : ""}` : undefined}
+      actions={problem && canOpenSettings ? [{ key: "settings", label: t("Open Settings", "فتح الإعدادات"), icon: "settings-outline", run: () => void openSettings() }] : undefined}
+      footer={step ? <GButton icon="checkmark" label={step === "OUT_FOR_DELIVERY" ? t("Leave now: out for delivery", "انطلق الآن: خرج للتوصيل") : t("Delivered, cash received", "تم التوصيل واستلام النقد")} busy={busy} disabled={busy} onPress={() => void move(step)} /> : undefined}>
+      <Loaded state={state}>{(o) => (
         <View style={{ gap: 12 }}>
+          <View style={{ alignSelf: "flex-start" }}><StatusChip tone={orderTone(o.status)} label={L.status[o.status]} /></View>
           {error ? <Note tone="danger" icon="alert-circle-outline">{error}</Note> : null}
           {problem ? <Note tone="danger" icon="location-outline">{problem}</Note> : null}
-          {problem && canOpenSettings ? <GButton variant="secondary" icon="settings-outline" label={t("Open Settings", "فتح الإعدادات")} onPress={() => void openSettings()} /> : null}
           {sharing && me ? <Note icon="radio-outline">{t("Sharing your location with the customer while this screen is open.", "تتم مشاركة موقعك مع الزبون أثناء فتح هذه الشاشة.")}</Note> : null}
-          <OrderMap orderId={o.id} height={Math.round(height * 0.5)} delivery={delivery} shop={o.shopPoint} courier={null} me={me} meFresh={meFresh} />
-          {steps.map((s) => (
-            <GButton key={s} label={s === "OUT_FOR_DELIVERY" ? t("Leave now: out for delivery", "انطلق الآن: خرج للتوصيل") : t("Delivered, cash received", "تم التوصيل واستلام النقد")} busy={busy === s} disabled={!!busy} onPress={() => void move(s)} />
-          ))}
+          <OrderMap orderId={o.id} height={Math.round(height * 0.5)} delivery={o.delivery?.lat != null && o.delivery.lng != null ? { lat: o.delivery.lat, lng: o.delivery.lng } : null} shop={o.shopPoint} courier={null} me={me} meFresh={meFresh} />
         </View>
-      ) : null}
-    </GaragePage>
+      )}</Loaded>
+    </Page>
   );
 }

@@ -1,7 +1,7 @@
 import { Image,View } from "react-native";
 import type { TowCompanyDetail,TowTruck } from "./catalogService";
 import { cityLabel } from "../../core/constants/cities";
-import { PublicMedia } from "../provider/portal/MediaPage";
+import { PublicMedia } from "../provider/portal/publicMedia";
 import { Panel,Pill,Text,useDT } from "../provider/portal/ui";
 import { useTruckLabels } from "../tow/truckBits";
 import { RatingText } from "../tow/DriverCard";

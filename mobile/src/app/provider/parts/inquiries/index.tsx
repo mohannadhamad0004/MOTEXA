@@ -1,62 +1,36 @@
-import { Async } from "../../../../components/ui/Feedback";
-import { EmptyState, Tabs } from "../../../../components/garage";
-import { ItemRow } from "../../../../components/ItemActionsMenu";
-import { shopInquiryActions } from "../../../../features/parts/provider/shopActions";
-import { ProviderLayout as DashboardLayout } from "../../../../components/layout/ProviderLayout";
+// Customer questions about this shop's parts = List: search, ONE chip row All · Open · Answered · Closed with counts, open ones first,
+// ⋮ per row. The customer's name is shown, never their email.
+import { router, type Href } from "expo-router";
+import { useState } from "react";
+import { FilterChips, ManagePage, ManageRow } from "../../../../components/manage/ManagePage";
 import { useL } from "../../../../core/hooks/useL";
 import { useLoad } from "../../../../core/hooks/useLoad";
-import { Text } from "../../../../components/ui/Text";
-import { useTheme } from "../../../../theme/useTheme";
-import { router } from "expo-router";
-import { useState } from "react";
-import { View } from "react-native";
-import { InquiryStatusBadge, fmtDateTime } from "../../../../features/requests/requestBits";
+import { shopInquiryActions } from "../../../../features/parts/provider/shopActions";
+import { fmtDateTime } from "../../../../features/requests/requestBits";
 import { InquiryStatus, shopInquiries } from "../../../../features/requests/requestsService";
+import { inquiryStatus } from "../../../../features/requests/inquiryStatus";
 
 type Filter = "ALL" | InquiryStatus;
+const ORDER: Record<InquiryStatus, number> = { OPEN: 0, ANSWERED: 1, CLOSED: 2 };
 
-// Customer questions about this shop's parts. The customer's name is shown, never their email.
 export default function ShopInquiries() {
-  const { c: col } = useTheme();
-  const { t, row, align } = useL();
-  const [filter, setFilter] = useState<Filter>("ALL");
-  const state = useLoad(() => shopInquiries.list(filter === "ALL" ? undefined : filter), [filter]);
-
+  const { t } = useL();
+  const [filter, setFilter] = useState<Filter>("ALL"), [q, setQ] = useState("");
+  const state = useLoad(() => shopInquiries.list(), [], 30000);
+  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const found = (state.data ?? []).filter((x) => words.every((w) => `${x.product.name} ${x.customerName} ${x.lastMessage ?? ""}`.toLowerCase().includes(w)));
+  const rows = found.filter((x) => filter === "ALL" || x.status === filter).sort((a, b) => ORDER[a.status] - ORDER[b.status] || b.updatedAt.localeCompare(a.updatedAt));
+  const n = (s: InquiryStatus) => found.filter((x) => x.status === s).length;
   return (
-    <DashboardLayout title={t("Customer questions", "أسئلة العملاء")} subtitle={t("Answer questions about your parts", "أجب عن الأسئلة حول قطعك")} back>
-      <View style={{ marginBottom: 14 }}>
-      <Tabs
-        value={filter}
-        onChange={setFilter}
-        options={[
-          { key: "ALL", label: t("All", "الكل") },
-          { key: "OPEN", label: t("Open", "مفتوحة") },
-          { key: "ANSWERED", label: t("Answered", "تم الرد") },
-          { key: "CLOSED", label: t("Closed", "مغلقة") },
-        ]}
-      />
-      </View>
-      <Async state={state}>
-        {(list) =>
-          !list.length ? (
-            <EmptyState photo="empty.requests" text={t("No questions here.", "لا توجد أسئلة هنا.")} />
-          ) : (
-            list.map((q) => (
-              <ItemRow key={q.id} title={q.product.name} subtitle={q.customerName} onPress={() => router.push(`/provider/parts/inquiries/${q.id}`)} actions={shopInquiryActions(t, q, state.reload)}>
-                <View style={[row, { justifyContent: "space-between", alignItems: "flex-start", gap: 10 }]}>
-                  <View style={{ flex: 1 }}>
-                    <Text numberOfLines={2} style={[{ color: col.text, fontSize: 15, fontWeight: "800" }, align]}>{q.product.name}</Text>
-                    <Text numberOfLines={1} style={[{ color: col.textMuted, fontSize: 12, marginTop: 3 }, align]}>{q.customerName}</Text>
-                  </View>
-                  <InquiryStatusBadge value={q.status} />
-                </View>
-                {q.lastMessage ? <Text numberOfLines={2} style={[{ color: col.textDim, fontSize: 12, marginTop: 10 }, align]}>{q.lastMessage}</Text> : null}
-                <Text style={[{ color: col.textDim, fontSize: 10, marginTop: 8 }, align]}>{fmtDateTime(q.updatedAt)}</Text>
-              </ItemRow>
-            ))
-          )
-        }
-      </Async>
-    </DashboardLayout>
+    <ManagePage title={t("Customer questions", "أسئلة العملاء")} line={state.data ? t(`${n("OPEN")} waiting for your answer`, `${n("OPEN")} بانتظار ردك`) : undefined}
+      search={{ value: q, onChange: setQ, placeholder: t("Part, customer or message", "القطعة أو العميل أو الرسالة") }}
+      filters={<FilterChips value={filter} onChange={setFilter} filters={[{ key: "ALL", label: t("All", "الكل"), count: found.length }, { key: "OPEN", label: t("Open", "مفتوحة"), count: n("OPEN") },
+        { key: "ANSWERED", label: t("Answered", "تم الرد"), count: n("ANSWERED") }, { key: "CLOSED", label: t("Closed", "مغلقة"), count: n("CLOSED") }]} />}
+      items={rows} keyOf={(x) => x.id}
+      renderItem={(x) => <ManageRow title={x.product.name} sub={[x.customerName, x.lastMessage, fmtDateTime(x.updatedAt)].filter(Boolean).join(" · ")} status={inquiryStatus(x.status, t)}
+        onPress={() => router.push(`/provider/parts/inquiries/${x.id}` as Href)} actions={shopInquiryActions(t, x, state.reload)} />}
+      loading={!state.data && !state.error} error={state.error} onRetry={() => void state.reload()}
+      empty={{ text: q || filter !== "ALL" ? t("No question matches.", "لا يوجد سؤال مطابق.") : t("No questions here.", "لا توجد أسئلة هنا.") }}
+      onRefresh={() => void state.reload()} refreshing={false} detailHint={t("Tap a question to answer it.", "اضغط على سؤال للرد عليه.")} />
   );
 }

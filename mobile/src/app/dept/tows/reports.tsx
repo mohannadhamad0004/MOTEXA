@@ -1,44 +1,29 @@
+// "Report a problem" from customers = List: ONE chip row Open · All with counts, open first, ⋮ = close a handled report; a row opens
+// the job.
 import { router } from "expo-router";
-import { ItemRow } from "../../../components/ItemActionsMenu";
-import { reportActions } from "../../../features/department/towActions";
 import { useState } from "react";
-import { View } from "react-native";
-import { Chip, EmptyState, ErrorState, GText, SkeletonRows, StatusChip } from "../../../components/garage";
-import { DeptHead, DeptPage } from "../../../features/department/ui";
+import { FilterChips, ManagePage, ManageRow } from "../../../components/manage/ManagePage";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
+import { reportActions } from "../../../features/department/towActions";
 import { fmtDateTime } from "../../../features/requests/requestBits";
 import { adminHistory } from "../../../features/tow/dispatchService";
-import { gType, useGarageTheme } from "../../../theme/garage";
 
-/** "Report a problem" from customers. Open the job to see everything; close a report once handled. */
 export default function AdminTowReports() {
   const { t } = useL();
-  const { row, align } = useGarageTheme();
-  const [open, setOpen] = useState(true);
-  const state = useLoad(() => adminHistory.reports(open), [open]);
+  const [show, setShow] = useState<"OPEN" | "ALL">("OPEN");
+  const state = useLoad(() => adminHistory.reports(false), []);
+  const all = state.data ?? [];
+  const open = all.filter((r) => !r.closedAt);
+  const rows = (show === "OPEN" ? open : all).slice().sort((a, b) => Number(!!a.closedAt) - Number(!!b.closedAt) || b.createdAt.localeCompare(a.createdAt));
   return (
-    <DeptPage back tabs={false} onRefresh={state.reload} refreshing={state.loading && !!state.data}>
-      <DeptHead title={t("Problem reports", "بلاغات المشاكل")} caption={state.data ? `${state.data.length}` : undefined} />
-      <View style={[row, { gap: 8, marginBottom: 12 }]}>
-        <Chip label={t("Open", "مفتوحة")} on={open} onPress={() => setOpen(true)} />
-        <Chip label={t("All", "الكل")} on={!open} onPress={() => setOpen(false)} />
-      </View>
-      {state.error && !state.data ? <ErrorState text={state.error} onRetry={state.reload} retryLabel={t("Retry", "إعادة المحاولة")} /> : null}
-      {!state.data && !state.error ? <SkeletonRows count={3} /> : null}
-      {state.data && !state.data.length ? <EmptyState photo="empty.requests" text={t("No reports.", "لا توجد بلاغات.")} /> : null}
-      <View style={{ gap: 10 }}>
-        {state.data?.map((r) => (
-          <ItemRow key={r.id} title={`${r.job.company}${r.job.driver ? ` · ${r.job.driver}` : ""}`} onPress={() => router.push({ pathname: "/dept/tows/[id]", params: { id: r.job.id } })} actions={reportActions(t, r, state.reload)}>
-            <View style={[row, { alignItems: "center", justifyContent: "space-between", gap: 8 }]}>
-              <GText style={[gType.label, { fontWeight: "800", flex: 1 }, align]}>{`${r.job.company}${r.job.driver ? ` · ${r.job.driver}` : ""}`}</GText>
-              <StatusChip tone={r.closedAt ? "neutral" : "danger"} label={r.closedAt ? t("Closed", "مغلق") : t("Open", "مفتوح")} />
-            </View>
-            <GText style={[gType.body, align, { marginVertical: 8 }]}>{r.body}</GText>
-            <GText soft style={[gType.caption, align]}>{`${r.job.customerFirstName} · ${fmtDateTime(r.createdAt)}`}</GText>
-          </ItemRow>
-        ))}
-      </View>
-    </DeptPage>
+    <ManagePage title={t("Problem reports", "بلاغات المشاكل")} line={state.data ? t(`${open.length} open`, `${open.length} مفتوحة`) : undefined}
+      filters={<FilterChips value={show} onChange={setShow} filters={[{ key: "OPEN", label: t("Open", "مفتوحة"), count: state.data ? open.length : undefined }, { key: "ALL", label: t("All", "الكل"), count: state.data ? all.length : undefined }]} />}
+      items={rows} keyOf={(r) => r.id}
+      renderItem={(r) => <ManageRow title={`${r.job.company}${r.job.driver ? ` · ${r.job.driver}` : ""}`} sub={`${r.body} · ${r.job.customerFirstName} · ${fmtDateTime(r.createdAt)}`}
+        status={r.closedAt ? { label: t("Closed", "مغلق"), tone: "neutral" } : { label: t("Open", "مفتوح"), tone: "danger" }}
+        onPress={() => router.push({ pathname: "/dept/tows/[id]", params: { id: r.job.id } })} actions={reportActions(t, r, state.reload)} />}
+      loading={!state.data && !state.error} error={state.error} onRetry={() => void state.reload()}
+      empty={{ text: t("No reports.", "لا توجد بلاغات.") }} onRefresh={() => void state.reload()} refreshing={false} detailHint={t("Tap a report to open its job.", "اضغط على بلاغ لفتح مهمته.")} />
   );
 }

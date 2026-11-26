@@ -2,11 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
-import { Button } from "../../components/ui/Button";
-import { Skeleton } from "../../components/ui/Skeleton";
-import { Text } from "../../components/ui/Text";
+import { GButton, GText, SkeletonBlock } from "../../components/garage";
 import { useL } from "../../core/hooks/useL";
-import { useTheme } from "../../theme/useTheme";
+import { gShape, useGarageTheme } from "../../theme/garage";
 import { Point, roundPoint } from "../../core/constants/geo";
 
 // Maps: Leaflet + OpenStreetMap tiles inside a WebView (runs in Expo Go; no Google key, no native map module).
@@ -240,7 +238,7 @@ function LeafletMap({
   /** true while the map is showing its "could not load" box, so a screen can fall back to its list */
   onFailedChange?: (failed: boolean) => void;
 }) {
-  const { c, r } = useTheme();
+  const { g } = useGarageTheme();
   const { t } = useL();
   const ref = useRef<WebView>(null);
   const [inited, setInited] = useState(false);
@@ -320,7 +318,7 @@ function LeafletMap({
   );
 
   return (
-    <View style={bare ? { height, overflow: "hidden", backgroundColor: c.surface } : { height, borderRadius: r.md + 2, overflow: "hidden", borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, marginBottom: 12 }}>
+    <View style={bare ? { height, overflow: "hidden", backgroundColor: g.card } : { height, borderRadius: gShape.small + 4, overflow: "hidden", borderWidth: 1, borderColor: g.line, backgroundColor: g.card, marginBottom: 12 }}>
       <WebView
         key={attempt}
         ref={ref}
@@ -342,22 +340,22 @@ function LeafletMap({
       />
       {!tiles && !failed ? (
         <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-          <Skeleton width="100%" height={height} radius={0} />
+          <SkeletonBlock width="100%" height={height} radius={0} />
         </View>
       ) : null}
       {failed && !tiles ? (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: c.surface, alignItems: "center", justifyContent: "center", padding: 18, gap: 8 }]}>
-          <Ionicons name="cloud-offline-outline" size={26} color={c.textDim} />
-          <Text style={{ color: c.textMuted, fontSize: 12, textAlign: "center" }}>
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: g.card, alignItems: "center", justifyContent: "center", padding: 18, gap: 8 }]}>
+          <Ionicons name="cloud-offline-outline" size={26} color={g.soft} />
+          <GText soft style={{ fontSize: 12, textAlign: "center" }}>
             {t("The map could not load. Check your internet connection. The list below still works.", "تعذّر تحميل الخريطة. تحقق من اتصال الإنترنت. القائمة تعمل كالمعتاد.")}
-          </Text>
-          <Button label={t("Retry", "إعادة المحاولة")} variant="ghost" size="sm" icon="refresh-outline" onPress={retry} />
+          </GText>
+          <GButton label={t("Retry", "إعادة المحاولة")} variant="ghost" icon="refresh-outline" onPress={retry} />
         </View>
       ) : null}
       {failed && tiles ? (
-        <View style={{ position: "absolute", left: 8, right: 8, top: 8, flexDirection: "row", alignItems: "center", gap: 8, padding: 8, borderRadius: 12, backgroundColor: c.surface, borderWidth: 1, borderColor: c.dangerBorder }}>
-          <Text style={{ color: c.danger, fontSize: 11, flex: 1 }}>{t("Part of the map could not load.", "تعذّر تحميل جزء من الخريطة.")}</Text>
-          <Button label={t("Reload", "إعادة تحميل")} variant="ghost" size="sm" onPress={retry} />
+        <View style={{ position: "absolute", left: 8, right: 8, top: 8, flexDirection: "row", alignItems: "center", gap: 8, padding: 8, borderRadius: 12, backgroundColor: g.card, borderWidth: 1, borderColor: g.danger + "4D" }}>
+          <GText style={{ color: g.danger, fontSize: 11, flex: 1 }}>{t("Part of the map could not load.", "تعذّر تحميل جزء من الخريطة.")}</GText>
+          <GButton label={t("Reload", "إعادة تحميل")} variant="ghost" onPress={retry} />
         </View>
       ) : null}
     </View>
@@ -365,8 +363,8 @@ function LeafletMap({
 }
 
 function useMapTheme() {
-  const { c } = useTheme();
-  return useMemo(() => ({ accent: c.accent, busy: "#8D8178", bg: c.surface, route: c.accent }), [c.accent, c.surface]);
+  const { g } = useGarageTheme();
+  return useMemo(() => ({ accent: g.accent, busy: "#8D8178", bg: g.card, route: g.accent }), [g.accent, g.card]);
 }
 
 /** Tow companies as pins (the selected one is highlighted), and your own position as a blue dot. */

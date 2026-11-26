@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { View } from "react-native";
-import { Mono, RoadLoader } from "../../components/blueprint";
-import { Text } from "../../components/ui/Text";
+import { ActivityIndicator, View } from "react-native";
+import { GText } from "../../components/garage";
 import { useL } from "../../core/hooks/useL";
-import { useTheme } from "../../theme/useTheme";
+import { useGarageTheme } from "../../theme/garage";
 import { LatLng, RouteResult, cachedRoute, getRoute, routeCacheKey } from "./routing";
 import { shouldRefreshLocationRoute } from "../../core/constants/geo";
 
@@ -57,25 +56,31 @@ export function useRoute(requestId: string | null, from: LatLng | null, to: LatL
 
 /** "≈ 12.3 km by road" + "Estimated drive time (no traffic) ≈ 18 min", or "Straight line ≈ 10 km". Honest labels only. */
 export function RouteSummary({ route, loading }: { route: RouteResult | null; loading: boolean }) {
-  const { c, row, align } = useTheme();
+  const { g, row, align } = useGarageTheme();
   const { t, isArabic } = useL();
-  if (loading) return <RoadLoader label={t("Finding the route…", "جارٍ حساب المسار…")} />;
-  if (!route) return <Text style={[{ color: c.soft, fontSize: 12 }, align]}>{""}</Text>;
+  const num = { fontVariant: ["tabular-nums" as const], color: g.ink };
+  if (loading) return (
+    <View style={[row, { alignItems: "center", gap: 8 }]}>
+      <ActivityIndicator size="small" color={g.accent} />
+      <GText soft style={{ fontSize: 12 }}>{t("Finding the route…", "جارٍ حساب المسار…")}</GText>
+    </View>
+  );
+  if (!route) return null;
   const km = route.km < 10 ? route.km.toFixed(1) : String(Math.round(route.km));
   const unit = isArabic ? "كم" : "km";
   return (
     <View style={{ gap: 4 }}>
       <View style={[row, { alignItems: "baseline", gap: 6 }]}>
-        <Mono color={c.ink} size={14} bold>{`≈ ${km} ${unit}`}</Mono>
-        <Text style={{ color: c.soft, fontSize: 12 }}>{route.kind === "road" ? t("by road", "بالطريق") : t("straight line", "خط مستقيم")}</Text>
+        <GText style={[num, { fontSize: 14, fontWeight: "800" }]}>{`≈ ${km} ${unit}`}</GText>
+        <GText soft style={{ fontSize: 12 }}>{route.kind === "road" ? t("by road", "بالطريق") : t("straight line", "خط مستقيم")}</GText>
       </View>
       {route.kind === "road" && route.minutes !== null ? (
         <View style={[row, { alignItems: "baseline", gap: 6, flexWrap: "wrap" }]}>
-          <Text style={{ color: c.soft, fontSize: 12 }}>{t("Estimated drive time (no traffic)", "وقت القيادة التقديري (بدون ازدحام)")}</Text>
-          <Mono size={12}>{`≈ ${route.minutes} ${isArabic ? "د" : "min"}`}</Mono>
+          <GText soft style={{ fontSize: 12 }}>{t("Estimated drive time (no traffic)", "وقت القيادة التقديري (بدون ازدحام)")}</GText>
+          <GText style={[num, { fontSize: 12 }]}>{`≈ ${route.minutes} ${isArabic ? "د" : "min"}`}</GText>
         </View>
       ) : null}
-      {route.kind === "line" ? <Text style={[{ color: c.soft, fontSize: 11 }, align]}>{t("The road route is not available right now.", "مسار الطريق غير متاح حاليًا.")}</Text> : null}
+      {route.kind === "line" ? <GText soft style={[{ fontSize: 11 }, align]}>{t("The road route is not available right now.", "مسار الطريق غير متاح حاليًا.")}</GText> : null}
     </View>
   );
 }

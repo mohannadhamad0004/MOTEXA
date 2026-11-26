@@ -1,6 +1,6 @@
 import type { CatalogShop } from "./catalogService";
 import { PrivatePhoto } from "../../components/garage";
-import { PublicMedia } from "../provider/portal/MediaPage";
+import { PublicMedia } from "../provider/portal/publicMedia";
 import { Panel,Text,Pill,useDT } from "../provider/portal/ui";
 import { cityLabel } from "../../core/constants/cities";
 export function ShopPublicProfile({shop}:{shop:CatalogShop}){const d=useDT();return <>
