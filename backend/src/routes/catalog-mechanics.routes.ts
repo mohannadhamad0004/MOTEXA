@@ -11,7 +11,8 @@ import { distanceTo, readPoint, text } from "./catalog.routes.js";
 //
 // WHO IS PUBLIC (one rule, `publicMechanic`, also used by mechanic requests): a MECHANIC whose account is ACTIVE and whose
 // MechanicProfile is VERIFIED (the mechanics admin approved it after the documents + interview review). Approval covers all of
-// the specializations the mechanic listed, so those are the skills customers see. Garages (later) add their mechanics here.
+// the specializations the mechanic listed, so those are the skills customers see. Garage mechanics are listed too (an APPROVED garage
+// mechanic of an APPROVED garage): first name only, with the garage as the workshop, measured from the garage's own pin.
 // PRIVACY: responses are built from an explicit field list. Never returned: phone, email, national id, documents, review or
 // interview notes.
 const router = Router();
@@ -50,9 +51,29 @@ const shape = (u: Row, detail = false) => {
     city: p.city,
     skills: skillsOf(p.specializations),
     yearsOfExperience: p.yearsOfExperience,
+    garage: null as null | { id: string; name: string; nameAr: string | null },
     ...(detail ? { workshopAddress: p.workshopAddress || null } : {}),
   };
 };
+
+/** Garage mechanics customers may pick directly: APPROVED, account ACTIVE, garage APPROVED. */
+const publicGarageMechanic: Prisma.GarageMechanicWhereInput = { approval: "APPROVED", user: { status: "ACTIVE", role: "MECHANIC" }, garage: { verificationStatus: "APPROVED" } };
+const gmSelect = {
+  userId: true, skills: true, user: { select: { fullName: true } },
+  garage: { select: { id: true, garageName: true, garageNameAr: true, city: true, address: true, baseLat: true, baseLng: true } },
+} satisfies Prisma.GarageMechanicSelect;
+type GmRow = Prisma.GarageMechanicGetPayload<{ select: typeof gmSelect }>;
+const shapeGm = (m: GmRow, detail = false) => ({
+  id: m.userId,
+  name: m.user.fullName.trim().split(/\s+/)[0] || m.user.fullName, // first name only
+  workshopName: m.garage.garageName,
+  city: m.garage.city,
+  skills: skillsOf(m.skills),
+  yearsOfExperience: null,
+  garage: { id: m.garage.id, name: m.garage.garageName, nameAr: m.garage.garageNameAr },
+  ...(detail ? { workshopAddress: m.garage.address || null } : {}),
+});
+const gmBase = (m: GmRow) => ({ city: m.garage.city, baseLat: m.garage.baseLat, baseLng: m.garage.baseLng });
 
 // ?q= (name or workshop) &city= &skill= &lat=&lng= (both or none) &sort=name|nearest &page=
 // With a position every row gets distanceKm + distanceSource ("base" = workshop coordinates, "city" = city centre).
@@ -88,8 +109,19 @@ router.get("/mechanics", async (req, res) => {
       },
       select,
     });
-    const all = rows
-      .map((u) => ({ ...shape(u), ...(point ? distanceTo(point, { city: u.mechanicProfile!.city ?? "", baseLat: null, baseLng: null }) : {}) }))
+    const gms = await prisma.garageMechanic.findMany({
+      where: {
+        ...publicGarageMechanic,
+        ...(skill ? { skills: { has: skill } } : {}),
+        ...(city ? { garage: { verificationStatus: "APPROVED", city } } : {}),
+        ...(q ? { OR: [{ user: { fullName: { contains: q, mode: "insensitive" } } }, { garage: { garageName: { contains: q, mode: "insensitive" } } }] } : {}),
+      },
+      select: gmSelect,
+    });
+    const all = [
+      ...rows.map((u) => ({ ...shape(u), ...(point ? distanceTo(point, { city: u.mechanicProfile!.city ?? "", baseLat: null, baseLng: null }) : {}) })),
+      ...gms.map((m) => ({ ...shapeGm(m), ...(point ? distanceTo(point, gmBase(m)) : {}) })),
+    ]
       .sort((a, b) => {
         const km = (x: object) => (x as { distanceKm?: number | null }).distanceKm ?? Infinity;
         const byDistance = sort === "nearest" ? km(a) - km(b) : 0;
@@ -118,8 +150,10 @@ router.get("/mechanics/:id", async (req, res) => {
     const point = readPoint(req.query);
     if (typeof point === "string") return bad(res, 400, point);
     const u = await prisma.user.findFirst({ where: { id: String(req.params.id), ...publicMechanic }, select });
-    if (!u) return bad(res, 404, "Mechanic not found.");
-    return res.json({ success: true, mechanic: { ...shape(u, true), ...(point ? distanceTo(point, { city: u.mechanicProfile!.city ?? "", baseLat: null, baseLng: null }) : {}) } });
+    if (u) return res.json({ success: true, mechanic: { ...shape(u, true), ...(point ? distanceTo(point, { city: u.mechanicProfile!.city ?? "", baseLat: null, baseLng: null }) : {}) } });
+    const m = await prisma.garageMechanic.findFirst({ where: { userId: String(req.params.id), ...publicGarageMechanic }, select: gmSelect });
+    if (!m) return bad(res, 404, "Mechanic not found.");
+    return res.json({ success: true, mechanic: { ...shapeGm(m, true), ...(point ? distanceTo(point, gmBase(m)) : {}) } });
   } catch (e) {
     return fail(res, "Catalog mechanic error", e);
   }

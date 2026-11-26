@@ -244,69 +244,116 @@
     "cleanupReason": "Six-view comparison shows upright assembled vehicle, usable body/wheels/materials and shape consistent with mapped generation."
   },
   "mercedes-c-class-w203": {
-    "key": "mercedes-c-class-w203",
-    "file": "mercedes-c-class-w203",
-    "make": "Mercedes-Benz",
+    "key": "manual-bfc1c9ea-57fa-4f66-be9d-1a1dfc831c88-ac482c8cbfc41191",
+    "file": "manual-bfc1c9ea-57fa-4f66-be9d-1a1dfc831c88-ac482c8cbfc41191",
+    "make": "Mercedes",
     "model": "C-Class",
     "code": "W203",
-    "title": "Mercedes- Benz C-class W203 sedan",
-    "author": "Nieve5677",
-    "authorUrl": "https://sketchfab.com/niev",
-    "url": "https://sketchfab.com/3d-models/mercedes-benz-c-class-w203-sedan-ff9ba755fc884fb88b5e73c3df1296e1",
-    "license": "CC BY 4.0",
-    "bytesBefore": 21008124,
-    "bytesAfter": 4097140,
-    "textures": 0,
-    "lengthM": 4.7,
-    "rotateY": -1.5708,
-    "paintMaterials": [
-      "carpaint"
-    ],
-    "rimsSwappable": false,
-    "removed": 2,
-    "flags": [],
-    "check": [
-      "front"
-    ],
-    "review": [],
+    "url": "https://sketchfab.com/3d-models/2000-mercedes-c-class-w203-6cf3d6203793450ba9e6a572fc164c77",
+    "title": "2000 Mercedes C-class W203",
+    "author": "Res1n",
+    "license": "CC Attribution",
     "inApp": true,
-    "configurationOverride": {
-      "preRotateX": -1.5707963267948966,
-      "rotateY": 0
-    },
+    "finalStatus": "PASS_VARIANT",
+    "source": "Sketchfab",
     "viewerConfig": {
-      "key": "mercedes-c-class-w203",
-      "generation": "Mercedes-Benz C-Class W203",
-      "lengthM": 4.7,
-      "preRotateX": -1.5707963267948966,
-      "rotateY": 0,
-      "groundOffset": 0,
-      "paintNodes": [],
-      "paintMaterials": [
-        "carpaint"
-      ],
-      "rimsSwappable": false,
-      "wing": {
-        "x": 0,
-        "y": 0,
-        "z": 0,
-        "scale": 1
-      },
+      "key": "manual-bfc1c9ea-57fa-4f66-be9d-1a1dfc831c88-ac482c8cbfc41191",
       "rack": {
         "x": 0,
         "y": 0,
         "z": 0,
         "scale": 1
       },
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
       "credit": {
-        "title": "Mercedes- Benz C-class W203 sedan",
-        "author": "Nieve5677",
-        "url": "https://sketchfab.com/3d-models/mercedes-benz-c-class-w203-sedan-ff9ba755fc884fb88b5e73c3df1296e1",
-        "license": "CC BY 4.0"
-      }
+        "url": "https://sketchfab.com/3d-models/2000-mercedes-c-class-w203-6cf3d6203793450ba9e6a572fc164c77",
+        "title": "2000 Mercedes C-class W203",
+        "author": "Res1n",
+        "license": "CC Attribution"
+      },
+      "lengthM": 4.5,
+      "rotateY": 0,
+      "generation": "Mercedes C-Class W203",
+      "paintNodes": [],
+      "preRotateX": 0,
+      "groundOffset": 0,
+      "rimsSwappable": false,
+      "paintMaterials": [
+        "carpaint"
+      ]
     },
-    "finalStatus": "PASS_AFTER_FIX",
-    "cleanupReason": "Upright, assembled, grounded, front heading and framing verified improved in front-three-quarter, left-side and rear-three-quarter comparisons."
+    "sourceUid": "6cf3d6203793450ba9e6a572fc164c77",
+    "authorUrl": "https://sketchfab.com/Res1n",
+    "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+    "sourceMetadata": {
+      "uid": "6cf3d6203793450ba9e6a572fc164c77",
+      "url": "https://sketchfab.com/3d-models/2000-mercedes-c-class-w203-6cf3d6203793450ba9e6a572fc164c77",
+      "tags": [
+        "bmw",
+        "audi",
+        "textures",
+        "transport",
+        "2000",
+        "germany",
+        "MERCEDES",
+        "amg",
+        "c-class",
+        "63",
+        "mashina",
+        "besplatno",
+        "2027",
+        "3d",
+        "blender",
+        "vehicle",
+        "pbr",
+        "car",
+        "free",
+        "sketchfab",
+        "2026",
+        "w203",
+        "resinnnn",
+        "res1n"
+      ],
+      "title": "2000 Mercedes C-class W203",
+      "author": "Res1n",
+      "format": "glb",
+      "allowed": true,
+      "license": "CC Attribution",
+      "authorUrl": "https://sketchfab.com/Res1n",
+      "thumbnail": "https://media.sketchfab.com/models/6cf3d6203793450ba9e6a572fc164c77/thumbnails/c3d8448dcccc4e208dc7bbc38c1d3bf1/4bb1f466002b47e8ac9f74b0610dd72c.jpeg",
+      "triangles": 644776,
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "inspectedAt": "2026-11-26T11:27:25.525Z",
+      "refusalCode": null,
+      "downloadable": true,
+      "downloadedAt": "2026-11-26T11:27:29.320Z",
+      "licenseClass": "CC BY",
+      "optimization": {
+        "removed": 2,
+        "textures": 0,
+        "warnings": [
+          "Front direction requires visual confirmation."
+        ],
+        "bytesAfter": 2246440,
+        "simplified": {
+          "after": 269978,
+          "before": 644745,
+          "budget": 300000
+        },
+        "bytesBefore": 21008828
+      },
+      "sourceSha256": "82b5da24c9f5e7f818813cfeb93be0ace3461e18f0717f3775067f9976029428",
+      "downloadSource": "https://api.sketchfab.com/v3/models/6cf3d6203793450ba9e6a572fc164c77/download",
+      "pendingRawPath": null,
+      "pendingPreparedPath": null,
+      "originalDownloadedBytes": 21008828
+    },
+    "preparedSha256": "ac482c8cbfc411915a2740bf42c2402825a0f57729d3979af55c14e78a2509e6"
   },
   "mercedes-e-class-w212": {
     "key": "mercedes-e-class-w212",
@@ -1389,5 +1436,89 @@
       "originalDownloadedBytes": 40464480
     },
     "preparedSha256": "e45ef295bee3028acb6526696e6708261a1bbd4eefbc7bc48689b1525f2620d8"
+  },
+  "mercedes-e-class-w210": {
+    "key": "manual-784c0eeb-0a98-46e6-a7ee-df87bb23b844-73eb4209497c0413",
+    "file": "manual-784c0eeb-0a98-46e6-a7ee-df87bb23b844-73eb4209497c0413",
+    "make": "Mercedes",
+    "model": "E-Class",
+    "code": "W210",
+    "url": "https://sketchfab.com/3d-models/2002-mercedes-benz-e320-w210-4matic-sedan-1bac3d44716541a3aa0b53671911066e",
+    "title": "2002 Mercedes-benz E320 W210 4MATIC Sedan",
+    "author": "Maroi Mister Let Me Think Official 3D Studio",
+    "license": "CC Attribution",
+    "inApp": true,
+    "finalStatus": "PASS_VARIANT",
+    "source": "Sketchfab",
+    "viewerConfig": {
+      "key": "manual-784c0eeb-0a98-46e6-a7ee-df87bb23b844-73eb4209497c0413",
+      "rack": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "wing": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1
+      },
+      "credit": {
+        "url": "https://sketchfab.com/3d-models/2002-mercedes-benz-e320-w210-4matic-sedan-1bac3d44716541a3aa0b53671911066e",
+        "title": "2002 Mercedes-benz E320 W210 4MATIC Sedan",
+        "author": "Maroi Mister Let Me Think Official 3D Studio",
+        "license": "CC Attribution"
+      },
+      "lengthM": 4.5,
+      "rotateY": 0,
+      "generation": "Mercedes E-Class W210",
+      "paintNodes": [],
+      "preRotateX": 0,
+      "groundOffset": 0,
+      "rimsSwappable": false,
+      "paintMaterials": []
+    },
+    "sourceUid": "1bac3d44716541a3aa0b53671911066e",
+    "authorUrl": "https://sketchfab.com/homicivan53",
+    "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+    "sourceMetadata": {
+      "uid": "1bac3d44716541a3aa0b53671911066e",
+      "url": "https://sketchfab.com/3d-models/2002-mercedes-benz-e320-w210-4matic-sedan-1bac3d44716541a3aa0b53671911066e",
+      "tags": [
+        "MERCEDES"
+      ],
+      "title": "2002 Mercedes-benz E320 W210 4MATIC Sedan",
+      "author": "Maroi Mister Let Me Think Official 3D Studio",
+      "format": "glb",
+      "allowed": true,
+      "license": "CC Attribution",
+      "authorUrl": "https://sketchfab.com/homicivan53",
+      "thumbnail": "https://media.sketchfab.com/models/1bac3d44716541a3aa0b53671911066e/thumbnails/e0bef4bef71e4366959bef55d2441a70/a099aac659d04e13b559e183fbd30082.jpeg",
+      "triangles": 95416,
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "inspectedAt": "2026-11-26T11:38:47.960Z",
+      "refusalCode": null,
+      "downloadable": true,
+      "downloadedAt": "2026-11-26T11:38:54.982Z",
+      "licenseClass": "CC BY",
+      "optimization": {
+        "removed": 5,
+        "textures": 22,
+        "warnings": [
+          "Paint segmentation requires review; automatic recoloring is disabled.",
+          "Front direction requires visual confirmation."
+        ],
+        "bytesAfter": 1229980,
+        "simplified": null,
+        "bytesBefore": 7696420
+      },
+      "sourceSha256": "dcc07da979e04c7324285f303b6dec64af0c4882649e3e029b6c2e7c2d468671",
+      "downloadSource": "https://api.sketchfab.com/v3/models/1bac3d44716541a3aa0b53671911066e/download",
+      "pendingRawPath": null,
+      "pendingPreparedPath": null,
+      "originalDownloadedBytes": 7696420
+    },
+    "preparedSha256": "73eb4209497c041379fce0f4937d369b0c97c3ba1033171c176f58b8f9ef656b"
   }
 }

@@ -21,7 +21,7 @@ test('mechanics admin: permissions, location rule, cancel with reason', async ()
   const ids = [customer.id, mechanic.id, mAdmin.id, pAdmin.id, superA.id];
   const [ct, mt, at, pt, st] = [customer, mechanic, mAdmin, pAdmin, superA].map(token);
   try {
-    const made = await call(ct, 'POST', '/requests/mechanic', { mechanicId: mechanic.id, carMake: 'Kia', carModel: 'Rio', problemDescription: 'Admin test: engine misfire', ...EXACT });
+    const made = await call(ct, 'POST', '/requests/mechanic', { mechanicId: mechanic.id, serviceMode: 'WORKSHOP', carMake: 'Kia', carModel: 'Rio', problemDescription: 'Admin test: engine misfire', ...EXACT });
     assert.equal(made.status, 201); const id = made.data.request.id;
     const find = (d) => d.requests.find((r) => r.id === id);
 

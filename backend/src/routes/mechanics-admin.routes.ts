@@ -5,7 +5,7 @@ import { prisma } from "../prisma.js";
 import { requireAuth, requireMechanicsAdmin } from "../middleware/auth.middleware.js";
 import { errorBody } from "../services/error-codes.js";
 import { notify } from "../services/provider-onboarding.js";
-import { include, mechanicView, nearestCity } from "./mechanic-requests.routes.js";
+import { endMechanicTrail, include, mechanicView, nearestCity } from "./mechanic-requests.routes.js";
 
 // Mechanics admin supervision of mechanic requests (like the tow admin's jobs). Mounted under /api.
 //  - GET  /admin/mechanics/stats                  counts for the admin home and the super admin dashboard
@@ -15,10 +15,11 @@ import { include, mechanicView, nearestCity } from "./mechanic-requests.routes.j
 // Access: SUPER_ADMIN or ADMIN + MANAGE_MECHANICS (requireMechanicsAdmin), enforced here, not only in the app.
 // Privacy: the admin gets the SAME location rule as the mechanic (exact address, pin and phone only while the job is ACCEPTED /
 // IN_PROGRESS; otherwise the nearest city and a pin rounded to ~1 km). The admin always sees the customer's full name (never the email).
+// Garage requests: `garage` is set; `mechanic` is null until the owner assigns one of his mechanics.
 const router = Router();
 const guard = [requireAuth, requireMechanicsAdmin];
 
-const ACTIVE = ["REQUESTED", "ACCEPTED", "IN_PROGRESS"] as const;
+const ACTIVE = ["REQUESTED", "ACCEPTED", "EN_ROUTE", "ARRIVED", "IN_PROGRESS"] as const;
 const HISTORY = ["COMPLETED", "DECLINED", "CANCELLED"] as const;
 const STATUSES = [...ACTIVE, ...HISTORY];
 const MAX = 200;
@@ -41,7 +42,9 @@ const adminView = (r: Prisma.MechanicRequestGetPayload<{ include: typeof include
     ...v,
     customerName: r.customer.fullName,
     customerId: r.customer.id,
-    mechanic: { id: r.mechanic.id, name: r.mechanic.fullName, workshopName: r.mechanic.mechanicProfile?.workshopName || null, city: r.mechanic.mechanicProfile?.city ?? null },
+    mechanic: r.mechanic
+      ? { id: r.mechanic.id, name: r.mechanic.fullName, workshopName: r.mechanic.mechanicProfile?.workshopName || r.garage?.garageName || null, city: r.mechanic.mechanicProfile?.city ?? r.garage?.city ?? null }
+      : { id: null, name: null, workshopName: r.garage?.garageName ?? null, city: r.garage?.city ?? null },
     // where the CAR is: the nearest city (≤ 30 km) to the customer's pin; null without a pin (never guessed from the mechanic's city,
     // which is mechanic.city). A customer may book a mechanic from another city, so the two can differ.
     city: v.location.point ? nearestCity(v.location.point) : null,
@@ -51,13 +54,18 @@ const adminView = (r: Prisma.MechanicRequestGetPayload<{ include: typeof include
 
 router.get("/admin/mechanics/stats", ...guard, async (_req, res) => {
   try {
-    const [byStatus, pendingApplications, verified] = await Promise.all([
+    const [byStatus, pendingApplications, verified, pendingGarages, approvedGarages, pendingGarageMechanics, onlineGarageMechanics] = await Promise.all([
       prisma.mechanicRequest.groupBy({ by: ["status"], _count: { _all: true } }),
       prisma.mechanicProfile.count({ where: { verificationStatus: "PENDING" } }),
       prisma.mechanicProfile.count({ where: { verificationStatus: "VERIFIED" } }),
+      prisma.garageProfile.count({ where: { verificationStatus: "PENDING" } }),
+      prisma.garageProfile.count({ where: { verificationStatus: "APPROVED" } }),
+      prisma.garageMechanic.count({ where: { approval: "PENDING" } }),
+      prisma.garageMechanic.count({ where: { approval: "APPROVED", offline: false } }),
     ]);
     const n = (s: string) => byStatus.find((r) => r.status === s)?._count._all ?? 0;
-    return res.json({ success: true, stats: { activeRequests: ACTIVE.reduce((a, s) => a + n(s), 0), waiting: n("REQUESTED"), accepted: n("ACCEPTED"), inProgress: n("IN_PROGRESS"), pendingApplications, verifiedMechanics: verified } });
+    return res.json({ success: true, stats: { activeRequests: ACTIVE.reduce((a, s) => a + n(s), 0), waiting: n("REQUESTED"), accepted: n("ACCEPTED"), onTheWay: n("EN_ROUTE") + n("ARRIVED"), inProgress: n("IN_PROGRESS"), pendingApplications, verifiedMechanics: verified,
+      pendingGarages, approvedGarages, pendingGarageMechanics, onlineGarageMechanics } });
   } catch (e) {
     return send(res, e, "Mechanics admin stats error");
   }
@@ -96,14 +104,15 @@ router.post("/admin/mechanics/requests/:id/cancel", ...guard, express.json(), as
     const reason = typeof req.body?.reason === "string" ? req.body.reason.trim().slice(0, 300) : "";
     if (reason.length < 3) throw new HttpError(400, "A reason is required.");
     const id = String(req.params.id);
-    const r = await prisma.mechanicRequest.findUnique({ where: { id }, select: { customerId: true, mechanicUserId: true } });
+    const r = await prisma.mechanicRequest.findUnique({ where: { id }, select: { customerId: true, mechanicUserId: true, garage: { select: { userId: true } } } });
     if (!r) throw new HttpError(404, "Request not found.");
     await prisma.$transaction(async (tx) => {
       const done = await tx.mechanicRequest.updateMany({ where: { id, status: { in: [...ACTIVE] } }, data: { status: "CANCELLED", cancelledAt: new Date(), cancelledBy: "ADMIN", cancelReason: reason } });
       if (!done.count) throw new HttpError(409, "Only an open request can be cancelled.");
+      await endMechanicTrail(tx, id);
       await tx.auditLog.create({ data: { actorId: actor(res), action: "MECHANIC_REQUEST_CANCELLED", targetId: id, details: { by: "ADMIN", reason } } });
     });
-    await notify([r.customerId, r.mechanicUserId], ["A mechanic request was cancelled by MOTEXA", "ألغت موتكسا طلب ميكانيكي"], [reason, reason]);
+    await notify([r.customerId, ...(r.mechanicUserId ? [r.mechanicUserId] : []), ...(r.garage ? [r.garage.userId] : [])], ["A mechanic request was cancelled by MOTEXA", "ألغت موتكسا طلب ميكانيكي"], [reason, reason]);
     return res.json({ success: true, request: adminView(await prisma.mechanicRequest.findUniqueOrThrow({ where: { id }, include })) });
   } catch (e) {
     return send(res, e, "Mechanics admin cancel error");

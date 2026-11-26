@@ -1,1 +1,1 @@
-export { AdminAccessory3DDetail as default } from "../../../features/accessory3d/screens";
+export { AdminAccessory3DDetail as default } from "../../../features/accessory3d/AdminDetail";

@@ -23,8 +23,9 @@ import { startOfferSweeper } from "./services/tow-offers.js";
 import catalogMechanicRoutes from "./routes/catalog-mechanics.routes.js";
 import mechanicRequestRoutes from "./routes/mechanic-requests.routes.js";
 import mechanicsAdminRoutes from "./routes/mechanics-admin.routes.js";
+import garageRoutes from "./routes/garages.routes.js";
 import providerOnboardingRoutes, { notificationsRouter } from "./routes/provider-onboarding.routes.js";
-import { partsReviewRouter, towReviewRouter } from "./routes/provider-review.routes.js";
+import { garageReviewRouter, partsReviewRouter, towReviewRouter } from "./routes/provider-review.routes.js";
 import express from "express";
 import { fileURLToPath } from "node:url";
 import cors from "cors";
@@ -67,11 +68,13 @@ app.use("/api", towRequestRoutes);
 app.use("/api", towJobExtrasRoutes); // chat, review, report of a tow job
 app.use("/api", mechanicRequestRoutes);
 app.use("/api", mechanicsAdminRoutes); // mechanics admin: supervise requests
+app.use("/api", garageRoutes); // garages: owner, garage mechanics (Online), admin review + live map, catalog
 // Provider onboarding (documents arrive as base64, so these routers parse their own body after authentication)
 app.use("/api/provider", providerOnboardingRoutes);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/admin/providers/tow", towReviewRouter);
 app.use("/api/admin/providers/parts", partsReviewRouter);
+app.use("/api/admin/providers/garage", garageReviewRouter);
 app.use(express.json({limit:'8mb'}));
 
 app.get("/api/health", (_req, res) => {

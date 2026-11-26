@@ -75,8 +75,8 @@ test('mechanic application from a customer account, private documents, review, r
   r=await api('/api/catalog/mechanics?skill=Brakes&city=Ramallah','GET',undefined,ct);assert.ok(r.body.mechanics.some(x=>x.id===mechanic.id),'listed in the catalog');
   r=await api('/api/catalog/mechanics/'+mechanic.id,'GET',undefined,ct);assert.equal(r.status,200);assert.deepEqual(r.body.mechanic.skills,['Engine','Brakes']);assert.equal(r.body.mechanic.workshopName,'Test Workshop');
   assert.doesNotMatch(JSON.stringify(r.body),/0599999999|example\.invalid/,'no phone or email for customers');
-  assert.equal((await api('/api/requests/mechanic','POST',{mechanicId:mechanic.id,skill:'Bodywork',carMake:'Kia',carModel:'Rio',problemDescription:'Engine stalls at idle.',locationText:'Ramallah centre'},ct)).status,400);
-  r=await api('/api/requests/mechanic','POST',{mechanicId:mechanic.id,skill:'Engine',carMake:'Kia',carModel:'Rio',problemDescription:'Engine stalls at idle.',locationText:'Ramallah centre'},ct);assert.equal(r.status,201);const job=r.body.request.id;
+  assert.equal((await api('/api/requests/mechanic','POST',{mechanicId:mechanic.id,serviceMode:'WORKSHOP',skill:'Bodywork',carMake:'Kia',carModel:'Rio',problemDescription:'Engine stalls at idle.',locationText:'Ramallah centre'},ct)).status,400);
+  r=await api('/api/requests/mechanic','POST',{mechanicId:mechanic.id,serviceMode:'WORKSHOP',skill:'Engine',carMake:'Kia',carModel:'Rio',problemDescription:'Engine stalls at idle.',locationText:'Ramallah centre'},ct);assert.equal(r.status,201);const job=r.body.request.id;
   assert.ok((await api('/api/mechanic/requests','GET',undefined,mt)).body.requests.some(x=>x.id===job),'in the mechanic inbox');
   for(const step of ['accept','start','complete']){r=await api('/api/mechanic/requests/'+job+'/'+step,'POST',{},mt);assert.equal(r.status,200,step);}
   assert.equal(r.body.request.status,'COMPLETED');
@@ -84,7 +84,7 @@ test('mechanic application from a customer account, private documents, review, r
   assert.equal((await api('/api/mechanics/admin/'+mechanic.id+'/decision','POST',{action:'SUSPEND',notes:'Services suspended pending an account review.',submissionVersion:version},rt)).status,200);
   assert.equal((await api('/api/mechanics/me/service-access','GET',undefined,mt)).status,403);
   r=await api('/api/catalog/mechanics/'+mechanic.id,'GET',undefined,ct);assert.equal(r.status,404);assert.equal(r.body.errorCode,'MECHANIC_NOT_FOUND'); // suspended = hidden
-  assert.equal((await api('/api/requests/mechanic','POST',{mechanicId:mechanic.id,carMake:'Kia',carModel:'Rio',problemDescription:'Engine stalls at idle.',locationText:'Ramallah centre'},ct)).status,404);
+  assert.equal((await api('/api/requests/mechanic','POST',{mechanicId:mechanic.id,serviceMode:'WORKSHOP',carMake:'Kia',carModel:'Rio',problemDescription:'Engine stalls at idle.',locationText:'Ramallah centre'},ct)).status,404);
   assert.equal((await api('/api/mechanics/me','GET',undefined,mt)).status,200);
   r=await api('/api/mechanics/notifications','GET',undefined,mt);assert.ok(r.body.notifications.length>=4);
   assert.ok((await prisma.auditLog.count({where:{targetId:profiles[0]}}))>=8);

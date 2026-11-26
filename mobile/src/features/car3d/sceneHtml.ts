@@ -1464,6 +1464,26 @@ function kitList(s) {
   var l = Array.isArray(s.kits) ? s.kits.slice(0, 4) : s.kit ? [s.kit] : [];
   return l.filter(function (k) { return k && typeof k.type === "string" && KIT[k.type] && typeof k.file === "string"; });
 }
+// The Parts Admin's correction editor (kit.qaLive): FIT-QA's own measure (qaMeasure, the same tiers) of the part where it is now (auto-fit +
+// correction), 350 ms after the last change, posted as "fitCheck", judged with the stored fit's own limit. The car body near the part (FIT-QA's
+// 12 cm box) and the part's samples are built once per accessory, the body again only when the part moves out of that box. Rims: clip only (their gap is the rim lip in the tyre, never moved here).
+var qaLiveTimer = null;
+function qaLive(a, k, j) {
+  var key = [j.x, j.y, j.z, j.rx, j.ry, j.s].join(","); if (a.qaKey === key) return; a.qaKey = key;
+  if (qaLiveTimer) clearTimeout(qaLiveTimer);
+  qaLiveTimer = setTimeout(function () { qaLiveTimer = null; if (!car || car.accs[k.type + "|" + k.file] !== a) return;
+    try {
+      var rims = k.type === "RIMS", nodes = a.place.map(function (p) { return p.o.node; });
+      if (rims) a.group.traverse(function (o) { if (o.isMesh && o.userData.tyre) nodes.push(o); });
+      var now = new THREE.Box3(); nodes.forEach(function (n) { n.updateMatrixWorld(true); now.expandByObject(n); });
+      if (!a.qa || !a.qa.box.containsBox(now)) { var box = now.clone().expandByScalar(0.12), extra = []; a.group.traverse(function (o) { if (o.isMesh && o.userData.residual) extra.push(o); });
+        a.qa = { box: box, body: qaBody(car, box, a.zone ? a.zone.hide.slice() : [], extra, a.zone && a.zone.cut), samples: a.qa ? a.qa.samples : nodes.map(function (n) { return qaSamples(n, Math.round(2400 / nodes.length)); }), lim: a.qa ? a.qa.lim : (a.info && a.info.qa && a.info.qa.limitMm) || qaLimit(nodes[0]) }; }
+      a.qa.body.setPart(nodes);
+      var m = qaMeasure(a.qa.body, nodes, a.qa.samples, rims), r = { clipMm: m.clipMm, gapMm: rims ? 0 : m.gapMm };
+      post({ type: "fitCheck", kitType: k.type, clipMm: r.clipMm, gapMm: rims ? null : r.gapMm, limitMm: a.qa.lim, tier: qaTier(r, a.qa.lim) });
+    } catch (e) { post({ type: "fitCheck", kitType: k.type, error: String(e && e.message || e).slice(0, 200) }); }
+  }, 350);
+}
 function kitApply(s) {
   car.stockVisibility = car.stockVisibility || new WeakMap();
   car.stockHidden = car.stockHidden || new Set();
@@ -1485,6 +1505,7 @@ function kitApply(s) {
     (a.shifts || []).forEach(function (x) { x.o.position.copy(x.orig).add(x.d); }); // rims: the wheel inset moves the kept stock tyres
     var j = addAdj(addAdj({ x: 0, y: 0, z: 0, rx: 0, ry: 0, s: 1 }, k.baseAdj), k.adj);
     a.place.forEach(function (p) { var n = p.o.node, b = p.base; n.position.set(b.pos[0] + j.x * p.side, b.pos[1] + j.y, b.pos[2] + j.z); n.rotation.set(b.rot[0] + j.rx, b.rot[1] + j.ry * p.side, b.rot[2]); n.scale.fromArray(b.sc).multiplyScalar(j.s); });
+    if (k.qaLive === true) qaLive(a, k, j); else a.qaKey = null; // reopened: measure again
     if (k.type === "RIMS") { // rims: the shop's finish on the main material, never the car's paint
       var fin = RIM_FINISH[String(k.finish || "silver").toLowerCase()]; // the shop's finish; silver when the shop gave none
       if (fin && !a.finish) a.finish = new THREE.MeshStandardMaterial({ color: fin[0], metalness: fin[1], roughness: fin[2], side: THREE.DoubleSide });

@@ -33,7 +33,7 @@ Keep the complete viewer configuration in `docs/3d/models.json`. Regenerate mobi
 | BMW 3 Series E36 | [BMW 3-Series e36 (Street)](https://sketchfab.com/3d-models/bmw-3-series-e36-street-13d0a12ecda04317b96ce1e618300412) | Black Snow | CC BY 4.0 |
 | BMW X5 E53 | [BMW X5 E53 RESTYLING   High Quality](https://sketchfab.com/3d-models/bmw-x5-e53-restyling-high-quality-1dfdb422f05d44b287e332bec4311c50) | takeover | CC BY 4.0 |
 | Hyundai Accent LC | [Hyundai Accent (TaGAZ) 2004](https://sketchfab.com/3d-models/hyundai-accent-tagaz-2004-b00b5faebc314e54aef423e46230e963) | panderlaike_design | CC BY 4.0 |
-| Mercedes-Benz C-Class W203 | [Mercedes- Benz C-class W203 sedan](https://sketchfab.com/3d-models/mercedes-benz-c-class-w203-sedan-ff9ba755fc884fb88b5e73c3df1296e1) | Nieve5677 | CC BY 4.0 |
+| Mercedes C-Class W203 | [2000 Mercedes C-class W203](https://sketchfab.com/3d-models/2000-mercedes-c-class-w203-6cf3d6203793450ba9e6a572fc164c77) | [Res1n](https://sketchfab.com/Res1n) | [CC Attribution](http://creativecommons.org/licenses/by/4.0/); MOTEXA adaptation: optimized geometry, WebP textures, normalized transforms; optional isolated body paint. Original source and license retained. |
 | Mercedes-Benz E-Class W212 | [Mercedes E Class W212](https://sketchfab.com/3d-models/mercedes-e-class-w212-119c5e10733142b197aa53b86f6aeb04) | Peter_D | CC BY 4.0 |
 | Mercedes-Benz Vito W447 | [Mercedes Vito Utility Car](https://sketchfab.com/3d-models/mercedes-vito-utility-car-fe704a2aa87a4921990d4973a6eef36d) | solid3DDD | CC BY 4.0 |
 | Peugeot 208 2nd gen / P21 | [2021 Peugeot 208](https://sketchfab.com/3d-models/2021-peugeot-208-c3a458884cf7434fa99b2172c96061a4) | tonielpro520 | CC BY 4.0 |
@@ -51,6 +51,7 @@ Keep the complete viewer configuration in `docs/3d/models.json`. Regenerate mobi
 | Audi Q3 8U | [2014 Audi Q3](https://sketchfab.com/3d-models/2014-audi-q3-d95e025603c9449997be95048d10af68) | tonielpro520 | CC BY 4.0 |
 | Volkswagen Beetle Type 1 | [Volkswagen beetle](https://sketchfab.com/3d-models/volkswagen-beetle-83276f21bd9c41e196c474350b43efb0) | [Angelos Gkanias](https://sketchfab.com/gkaniasag) | [CC Attribution](http://creativecommons.org/licenses/by/4.0/); MOTEXA adaptation: optimized geometry, WebP textures, normalized transforms; optional isolated body paint. Original source and license retained. |
 | Mercedes C-Class 202 | [1997 Mercedes C-class W202](https://sketchfab.com/3d-models/1997-mercedes-c-class-w202-d367d28eee22450da57ab4b7a2f0c56d) | [Res1n](https://sketchfab.com/Res1n) | [CC Attribution](http://creativecommons.org/licenses/by/4.0/); MOTEXA adaptation: optimized geometry, WebP textures, normalized transforms; optional isolated body paint. Original source and license retained. |
+| Mercedes E-Class W210 | [2002 Mercedes-benz E320 W210 4MATIC Sedan](https://sketchfab.com/3d-models/2002-mercedes-benz-e320-w210-4matic-sedan-1bac3d44716541a3aa0b53671911066e) | [Maroi Mister Let Me Think Official 3D Studio](https://sketchfab.com/homicivan53) | [CC Attribution](http://creativecommons.org/licenses/by/4.0/); MOTEXA adaptation: optimized geometry, WebP textures, normalized transforms; optional isolated body paint. Original source and license retained. |
 <!-- /models -->
 
 ## Body-kit parts (test)

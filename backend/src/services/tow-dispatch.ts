@@ -17,6 +17,8 @@ import { randomBytes } from "node:crypto";
 import { parseUpload, removeStoredFile, storeFile } from "../uploads/providerFiles.js";
 import { createPasswordResetStore, requestPasswordReset } from "./password-reset.service.js";
 import { sendDriverInviteEmail } from "./email.service.js";
+import { dutyPoint, nearestFirst, presenceOf, tooSoon } from "./presence.js";
+import { restingPoint } from "./tow-cards.js";
 
 const EMAIL_TAKEN = "This email cannot be used for a new driver. Use another email."; // neutral: never says whether the address is registered
 export class DispatchError extends Error {
@@ -69,7 +71,7 @@ const B = (en: string, ar: string) => [en, ar] as [string, string];
 
 // ------------------------------------------------------------------ drivers (company owner)
 
-const PASSWORD_RULE = "The password needs 8–128 characters with uppercase, lowercase, a number and a symbol.";
+export const PASSWORD_RULE = "The password needs 8–128 characters with uppercase, lowercase, a number and a symbol.";
 export const passwordOk = (p: unknown): p is string =>
   typeof p === "string" && p.length >= 8 && p.length <= 128 && /[A-Z]/.test(p) && /[a-z]/.test(p) && /[0-9]/.test(p) && /[^\w\s]/.test(p);
 const phoneOk = (v: unknown): v is string => typeof v === "string" && /^\+?[0-9 ()-]{8,24}$/.test(v.trim());
@@ -467,5 +469,30 @@ export async function driverPing(userId: string, requestId: string, lat: unknown
 export async function setOffline(userId: string, offline: unknown) {
   if (typeof offline !== "boolean") throw new DispatchError(400, "offline must be true or false.");
   const d = await myDriver(userId);
-  return prisma.towDriver.update({ where: { id: d.id }, data: { offline } });
+  // Offline = no more sharing: the stored point goes too (kept only while a job is active: the customer is following him)
+  const onJob = offline && (await prisma.towRequest.count({ where: { driverId: d.id, status: { in: [...WORKING] } } })) > 0;
+  return prisma.towDriver.update({ where: { id: d.id }, data: { offline, ...(offline && !onJob ? { lastLat: null, lastLng: null, lastAt: null } : {}) } });
+}
+
+/** While Online (about every 60 s, services/presence.ts): only his latest point is stored; refused while Offline or not approved. */
+export async function driverDutyPing(userId: string, lat: unknown, lng: unknown) {
+  const p = dutyPoint(lat, lng);
+  if (!p) throw new DispatchError(400, "Invalid location.");
+  const d = await myDriver(userId);
+  if (d.approval !== "APPROVED") throw new DispatchError(409, "Your licence is not approved, so your location is not shared.");
+  if (d.offline) throw new DispatchError(409, "Go online to share your location.");
+  if (tooSoon(d.lastAt)) return { stored: false };
+  await prisma.towDriver.update({ where: { id: d.id }, data: { lastLat: p.lat, lastLng: p.lng, lastAt: new Date() } });
+  return { stored: true };
+}
+
+/** The company's FREE drivers nearest to a point (fresh live point, else the truck / company base): "nearest available". */
+export async function nearestDrivers(companyId: string, to: { lat: number; lng: number } | null) {
+  const free = await prisma.towDriver.findMany({
+    where: { id: { in: (await freeDrivers(prisma, companyId)).map((d) => d.id) } },
+    include: { user: { select: { fullName: true } }, truck: { select: { baseLat: true, baseLng: true, truckType: true } }, company: { select: { baseLat: true, baseLng: true, city: true } } },
+  });
+  return nearestFirst(free, to, (d) => ({ live: presenceOf(d), base: restingPoint(d) })).map(({ item: d, distanceKm, source }) => ({
+    id: d.id, name: d.user.fullName, truckType: d.truck?.truckType ?? null, distanceKm, source,
+  }));
 }

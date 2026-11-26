@@ -11,7 +11,26 @@ import { towTone } from "../requests/garageBits";
 import { useTowStatusLabels } from "../requests/requestBits";
 import { MAPS_AVAILABLE, ServiceMap, ServicePin } from "../shared/maps";
 import { RouteSummary, useRoute } from "../shared/useRoute";
-import { TowJob, liveLabel } from "./dispatchService";
+import { OnlineDriver, TowJob, liveLabel } from "./dispatchService";
+
+/** The online drivers under the map: name (company), status, "live" / "last seen". */
+function OnlineList({ people, showCompany }: { people: OnlineDriver[]; showCompany: boolean }) {
+  const { g, row, align } = useGarageTheme();
+  const { t } = useL();
+  const label: Record<string, string> = { FREE: t("Free", "متاح"), BUSY: t("Busy", "مشغول"), OFFLINE: t("Offline", "غير متصل"), NO_TRUCK: t("No truck ready", "لا شاحنة جاهزة"), UNAPPROVED: t("Not approved", "غير معتمد") };
+  return (
+    <View style={{ gap: 6 }}>
+      <GText style={[gType.label, align, { fontWeight: "800" }]}>{`${t("Online now", "متصلون الآن")} · ${people.length}`}</GText>
+      {people.map((d) => (
+        <View key={d.id} style={[row, { alignItems: "center", gap: 8, minHeight: 40 }]}>
+          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: d.live && !d.live.stale ? "#2E7D4F" : g.soft }} />
+          <GText numberOfLines={1} style={[gType.bodySm, align, { flex: 1 }]}>{showCompany ? `${d.name} · ${d.company.name}` : d.name}</GText>
+          <GText soft style={gType.caption}>{`${label[d.status] ?? d.status} · ${d.live ? liveLabel(d.live, t) : t("no location yet", "لا موقع بعد")}`}</GText>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 /** One job row's "⋮" (and long-press) sheet. */
 function JobMenu({ title, actions, children }: { title: string; actions: ItemAction[]; children: (openSheet: () => void) => React.ReactNode }) {
@@ -19,8 +38,9 @@ function JobMenu({ title, actions, children }: { title: string; actions: ItemAct
   return (<>{children(() => setOpen(true))}<ActionsSheet visible={open} onClose={() => setOpen(false)} title={title} actions={actions} /></>);
 }
 
-/** actions = the "⋮" menu of each job in the list (the admin passes Open / Cancel); without it the row keeps its "Open" link. */
-export function LiveJobsMap({ jobs, onOpen, showCompany = false, actions }: { jobs: TowJob[]; onOpen: (id: string) => void; showCompany?: boolean; actions?: (j: TowJob) => ItemAction[] }) {
+/** actions = the "⋮" menu of each job in the list (the admin passes Open / Cancel); without it the row keeps its "Open" link.
+ *  people = online drivers (their latest point, shared only while Online): green pins + a short list under the map. */
+export function LiveJobsMap({ jobs, onOpen, showCompany = false, actions, people = [] }: { jobs: TowJob[]; onOpen: (id: string) => void; showCompany?: boolean; actions?: (j: TowJob) => ItemAction[]; people?: OnlineDriver[] }) {
   const { g, shadow, row, align } = useGarageTheme();
   const { t } = useL();
   const L = useTowStatusLabels();
@@ -33,11 +53,11 @@ export function LiveJobsMap({ jobs, onOpen, showCompany = false, actions }: { jo
   const pins: ServicePin[] = jobs.flatMap((j) => [
     ...(j.driver?.live ? [{ id: `d:${j.id}`, name: j.driver.name, lat: j.driver.live.lat, lng: j.driver.live.lng, kind: "tow" as const, dim: j.driver.live.stale, color: "#B5541C" }] : []),
     ...(j.pickup ? [{ id: `p:${j.id}`, name: j.customer.firstName, lat: j.pickup.lat, lng: j.pickup.lng, kind: "hq" as const, dim: false }] : []),
-  ]);
+  ]).concat(people.filter((d) => d.live && !jobs.some((j) => j.driver?.id === d.id && j.driver.live)).map((d) => ({ id: `o:${d.id}`, name: d.name, lat: d.live!.lat, lng: d.live!.lng, kind: "tow" as const, dim: d.live!.stale, color: "#2E7D4F" })));
   const fit: [number, number][] = route?.coords ?? pins.map((p) => [p.lat, p.lng] as [number, number]);
   const mapH = Math.round(height * 0.45);
 
-  if (!jobs.length) return <EmptyState photo="empty.requests" text={t("No active tow job.", "لا توجد مهمة سحب نشطة.")} />;
+  if (!jobs.length && !people.length) return <EmptyState photo="empty.requests" text={t("No active tow job and nobody online.", "لا توجد مهمة سحب نشطة ولا أحد متصل.")} />;
   return (
     <View style={{ gap: 12 }}>
       {MAPS_AVAILABLE ? (
@@ -59,6 +79,7 @@ export function LiveJobsMap({ jobs, onOpen, showCompany = false, actions }: { jo
         <Note>{t("The map is not available on this platform.", "الخريطة غير متاحة على هذه المنصة.")}</Note>
       )}
       {chosen ? <RouteSummary route={route} loading={loading} /> : null}
+      {people.length ? <OnlineList people={people} showCompany={showCompany} /> : null}
       {jobs.map((j) => (
         <View key={j.id} style={[{ borderRadius: gShape.card, backgroundColor: j.id === sel ? g.tint : g.card, overflow: "hidden" }, shadow(1)]}>
          {actions ? (

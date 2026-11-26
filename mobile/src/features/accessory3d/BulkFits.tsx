@@ -23,15 +23,17 @@ import { fitKit } from "./screens";
 
 type T = (en: string, ar: string) => string;
 const STATE = FIT_STATE_LABELS;
-/** the filter chips: "Needs manual correction" covers both a flagged fit and a stored correction (each is reviewed on its own) */
+/** the filter chips (at most 5): "To review" = passed + needs correction + a saved manual correction (the row's chip says which) */
 const FILTERS: { key: FitFilter["status"] | "all"; en: string; ar: string; count: (c: Record<FitState, number>) => number }[] = [
   { key: "all", en: "All", ar: "الكل", count: c => Object.values(c).reduce((a, b) => a + b, 0) },
-  { key: "not_computed", en: "Not computed", ar: "لم يُحسب", count: c => c.not_computed },
-  { key: "passed", en: "Passed", ar: "اجتاز الفحص", count: c => c.passed },
+  { key: "review", en: "To review", ar: "للمراجعة", count: c => c.passed + c.needs_correction + c.has_correction },
   { key: "failed", en: "Failed", ar: "فشل", count: c => c.failed },
-  { key: "correction", en: "Needs manual correction", ar: "يحتاج إلى تصحيح يدوي", count: c => c.needs_correction + c.has_correction },
+  { key: "not_computed", en: "Not computed", ar: "لم يُحسب", count: c => c.not_computed },
   { key: "approved", en: "Approved", ar: "معتمد", count: c => c.approved },
 ];
+const STATUSES = ["review", "failed", "not_computed", "approved", "passed", "correction"] as const;
+/** ?status=… from a link (the request page opens "To review"); anything else = All */
+const initialStatus = (s: unknown): FitFilter["status"] => (STATUSES as readonly string[]).includes(String(s)) ? (s as FitFilter["status"]) : undefined;
 /** Why a car is in its state, for the preview. */
 const WHY: Record<string, [string, string]> = {
   FIT_NOT_READY: ["Not computed yet. Run auto-fit on it.", "لم يُحسب بعد. شغّل التركيب التلقائي عليها."],
@@ -90,20 +92,20 @@ export function BulkFitsPicker() {
 }
 
 export function BulkFits() {
-  const { accessoryId } = useLocalSearchParams<{ accessoryId?: string }>();
+  const { accessoryId, status } = useLocalSearchParams<{ accessoryId?: string; status?: string }>();
   if (!accessoryId) return <BulkFitsPicker />;
-  return <BulkFitsList accessoryId={String(accessoryId)} />;
+  return <BulkFitsList key={String(accessoryId)} accessoryId={String(accessoryId)} status={initialStatus(status)} />;
 }
 
 type Confirm = { kind: "approve"; approvable: number; skipped: Record<string, number>; error?: string } | { kind: "fit"; summary: FitJobSummary; include: boolean; includeCorrections: boolean; error?: string };
 
-function BulkFitsList({ accessoryId }: { accessoryId: string }) {
+function BulkFitsList({ accessoryId, status }: { accessoryId: string; status?: FitFilter["status"] }) {
   const { t, isArabic } = useL();
   const { g, row, align } = useGarageTheme();
   const twoPane = useTwoPane(), { table, onListWidth } = useListWidth();
 
   // ---- filter + paged rows (the server filters; only the latest answer counts)
-  const [filter, setFilter] = useState<FitFilter>({});
+  const [filter, setFilter] = useState<FitFilter>(status ? { status } : {});
   const [q, setQ] = useState("");
   useEffect(() => { const id = setTimeout(() => setFilter(f => ((f.q ?? "") === q.trim() ? f : { ...f, q: q.trim() || undefined })), 300); return () => clearTimeout(id); }, [q]);
   const [page, setPage] = useState<FitsPage | null>(null), [cars, setCars] = useState<FitRow[]>([]);
@@ -343,10 +345,14 @@ function JobCard({ job, busy, onCancel, onResume, onHide }: { job: FitJob; busy:
   const { t, isArabic } = useL();
   const { g, row, align } = useGarageTheme();
   const active = job.status === "QUEUED" || job.status === "RUNNING", pct = job.total ? Math.min(1, job.position / job.total) : 0;
-  const title = { QUEUED: t("Auto-fit queued", "التركيب التلقائي في الانتظار"), RUNNING: t("Running auto-fit", "التركيب التلقائي قيد التشغيل"), DONE: t("Auto-fit finished", "انتهى التركيب التلقائي"),
-    CANCELLED: t("Auto-fit cancelled", "أُلغي التركيب التلقائي"), FAILED: t("Auto-fit stopped", "توقف التركيب التلقائي") }[job.status];
+  const title = job.correction
+    ? { QUEUED: t("Correction queued", "التصحيح في الانتظار"), RUNNING: t("Applying your correction", "جارٍ تطبيق تصحيحك"), DONE: t("Correction applied", "تم تطبيق التصحيح"),
+      CANCELLED: t("Correction cancelled", "أُلغي التصحيح"), FAILED: t("Correction stopped", "توقف التصحيح") }[job.status]
+    : { QUEUED: t("Auto-fit queued", "التركيب التلقائي في الانتظار"), RUNNING: t("Running auto-fit", "التركيب التلقائي قيد التشغيل"), DONE: t("Auto-fit finished", "انتهى التركيب التلقائي"),
+      CANCELLED: t("Auto-fit cancelled", "أُلغي التركيب التلقائي"), FAILED: t("Auto-fit stopped", "توقف التركيب التلقائي") }[job.status];
   const eta = active ? etaText(job.etaSeconds, isArabic) ?? t("estimating time…", "جارٍ تقدير الوقت…") : null;
-  const stats = [job.done ? t(`${num(job.done)} fitted`, `${num(job.done)} تم تركيبها`) : null, job.skipped ? t(`${num(job.skipped)} skipped`, `${num(job.skipped)} تم تخطيها`) : null,
+  const stats = [job.done ? (job.correction ? t(`${num(job.done)} saved for review`, `${num(job.done)} محفوظة للمراجعة`) : t(`${num(job.done)} fitted`, `${num(job.done)} تم تركيبها`)) : null,
+    job.skipped ? (job.correction ? t(`${num(job.skipped)} not changed (did not pass the fit check)`, `${num(job.skipped)} لم تتغير (لم تجتز فحص التركيب)`) : t(`${num(job.skipped)} skipped`, `${num(job.skipped)} تم تخطيها`)) : null,
     job.errors ? t(`${num(job.errors)} could not be computed`, `${num(job.errors)} تعذّر حسابها`) : null].filter(Boolean).join(" · ");
   return (
     <Card style={{ gap: 10 }}>
@@ -360,6 +366,7 @@ function JobCard({ job, busy, onCancel, onResume, onHide }: { job: FitJob; busy:
         <View style={{ width: `${Math.round(pct * 100)}%`, backgroundColor: job.status === "FAILED" ? g.warning : g.accent }} />
       </View>
       <GText soft style={[gType.caption, align]}>{[eta, stats].filter(Boolean).join(" · ") || t("Starting…", "جارٍ البدء…")}</GText>
+      {job.correction ? <GText soft style={[gType.tiny, align]}>{t("Each car is checked with your correction; the ones that pass wait for your review. Nothing is approved.", "تُفحص كل سيارة مع تصحيحك؛ وتنتظر الناجحة مراجعتك. لا يُعتمد شيء.")}</GText> : null}
       {job.includeApproved && active ? <Note tone="warning">{t("Approved fits are being re-run too: those cars need your approval again.", "يُعاد تشغيل التركيبات المعتمدة أيضًا: تحتاج تلك السيارات إلى اعتمادك مجددًا.")}</Note> : null}
       {job.includeCorrections && active ? <Note tone="warning">{t("Saved manual corrections are being reset too (each one is kept in the record).", "يُعاد ضبط التصحيحات اليدوية المحفوظة أيضًا (يبقى كل منها في السجل).")}</Note> : null}
       {job.status === "FAILED" ? <Note tone="danger">{job.error === "FIT_CHECKER_UNAVAILABLE" ? t("The fit checker failed on 5 cars in a row, so the run stopped. Those cars and the ones after them were not changed. Resume to try them again.", "فشل فاحص التركيب على 5 سيارات متتالية فتوقف التشغيل. لم تتغير تلك السيارات ولا التي بعدها. استأنف لإعادة المحاولة.") : t("The run stopped: this accessory is no longer ready for fitting.", "توقف التشغيل: لم تعد هذه القطعة جاهزة للتركيب.")}</Note> : null}

@@ -5,6 +5,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
 import { requireAuth, requireCustomer, requireTowAdmin, requireTowDriver, requireTowProvider } from "../middleware/auth.middleware.js";
 import { freeDriversNear } from "../services/tow-cards.js";
+import { presenceOf } from "../services/presence.js";
 import { notify } from "../services/provider-onboarding.js";
 import { requireApprovedProvider } from "../services/provider-onboarding.js";
 import {
@@ -15,6 +16,8 @@ import {
   assign,
   driverAccept,
   driverCancel,
+  driverDutyPing,
+  nearestDrivers,
   driverDecline,
   driverMove,
   driverPing,
@@ -173,6 +176,14 @@ router.post("/driver/jobs/:id/cancel", ...driverSide, async (req, res) => {
     return send(res, e, "Driver cancel error");
   }
 });
+// while Online (about every 60 s): his latest point only, for his company's live map and the tow admins (services/presence.ts)
+router.post("/driver/me/location", ...driverSide, async (req, res) => {
+  try {
+    return res.json({ success: true, ...(await driverDutyPing(me(res), req.body?.lat, req.body?.lng)) });
+  } catch (e) {
+    return send(res, e, "Driver duty location error");
+  }
+});
 router.post("/driver/jobs/:id/location", ...driverSide, async (req, res) => {
   try {
     await driverPing(me(res), id(req.params.id), req.body?.lat, req.body?.lng);
@@ -256,14 +267,47 @@ router.post("/tow/me/requests/:id/assign", ...companySide, async (req, res) => {
     return send(res, e, "Assign error");
   }
 });
-// every active job of the company with its driver's live point (the company's Live map)
+/** Online, approved drivers with their latest point (only while Online) and status, for a company's or the tow admins' map. */
+async function onlineDrivers(companyId?: string) {
+  const rows = await prisma.towDriver.findMany({
+    where: { offline: false, approval: "APPROVED", user: { status: "ACTIVE" }, ...(companyId ? { companyId } : { company: { verificationStatus: "APPROVED" } }) },
+    include: { user: { select: { fullName: true } }, company: { select: { id: true, companyName: true } }, truck: { select: { truckType: true } } },
+    take: 500,
+  });
+  const out = [];
+  for (const d of rows) out.push({ id: d.id, name: d.user.fullName, company: { id: d.company.id, name: d.company.companyName }, truckType: d.truck?.truckType ?? null, status: await driverStatus(prisma, d), live: presenceOf(d) });
+  return out;
+}
+
+// every active job of the company with its driver's live point + its online drivers (the company's Live map)
 router.get("/tow/me/live", ...companySide, async (_req, res) => {
   try {
     const c = await companyOf(res);
     const rows = await prisma.towRequest.findMany({ where: { companyId: c.id, status: { in: ["REQUESTED", ...WORKING] } }, include: jobInclude, orderBy: { updatedAt: "desc" }, take: 100 });
-    return res.json({ success: true, jobs: rows.map(jobView) });
+    return res.json({ success: true, jobs: rows.map(jobView), drivers: await onlineDrivers(c.id) });
   } catch (e) {
     return send(res, e, "Company live error");
+  }
+});
+
+// "nearest available" for one request: the company's FREE drivers by distance to the pickup (fresh live point, else their base)
+router.get("/tow/me/requests/:id/nearest", ...companySide, async (req, res) => {
+  try {
+    const c = await companyOf(res);
+    const r = await prisma.towRequest.findFirst({ where: { id: id(req.params.id), companyId: c.id }, select: { pickupLat: true, pickupLng: true } });
+    if (!r) throw new DispatchError(404, "Request not found.");
+    return res.json({ success: true, drivers: await nearestDrivers(c.id, point(r.pickupLat, r.pickupLng)) });
+  } catch (e) {
+    return send(res, e, "Nearest drivers error");
+  }
+});
+
+// tow admins: every online driver with his latest point (the "online" layer of the admin map)
+router.get("/admin/tow/online", requireAuth, requireTowAdmin, async (_req, res) => {
+  try {
+    return res.json({ success: true, drivers: await onlineDrivers() });
+  } catch (e) {
+    return send(res, e, "Online drivers error");
   }
 });
 

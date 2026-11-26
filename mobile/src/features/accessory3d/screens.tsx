@@ -5,11 +5,10 @@ import { photoErrorText, pickPhoto } from "../../core/hooks/pickPhoto";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Image, Modal, Pressable, ScrollView, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Card, Chip, GButton, GIcon, GText, Note, Rail, Section, SkeletonRows, StatusChip } from "../../components/garage";
+import { Card, Chip, GButton, GText, Note, Rail, Section, SkeletonRows, StatusChip } from "../../components/garage";
 import { ActionsSheet, type ItemAction } from "../../components/ItemActionsMenu";
 import { ManageEntry, ManageHeader, ManagePage, ManageRow, useTwoPane } from "../../components/manage/ManagePage";
 import { Page } from "../../components/manage/Page";
-import { ReasonSheet } from "../../components/manage/Form";
 import { isoLatin } from "../../core/constants/bidi";
 import { findCategory, labelOf } from "../../core/constants/categories";
 import { useL } from "../../core/hooks/useL";
@@ -23,22 +22,24 @@ import { refreshRuntimeModels, useCatalogModelKey } from "../car3d/runtimeModels
 import { normalizeNumberText } from "../../core/constants/numbers";
 import { ACCESSORY_TYPE_LABELS, FIT_STATE_LABELS, type FitState, KIT_PART_TYPE, PREVIEW_VIEWS, REPLACES_STOCK, STATUS_LABELS, adminAccessoryApi, isBumper, shopAccessoryApi, sizeField, typesForCategory, type KitPart,
   type Accessory, type AccessoryStatus, type AutoFitRow, type PartMapDetail, type PartMapListItem, type Preview, type ZoneBox, RIM_FINISHES, RIM_FINISH_LABELS, type RimFinish } from "./api";
-import { shapeSize, sizeMismatches, SIZE_LABEL } from "./partSize";
+import { shapeSize } from "./partSize";
 import { NO_ADJUST, type FitAdjust } from "../car3d/car3d";
 import { GateSummary } from "./gate";
 import { ThreeDRequestsList } from "../department/partsAdmin";
 import {threeDError} from "../vehicleCatalog/lifecycleText";
 import {accessoryProcessingLabel} from "./processing";
-import {AccessoryFinalReview} from "./FinalReview";
 import { SupportWarning } from "./support";
 import { ShopWizard } from "./ShopWizard";
-import { SLOT_LABELS, WIZARD_TYPES, isWizardType, slotKind } from "./wizardArt";
+import { WIZARD_TYPES, isWizardType } from "./wizardArt";
+import { CorrectionPanel, SimilarSheet } from "./FitCorrection";
+import { isCorrected, sameAdj } from "./correction";
+import type { FitCheck } from "../car3d/useCar3D";
 
 const tone = (s: AccessoryStatus) => s === "PUBLISHED" ? "success" : s === "REJECTED" ? "danger" : s === "DRAFT" ? "neutral" : s === "READY_FOR_FINAL_REVIEW" ? "accent" : "warning";
 const VIEW_LABELS: Record<string, [string, string]> = { front: ["Front", "الأمام"], "front-three-quarter": ["Front 3/4", "أمام ٣/٤"], "left-side": ["Side", "الجانب"],
   "rear-three-quarter": ["Rear 3/4", "خلف ٣/٤"], rear: ["Rear", "الخلف"], "top-three-quarter": ["Above", "من الأعلى"] };
 
-const sizeLabel: Record<string, [string, string]> = { widthMm: ["Width across the car (mm)", "العرض على امتداد عرض السيارة (مم)"], lengthMm: ["Length along the car (mm)", "الطول على امتداد السيارة (مم)"],
+export const sizeLabel: Record<string, [string, string]> = { widthMm: ["Width across the car (mm)", "العرض على امتداد عرض السيارة (مم)"], lengthMm: ["Length along the car (mm)", "الطول على امتداد السيارة (مم)"],
   heightMm: ["Height (mm)", "الارتفاع (مم)"], depthMm: ["Depth (mm)", "العمق (مم)"], rimInches: ["Rim diameter (inches)", "قطر الجنط (إنش)"] };
 
 function useWork() {
@@ -75,7 +76,7 @@ export function PrivateImage({ load, label, height = 150, width = "100%" }: { lo
   return uri ? <Image accessibilityLabel={label} source={{ uri }} resizeMode="cover" style={{ width, height, borderRadius: 12, backgroundColor: g.cardSoft }} />
     : <View style={{ width, height, borderRadius: 12, backgroundColor: g.cardSoft, alignItems: "center", justifyContent: "center", padding: 8 }}><GText soft style={gType.tiny}>{failed ? t("Could not load", "تعذّر التحميل") : t("Loading…", "جارٍ التحميل…")}</GText></View>;
 }
-function PreviewGrid({ preview, load }: { preview: NonNullable<Preview>; load: (view: string) => () => Promise<string> }) {
+export function PreviewGrid({ preview, load }: { preview: NonNullable<Preview>; load: (view: string) => () => Promise<string> }) {
   const { t } = useL(); const { row, align } = useGarageTheme();
   // a new fit or render changes the key, so mounted images reload instead of showing the old six views
   const imgKey = `${preview.modelRevision}-${preview.generationId}-${preview.fitSnapshot?.fitVersion ?? 0}-${preview.fitSnapshot?.updatedAt ?? preview.renderedAt ?? ""}`;
@@ -89,7 +90,7 @@ function PreviewGrid({ preview, load }: { preview: NonNullable<Preview>; load: (
     </View>
   </View>;
 }
-function PhotoStrip({ photos, load, onRemove, labels }: { photos: { id: string }[]; load: (id: string) => () => Promise<string>; onRemove?: (id: string) => void; labels?: (string | null)[] }) {
+export function PhotoStrip({ photos, load, onRemove, labels }: { photos: { id: string }[]; load: (id: string) => () => Promise<string>; onRemove?: (id: string) => void; labels?: (string | null)[] }) {
   const { t } = useL(); const { row } = useGarageTheme();
   return <View style={[row, { flexWrap: "wrap", gap: 8 }]}>
     {photos.map((p, i) => <View key={p.id} style={{ width: "31%", gap: 4 }}>
@@ -97,24 +98,6 @@ function PhotoStrip({ photos, load, onRemove, labels }: { photos: { id: string }
       {onRemove ? <GButton variant="secondary" label={t("Remove", "حذف")} onPress={() => onRemove(p.id)} /> : <GText soft style={gType.tiny}>{labels?.[i] ?? `#${i + 1}`}</GText>}
     </View>)}
   </View>;
-}
-/** The shop's own .glb ("I have a 3D file"): Parts Admin uses it as the model (manual import + the same validation), no Meshy. */
-function ShopModelCard({ a, busy, use }: { a: Accessory; busy: boolean; use: () => void }) {
-  const { t } = useL(); const { g, row, align } = useGarageTheme();
-  const inUse = a.provider === "MANUAL" && a.hasModel, can = ["PENDING_REVIEW", "APPROVED_FOR_GENERATION", "READY_FOR_FINAL_REVIEW"].includes(a.status) && !a.published && !inUse;
-  return <Card style={{ borderWidth: 2, borderColor: g.accent }}>
-    <View style={[row, { gap: 12, alignItems: "center" }]}>
-      <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: g.tint, alignItems: "center", justifyContent: "center" }}><GIcon name="cube-outline" size={26} color={g.accent} /></View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <GText style={[gType.title, align]}>{t("The shop sent its own 3D file", "أرسل المتجر ملفه ثلاثي الأبعاد")}</GText>
-        <GText soft style={[gType.caption, align]}>{inUse ? t("This file is the current 3D model.", "هذا الملف هو النموذج ثلاثي الأبعاد الحالي.") : t(".glb, safety-checked on upload. Using it costs no Meshy credits.", "ملف ⁦.glb⁩ فُحص عند الرفع. استخدامه لا يستهلك رصيد Meshy.")}</GText>
-      </View>
-    </View>
-    {can ? <View style={{ marginTop: 12, gap: 8 }}>
-      <GButton icon="cube-outline" label={t("Use this file as the 3D model", "استخدم هذا الملف كنموذج ثلاثي الأبعاد")} disabled={busy} onPress={use} />
-      <GText soft style={[gType.tiny, align]}>{t("It is optimised and validated like any manual import; then review the fit and publish as usual. A model made earlier for this request stays until this one is published, then it is deleted for good (file and previews).", "يُحسَّن ويُتحقق منه كأي استيراد يدوي، ثم راجع التركيب وانشره كالمعتاد. يبقى أي نموذج سابق لهذا الطلب حتى يُنشر هذا، ثم يُحذف نهائيًا (الملف والمعاينات).")}</GText>
-    </View> : null}
-  </Card>;
 }
 /** Resized + converted to JPEG by the shared picker; failures say which step failed, in the current language. */
 async function pickJpeg(t: (en: string, ar: string) => string) {
@@ -137,9 +120,7 @@ function StatusCard({ a, admin, product }: { a: Accessory; admin?: boolean; prod
     {a.mock ? <View style={{ marginTop: 10 }}><Note>{t("Mock mode: a plain stand-in shape that tests the workflow. It is not your part and can never be published.", "الوضع التجريبي: شكل بديل بسيط لاختبار الخطوات، وليس قطعتك، ولا يمكن نشره أبدًا.")}</Note></View> : null}
     {a.reviewNotes ? <View style={{ marginTop: 10 }}><Note tone={a.status === "REJECTED" ? "danger" : "accent"}>{a.reviewNotes}</Note></View> : null}
     {a.failureReason ? <View style={{ marginTop: 10 }}><Note tone="warning">{a.generationErrorCode?threeDError({code:a.generationErrorCode,message:a.failureReason},t):t(a.failureReason,"تتطلب النتيجة مراجعة الإدارة. راجع حالة التركيب.")}</Note></View> : null}
-    {admin && a.generationErrorCode ? <GText soft selectable style={[gType.caption, align, { marginTop: 6 }]}>{a.generationErrorCode}</GText> : null}
     {a.providerState==="SUCCEEDED"&&a.failureReason?<GText selectable style={{textAlign:"left",writingDirection:"ltr",marginTop:8}}>{a.failureReason}</GText>:null}
-    {admin&&a.processing?<GText soft selectable style={[gType.caption,align,{marginTop:8}]}>{`${t("Source bytes","بايتات المصدر")}: ${a.processing.rawBytes??"—"} · ${t("Optimized bytes","البايتات بعد التحسين")}: ${a.processing.optimizedBytes??"—"} · ${t("Final limit","الحد النهائي")}: ${a.processing.finalLimitBytes??"—"}`}</GText>:null}
   </Card>;
 }
 
@@ -395,88 +376,6 @@ function ClassicShopAccessory3DScreen() {
 /** /dept/accessory3d: the same 3D requests list as Requests › 3D requests (kept as a route so old links work). */
 export const AdminAccessory3DList = () => <ThreeDRequestsList />;
 
-export function AdminAccessory3DDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>(); const { t, isArabic } = useL(); const { row, align } = useGarageTheme();
-  const item = useLoad(() => adminAccessoryApi.get(id), [id], 6000);
-  const { busy, error, work } = useWork();
-  const [notes, setNotes] = useState(""), [paid, setPaid] = useState(false), [cap, setCap] = useState("");
-  const [replacement, setReplacement] = useState(false), [replacementPaid, setReplacementPaid] = useState(false), [rejecting, setRejecting] = useState(false);
-  const a = item.data;
-  useEffect(() => { if (a) setCap(String(a.monthlyCredits)); }, [a?.monthlyCredits]);
-  const act = (action: Parameters<typeof adminAccessoryApi.act>[1], body?: Record<string, unknown>) => work(() => adminAccessoryApi.act(id, action, body), item.reload);
-  const load = (asset: string) => () => adminAccessoryApi.asset(id, asset);
-  const left = a ? Math.max(0, a.monthlyCredits - a.creditsThisMonth) : 0;
-  const startDisabled = !a || busy || a.generationErrorCode === "PROVIDER_REQUEST_UNCONFIRMED" || (a.mode === "real" && (!paid || !a.paidEnabled || left === 0));
-  const footer = !a ? undefined : a.status === "PENDING_REVIEW" ? <GButton icon="checkmark-circle-outline" label={t("Approve for 3D generation", "الموافقة على إنشاء النموذج")} busy={busy} disabled={busy} onPress={() => void act("approve")} />
-    : a.status === "APPROVED_FOR_GENERATION" && a.resumable ? <GButton icon="refresh" label={t("Resume the same task (no new charge)", "استئناف المهمة نفسها (دون تكلفة جديدة)")} busy={busy} disabled={busy} onPress={() => void act("start", {})} />
-    : a.status === "APPROVED_FOR_GENERATION" && a.providerState !== "SUCCEEDED" ? <GButton icon="cube-outline" busy={busy} disabled={startDisabled} onPress={() => void act("start", { confirmPaid: paid })}
-        label={t("Start 3D Generation", "بدء إنشاء النموذج") + (a.estimatedProviderCredits ? ` · ${a.estimatedProviderCredits} ${t("Meshy credits", "من رصيد Meshy")}` : "")} /> : undefined;
-  const menu: ItemAction[] = !a ? [] : [
-    ...(["PENDING_REVIEW", "APPROVED_FOR_GENERATION", "READY_FOR_FINAL_REVIEW"].includes(a.status) ? [{ key: "reject", label: t("Reject (shop must change it)", "رفض (على المتجر التعديل)"), icon: "close-circle-outline" as const, run: () => setRejecting(true) }] : []),
-    ...(a.status === "PUBLISHED" ? [{ key: "pub", label: a.deactivatedAt ? t("Reactivate model", "إعادة نشر النموذج") : t("Unpublish model", "إلغاء نشر النموذج"), icon: (a.deactivatedAt ? "eye-outline" : "eye-off-outline") as "eye-outline", destructive: !a.deactivatedAt, disabled: busy, run: () => act(a.deactivatedAt ? "reactivate" : "unpublish") }] : []),
-    ...(a.hasModel && a.status !== "PUBLISHED" && a.status !== "GENERATING" ? [{ key: "discard", label: t("Delete this private 3D model", "حذف هذا النموذج الخاص"), icon: "trash-outline" as const, destructive: true, disabled: busy, run: () => act("discard-candidate") }] : []),
-  ];
-  return <Page title={a?.product?.name ?? t("Accessory", "إكسسوار")} line={a?.product ? `${a.product.shop.shopName} · ${a.product.brand} ${a.product.partNumber}` : undefined} actions={menu} footer={footer}
-    onRefresh={() => void item.reload()} refreshing={item.loading && !!item.data}>
-    {!a ? (item.error ? <Note tone="danger">{item.error}</Note> : <GText>{t("Loading…", "جارٍ التحميل…")}</GText>) : <View style={{ gap: 14 }}>
-      <StatusCard a={a} admin product={a.product} />
-      {a.hasModel||a.providerState==="SUCCEEDED"||a.status==="READY_FOR_FINAL_REVIEW"||a.status==="PUBLISHED"?<AccessoryFinalReview a={a} busy={busy} act={act}>{a.preview?<PreviewGrid preview={a.preview} load={load}/>:null}</AccessoryFinalReview>:null}
-      {a.provider==="MESHY"&&a.providerTaskId?<Card><GText>{t("Meshy task","مهمة Meshy")}</GText><GText selectable style={{writingDirection:"ltr",textAlign:"left"}}>{a.providerTaskId}</GText></Card>:null}
-      {a.status === "READY_FOR_FINAL_REVIEW" && a.provider === "MESHY" && a.providerState === "SUCCEEDED" ? <Card>
-        <GButton variant="secondary" label={t("Generate a new 3D (costs Meshy credits)", "إنشاء نموذج ثلاثي الأبعاد جديد (يستهلك رصيد Meshy)")} disabled={busy} onPress={() => { setReplacement(true); setReplacementPaid(false); }} />
-        {replacement ? <View style={{ gap: 10, marginTop: 12 }}>
-          <Note tone="warning">{t(`This creates a new Meshy task and costs approximately ${a.estimatedProviderCredits ?? 30} credits. The current result stays until the new model is published, then it is deleted for good.`, `سيُنشئ هذا مهمة Meshy جديدة بتكلفة تقديرية ${a.estimatedProviderCredits ?? 30} رصيدًا. تبقى النتيجة الحالية حتى يُنشر النموذج الجديد، ثم تُحذف نهائيًا.`)}</Note>
-          <Check checked={replacementPaid} disabled={busy} onPress={() => setReplacementPaid(v => !v)} label={t("I confirm the cost of a new generation", "أؤكد تكلفة إنشاء نموذج جديد")} />
-          <GButton label={t("Confirm and start paid generation", "تأكيد وبدء الإنشاء المدفوع")} disabled={busy || !replacementPaid || !a.paidEnabled || left === 0} onPress={() => void act("start", { confirmPaid: true, replaceRevision: a.revision })} />
-          <GButton variant="secondary" label={t("Cancel", "إلغاء")} onPress={() => { setReplacement(false); setReplacementPaid(false); }} />
-        </View> : null}
-      </Card> : null}
-      {a.status === "APPROVED_FOR_GENERATION" && a.resumable ? <Card>
-        <Note>{t("Resume the saved Meshy task. No new task or charge is created.", "استأنف مهمة Meshy المحفوظة دون إنشاء مهمة أو تكلفة جديدة.")}</Note>
-      </Card> : a.status === "APPROVED_FOR_GENERATION" && a.providerState !== "SUCCEEDED" ? <Card>
-        <GText style={[gType.label, align]}>{t("Generate with Meshy", "إنشاء عبر Meshy")}</GText>
-        <GText soft style={align}>{`${t("Shop generations this month", "إنشاءات المتجر هذا الشهر")}: ${a.creditsThisMonth} / ${a.monthlyCredits}`}</GText>
-        {!a.paidEnabled?<Note tone="warning">{t("Meshy generation is unavailable. Check the backend key and generation setting.", "إنشاء Meshy غير متاح. تحقق من مفتاح الخادم وإعداد الإنشاء.")}</Note>:null}
-        {a.mode==="real"?<Check checked={paid} disabled={busy} onPress={()=>setPaid(v=>!v)} label={a.estimatedProviderCredits?t(`I confirm one paid Meshy generation, estimated ${a.estimatedProviderCredits} Meshy credits.`,`أؤكد إنشاءً واحدًا مدفوعًا بتكلفة تقديرية ${a.estimatedProviderCredits} من رصيد Meshy.`):t("I confirm one paid Meshy generation.","أؤكد إنشاءً واحدًا مدفوعًا عبر Meshy.")}/>:null}
-      </Card>:null}
-      {a.fitmentNotes?<Note>{a.fitmentNotes}</Note>:null}
-      <Card>
-        <GText style={[gType.label, align]}>{t("Real size", "المقاس الحقيقي")}</GText>
-        {Object.entries(a.size).filter(([, v]) => v !== null).map(([k, v]) => <GText key={k} soft style={align}>{`${t(...sizeLabel[k]!)}: ${v}`}</GText>)}
-        {Object.values(a.size).every(v => v === null) ? <Note tone="warning" icon="resize-outline">{t("Size not given by the shop: measure it (part-map editor or the model).", "لم يُدخل المتجر المقاس: قِسه (محرر خريطة القطع أو النموذج).")}</Note> : null}
-        <GText style={[gType.label, align, { marginTop: 10 }]}>{t("Fits", "تناسب")}</GText>
-        {a.fits.map(f => <GText key={f.id} soft style={align}>{`${isArabic ? isoLatin(`${f.nameAr} (${f.years[0]}–${f.years[1]})`) : `${f.name} (${f.years[0]}–${f.years[1]})`}${f.id === a.installedGenerationId ? ` · ${t("shown in installed photos", "ظاهرة في صور التركيب")}` : ""}${f.has3d ? ` · ${t("has a 3D model", "لها نموذج ثلاثي الأبعاد")}` : ` · ${t("no 3D model yet", "بلا نموذج ثلاثي الأبعاد بعد")}`}`}</GText>)}
-        {a.fits.map(f => { const L = SIZE_LABEL[a.accessoryType], m = L ? f.partSizes?.[L] : null; if (!m) return null;
-          const off = sizeMismatches(a.accessoryType, a.size, m), car = isArabic ? f.nameAr : f.name;
-          return <View key={`size-${f.id}`} style={{ marginTop: 8 }}>
-            <GText soft style={align}>{`${t("Measured on the", "المقاس على")} ${car}: ${fmtSize(m)} ${t("mm (width × height × depth)", "مم (العرض × الارتفاع × العمق)")}`}</GText>
-            {off.length ? <Note tone="warning">{`${t("Real size differs by more than 15% from the measured part", "المقاس الحقيقي يختلف بأكثر من 15% عن القطعة المقاسة")} (${car}): ${off.map(o => `${t(...sizeLabel[o.field]!)} ${o.shop} ≠ ${o.measured}`).join(" · ")}`}</Note> : null}
-          </View>; })}
-        <SupportWarning type={a.accessoryType} generationIds={a.fits.map(f => f.id)} name={id => { const f = a.fits.find(x => x.id === id); return f ? (isArabic ? f.nameAr : f.name) : id; }} />
-      </Card>
-      <Section title={t("Photos of the part", "صور القطعة")}>{a.partPhotos.length ? <PhotoStrip photos={a.partPhotos} load={load} labels={a.partPhotos.map(p => p.slot !== undefined ? t(...SLOT_LABELS[slotKind(a.accessoryType)][p.slot]!) : null)} /> : <GText soft style={align}>{t("No photos: the shop sent a 3D file instead.", "لا صور: أرسل المتجر ملفًا ثلاثي الأبعاد بدلًا منها.")}</GText>}</Section>
-      {a.shopModel ? <ShopModelCard a={a} busy={busy} use={() => void act("use-shop-model")} /> : null}
-      <Section title={`${t("Installed photos", "صور التركيب")}${a.installed360 ? " · 360°" : ""}`}><PhotoStrip photos={a.installedPhotos} load={load} /></Section>
-
-      {a.status === "PENDING_REVIEW" ? <Card>
-        <Note>{t("Check: photos show the real part, plain background for the loose part, nothing private (plates, faces), the installed car matches, the size is plausible. Approving also shows the installed photos to customers.", "تحقق: الصور للقطعة الحقيقية، خلفية سادة للقطعة المنفردة، لا شيء خاص (لوحات، وجوه)، السيارة في صور التركيب مطابقة، المقاس منطقي. الموافقة تُظهر صور التركيب للعملاء أيضًا.")}</Note>
-      </Card> : null}
-
-
-      {a.product ? <Card>
-        <View style={[row, { gap: 10, alignItems: "flex-end", flexWrap: "wrap" }]}>
-          <Field numeric label={t("Paid 3D generations per month for this shop", "إنشاءات مدفوعة شهريًا لهذا المتجر")} value={cap} onChange={v => setCap(normalizeNumberText(v))} />
-          <GButton variant="secondary" label={t("Save", "حفظ")} disabled={busy || cap === ""} onPress={() => void work(() => adminAccessoryApi.setCredits(a.product!.shop.id, Number(cap)), item.reload)} />
-        </View>
-      </Card> : null}
-      {busy ? <GText soft>{t("Working… (rendering a preview takes up to a minute)", "جارٍ التنفيذ… (عرض المعاينة قد يستغرق دقيقة)")}</GText> : null}
-      {error ? <Note tone="danger">{error}</Note> : null}
-    </View>}
-    <ReasonSheet visible={rejecting} title={t("Reject (shop must change it)", "رفض (على المتجر التعديل)")} prompt={t("Notes to the shop (required)", "ملاحظات للمتجر (مطلوبة)")} confirmLabel={t("Reject", "رفض")} danger busy={busy}
-      onCancel={() => setRejecting(false)} onConfirm={why => { setRejecting(false); void act("reject", { notes: why }); }} />
-  </Page>;
-}
-
 // ---------------- zone editor ----------------
 /** The viewer's default boxes (sceneHtml KIT); types without one are computed from the wheels / roof / mirrors. */
 const DEFAULT_BOX: Partial<Record<AccessoryType, ZoneBox>> = {
@@ -643,7 +542,7 @@ const SHAPE_STEPS: [string, string][] = [
   ["outer edge, the part's outermost point on the left.", "الحافة الخارجية، أبعد نقطة للقطعة على اليسار."],
   ["outer edge, the part's outermost point on the right.", "الحافة الخارجية، أبعد نقطة للقطعة على اليمين."],
 ];
-const fmtSize = (z: { widthMm: number; heightMm: number; depthMm: number }) => `${z.widthMm} × ${z.heightMm} × ${z.depthMm}`;
+export const fmtSize = (z: { widthMm: number; heightMm: number; depthMm: number }) => `${z.widthMm} × ${z.heightMm} × ${z.depthMm}`;
 const fromProposal = (d: PartMapDetail): PartMap => d.map ?? Object.fromEntries(Object.entries(d.proposal ?? {}).map(([k, v]) => [k, v!.ids]));
 function PartMapEditor({ carKey: key }: { carKey: string }) {
   const { t } = useL(); const { g, row, align } = useGarageTheme();
@@ -803,12 +702,6 @@ function PartMapEditor({ carKey: key }: { carKey: string }) {
 }
 
 // ---------------- accessory auto-fits ----------------
-// Admin correction rows (same bounds as the customer's Adjust: ±0.5 m, ±0.8 rad, 80–125 %)
-const FIT_NUDGE: [string, string, keyof FitAdjust, number, number][] = [
-  ["Left / right", "يسار / يمين", "x", 0.01, 0.5], ["Up / down", "أعلى / أسفل", "y", 0.005, 0.5], ["Back / forward", "خلف / أمام", "z", 0.01, 0.5],
-  ["Tilt", "إمالة", "rx", 0.01, 0.8], ["Size", "الحجم", "s", 0.01, 0],
-];
-const fitBound = (f: keyof FitAdjust, v: number, lim: number) => Math.round((f === "s" ? Math.min(1.25, Math.max(0.8, v)) : Math.min(lim, Math.max(-lim, v))) * 1000) / 1000;
 const WHEEL_NAMES: Record<string, [string, string]> = { FL: ["Front left", "أمامي يسار"], FR: ["Front right", "أمامي يمين"], RL: ["Rear left", "خلفي يسار"], RR: ["Rear right", "خلفي يمين"] };
 /** Why an automatic wheel move stopped short (viewer fit warnings), in words. */
 const RIM_NOTES: Record<string, [string, string]> = { // in this order
@@ -900,17 +793,24 @@ function CarFits({ carKey, onPick }: { carKey: string; onPick: (key: string, acc
     sub={`${t(...ACCESSORY_TYPE_LABELS[f.type])} · ${f.generation}`} status={{ label: t(l.en, l.ar), tone: l.tone }} onPress={() => onPick(carKey, f.accessoryId, f.generationId)} />; })}</View>;
 }
 
-/** One fit on one car: the 3D view, its state, Approve / Needs correction. Rerun, the position correction and the wheel position are in ⋮. */
+/** One fit on one car: the 3D view, its state, Approve / Needs correction (the footer). The position correction opens under the viewer (nudges,
+ *  live fit check, before / after, Undo, apply to similar cars); rerun and the wheel position are in ⋮. */
 function FitReview({ fitKey, accessoryId, generationId, requestId }: { fitKey: string; accessoryId: string; generationId: string; requestId?: string }) {
   const { t } = useL(); const { g, row, align } = useGarageTheme();
   const { busy, error, work } = useWork();
   const fits = useLoad(() => adminAccessoryApi.autoFits(fitKey), [fitKey]);
   const car = useCatalogModelKey(fitKey);
   const r = (fits.data ?? []).find(x => x.accessoryId === accessoryId && x.generation.id === generationId) ?? null;
-  const [adj, setAdj] = useState<FitAdjust>(NO_ADJUST), [panel, setPanel] = useState<"adjust" | "wheels" | null>(null);
+  const [adj, setAdjNow] = useState<FitAdjust>(NO_ADJUST), [history, setHistory] = useState<FitAdjust[]>([]), [view, setView] = useState<"before" | "after">("after");
+  const [panel, setPanel] = useState<"adjust" | "wheels" | null>(null), [similar, setSimilar] = useState(false), [check, setCheck] = useState<FitCheck | null>(null);
   const [viewerFitError, setViewerFitError] = useState<string | null>(null), [fitReviewed, setFitReviewed] = useState(false);
   useEffect(() => { setViewerFitError(null); setFitReviewed(false); }, [r?.modelRevision, r?.fit?.approvedAt, adj]);
-  useEffect(() => { setAdj(r?.fit?.adj ?? NO_ADJUST); }, [r?.fit?.approvedAt]); // eslint-disable-line react-hooks/exhaustive-deps
+  const savedKey = JSON.stringify(r?.fit?.adj ?? null);
+  useEffect(() => { setAdjNow(r?.fit?.adj ?? NO_ADJUST); setHistory([]); }, [r?.fit?.approvedAt, savedKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const saved = r?.fit?.adj ?? NO_ADJUST;
+  // every change can be undone (the last 50); a change always shows "After"
+  const setAdj = (next: FitAdjust) => { if (sameAdj(next, adj)) return; setHistory(h => [...h.slice(-49), adj]); setAdjNow(next); setView("after"); };
+  const undo = () => { const prev = history[history.length - 1]; if (!prev) return; setHistory(h => h.slice(0, -1)); setAdjNow(prev); setView("after"); };
   // a fit being computed in the background: look again until it is there
   useEffect(() => { if (!r?.computing) return; const id = setTimeout(() => void fits.reload(), 6000); return () => clearTimeout(id); }, [fits.data]); // eslint-disable-line react-hooks/exhaustive-deps
   const info = (r?.fit?.fit.info ?? {}) as { body?: string; mount?: { body?: string; widthM?: number; bodyWidthM?: number; scaleBy?: string }; feetGapMm?: (number | null)[]; topGapMm?: (number | null)[]; spanM?: number; heightAboveM?: number; pitchDeg?: number };
@@ -932,9 +832,20 @@ function FitReview({ fitKey, accessoryId, generationId, requestId }: { fitKey: s
   }, async () => { setInset(null); await Promise.all([fits.reload(), refreshRuntimeModels()]); });
   // a failed fit stores only its reason: the part is fitted live with the viewer's evidence flags (placed where the auto-fit put it, never
   // refused), so the admin sees why; it still cannot be approved (here or on the server)
-  const kit = useMemo(() => r ? fitKit(r, adj, !!draft) : null, [r, adj, draft]);
+  const shownAdj = view === "before" ? saved : adj;
+  // while the correction panel is open the viewer measures the part where it is now (FIT-QA clip / gap) after every change
+  const kit = useMemo(() => { const k = r ? fitKit(r, shownAdj, !!draft) : null; return k && panel === "adjust" ? { ...k, qaLive: true } : k; }, [r, shownAdj, draft, panel]);
+  useEffect(() => { setCheck(null); }, [shownAdj, panel]);
+  // at the saved position the server's own check of this stored fit is the answer (a replayed bumper corner can measure differently from the
+  // fit that was checked); every other position is measured live by the viewer
+  const savedCheck = useMemo((): FitCheck | null => {
+    const q = (r?.fit?.fit.info as { qa?: { clipMm?: number; gapMm?: number; limitMm?: number; tier?: string; correction?: { adj?: FitAdjust; clipMm?: number; gapMm?: number; tier?: string } } } | undefined)?.qa;
+    const c = !q ? null : sameAdj(shownAdj, NO_ADJUST) ? q : q.correction?.adj && sameAdj(shownAdj, q.correction.adj) ? q.correction : null;
+    if (!q || !c || typeof c.clipMm !== "number" || typeof q.limitMm !== "number" || !(c.tier === "PERFECT" || c.tier === "GOOD" || c.tier === "REFUSED")) return null;
+    return { clipMm: c.clipMm, gapMm: r!.type === "RIMS" ? null : c.gapMm ?? null, limitMm: q.limitMm, tier: c.tier };
+  }, [r, shownAdj]);
   const gaps = (info.feetGapMm ?? info.topGapMm ?? []).map(x => x === null ? "—" : `${x} mm`).join(" / ");
-  const corrected = JSON.stringify(adj) !== JSON.stringify(NO_ADJUST);
+  const corrected = isCorrected(adj), changed = !sameAdj(adj, saved);
   const state = !r ? null : r.computing ? { label: t("Computing the fit…", "جارٍ حساب التركيب…"), tone: "warning" as const } : failed ? { label: t("Does not fit this car", "لا تناسب هذه السيارة"), tone: "danger" as const }
     : r.fit?.approvedAt ? { label: t("Approved", "معتمد"), tone: "success" as const } : r.fit?.fit.needsCorrection ? { label: t("Needs correction", "يحتاج إلى تصحيح"), tone: "warning" as const }
     : r.fit ? { label: t("Waiting for your review", "بانتظار مراجعتك"), tone: "accent" as const } : { label: t("Not computed", "لم يُحسب"), tone: "neutral" as const };
@@ -982,22 +893,12 @@ function FitReview({ fitKey, accessoryId, generationId, requestId }: { fitKey: s
             {/* the viewer's own measurement text (English, technical): its own left-to-right line, never inside the Arabic sentence */}
             <GText soft style={[gType.tiny, { writingDirection: "ltr", textAlign: "left" }]}>{failed}</GText>
           </View> : null}
-          {kit && previewCar ? <Car3DView model={previewCar} color="#8b9baa" bg={g.cardSoft} kit={kit} onFitError={message => setViewerFitError(message)} interactive style={{ height: 320, borderRadius: 16 }} />
+          {kit && previewCar ? <Car3DView model={previewCar} color="#8b9baa" bg={g.cardSoft} kit={kit} onFitError={message => setViewerFitError(message)} onFitCheck={setCheck} interactive style={{ height: 320, borderRadius: 16 }} />
             : !r.fit ? <Note>{t("Not computed yet for this car.", "لم يُحسب لهذه السيارة بعد.")}</Note> : null}
           {viewerFitError ? <Note tone="danger">{viewerFitError}</Note> : null}
-          {panel === "adjust" && r.fit ? <Card style={{ gap: 6 }}>
-            <View style={[row, { alignItems: "center" }]}>
-              <GText style={[gType.label, align, { flex: 1, fontWeight: "800" }]}>{t("Correct the position", "تصحيح الموضع")}</GText>
-              <GButton variant="ghost" label={t("Done", "تم")} onPress={() => setPanel(null)} />
-            </View>
-            {FIT_NUDGE.map(([en, ar, f, step, lim]) => <View key={f} style={[row, { alignItems: "center", gap: 8 }]}>
-              <GText style={[gType.label, align, { flex: 1 }]}>{t(en, ar)}</GText>
-              <GButton variant="secondary" label="−" onPress={() => setAdj(a => ({ ...a, [f]: fitBound(f, a[f] - step, lim) }))} />
-              <GText soft style={[gType.tiny, { width: 48, textAlign: "center", writingDirection: "ltr" }]}>{adj[f].toFixed(3)}</GText>
-              <GButton variant="secondary" label="+" onPress={() => setAdj(a => ({ ...a, [f]: fitBound(f, a[f] + step, lim) }))} />
-            </View>)}
-            <GButton variant="secondary" label={t("Reset to auto-fit", "العودة إلى التركيب التلقائي")} disabled={busy || !corrected} onPress={() => setAdj(NO_ADJUST)} />
-          </Card> : null}
+          {panel === "adjust" && r.fit ? <CorrectionPanel adj={adj} onChange={setAdj} view={view} setView={setView} check={savedCheck ?? check} checking={!savedCheck && !check} saved={!!savedCheck} rims={r.type === "RIMS"}
+            canUndo={history.length > 0} onUndo={undo} onReset={() => setAdj(NO_ADJUST)} corrected={corrected} changed={changed} onSimilar={() => setSimilar(true)} onDone={() => { setPanel(null); setView("after"); }} />
+            : r.fit && panel !== "wheels" ? <GButton variant="secondary" icon="move-outline" label={t("Correct the position", "تصحيح الموضع")} onPress={() => setPanel("adjust")} /> : null}
           {panel === "wheels" && r.type === "RIMS" && r.fit && !failed ? <Card style={{ gap: 6 }}>
             <View style={[row, { alignItems: "center" }]}>
               <GText style={[gType.label, align, { flex: 1, fontWeight: "800" }]}>{t("Wheel position", "موضع العجلات")}</GText>
@@ -1019,10 +920,11 @@ function FitReview({ fitKey, accessoryId, generationId, requestId }: { fitKey: s
             </View>
             {draft ? <Note>{t("Previewing the draft: save it to refit every rim on this car.", "معاينة المسودة: احفظها لإعادة تركيب كل الجنوط على هذه السيارة.")}</Note> : hasOverride ? <Note>{t("This car uses your override.", "تستخدم هذه السيارة تعديلك.")}</Note> : null}
           </Card> : null}
-          {corrected && panel !== "adjust" ? <Note>{t("A position correction is applied. Approve to save it with the fit.", "تم تطبيق تصحيح للموضع. اعتمد لحفظه مع التركيب.")}</Note> : null}
+          {changed && panel !== "adjust" ? <Note>{t("A position correction is applied. Approve to save it with the fit.", "تم تطبيق تصحيح للموضع. اعتمد لحفظه مع التركيب.")}</Note> : null}
         </> : null}
         {error ? <Note tone="danger">{error}</Note> : null}
       </View>
+      {r ? <SimilarSheet visible={similar} onClose={() => { setSimilar(false); void fits.reload(); }} accessoryId={r.accessoryId} generationId={r.generation.id} adj={adj} /> : null}
     </Page>
   );
 }

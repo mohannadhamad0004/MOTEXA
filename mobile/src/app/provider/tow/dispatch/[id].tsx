@@ -1,5 +1,6 @@
 // One request, company side = Detail: who has it (and who the customer asked for), the live map, the timeline, the facts. ONE primary
-// in the footer: assign / transfer to a FREE driver (a sheet of free drivers; until the driver is on the way), or, for a company
+// in the footer: assign / transfer to a FREE driver (a sheet of free drivers, nearest to the pickup first: live point while Online,
+// else the truck / company base; until the driver is on the way), or, for a company
 // without drivers, answer it on the classic screen. Decline a new one / cancel an accepted one (reason required) are in ⋮.
 // Only the driver moves a job he has.
 import { router, useLocalSearchParams } from "expo-router";
@@ -24,10 +25,11 @@ export default function CompanyDispatchDetail() {
   const { t } = useL();
   const L = useTowStatusLabels();
   const problem = useProblemLabels();
-  const state = useLoad(() => Promise.all([companyTowRequests.get(id), companyDispatch.drivers()]).then(([r, drivers]) => ({ r, drivers })), [id], 10_000);
+  const state = useLoad(() => Promise.all([companyTowRequests.get(id), companyDispatch.drivers(), companyDispatch.nearest(id)]).then(([r, drivers, nearest]) => ({ r, drivers, nearest })), [id], 10_000);
   const [picking, setPicking] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState<string | null>(null);
   const r = state.data?.r, drivers = state.data?.drivers ?? [];
-  const free = drivers.filter((d) => d.status === "FREE" && d.id !== r?.driver?.id);
+  const free = (state.data?.nearest ?? []).filter((d) => d.id !== r?.driver?.id);
+  const away = (d: { distanceKm: number | null; source: string }) => d.distanceKm === null ? t("distance unknown", "المسافة غير معروفة") : `${d.distanceKm} ${t("km", "كم")} · ${d.source === "live" ? t("live", "مباشر") : t("from base", "من المقر")}`;
   const live = r?.driver?.live ?? null;
   const assign = async (driverId: string) => {
     setBusy(true); setError(null);
@@ -69,7 +71,7 @@ export default function CompanyDispatchDetail() {
       )}</Loaded>
       <Sheet visible={picking} onClose={() => setPicking(false)} title={r?.driver ? t("Transfer to a free driver", "التحويل إلى سائق متاح") : t("Assign to a free driver", "الإسناد إلى سائق متاح")} closeLabel={t("Close", "إغلاق")}>
         <View style={{ gap: 8 }}>
-          {free.length ? free.map((d) => <ManageEntry key={d.id} icon="person-outline" title={d.name} sub={d.truck?.plate} onPress={() => void assign(d.id)} />)
+          {free.length ? free.map((d, i) => <ManageEntry key={d.id} icon={i === 0 ? "navigate-outline" : "person-outline"} title={i === 0 ? `${d.name} · ${t("nearest", "الأقرب")}` : d.name} sub={away(d)} onPress={() => void assign(d.id)} />)
             : <Note>{t("No other driver is free right now.", "لا يوجد سائق آخر متاح الآن.")}</Note>}
           {error ? <Note tone="danger" icon="alert-circle-outline">{error}</Note> : null}
         </View>

@@ -81,6 +81,7 @@ export function createAccessory3DRouter(service = createAccessory3DService(), pa
   // bulk fit review on ONE accessory (all its cars): the grid, and approve / unapprove selected (only "passed" / "approved" fits are taken)
   // paged + filtered (?q&make&model&generationId&status&offset&limit); a selection is picked ids (<= 500) or { filter, exclude }, never 5,000 ids
   const selectionJson = express.json({ limit: "64kb" });
+  router.get(a + "/:id/fits/similar/:generationId", ...admin, handle(async (req, res) => res.json(await autoFits.similar(p(req, "id"), p(req, "generationId")))));
   router.get(a + "/:id/fits", ...admin, handle(async (req, res) => res.json(await autoFits.page(p(req, "id"), req.query as Record<string, unknown>))));
   router.post(a + "/:id/fits/bulk", ...admin, json, handle(async (req, res, uid) => res.json(await autoFits.bulk(uid, p(req, "id"), String(req.body?.action ?? ""), req.body?.generationIds))));
   router.post(a + "/:id/fits/approve", ...admin, selectionJson, handle(async (req, res, uid) => res.json(await autoFits.approveMatching(uid, p(req, "id"), req.body ?? {}))));
@@ -89,7 +90,9 @@ export function createAccessory3DRouter(service = createAccessory3DService(), pa
   router.get(a + "/:id/fits/jobs/current", ...admin, handle(async (req, res) => res.json(await currentFitJob(p(req, "id")))));
   router.post(a + "/:id/fits/jobs/:jobId/cancel", ...admin, handle(async (req, res, uid) => res.json(await cancelFitJob(uid, p(req, "id"), p(req, "jobId")))));
   router.post(a + "/:id/fits/jobs/:jobId/resume", ...admin, handle(async (req, res, uid) => res.json(await resumeFitJob(uid, p(req, "id"), p(req, "jobId")))));
-  router.put("/admin/parts/auto-fits/:accessoryId/:generationId", ...admin, json, handle(async (req, res, uid) => res.json({ fit: await autoFits.approve(uid, p(req, "accessoryId"), p(req, "generationId"), req.body ?? {}) })));
+  // review: true = save the correction for review on this car (never approves): "Apply this correction to similar cars"
+  router.put("/admin/parts/auto-fits/:accessoryId/:generationId", ...admin, json, handle(async (req, res, uid) => res.json(req.body?.review === true
+    ? await autoFits.suggest(uid, p(req, "accessoryId"), p(req, "generationId"), req.body) : { fit: await autoFits.approve(uid, p(req, "accessoryId"), p(req, "generationId"), req.body ?? {}) })));
 
   const c = "/catalog/products/:productId/accessory-3d";
   router.get(c+"/garage",...customer,handle(async(req,res,uid)=>{

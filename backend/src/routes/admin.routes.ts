@@ -82,7 +82,7 @@ router.get("/dashboard", async (_req, res) => {
 router.get("/providers", async (_req, res) => {
   try {
     const providers = await prisma.user.findMany({
-      where: { role: { in: ["MECHANIC", "PARTS_PROVIDER", "TOW_PROVIDER"] } },
+      where: { role: { in: ["MECHANIC", "PARTS_PROVIDER", "TOW_PROVIDER", "GARAGE_OWNER"] } },
       select: {
         id: true,
         fullName: true,

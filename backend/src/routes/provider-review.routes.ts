@@ -1,13 +1,15 @@
-// Department admins review provider applications. Two mounts of the same router:
-//   /api/admin/providers/tow    requireTowAdmin    (SUPER_ADMIN or ADMIN + MANAGE_TOWING)
-//   /api/admin/providers/parts  requirePartsAdmin  (SUPER_ADMIN or ADMIN + MANAGE_SPARE_PARTS)
+// Department admins review provider applications. Three mounts of the same router:
+//   /api/admin/providers/tow     requireTowAdmin        (SUPER_ADMIN or ADMIN + MANAGE_TOWING)
+//   /api/admin/providers/parts   requirePartsAdmin      (SUPER_ADMIN or ADMIN + MANAGE_SPARE_PARTS)
+//   /api/admin/providers/garage  requireMechanicsAdmin  (SUPER_ADMIN or ADMIN + MANAGE_MECHANICS)
 // The approval checklist is enforced HERE: the app can disable the button, but the server refuses to approve until it passes.
 import express, { Router, type RequestHandler } from "express";
 import { prisma } from "../prisma.js";
-import { requireAuth, requirePartsAdmin, requireTowAdmin } from "../middleware/auth.middleware.js";
+import { requireAuth, requireMechanicsAdmin, requirePartsAdmin, requireTowAdmin } from "../middleware/auth.middleware.js";
 import { removeStoredFile, storeFile } from "../uploads/providerFiles.js";
 import {
   COMPANY_DOC_KINDS,
+  OWNER_KEY,
   PURPOSE_OF,
   audit,
   checklist,
@@ -21,6 +23,7 @@ import {
   shapeFile,
   shapeInfo,
   shapeTrucks,
+  tableOf,
   text,
   threadWhere,
   timeline,
@@ -33,14 +36,14 @@ import { approvalBlocked, promoteApplicant } from "../services/applications.js";
 const TABS = { NEW: "PENDING", NEEDS_CHANGES: "NEEDS_CHANGES", APPROVED: "APPROVED", REJECTED: "REJECTED" } as const;
 
 // Fields a reviewer may flag besides documents (kept in sync with the onboarding form).
-const FLAGGABLE = ["name", "nameAr", "ownerName", "phone", "city", "address", "location", "workingHours", "serviceCities", "truckTypes", "categories", "brands", "truck"];
+const FLAGGABLE = ["name", "nameAr", "ownerName", "phone", "city", "address", "location", "workingHours", "serviceCities", "truckTypes", "categories", "brands", "truck", "services"];
 
 export function createProviderReviewRouter(kind: Kind) {
   const router = Router();
-  const guard: RequestHandler = kind === "TOW" ? requireTowAdmin : requirePartsAdmin;
+  const guard: RequestHandler = kind === "TOW" ? requireTowAdmin : kind === "GARAGE" ? requireMechanicsAdmin : requirePartsAdmin;
   router.use(requireAuth, guard, express.json({ limit: "25mb" }));
 
-  const table = () => (kind === "TOW" ? prisma.towCompanyProfile : prisma.partsShopProfile);
+  const table = () => tableOf(kind);
   const load = async (id: string): Promise<App> => (await loadApp(kind, { id })) ?? fail(404, "Application not found.");
   const unreadForAdmin = (app: App) => prisma.providerMessage.count({ where: { ...threadWhere(app), authorRole: "PROVIDER", readByAdminAt: null } });
   const actor = (res: any) => res.locals.authUser as { id: string };
@@ -71,7 +74,7 @@ export function createProviderReviewRouter(kind: Kind) {
     try {
       const rows = await (table() as any).groupBy({ by: ["verificationStatus"], _count: { _all: true } });
       const n = (s: string) => rows.find((r: any) => r.verificationStatus === s)?._count._all ?? 0;
-      const where = kind === "TOW" ? { towCompanyId: { not: null } } : { partsShopId: { not: null } };
+      const where = { [OWNER_KEY[kind]]: { not: null } };
       const unreadMessages = await prisma.providerMessage.count({ where: { ...where, authorRole: "PROVIDER", readByAdminAt: null } });
       return res.json({ success: true, counts: { NEW: n("PENDING"), NEEDS_CHANGES: n("NEEDS_CHANGES"), APPROVED: n("APPROVED"), REJECTED: n("REJECTED") }, unreadMessages });
     } catch (e) {
@@ -95,7 +98,7 @@ export function createProviderReviewRouter(kind: Kind) {
         const app = { kind, row: r } as App;
         out.push({
           id: r.id,
-          name: kind === "TOW" ? r.companyName : r.shopName,
+          name: kind === "TOW" ? r.companyName : kind === "GARAGE" ? r.garageName : r.shopName,
           ownerName: r.ownerName ?? r.user.fullName,
           city: r.city,
           status: r.verificationStatus,
@@ -160,6 +163,8 @@ export function createProviderReviewRouter(kind: Kind) {
           // trucks whose photo, licence and insurance were all accepted go live with the company
           const ok = (app.row as any).trucks.filter(truckQualifies).map((t: any) => t.id);
           if (ok.length) await tx.truck.updateMany({ where: { id: { in: ok } }, data: { verificationStatus: "APPROVED", rejectionReason: null, reviewedById: who, reviewedAt: new Date() } });
+        } else if (kind === "GARAGE") {
+          await tx.garageProfile.update({ where: { id: app.row.id }, data });
         } else {
           await tx.partsShopProfile.update({ where: { id: app.row.id }, data });
         }
@@ -195,6 +200,7 @@ export function createProviderReviewRouter(kind: Kind) {
         const flagged = [...new Set([...fields, ...picked.map((f: any) => `doc:${f.docKind ?? f.purpose}`)])];
         const data = { verificationStatus: "NEEDS_CHANGES" as const, flaggedFields: flagged };
         if (kind === "TOW") await tx.towCompanyProfile.update({ where: { id: app.row.id }, data });
+        else if (kind === "GARAGE") await tx.garageProfile.update({ where: { id: app.row.id }, data });
         else await tx.partsShopProfile.update({ where: { id: app.row.id }, data });
         await tx.auditLog.create({ data: { actorId: who, action: "PROVIDER_CHANGES_REQUESTED", targetId: app.row.id, details: { kind, fields, documents: picked.map((f: any) => f.docKind ?? f.purpose), message } } });
       });
@@ -218,7 +224,7 @@ export function createProviderReviewRouter(kind: Kind) {
       const who = actor(res).id;
       const data = { verificationStatus: "REJECTED" as const, rejectionReason: reason, flaggedFields: [], reviewedById: who, reviewedAt: new Date() };
       await prisma.$transaction([
-        kind === "TOW" ? prisma.towCompanyProfile.update({ where: { id: app.row.id }, data }) : prisma.partsShopProfile.update({ where: { id: app.row.id }, data }),
+        kind === "TOW" ? prisma.towCompanyProfile.update({ where: { id: app.row.id }, data }) : kind === "GARAGE" ? prisma.garageProfile.update({ where: { id: app.row.id }, data }) : prisma.partsShopProfile.update({ where: { id: app.row.id }, data }),
         prisma.auditLog.create({ data: { actorId: who, action: "PROVIDER_REJECTED", targetId: app.row.id, details: { kind, reason } } }),
       ]);
       const fresh = await load(app.row.id);
@@ -234,7 +240,7 @@ export function createProviderReviewRouter(kind: Kind) {
   // ---- messages
   router.get("/threads", async (_req, res) => {
     try {
-      const key = kind === "TOW" ? "towCompanyId" : "partsShopId";
+      const key = OWNER_KEY[kind];
       const last = await prisma.providerMessage.groupBy({ by: [key], where: { [key]: { not: null } }, _max: { createdAt: true }, orderBy: { _max: { createdAt: "desc" } }, take: 100 } as any);
       const out = [];
       for (const g of last as any[]) {
@@ -299,3 +305,4 @@ export function createProviderReviewRouter(kind: Kind) {
 
 export const towReviewRouter = createProviderReviewRouter("TOW");
 export const partsReviewRouter = createProviderReviewRouter("PARTS");
+export const garageReviewRouter = createProviderReviewRouter("GARAGE");

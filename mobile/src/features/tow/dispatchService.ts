@@ -90,7 +90,13 @@ export const driverApi = {
   move: (id: string, to: DriverStep) => api<{ job: TowJob }>("POST", `/driver/jobs/${id}/status`, { to }).then((r) => r.job),
   cancel: (id: string, reason: string) => api<{ job: TowJob }>("POST", `/driver/jobs/${id}/cancel`, { reason }).then((r) => r.job),
   ping: (id: string, p: P) => api("POST", `/driver/jobs/${id}/location`, p),
+  /** while Online (~every 60 s): his latest point for the company and the tow admins */
+  dutyPing: (p: P) => api<{ stored: boolean }>("POST", "/driver/me/location", p),
 };
+/** An online driver on a company / admin map: his latest point is shared only while he is Online. */
+export type OnlineDriver = { id: string; name: string; company: { id: string; name: string }; truckType: TruckType | null; status: DriverStatus; live: DriverLive | null };
+/** "nearest available" for one request: FREE drivers by distance to the pickup (live point when fresh, else their base) */
+export type NearestDriver = { id: string; name: string; truckType: TruckType | null; distanceKm: number | null; source: "live" | "base" | "none" };
 
 export const companyDispatch = {
   drivers: () => api<{ drivers: CompanyDriver[] }>("GET", "/tow/me/drivers").then((r) => r.drivers),
@@ -98,7 +104,8 @@ export const companyDispatch = {
   invite: (id: string) => api("POST", `/tow/me/drivers/${id}/invite`),
   updateDriver: (id: string, d: { phone?: string; truckId?: string | null; offline?: boolean; licenceNumber?: string; licencePhoto?: Upload; photo?: Upload }) => api("PATCH", `/tow/me/drivers/${id}`, d),
   assign: (requestId: string, driverId: string) => api("POST", `/tow/me/requests/${requestId}/assign`, { driverId }),
-  live: () => api<{ jobs: TowJob[] }>("GET", "/tow/me/live").then((r) => r.jobs),
+  live: () => api<{ jobs: TowJob[]; drivers: OnlineDriver[] }>("GET", "/tow/me/live"),
+  nearest: (requestId: string) => api<{ drivers: NearestDriver[] }>("GET", `/tow/me/requests/${requestId}/nearest`).then((r) => r.drivers),
 };
 
 export const freeDriversOf = (companyId: string) => api<{ drivers: FreeDriver[] }>("GET", `/catalog/tow/companies/${companyId}/drivers`).then((r) => r.drivers);
@@ -138,6 +145,7 @@ export const adminHistory = {
 
 export const adminTows = {
   active: () => api<{ jobs: TowJob[] }>("GET", "/admin/tow/active-jobs").then((r) => r.jobs),
+  online: () => api<{ drivers: OnlineDriver[] }>("GET", "/admin/tow/online").then((r) => r.drivers),
   job: (id: string) => api<{ job: TowJob }>("GET", `/admin/tow/jobs/${id}`).then((r) => r.job),
 };
 

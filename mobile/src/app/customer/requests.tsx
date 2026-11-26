@@ -73,7 +73,7 @@ export default function MyRequests() {
     ...(mechs.data ?? []).map((r) => ({
       key: "m" + r.id,
       photo: "service.mechanics" as PhotoKey,
-      title: r.mechanic.name,
+      title: (r.mechanic?.name ?? r.garage?.name ?? ""),
       sub: `${r.vehicle.make} ${r.vehicle.model} · ${r.problemDescription}`,
       status: mechLabel[r.status],
       tone: mechTone(r.status),

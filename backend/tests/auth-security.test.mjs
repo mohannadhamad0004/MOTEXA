@@ -15,6 +15,9 @@ const ALLOWED = {
   'src/routes/auth.routes.ts': ['"ADMIN"'], // administrator activation: super admin's invitation + emailed OTP
   'src/services/applications.ts': ['role'], // promoteApplicant, inside the department admin's approval transaction
   'src/services/tow-dispatch.ts': ['"TOW_DRIVER"'], // a tow company adds its drivers
+  // an exception like tow drivers: an APPROVED garage owner adds his mechanics (new MECHANIC logins of his own garage, PENDING until a
+  // mechanics admin approves them; tested in garages.test.mjs)
+  'src/services/garage-staff.ts': ['"MECHANIC"'],
   'src/seed/': ['*'], // dev seed, refuses to run without ALLOW_DEV_SEED
 };
 

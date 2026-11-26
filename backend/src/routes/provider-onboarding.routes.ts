@@ -1,4 +1,4 @@
-// Provider side of the onboarding (TOW_PROVIDER / PARTS_PROVIDER), mounted at /api/provider (+ /api/notifications for everyone).
+// Provider side of the onboarding (TOW_PROVIDER / PARTS_PROVIDER / GARAGE_OWNER), mounted at /api/provider (+ /api/notifications for everyone).
 // Mounted BEFORE the global JSON parser: documents arrive as base64 and the body limit is raised after authentication.
 //   GET  /onboarding              the whole application (status, info, documents, trucks, what is missing, flagged items, timeline)
 //   GET  /onboarding/status       light version for the layout gate and badges
@@ -12,9 +12,11 @@ import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 import { canonicalCity } from "../cities.js";
 import { CATEGORY_KEYS } from "../catalogCategories.js";
+import { MECHANIC_SKILLS } from "../mechanicSkills.js";
 import { removeStoredFile, storeFile } from "../uploads/providerFiles.js";
 import {
   COMPANY_DOC_KINDS,
+  OWNER_KEY,
   PURPOSE_OF,
   adminIds,
   audit,
@@ -33,6 +35,7 @@ import {
   shapeFile,
   shapeInfo,
   shapeTrucks,
+  tableOf,
   text,
   threadWhere,
   timeline,
@@ -49,13 +52,13 @@ const PHONE = /^\+?[0-9 ()-]{8,24}$/;
 async function mine(res: any): Promise<App> {
   const u = res.locals.authUser as { id: string; role: string };
   if (u.role === "CUSTOMER") {
-    // a customer fills in their own application (POST /apply/tow|parts) until the approval makes them the provider
-    const apps = [await loadApp("TOW", { userId: u.id }), await loadApp("PARTS", { userId: u.id })].filter((a): a is App => !!a);
+    // a customer fills in their own application (POST /apply/tow|parts|garage) until the approval makes them the provider
+    const apps = [await loadApp("TOW", { userId: u.id }), await loadApp("PARTS", { userId: u.id }), await loadApp("GARAGE", { userId: u.id })].filter((a): a is App => !!a);
     // no application: refused exactly like any other non-provider role
-    return apps.find((a) => a.row.verificationStatus !== "REJECTED") ?? apps[0] ?? fail(403, "Tow company or parts shop access required.");
+    return apps.find((a) => a.row.verificationStatus !== "REJECTED") ?? apps[0] ?? fail(403, "Tow company, parts shop or garage access required.");
   }
-  const kind: Kind | null = u.role === "TOW_PROVIDER" ? "TOW" : u.role === "PARTS_PROVIDER" ? "PARTS" : null;
-  if (!kind) return fail(403, "Tow company or parts shop access required.");
+  const kind: Kind | null = u.role === "TOW_PROVIDER" ? "TOW" : u.role === "PARTS_PROVIDER" ? "PARTS" : u.role === "GARAGE_OWNER" ? "GARAGE" : null;
+  if (!kind) return fail(403, "Tow company, parts shop or garage access required.");
   const app = await loadApp(kind, { userId: u.id });
   return app ?? fail(404, "No application is linked to this account.");
 }
@@ -157,6 +160,22 @@ router.put("/onboarding/info", async (req, res) => {
       if (has("description")) data.description = text(b.description, 600) || null;
       if (point) [data.baseLat, data.baseLng] = [point.lat, point.lng];
       await prisma.towCompanyProfile.update({ where: { id: app.row.id }, data });
+    } else if (app.kind === "GARAGE") {
+      const data: Record<string, unknown> = { ...common };
+      if (name !== null) data.garageName = name;
+      if (nameAr !== undefined) data.garageNameAr = nameAr;
+      if (has("open24h")) {
+        if (typeof b.open24h !== "boolean") return fail(400, "open24h must be true or false.");
+        data.open24h = b.open24h;
+        if (b.open24h) data.workingHours = "24/7";
+      }
+      if (has("services")) {
+        if (!Array.isArray(b.services) || !b.services.length || b.services.some((x: unknown) => !(MECHANIC_SKILLS as readonly string[]).includes(x as string))) return fail(400, "Choose the services from the list.");
+        data.services = [...new Set(b.services as string[])];
+      }
+      if (has("description")) data.description = text(b.description, 600) || null;
+      if (point) [data.baseLat, data.baseLng] = [point.lat, point.lng];
+      await prisma.garageProfile.update({ where: { id: app.row.id }, data });
     } else {
       const data: Record<string, unknown> = { ...common };
       if (name !== null) data.shopName = name;
@@ -191,7 +210,7 @@ router.post("/onboarding/documents", async (req, res) => {
     const expiresAt = parseExpiryDate(req.body?.expiresAt);
     const old = app.row.files.filter((f) => f.docKind === kind && f.purpose === PURPOSE_OF[app.kind] && !f.messageId);
     storageKey = await storeFile(file);
-    const owner = app.kind === "TOW" ? { towCompanyId: app.row.id } : { partsShopId: app.row.id };
+    const owner = { [OWNER_KEY[app.kind]]: app.row.id };
     const created = await prisma.$transaction(async (tx) => {
       if (old.length) await tx.providerFile.deleteMany({ where: { id: { in: old.map((o) => o.id) } } });
       return tx.providerFile.create({
@@ -251,8 +270,7 @@ router.post("/onboarding/submit", async (_req, res) => {
     const resubmit = status === "NEEDS_CHANGES";
     const where = { id: app.row.id };
     const data = { verificationStatus: "PENDING" as const, submittedAt: new Date(), submissionVersion: { increment: 1 }, flaggedFields: [], rejectionReason: null };
-    if (app.kind === "TOW") await prisma.towCompanyProfile.update({ where, data });
-    else await prisma.partsShopProfile.update({ where, data });
+    await tableOf(app.kind).update({ where, data });
     await audit(app.row.userId, resubmit ? "PROVIDER_RESUBMITTED" : "PROVIDER_SUBMITTED", app.row.id, { kind: app.kind });
     const fresh = (await loadApp(app.kind, where))!;
     await postMessage(fresh, {

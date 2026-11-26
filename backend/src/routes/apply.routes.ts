@@ -1,7 +1,7 @@
-// POST /api/apply/:kind (mechanic | tow | parts): a signed-in CUSTOMER starts a provider application = the DRAFT profile on their own
+// POST /api/apply/:kind (mechanic | tow | parts | garage): a signed-in CUSTOMER starts a provider application = the DRAFT profile on their own
 // account, then fills it in with the existing wizards (/mechanics/me, /provider/onboarding). Never changes the role: only the approval
 // by that department's admin does (services/applications.ts promoteApplicant).
-// Body: acknowledgeProviderAccount: true + acceptTerms: true; tow / parts also businessName, phone, city (required by the profile).
+// Body: acknowledgeProviderAccount: true + acceptTerms: true; tow / parts / garage also businessName, phone, city (required by the profile).
 import express, { Router } from "express";
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
@@ -15,7 +15,7 @@ router.post("/apply/:kind", requireAuth, express.json(), async (req, res) => {
   const bad = (status: number, code: string, message: string) => res.status(status).json({ success: false, code, message });
   try {
     const kind = APPLY_KINDS[String(req.params.kind) as keyof typeof APPLY_KINDS];
-    if (!kind) return bad(404, "UNKNOWN_KIND", "Choose mechanic, tow company or parts shop.");
+    if (!kind) return bad(404, "UNKNOWN_KIND", "Choose mechanic, garage, tow company or parts shop.");
     const me = res.locals.authUser as { id: string; role: string };
     if (me.role !== "CUSTOMER") return bad(403, "CUSTOMERS_ONLY", "Only a customer account can apply to work with MOTEXA.");
     const b = req.body ?? {};
@@ -43,7 +43,9 @@ router.post("/apply/:kind", requireAuth, express.json(), async (req, res) => {
       targetId =
         kind === "TOW"
           ? (await prisma.towCompanyProfile.create({ data: { ...common, companyName: businessName }, select: { id: true } })).id
-          : (await prisma.partsShopProfile.create({ data: { ...common, shopName: businessName }, select: { id: true } })).id;
+          : kind === "GARAGE"
+            ? (await prisma.garageProfile.create({ data: { ...common, garageName: businessName }, select: { id: true } })).id
+            : (await prisma.partsShopProfile.create({ data: { ...common, shopName: businessName }, select: { id: true } })).id;
     }
     await prisma.auditLog.create({ data: { actorId: me.id, action: "APPLICATION_STARTED", targetId, details: { kind } } });
     return res.status(201).json({ success: true, application: { kind, status: "DRAFT" }, created: true });

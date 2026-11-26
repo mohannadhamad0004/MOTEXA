@@ -49,7 +49,9 @@ export default function MechanicRequestScreen() {
 
   const r = state.data;
   // MOTEXA stores no workshop coordinates yet: the other end of the route is the mechanic's city centre (approximate)
-  const provider = r?.mechanic.city ? cityCentre(r.mechanic.city) : null;
+  // a garage request has no mechanic until the owner assigns one: the garage stands in
+  const mech = r ? (r.mechanic ?? { id: "", name: r.garage?.name ?? t("Garage", "كراج"), workshopName: r.garage?.name ?? null, city: null }) : null;
+  const provider = mech?.city ? cityCentre(mech.city) : null;
   const { route, loading: routing } = useRoute(r?.id ?? null, r?.location.point ?? null, provider);
   const canMap = MAPS_AVAILABLE && !!r?.location.point && !!provider;
 
@@ -57,6 +59,8 @@ export default function MechanicRequestScreen() {
     ({
       REQUESTED: t(`Waiting for ${name} to answer`, `بانتظار رد ${name}`),
       ACCEPTED: t(`${name} accepted your request`, `${name} قبل طلبك`),
+      EN_ROUTE: t(`${name} is on the way`, `${name} في الطريق إليك`),
+      ARRIVED: t(`${name} has arrived`, `وصل ${name}`),
       IN_PROGRESS: t(`${name} is working on your car`, `${name} يعمل على سيارتك`),
       COMPLETED: t("Service completed", "اكتملت الخدمة"),
       DECLINED: t(`${name} declined your request`, `${name} رفض طلبك`),
@@ -74,7 +78,7 @@ export default function MechanicRequestScreen() {
         <HeroLayout
           config={{
             tab: "mechanics",
-            title: r ? headline(r.mechanic.name, r.status) : t("Service request", "طلب خدمة"),
+            title: r ? headline(mech!.name, r.status) : t("Service request", "طلب خدمة"),
             line: r ? `${statusLabel[r.status]} · ${shortId(id)}` : shortId(id),
             top: { label: t("Service request", "طلب خدمة"), back: () => (router.canGoBack() ? router.back() : router.navigate("/customer/requests")), actions: [] },
           }}
@@ -89,10 +93,10 @@ export default function MechanicRequestScreen() {
         <View>
           <Card pad={12}>
             <View style={[row, { alignItems: "center", gap: 12, paddingVertical: 4 }]}>
-              <InitialBubble name={r.mechanic.name} size={44} />
+              <InitialBubble name={mech!.name} size={44} />
               <View style={{ flex: 1 }}>
-                <GText numberOfLines={1} style={[gType.label, { fontWeight: "800" }, align]}>{r.mechanic.name}</GText>
-                <GText soft numberOfLines={2} style={[gType.caption, align]}>{[r.mechanic.workshopName, r.mechanic.city ? cityLabel(r.mechanic.city, isArabic) : null].filter(Boolean).join(" · ")}</GText>
+                <GText numberOfLines={1} style={[gType.label, { fontWeight: "800" }, align]}>{mech!.name}</GText>
+                <GText soft numberOfLines={2} style={[gType.caption, align]}>{[mech!.workshopName, mech!.city ? cityLabel(mech!.city, isArabic) : null].filter(Boolean).join(" · ")}</GText>
               </View>
             </View>
             {canMap ? <ListRow divider icon="map-outline" title={mapOpen ? t("Hide map", "إخفاء الخريطة") : t("View on map", "عرض على الخريطة")} onPress={() => setMapOpen(!mapOpen)} /> : null}
@@ -100,7 +104,7 @@ export default function MechanicRequestScreen() {
 
           {canMap && mapOpen ? (
             <View style={{ marginTop: 12, borderRadius: gShape.card, overflow: "hidden" }}>
-              <RequestRouteMap reqId={r.id} kind="mech" height={280} provider={{ ...provider!, name: r.mechanic.name }} pickup={r.location.point!} route={route} />
+              <RequestRouteMap reqId={r.id} kind="mech" height={280} provider={{ ...provider!, name: mech!.name }} pickup={r.location.point!} route={route} />
               <View style={{ paddingTop: 8 }}>
                 <RouteSummary route={route} loading={routing} />
                 <GText soft style={[gType.tiny, align, { marginTop: 4 }]}>{t("The mechanic pin is approximate (city centre).", "دبوس الميكانيكي تقريبي (مركز المدينة).")}</GText>

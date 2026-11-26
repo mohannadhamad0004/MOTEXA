@@ -15,6 +15,7 @@ enum UserRole {
   PARTS_PROVIDER
   TOW_PROVIDER
   TOW_DRIVER // a driver account added by a tow company owner; linked to that company (TowDriver)
+  GARAGE_OWNER // an approved garage / workshop (GarageProfile); his mechanics are MECHANIC accounts linked by GarageMechanic
 }
 
 enum AccountStatus {
@@ -48,6 +49,8 @@ model User {
   role                UserRole
   status              AccountStatus        @default(PENDING)
   mechanicProfile     MechanicProfile?
+  garageProfile       GarageProfile?
+  garageMechanic      GarageMechanic?
   emailVerifiedAt     DateTime?
   phone               String? // optional, given at customer signup
   mechanicEmailChecks MechanicEmailCheck[]
@@ -617,6 +620,9 @@ enum ProviderFilePurpose {
   MESSAGE_ATTACHMENT
   DRIVER_PHOTO // public (shown on the driver card)
   DRIVER_LICENCE // private: company owner + tow admins only
+  GARAGE_DOCUMENT // garage onboarding documents (docKind: COMMERCIAL_REGISTRATION, OWNER_ID, WORKSHOP_PHOTO)
+  GARAGE_MECHANIC_PHOTO // public (shown with the mechanic's first name)
+  GARAGE_MECHANIC_ID // private: the garage owner + mechanics admins only
 }
 
 enum ProviderDocStatus {
@@ -654,6 +660,10 @@ model ProviderFile {
   partsShop    PartsShopProfile?  @relation(fields: [partsShopId], references: [id], onDelete: Cascade)
   towDriverId  String?
   towDriver    TowDriver?         @relation(fields: [towDriverId], references: [id], onDelete: Cascade)
+  garageId         String?
+  garage           GarageProfile?  @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  garageMechanicId String?
+  garageMechanic   GarageMechanic? @relation(fields: [garageMechanicId], references: [id], onDelete: Cascade)
 
   label        String?
   originalName String
@@ -677,6 +687,7 @@ model ProviderFile {
   @@index([ownerUserId])
   @@index([towCompanyId])
   @@index([partsShopId])
+  @@index([garageId])
 }
 
 // Public presentation assets only. Verification documents remain in ProviderFile.
@@ -709,6 +720,8 @@ model ProviderMessage {
   towCompany       TowCompanyProfile?    @relation(fields: [towCompanyId], references: [id], onDelete: Cascade)
   partsShopId      String?
   partsShop        PartsShopProfile?     @relation(fields: [partsShopId], references: [id], onDelete: Cascade)
+  garageId         String?
+  garage           GarageProfile?        @relation(fields: [garageId], references: [id], onDelete: Cascade)
   authorUserId     String?
   author           User?                 @relation("ProviderMessageAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
   authorRole       ProviderMessageAuthor
@@ -720,6 +733,7 @@ model ProviderMessage {
 
   @@index([towCompanyId, createdAt])
   @@index([partsShopId, createdAt])
+  @@index([garageId, createdAt])
 }
 
 // ---- Vehicle fitment: which vehicles a part fits. Free text (no make/model catalogue yet). ----
@@ -1098,6 +1112,8 @@ model TowRequest {
 enum MechanicRequestStatus {
   REQUESTED
   ACCEPTED
+  EN_ROUTE // on site: the mechanic is on the way
+  ARRIVED // on site: the mechanic is at the customer
   IN_PROGRESS
   COMPLETED
   DECLINED
@@ -1108,9 +1124,15 @@ model MechanicRequest {
   id             String @id @default(uuid())
   customerId     String
   customer       User   @relation("MechanicRequestCustomer", fields: [customerId], references: [id], onDelete: Cascade)
-  // The mechanic's User id: every mechanic has one (a MechanicProfile is optional) and it is the public id in the catalog.
-  mechanicUserId String
-  mechanic       User   @relation("MechanicRequestMechanic", fields: [mechanicUserId], references: [id], onDelete: Cascade)
+  // The mechanic's User id (independent or garage mechanic); null while a request to a GARAGE waits for the owner to assign one.
+  mechanicUserId String?
+  mechanic       User?  @relation("MechanicRequestMechanic", fields: [mechanicUserId], references: [id], onDelete: Cascade)
+  // a request to a garage (the owner assigns one of his mechanics), or the garage of the garage mechanic who was asked directly
+  garageId       String?
+  garage         GarageProfile? @relation(fields: [garageId], references: [id], onDelete: SetNull)
+  assignedAt     DateTime?
+  // ON_SITE = the mechanic comes to the customer (a pin is required); WORKSHOP = the customer brings the car. null on older rows.
+  serviceMode    MechanicServiceMode?
 
   skill              String? // one of the mechanic's approved skills at the time of the request
   carMake            String
@@ -1126,10 +1148,17 @@ model MechanicRequest {
   status        MechanicRequestStatus @default(REQUESTED)
   declineReason String?
   cancelReason  String? // why it was cancelled (admin cancel: required; shown to the customer and the mechanic)
-  cancelledBy   String? // CUSTOMER | ADMIN
+  cancelledBy   String? // CUSTOMER | ADMIN | MECHANIC | GARAGE
+  // the assigned mechanic's live point during the active job (on-site: sent while his job screen is open); cleared when the job ends
+  liveLat       Float?
+  liveLng       Float?
+  liveAt        DateTime?
+  trail         MechanicJobTrail[]
 
   requestedAt DateTime  @default(now())
   acceptedAt  DateTime?
+  enRouteAt   DateTime?
+  arrivedAt   DateTime?
   declinedAt  DateTime?
   startedAt   DateTime?
   completedAt DateTime?
@@ -1139,6 +1168,97 @@ model MechanicRequest {
 
   @@index([customerId, status])
   @@index([mechanicUserId, status])
+  @@index([garageId, status])
+}
+
+// The exact path of an active mechanic job (like TowJobTrail): deleted when the job ends.
+model MechanicJobTrail {
+  id        String          @id @default(uuid())
+  requestId String
+  request   MechanicRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  lat       Float
+  lng       Float
+  at        DateTime        @default(now())
+
+  @@index([requestId, at])
+}
+
+enum MechanicServiceMode {
+  ON_SITE
+  WORKSHOP
+}
+
+// ---- Garages (= the tow company pattern): an approved owner (GARAGE_OWNER) and his mechanics (MECHANIC accounts he adds).
+model GarageProfile {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  garageName   String
+  garageNameAr String?
+  ownerName    String?
+  phone        String
+  city         String
+  address      String?
+  description  String?
+  workingHours String?
+  open24h      Boolean  @default(false)
+  services     String[] @default([]) // skill keys from mechanicSkills.ts
+  // exact here; customers only get it rounded (3 decimals)
+  baseLat      Float?
+  baseLng      Float?
+
+  verificationStatus ProviderVerificationStatus @default(PENDING)
+  rejectionReason    String?
+  reviewedById       String?
+  reviewedAt         DateTime?
+  submittedAt        DateTime?
+  submissionVersion  Int                        @default(0)
+  flaggedFields      String[]                   @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  files     ProviderFile[]
+  messages  ProviderMessage[]
+  mechanics GarageMechanic[]
+  requests  MechanicRequest[]
+}
+
+enum GarageMechanicApproval {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+model GarageMechanic {
+  id       String        @id @default(uuid())
+  userId   String        @unique
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  garageId String
+  garage   GarageProfile @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  phone    String
+  skills   String[]      @default([])
+  // Online = sharing his location with the garage (~every 60 s, foreground); starts offline
+  offline  Boolean       @default(true)
+
+  // ID review by a mechanics admin: never assigned / listed unless APPROVED
+  approval       GarageMechanicApproval @default(PENDING)
+  approvalReason String?
+  reviewedById   String?
+  reviewedAt     DateTime?
+  files          ProviderFile[]
+
+  // the latest point only, while Online (cleared when he goes Offline)
+  lastLat Float?
+  lastLng Float?
+  lastAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([garageId])
 }
 
 model AdminInvitationOtp {

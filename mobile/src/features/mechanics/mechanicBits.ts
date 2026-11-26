@@ -24,6 +24,8 @@ export function useMechanicStatusLabels() {
   const label: Record<MechanicRequestStatus, string> = {
     REQUESTED: t("Requested", "تم الطلب"),
     ACCEPTED: t("Accepted", "تم القبول"),
+    EN_ROUTE: t("On the way", "في الطريق"),
+    ARRIVED: t("Arrived", "وصل"),
     IN_PROGRESS: t("In progress", "قيد التنفيذ"),
     COMPLETED: t("Completed", "مكتمل"),
     DECLINED: t("Declined", "مرفوض"),

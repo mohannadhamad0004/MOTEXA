@@ -76,10 +76,15 @@ export const FIT_STATE_LABELS: Record<FitState, { en: string; ar: string; tone: 
 /** Accessory fits by car: states counted per car model; with a key, also that car's fits one by one. */
 export type FitSummary = { accessories: number; cars: { model3dKey: string; counts: Record<FitState, number> }[];
   fits?: { accessoryId: string; productName: string; type: AccessoryType; kitPart: KitPart; generationId: string; generation: string; status: FitState; reason: string | null }[] };
-/** The bulk fits screen (one accessory on all its cars): filtered, paged rows; "correction" = needs correction or a manual correction. */
-export type FitFilter = { q?: string; make?: string; model?: string; generationId?: string; status?: FitState | "correction" };
+/** The bulk fits screen (one accessory on all its cars): filtered, paged rows; "correction" = needs correction or a manual correction;
+ *  "review" = everything waiting for review (passed + both correction states). */
+export type FitFilter = { q?: string; make?: string; model?: string; generationId?: string; status?: FitState | "correction" | "review" };
 export type FitRow = { generationId: string; make: string; makeAr: string; model: string; modelAr: string; code: string; nameEn: string; nameAr: string;
-  yearFrom: number; yearTo: number; model3dKey: string; photoUrl: string | null; status: FitState; reason: string | null; approvedAt: string | null };
+  yearFrom: number; yearTo: number; model3dKey: string; photoUrl: string | null; bodyType: string | null; status: FitState; reason: string | null; approvedAt: string | null };
+/** "Apply this correction to similar cars": the same 3D model, the same make + model (other generations), the same body type. */
+export type SimilarFits = { bodyType: string | null; groups: { model3d: FitRow[]; family: FitRow[]; body: FitRow[] } };
+/** The viewer's verdict on a correction (FIT-QA tiers: PERFECT / GOOD are shown, REFUSED is not). */
+export type CorrectionCheck = { ok: boolean; clipMm?: number; gapMm?: number; tier?: string; reason?: string };
 export type FitsPage = {
   accessory: { id: string; productId: string; productName: string; type: AccessoryType; kitPart: KitPart; status: AccessoryStatus; universal: boolean; computing: boolean };
   /** every car of the part / the cars matching the filter */
@@ -92,7 +97,7 @@ export type FitsPage = {
 /** picked rows (at most 500) or everything matching the filter minus a few unticked rows: never thousands of ids */
 export type FitSelectionBody = { generationIds: string[] } | { filter: FitFilter; exclude: string[] };
 export type FitJob = { id: string; status: "QUEUED" | "RUNNING" | "DONE" | "CANCELLED" | "FAILED"; total: number; position: number; done: number; skipped: number; errors: number;
-  includeApproved: boolean; includeCorrections: boolean; error: string | null; createdAt: string; startedAt: string | null; finishedAt: string | null; etaSeconds: number | null };
+  includeApproved: boolean; includeCorrections: boolean; /** "Apply this correction to similar cars" (saved for review, never approved) */ correction?: boolean; error: string | null; createdAt: string; startedAt: string | null; finishedAt: string | null; etaSeconds: number | null };
 export type FitJobSummary = { toRun: number; approvedSkipped: number; approvedReset: number; correctionsSkipped: number; correctionsReset: number; notATarget: number };
 export type BulkFitsResult = { action: "approve" | "unapprove"; done: { generationId: string; name: string }[]; skipped: { generationId: string; name: string; code: string }[] };
 export type { ZoneBox } from "../car3d/modelConfig";
@@ -163,6 +168,10 @@ export const adminAccessoryApi = {
   autoFits: async (model3dKey: string) => (await api<{ fits: AutoFitRow[] }>("GET", `/admin/parts/auto-fits?model3dKey=${encodeURIComponent(model3dKey)}`)).fits,
   /** approve the fit with a correction (null = the pure auto-fit: "Reset to auto-fit") */
   approveFit: (accessoryId: string, generationId: string, adj: FitAdjust | null) => api("PUT", `/admin/parts/auto-fits/${accessoryId}/${generationId}`, { adj }),
+  /** the same correction on another car, saved for review after the server's viewer check (never approved) */
+  suggestFit: (accessoryId: string, generationId: string, adj: FitAdjust, resetApproval = false) =>
+    api<{ saved: boolean; check: CorrectionCheck }>("PUT", `/admin/parts/auto-fits/${accessoryId}/${generationId}`, { adj, review: true, resetApproval }),
+  similarFits: (accessoryId: string, generationId: string) => api<SimilarFits>("GET", `${adm}/${accessoryId}/fits/similar/${generationId}`),
   needsCorrection: (accessoryId: string, generationId: string) => api("PUT", `/admin/parts/auto-fits/${accessoryId}/${generationId}`, { needsCorrection: true }),
   fitSummary: (model3dKey?: string) => api<FitSummary>("GET", `/admin/parts/auto-fits/summary${model3dKey ? `?model3dKey=${encodeURIComponent(model3dKey)}` : ""}`),
   /** bulk review: one page of the cars of one accessory (filtered on the server), approve passed fits / run auto-fit on a selection */
@@ -172,7 +181,7 @@ export const adminAccessoryApi = {
   },
   approveFits: (accessoryId: string, sel: FitSelectionBody, dryRun = false) =>
     api<{ approvable?: number; approved?: number; skipped: Record<string, number> }>("POST", `${adm}/${accessoryId}/fits/approve`, { ...sel, dryRun }),
-  startFitJob: (accessoryId: string, sel: FitSelectionBody, o: { includeApproved?: boolean; confirmApprovedReset?: number; includeCorrections?: boolean; confirmCorrectionReset?: number; dryRun?: boolean }) =>
+  startFitJob: (accessoryId: string, sel: FitSelectionBody, o: { includeApproved?: boolean; confirmApprovedReset?: number; includeCorrections?: boolean; confirmCorrectionReset?: number; dryRun?: boolean; correction?: FitAdjust }) =>
     api<{ job: FitJob | null; summary: FitJobSummary }>("POST", `${adm}/${accessoryId}/fits/jobs`, { ...sel, ...o }),
   currentFitJob: async (accessoryId: string) => (await api<{ job: FitJob | null }>("GET", `${adm}/${accessoryId}/fits/jobs/current`)).job,
   cancelFitJob: (accessoryId: string, jobId: string) => api("POST", `${adm}/${accessoryId}/fits/jobs/${jobId}/cancel`),

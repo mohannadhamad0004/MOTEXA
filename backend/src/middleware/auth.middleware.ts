@@ -197,6 +197,16 @@ export function requireTowProvider(
   next();
 }
 
+/** Garage owner access: role GARAGE_OWNER on an ACTIVE account. Use after requireAuth (approval: requireApprovedProvider). */
+export function requireGarageOwner(_req: Request, res: Response, next: NextFunction) {
+  const user = res.locals.authUser;
+  if (!user || user.role !== "GARAGE_OWNER" || user.status !== "ACTIVE") {
+    res.status(403).json({ success: false, message: "Garage access required." });
+    return;
+  }
+  next();
+}
+
 /** Parts administration access: SUPER_ADMIN, or ADMIN holding MANAGE_SPARE_PARTS. Use after requireAuth. */
 export async function requirePartsAdmin(
   _req: Request,

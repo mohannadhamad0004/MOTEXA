@@ -41,7 +41,7 @@ export function useActiveRequest() {
   for (const r of mechs.data ?? []) {
     const i = { REQUESTED: 0, ACCEPTED: 1, IN_PROGRESS: 2 }[r.status as string];
     if (i === undefined) continue;
-    const name = r.mechanic.name;
+    const name = (r.mechanic?.name ?? r.garage?.name ?? "");
     const title = [
       t(`Waiting for ${name} to answer`, `بانتظار رد ${name}`),
       t(`${name} accepted your request`, `${name} قبل طلبك`),

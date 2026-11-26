@@ -5,13 +5,15 @@
 //   overwritten either: skipped unless corrections are explicitly included with their confirmed count; each reset one is audited.
 // - 5 cars in a row that the fit checker could not compute stop the job (FAILED, FIT_CHECKER_UNAVAILABLE) at any point; those cars are
 //   handed back (position rewound) so "Resume" retries them. A car-update refit that had to wait for the job runs when the job ends.
+// - A correction job ("Apply this correction to similar cars", more than ~10 cars) carries the Parts Admin's correction: each car is fitted
+//   with it on top and, when it passes the viewer's check, the correction is saved for review (suggestCorrection). It never approves.
 // - One queued / running job per accessory. The worker holds a lease, renewed after every car; after a restart an expired lease is
 //   picked up again at `position`. Each car is fitted exactly like an explicit rerun (fresh fit, waits for the Parts Admin's review).
 // - Progress and the "about N min left" estimate come from the stored counters, so leaving the screen changes nothing.
 import { randomUUID } from "node:crypto";
 import { type AccessoryFitJob, type Prisma, type ProductAccessory3D } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
-import { accessoryTargets, autoFitAccessory, computeFit, fitRows, forgetFitRows, hasCorrection, isAccessoryFitRunning, parseAdj, parseFitSelection, saveFit, selectFitRows } from "./accessory-autofit.js";
+import { accessoryTargets, autoFitAccessory, computeFit, fitRows, forgetFitRows, hasCorrection, isAccessoryFitRunning, parseAdj, parseFitSelection, saveFit, selectFitRows, suggestCorrection, type Adj } from "./accessory-autofit.js";
 import { fail } from "./vehicle3d-validation.js";
 
 const ACTIVE: ("QUEUED" | "RUNNING")[] = ["QUEUED", "RUNNING"];
@@ -19,18 +21,26 @@ const LEASE_MS = 3 * 60_000;
 /** cars in a row the checker could not compute before the job stops */
 export const MAX_FAILURE_STREAK = 5;
 type Compute = typeof computeFit;
+/** targets = the generation ids in order; a correction job stores { ids, correction } in the same column (no schema change). */
+export function jobPlan(targets: unknown): { ids: string[]; correction: Adj | null } {
+  if (Array.isArray(targets)) return { ids: targets as string[], correction: null };
+  const t = (targets ?? {}) as { ids?: unknown; correction?: unknown };
+  return { ids: Array.isArray(t.ids) ? t.ids as string[] : [], correction: parseAdj(t.correction) };
+}
 
 export function fitJobView(j: AccessoryFitJob) {
   const fitted = j.done + j.errors, left = Math.max(0, j.total - j.position);
   // average time of the cars actually fitted so far x the cars left; null until the first one is done
   const etaSeconds = ACTIVE.includes(j.status as "QUEUED") && fitted > 0 ? Math.round((j.workMs / fitted) * left / 1000) : null;
   return { id: j.id, status: j.status, total: j.total, position: j.position, done: j.done, skipped: j.skipped, errors: j.errors, includeApproved: j.includeApproved,
-    includeCorrections: j.includeCorrections, error: j.error, createdAt: j.createdAt, startedAt: j.startedAt, finishedAt: j.finishedAt, etaSeconds };
+    includeCorrections: j.includeCorrections, correction: jobPlan(j.targets).correction !== null, error: j.error, createdAt: j.createdAt, startedAt: j.startedAt, finishedAt: j.finishedAt, etaSeconds };
 }
 
 /** dryRun = only the counts for the confirmation sheet. */
 export async function createFitJob(uid: string, accessoryId: string, body: Record<string, unknown>) {
   const sel = parseFitSelection(body), includeApproved = body.includeApproved === true, includeCorrections = body.includeCorrections === true;
+  const correction = body.correction === undefined || body.correction === null ? null : parseAdj(body.correction);
+  if (body.correction && !correction) return fail("INVALID_ADJUST", "Adjustments are limited to ±0.5 m, ±45° and 80-125 % scale.");
   const { rows } = await fitRows(accessoryId, true), picked = selectFitRows(rows, sel);
   const approved = picked.rows.filter(r => r.status === "approved");
   // a saved manual correction that is not approved (e.g. after Unapprove): read from the fit rows themselves, whatever the list state says
@@ -49,8 +59,8 @@ export async function createFitJob(uid: string, accessoryId: string, body: Recor
   const job = await prisma.$transaction(async tx => {
     await tx.$queryRaw`SELECT "id" FROM "ProductAccessory3D" WHERE "id"=${accessoryId} FOR UPDATE`;
     if (await tx.accessoryFitJob.count({ where: { accessoryId, status: { in: ACTIVE } } })) return fail("FIT_JOB_RUNNING", "A fit run is already in progress for this accessory.", 409);
-    const created = await tx.accessoryFitJob.create({ data: { accessoryId, createdById: uid, targets: run.map(r => r.generationId), includeApproved, includeCorrections, total: run.length } });
-    await tx.auditLog.create({ data: { actorId: uid, action: "ACCESSORY3D_FIT_JOB_STARTED", targetId: accessoryId, details: { jobId: created.id, ...summary, includeApproved, includeCorrections,
+    const created = await tx.accessoryFitJob.create({ data: { accessoryId, createdById: uid, targets: correction ? { ids: run.map(r => r.generationId), correction } : run.map(r => r.generationId), includeApproved, includeCorrections, total: run.length } });
+    await tx.auditLog.create({ data: { actorId: uid, action: "ACCESSORY3D_FIT_JOB_STARTED", targetId: accessoryId, details: { jobId: created.id, ...summary, includeApproved, includeCorrections, correction,
       resetGenerationIds: includeApproved ? approved.map(r => r.generationId) : [], resetCorrectionGenerationIds: includeCorrections ? corrected.map(r => r.generationId) : [], selection: "ids" in sel ? "picked" : { filter: sel.filter, excluded: sel.exclude.size } } as unknown as Prisma.InputJsonValue } });
     return created;
   });
@@ -127,13 +137,13 @@ async function runFitJob(jobId: string, lease: string, compute: Compute) {
   const a = await prisma.productAccessory3D.findUnique({ where: { id: job.accessoryId } });
   if (!a?.privateModelPath || !["PUBLISHED", "READY_FOR_FINAL_REVIEW"].includes(a.status)) return finish("FAILED", "FIT_NOT_READY");
   const targets = new Set((await accessoryTargets(job.accessoryId)).filter(g => g.isPublished && g.model3dKey).map(g => g.id));
-  const list = job.targets as string[], stillMine = async () => (await prisma.accessoryFitJob.count({ where: mine })) > 0;
+  const { ids: list, correction } = jobPlan(job.targets), stillMine = async () => (await prisma.accessoryFitJob.count({ where: mine })) > 0;
   // failures in a row since the last fitted car (a skipped car neither breaks nor extends it) and where that run of failures started
   let streak = 0, streakStart = 0, streakSkips = 0, cause = "";
   for (let pos = job.position; pos < list.length; pos++) {
     const started = Date.now();
     let outcome: "done" | "skipped" | "errors";
-    try { outcome = await fitOne(a, list[pos]!, job, targets, compute, stillMine); }
+    try { outcome = await fitOne(a, list[pos]!, job, targets, compute, stillMine, correction); }
     catch (e) { outcome = "errors"; cause = String((e as Error)?.message ?? e).split("\n")[0]!.slice(0, 200); console.error(`Accessory fit job ${jobId}: one car could not be fitted.`); }
     const step = await prisma.accessoryFitJob.updateMany({ where: mine, data: { position: pos + 1, [outcome]: { increment: 1 },
       workMs: { increment: outcome === "skipped" ? 0 : Date.now() - started }, leaseUntil: new Date(Date.now() + LEASE_MS) } });
@@ -156,13 +166,15 @@ async function runFitJob(jobId: string, lease: string, compute: Compute) {
  *  as the suggestion). "skipped" = no longer a car of this part, approved since the job started (when approved ones are not included),
  *  a saved manual correction (when corrections are not included; checked again here, so one saved after the job started is kept too),
  *  or the job was cancelled while this car was being fitted. An included correction is reset with an audit row (saveFit). */
-async function fitOne(a: ProductAccessory3D, generationId: string, job: AccessoryFitJob, targets: Set<string>, compute: Compute, stillMine: () => Promise<boolean>) {
+async function fitOne(a: ProductAccessory3D, generationId: string, job: AccessoryFitJob, targets: Set<string>, compute: Compute, stillMine: () => Promise<boolean>, fix: Adj | null = null) {
   if (!targets.has(generationId)) return "skipped" as const;
   const key = (await prisma.vehicleGeneration.findUnique({ where: { id: generationId }, select: { model3dKey: true } }))?.model3dKey;
   if (!key) return "skipped" as const;
   const id = { accessoryId_generationId: { accessoryId: a.id, generationId } }, previous = await prisma.accessoryAutoFit.findUnique({ where: id });
   if (previous?.approvedAt && !job.includeApproved) return "skipped" as const;
   if (previous && !previous.approvedAt && hasCorrection(previous.adj) && !job.includeCorrections) return "skipped" as const;
+  // a correction job: saved for review when it passes on this car, else this car is left as it was ("skipped")
+  if (fix) return (await suggestCorrection(a, generationId, key, fix, job.createdById, compute, { jobId: job.id, go: stillMine })).saved ? "done" as const : "skipped" as const;
   const correction = previous?.approvedAt && previous.adj ? parseAdj(previous.adj) : null;
   const fit = await compute(a.accessoryType, { widthMm: a.widthMm, lengthMm: a.lengthMm, rimInches: a.rimInches }, a.privateModelPath!, key, correction);
   if (!await stillMine()) return "skipped" as const;

@@ -186,6 +186,30 @@ export async function sendPasswordResetOtpEmail({
   return { emailId: data.id };
 }
 
+/** A garage owner added this mechanic: the same set-your-password code as a driver invitation, with the garage name. */
+export async function sendGarageMechanicInviteEmail({ to, fullName, otp, company }: OtpEmailInput & { company: string }) {
+  const { data, error } = await deliverEmail({
+    to: [to],
+    subject: "MOTEXA | You were added as a garage mechanic",
+    text: [
+      `Hello ${fullName},`,
+      "",
+      `${company} added you as a mechanic on MOTEXA.`,
+      "To set your password: open MOTEXA, choose Forgot password, enter this email and this code:",
+      "",
+      otp,
+      "",
+      "This code expires in 5 minutes. Never share it with anyone.",
+      "",
+      `أضافتك ${company} كميكانيكي في MOTEXA. لتعيين كلمة المرور: افتح التطبيق واختر "نسيت كلمة المرور" ثم أدخل بريدك وهذا الرمز.`,
+      "",
+      "MOTEXA Team",
+    ].join("\n"),
+  });
+  if (error || !data?.id) throw new Error("Mechanic invitation email could not be delivered.");
+  return { emailId: data.id };
+}
+
 // A tow company added this person as a driver: the code lets them set a password (same recovery flow, different wording).
 export async function sendDriverInviteEmail({ to, fullName, otp, company }: OtpEmailInput & { company: string }) {
   const { data, error } = await deliverEmail({

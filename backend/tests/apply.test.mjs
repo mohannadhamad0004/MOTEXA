@@ -51,7 +51,7 @@ test('apply: token required, customers only, confirmation required, and it never
     assert.equal(r.status, 403, role); assert.equal(r.data.code, 'CUSTOMERS_ONLY'); assert.equal(await roleOf(u.id), role);
   }
   const c = await mk('CUSTOMER');
-  assert.equal((await call(c, 'POST', '/apply/garage', OK)).status, 404);
+  assert.equal((await call(c, 'POST', '/apply/bakery', OK)).status, 404);
   assert.equal((await call(c, 'POST', '/apply/mechanic', { acceptTerms: true })).data.code, 'CONFIRM_REQUIRED');
   assert.equal((await call(c, 'POST', '/apply/mechanic', { ...OK, acknowledgeProviderAccount: 'yes' })).status, 400);
   const r = await call(c, 'POST', '/apply/mechanic', { ...OK, role: 'MECHANIC', status: 'ACTIVE', verificationStatus: 'VERIFIED', adminPermissions: ['MANAGE_MECHANICS'] });

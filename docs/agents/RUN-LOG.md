@@ -179,3 +179,48 @@ Templates: **Dashboard** · **List** · **Detail** (maps = Detail with a map bod
 - Test data: 23 RefreshToken rows from my screenshot logins removed (8 from the 2026-11-25 before-run, 15 from today) + 1 TEST_DATA_REMOVED audit row; the 2026-11-25 10:19 admin.parts session is not mine and was kept. My Expo web on :8095 is stopped; the backend on :5000 was never restarted.
 - Final checks: mobile tsc 0, mobile tests 93/93 (guard PENDING = 0), backend tsc 0, backend `npm test` 350/350, `npx expo export --platform android` bundles (output in the session scratchpad).
 - RUN FINISHED 2026-11-26: every role on the one UI system. Nothing left open in this checklist.
+
+---
+
+# RUN-LOG — mechanics like tow: customer location, garages, live fleet locations (started 2026-11-26)
+
+Approved plan (chat, 2026-11-26) + answers: (1) a GPS / pin point is required only for ON-SITE requests (optional for a workshop visit);
+(2) independent mechanics share location only during their active job, tow drivers and garage mechanics while Online; garage owners
+creating MECHANIC accounts is an explicit exception in the auth-security source scan (like tow drivers), tested.
+Live checks: backend :5000 (the human's, never restarted by me), my Expo web on :8083, dev accounts `*@motexa.test`. Test records I create
+are removed afterwards (audit rows kept + one TEST_DATA_REMOVED row each). No git commands; `graphify-out/` untouched.
+
+## Checklist
+- [x] 1. Schema + additive migration: GARAGE_OWNER, GarageProfile, GarageMechanic (+ approval enum), MechanicRequest (nullable mechanic, garageId, serviceMode, assignedAt, enRouteAt, arrivedAt, live point), MechanicJobTrail, statuses EN_ROUTE / ARRIVED, ProviderFile / ProviderMessage garageId
+- [x] 2. Backend on-duty location: tow driver Online ping (60 s, latest only, Offline clears), company live drivers + nearest suggestions, tow admin online layer
+- [x] 3. Backend garages: apply kind GARAGE, onboarding (info, services, hours, pin, documents), review by mechanics admin, promotion to GARAGE_OWNER
+- [x] 4. Backend garage owner: profile, mechanics add / edit / invite (pending until approved), requests inbox, assign + nearest suggestions, live map
+- [x] 5. Backend mechanic requests: mechanic OR garage, serviceMode (pin required on site), EN_ROUTE / ARRIVED, job ping + trail (deleted at the end), privacy views (area / exact / customer sees only his assigned mechanic while on the way)
+- [x] 6. Backend garage mechanics: Online switch + ping, inbox, steps; admin review list; mechanics admin live map; catalog garages + garage mechanics in the mechanics list
+- [x] 7. Auth-security allowlist (garage owner creates MECHANIC accounts) + backend tests (privacy, garage flow, pings, nearest, exclusivity, only an APPROVED owner adds to his own garage, new mechanic pending)
+- [ ] 8. Mobile shared: on-duty hook (foreground, ~60 s), API clients, live map with people pins
+- [ ] 9. Mobile customer: Garages segment + garage page, request form (mode + GPS / manual pin), status page live map + route
+- [ ] 10. Mobile garage owner (`app/garage/*`): Dashboard, Requests list + detail (assign, nearest), Mechanics list + add form, Live map, Profile entry rows, Messages; onboarding kind GARAGE; landing + Work with MOTEXA
+- [ ] 11. Mobile mechanic: Online switch (garage mechanics), job steps On the way / Arrived / Start / Complete, location sharing + route to the customer
+- [x] 12. Mobile tow: Online pings from the driver app, company Live map shows online drivers, dispatch nearest available
+- [ ] 13. Mobile admins: mechanics admin garage applications, garage mechanics review, live map; tow admin online drivers layer
+- [ ] 14. Checks: mobile + backend tsc, all tests, screenshots 390 EN dark + AR light + wide, console errors
+- [ ] 15. Docs (05-features, 10-ui-system appendix, Expo Go foreground note), STATUS.md, test-data cleanup
+
+## Log
+- 1 done: migration `20261126180000_garages_live_locations` (generated with `prisma migrate diff` from the live DB; 4 unrelated drift lines on Vehicle3D tables left out), applied with `migrate deploy`, client generated.
+- 2 done: `services/presence.ts` (latest point only, pings >= 30 s apart, stale after 3 min, nearest-first); tow: `POST /driver/me/location` (refused offline / unapproved), Offline clears the point (kept only during an active job), `GET /tow/me/live` + online drivers, `GET /tow/me/requests/:id/nearest`, `GET /admin/tow/online`.
+- 3 done: onboarding kind GARAGE (OWNER_KEY / tableOf maps; docs COMMERCIAL_REGISTRATION, OWNER_ID, WORKSHOP_PHOTO; services from MECHANIC_SKILLS; hours / 24h; pin), `POST /apply/garage`, review router at `/api/admin/providers/garage` (requireMechanicsAdmin, 'services' flaggable), promotion CUSTOMER -> GARAGE_OWNER, `requireGarageOwner`, super admin provider list includes garages.
+- 4–6 done: `services/garage-staff.ts` (add MECHANIC login PENDING, invite email, edit, admin review, status, Online + ping, nearest, assign / decline), `routes/garages.routes.ts` (owner, duty, admin review + live, catalog garages), `mechanic-requests.routes.ts` rewritten (mechanic OR garage, serviceMode, pin required on site, EN_ROUTE / ARRIVED, job ping + trail deleted at the end, customer sees the live point only while on the way / arrived, notifications), mechanics admin (nullable mechanic, garage, new statuses, trail cleanup), catalog lists garage mechanics (first name + garage).
+- 7 done: allowlist `src/services/garage-staff.ts: "MECHANIC"` (commented exception like tow drivers); new `tests/garages.test.mjs` (5 tests: application → GARAGE_OWNER, only an APPROVED owner adds to HIS garage + PENDING until approved + one-or-the-other, on-duty pings for garage mechanics and tow drivers, garage request flow with privacy + nearest + trail cleanup, workshop rules + give-back); existing request tests now send serviceMode; apply test's 'unknown kind' example changed from garage to bakery. 6 affected files pass.
+- 12 done: `OnDutySharing` in `driver/_layout` (re-reads Online every 60 s, shares ~60 s via useShareLocation, foreground only), the Online switch updates it at once + an explaining note; company Live map + tow admin Active tows show online drivers (green pins + 'Online now' list); dispatch assign sheet = nearest available (km · live / from base).
+- Partial (8, 9): API clients (tow + mechanics: steps, pings, duty, garage catalog, garage owner, admin garages), `features/shared/onDuty.tsx` + `OnDutySharing` in `driver/_layout` and `mechanic/_layout` (garage mechanics only); request form: service mode (default on site), pin required on site, garage target; customer status page handles a garage request without a mechanic yet + On the way / Arrived headlines; status labels. Mobile tsc 0.
+
+STOP NOTE (2026-11-26): stopped because the usage limit was reached. Backend is complete and tested (items 1–7); mobile compiles (tsc 0).
+Next session continues with, in this order:
+- 8: `features/mechanics/MechanicLiveMap.tsx` (mechanic jobs + online garage mechanics, like LiveJobsMap with `people`).
+- 9: Mechanics tab "Garages" segment + `customer/garage/[id]` page (Request this garage / its mechanics); `customer/mechanicrequest/new.tsx` mode chips + `garageId` param + auto-locate + "Set it on the map" when no pin (form.startPin); `ServiceMapScreen` panel mode chips; status page live map (`r.live` + `RequestRouteMap`).
+- 10: `app/garage/*` (Dashboard, Requests list + detail with assign sheet = `garageOwner.request().suggestions`, Mechanics list + add form, Live map, Profile entry rows, Messages via `/provider/messages`), landing GARAGE_OWNER → /garage, RoleGate, crumbs, `work-with-motexa.tsx` kind GARAGE, provider Onboarding wizard kind GARAGE (services + hours + docs), session `applications` kind union, ui-system guard list + appendix.
+- 11: MechanicHome Online switch for garage mechanics (`mechanicDuty`, `setDutyOnline`), `mechanic/requests/[id]` footer steps (en-route / arrived / start / complete) + `useShareLocation` job pings (on site) + route to the customer.
+- 13: dept mechanics: garage applications (ApplicationsList kind GARAGE, review route kind garage), garage mechanics review page (copy of `dept/tows/drivers`), live map (`adminGarages.live`).
+- 14–15: full backend `npm test` + mobile tests, screenshots (390 EN dark / AR light by tapping through, wide), docs (05-features §6.4 + §7 + garages + "Expo Go = foreground only, background needs a development build"), STATUS.md, cleanup of my RefreshToken rows.

@@ -16,7 +16,11 @@ export type Kit = { type: AccessoryType; file: string; paintMatch: boolean; adj:
   /** the stored auto-fit to replay (validated by the viewer; a stale one is ignored and the part is fitted live) */
   fit?: unknown;
   /** the Parts Admin's correction for this car, under the customer's own adj */
-  baseAdj?: FitAdjust | null };
+  baseAdj?: FitAdjust | null;
+  /** Parts Admin correction editor: measure clip / gap of the part where it is now after every change (onFitCheck) */
+  qaLive?: boolean };
+/** The viewer's live FIT-QA measure of the placed part (gapMm null for rims: only clip counts there). */
+export type FitCheck = { clipMm: number; gapMm: number | null; limitMm: number; tier: "PERFECT" | "GOOD" | "REFUSED" } | { error: string };
 
 export type Car3DProps = {
   model: CarModel;
@@ -29,6 +33,8 @@ export type Car3DProps = {
   kits?: Kit[];
   /** the accessory could not be fitted on this car (the car itself still shows) */
   onFitError?: (message: string, kitType: AccessoryType | null) => void;
+  /** a kit with qaLive: its clip / gap measured live (FIT-QA tiers) */
+  onFitCheck?: (check: FitCheck) => void;
   /** Parts Admin zone editor: red = what an accessory of this type hides, green = where it goes (draft zones in model.zones) */
   zonePreview?: AccessoryType | null;
   onZone?: (info: { hidden: number; how: string | null; note: string | null }) => void;
@@ -58,6 +64,8 @@ export function useCar3D(p: Car3DProps, send: (m: object) => void) {
   const privateKits = useMemo(() => p.kits ?? (p.kit ? [p.kit] : []), [p.kit,p.kits]);
   const onFitError = useRef(p.onFitError);
   useEffect(() => { onFitError.current = p.onFitError; }, [p.onFitError]);
+  const onFitCheck = useRef(p.onFitCheck);
+  useEffect(() => { onFitCheck.current = p.onFitCheck; }, [p.onFitCheck]);
   const onZone = useRef(p.onZone);
   useEffect(() => { onZone.current = p.onZone; }, [p.onZone]);
   const onPick = useRef(p.onPick), onPieces = useRef(p.onPieces), onBoxPoint = useRef(p.onBoxPoint), onBoxIds = useRef(p.onBoxIds), onBoxMiss = useRef(p.onBoxMiss);
@@ -107,6 +115,12 @@ export function useCar3D(p: Car3DProps, send: (m: object) => void) {
     else if (x.type === "boxPt" && Array.isArray(x.p) && x.p.length === 3 && x.p.every(n => typeof n === "number" && Number.isFinite(n))) onBoxPoint.current?.(x.p as number[]);
     else if (x.type === "boxMiss") onBoxMiss.current?.();
     else if (x.type === "boxIds" && Array.isArray(x.ids) && x.ids.length <= 20000) onBoxIds.current?.(x.ids.filter((id): id is string => typeof id === "string" && /^m\d{1,5}c\d{1,6}$/.test(id)));
+    else if (x.type === "fitCheck") {
+      const mm = (v: unknown) => typeof v === "number" && Number.isFinite(v) ? Math.round(v * 10) / 10 : null;
+      if (typeof x.error === "string") onFitCheck.current?.({ error: x.error.slice(0, 200) });
+      else if (mm(x.clipMm) !== null && mm(x.limitMm) !== null && (x.tier === "PERFECT" || x.tier === "GOOD" || x.tier === "REFUSED"))
+        onFitCheck.current?.({ clipMm: mm(x.clipMm)!, gapMm: mm(x.gapMm), limitMm: mm(x.limitMm)!, tier: x.tier });
+    }
     else if (x.type === "fitError") onFitError.current?.(typeof x.message === "string" ? x.message.slice(0, 300) : "fit", typeof x.kitType === "string" ? x.kitType as AccessoryType : null);
     else if (x.type === "error") setError(typeof x.message === "string" ? x.message : "error");
     else if (x.type === "need" && Array.isArray(x.keys))

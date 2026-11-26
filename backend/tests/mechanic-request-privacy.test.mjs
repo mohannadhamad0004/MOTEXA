@@ -10,7 +10,7 @@ const API = process.env.API_URL || 'http://127.0.0.1:5000/api';
 const call = async (tok, method, path, body) => { const r = await fetch(API + path, { method, headers: { 'content-type': 'application/json', ...(tok ? { authorization: 'Bearer ' + tok } : {}) }, body: body ? JSON.stringify(body) : undefined }); return { status: r.status, data: await r.json().catch(() => null) }; };
 const token = (u) => jwt.sign({ role: u.role, sessionVersion: u.sessionVersion }, process.env.JWT_SECRET, { subject: u.id, expiresIn: '10m', algorithm: 'HS256' });
 const EXACT = { locationText: 'Exact Street 12, Rafidia, Nablus', locationLat: 32.226789, locationLng: 35.243456, contactPhone: '+970 599 123 456' };
-const body = (mechanicId) => ({ mechanicId, carMake: 'Toyota', carModel: 'Corolla', problemDescription: 'Privacy test: engine noise on start', ...EXACT });
+const body = (mechanicId) => ({ mechanicId, serviceMode: 'WORKSHOP', carMake: 'Toyota', carModel: 'Corolla', problemDescription: 'Privacy test: engine noise on start', ...EXACT });
 
 const FULL = 'Privacy Test Customer', FIRST = 'Privacy'; // the test customer's name
 const name = (v, expected, label) => assert.equal(v.customerName, expected, `${label}: customer name`);

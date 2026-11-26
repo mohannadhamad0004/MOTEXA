@@ -1,5 +1,5 @@
 import { errorBody } from "./error-codes.js";
-// Provider onboarding (tow companies and parts shops): ONE set of rules for both kinds.
+// Provider onboarding (tow companies, parts shops and garages): ONE set of rules for every kind.
 // Pattern follows the mechanic onboarding: register -> DRAFT -> fill in -> submit -> admin review -> NEEDS_CHANGES / APPROVED / REJECTED.
 // PENDING in the enum means "submitted, waiting for review".
 import { createHash } from "node:crypto";
@@ -9,15 +9,21 @@ import { prisma } from "../prisma.js";
 import { canonicalCity } from "../cities.js";
 import { type ParsedUpload } from "../uploads/providerFiles.js";
 
-export type Kind = "TOW" | "PARTS";
-export const ROLE_OF: Record<Kind, "TOW_PROVIDER" | "PARTS_PROVIDER"> = { TOW: "TOW_PROVIDER", PARTS: "PARTS_PROVIDER" };
-export const PERMISSION_OF: Record<Kind, "MANAGE_TOWING" | "MANAGE_SPARE_PARTS"> = { TOW: "MANAGE_TOWING", PARTS: "MANAGE_SPARE_PARTS" };
-export const PURPOSE_OF: Record<Kind, "TOW_COMPANY_DOCUMENT" | "PARTS_SHOP_DOCUMENT"> = { TOW: "TOW_COMPANY_DOCUMENT", PARTS: "PARTS_SHOP_DOCUMENT" };
+export type Kind = "TOW" | "PARTS" | "GARAGE";
+export const ROLE_OF: Record<Kind, "TOW_PROVIDER" | "PARTS_PROVIDER" | "GARAGE_OWNER"> = { TOW: "TOW_PROVIDER", PARTS: "PARTS_PROVIDER", GARAGE: "GARAGE_OWNER" };
+// garages are reviewed by the mechanics department
+export const PERMISSION_OF: Record<Kind, "MANAGE_TOWING" | "MANAGE_SPARE_PARTS" | "MANAGE_MECHANICS"> = { TOW: "MANAGE_TOWING", PARTS: "MANAGE_SPARE_PARTS", GARAGE: "MANAGE_MECHANICS" };
+export const PURPOSE_OF: Record<Kind, "TOW_COMPANY_DOCUMENT" | "PARTS_SHOP_DOCUMENT" | "GARAGE_DOCUMENT"> = { TOW: "TOW_COMPANY_DOCUMENT", PARTS: "PARTS_SHOP_DOCUMENT", GARAGE: "GARAGE_DOCUMENT" };
+/** the ProviderFile / ProviderMessage column that links a row to the business */
+export const OWNER_KEY: Record<Kind, "towCompanyId" | "partsShopId" | "garageId"> = { TOW: "towCompanyId", PARTS: "partsShopId", GARAGE: "garageId" };
+/** the profile table of a kind (same verification columns on all three) */
+export const tableOf = (kind: Kind) => (kind === "TOW" ? prisma.towCompanyProfile : kind === "PARTS" ? prisma.partsShopProfile : prisma.garageProfile) as unknown as typeof prisma.garageProfile;
 
 /** Documents the owner uploads for the business itself. Vehicle documents belong to each truck (existing truck endpoints). */
 export const COMPANY_DOC_KINDS: Record<Kind, readonly string[]> = {
   TOW: ["COMMERCIAL_REGISTRATION", "OWNER_ID", "DRIVER_LICENCE"],
   PARTS: ["COMMERCIAL_REGISTRATION", "TRADE_LICENCE", "OWNER_ID"],
+  GARAGE: ["COMMERCIAL_REGISTRATION", "OWNER_ID", "WORKSHOP_PHOTO"],
 };
 
 export const EDITABLE = ["DRAFT", "NEEDS_CHANGES"] as const;
@@ -47,13 +53,23 @@ export const shopInclude = {
   files: { orderBy: { createdAt: "asc" } },
 } satisfies Prisma.PartsShopProfileInclude;
 
+export const garageInclude = {
+  user: { select: { id: true, fullName: true, email: true } },
+  files: { orderBy: { createdAt: "asc" } },
+} satisfies Prisma.GarageProfileInclude;
+
 export type TowApp = Prisma.TowCompanyProfileGetPayload<{ include: typeof towInclude }>;
 export type ShopApp = Prisma.PartsShopProfileGetPayload<{ include: typeof shopInclude }>;
-export type App = { kind: "TOW"; row: TowApp } | { kind: "PARTS"; row: ShopApp };
+export type GarageApp = Prisma.GarageProfileGetPayload<{ include: typeof garageInclude }>;
+export type App = { kind: "TOW"; row: TowApp } | { kind: "PARTS"; row: ShopApp } | { kind: "GARAGE"; row: GarageApp };
 
 export async function loadApp(kind: Kind, where: { id?: string; userId?: string }): Promise<App | null> {
   if (kind === "TOW") {
     const row = await prisma.towCompanyProfile.findFirst({ where, include: towInclude });
+    return row ? { kind, row } : null;
+  }
+  if (kind === "GARAGE") {
+    const row = await prisma.garageProfile.findFirst({ where, include: garageInclude });
     return row ? { kind, row } : null;
   }
   const row = await prisma.partsShopProfile.findFirst({ where, include: shopInclude });
@@ -117,6 +133,23 @@ export function shapeInfo(app: App) {
       description: c.description,
     };
   }
+  if (app.kind === "GARAGE") {
+    const g = app.row;
+    return {
+      name: g.garageName,
+      nameAr: g.garageNameAr,
+      ownerName: g.ownerName ?? g.user.fullName,
+      phone: g.phone,
+      city: g.city,
+      address: g.address,
+      baseLat: g.baseLat,
+      baseLng: g.baseLng,
+      open24h: g.open24h,
+      workingHours: g.workingHours,
+      services: g.services,
+      description: g.description,
+    };
+  }
   const s = app.row;
   return {
     name: s.shopName,
@@ -153,6 +186,8 @@ export function checklist(app: App): CheckItem[] {
   if (app.kind === "TOW") {
     const good = app.row.trucks.filter(truckQualifies);
     items.push({ key: "truck", ok: good.length > 0, detail: `${good.length}/${app.row.trucks.length}` });
+  } else if (app.kind === "GARAGE") {
+    items.push({ key: "services", ok: app.row.services.length > 0 });
   } else {
     items.push({ key: "category", ok: app.row.categories.length > 0 });
   }
@@ -168,7 +203,7 @@ export function truckQualifies(t: TowApp["trucks"][number]) {
 /** What the owner still has to provide before submitting (completeness, not the admin's judgement). */
 export function missingForSubmit(app: App): string[] {
   const out: string[] = [];
-  const r = app.row as TowApp & ShopApp;
+  const r = app.row as TowApp & ShopApp & GarageApp;
   if (!r.phone || !/^\+?[0-9 ()-]{8,24}$/.test(r.phone)) out.push("phone");
   if (!r.city) out.push("city");
   if (r.baseLat === null || r.baseLng === null) out.push("location");
@@ -183,6 +218,11 @@ export function missingForSubmit(app: App): string[] {
     const has = (x: TowApp["trucks"][number], p: string) => x.files.some((f) => f.purpose === p);
     const complete = t.trucks.filter((x) => has(x, "TRUCK_PHOTO") && has(x, "TRUCK_REGISTRATION") && (has(x, "TRUCK_INSURANCE") || has(x, "TRUCK_OPERATING_LICENSE")));
     if (!complete.length) out.push("truck");
+  } else if (app.kind === "GARAGE") {
+    const g = app.row;
+    if (!g.ownerName) out.push("ownerName");
+    if (!g.open24h && !g.workingHours) out.push("workingHours");
+    if (!g.services.length) out.push("services");
   } else {
     const s = app.row as ShopApp;
     if (!s.ownerName) out.push("ownerName");
@@ -266,10 +306,10 @@ export async function adminIds(kind: Kind): Promise<string[]> {
   return rows.map((r) => r.id);
 }
 
-export const threadWhere = (app: App): Prisma.ProviderMessageWhereInput => (app.kind === "TOW" ? { towCompanyId: app.row.id } : { partsShopId: app.row.id });
+export const threadWhere = (app: App): Prisma.ProviderMessageWhereInput => ({ [OWNER_KEY[app.kind]]: app.row.id });
 
 export async function postMessage(app: App, input: { authorUserId: string | null; role: "PROVIDER" | "ADMIN" | "SYSTEM"; body: string; file?: ParsedUpload; storageKey?: string }) {
-  const where = app.kind === "TOW" ? { towCompanyId: app.row.id } : { partsShopId: app.row.id };
+  const where = { [OWNER_KEY[app.kind]]: app.row.id };
   const msg = await prisma.providerMessage.create({
     data: {
       ...where,
@@ -340,6 +380,7 @@ export async function requireApprovedProvider(_req: Request, res: Response, next
     let status: string | undefined;
     if (u?.role === "TOW_PROVIDER") status = (await prisma.towCompanyProfile.findUnique({ where: { userId: u.id }, select: { verificationStatus: true } }))?.verificationStatus;
     else if (u?.role === "PARTS_PROVIDER") status = (await prisma.partsShopProfile.findUnique({ where: { userId: u.id }, select: { verificationStatus: true } }))?.verificationStatus;
+    else if (u?.role === "GARAGE_OWNER") status = (await prisma.garageProfile.findUnique({ where: { userId: u.id }, select: { verificationStatus: true } }))?.verificationStatus;
     if (status !== "APPROVED") {
       res.status(403).json(errorBody("Your application has not been approved yet."));
       return;

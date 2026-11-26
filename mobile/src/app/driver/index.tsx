@@ -13,6 +13,7 @@ import { fmtDateTime, useTowStatusLabels } from "../../features/requests/request
 import { AppearanceSection } from "../../features/providerhub/AppearanceSection";
 import { TowJob, driverApi } from "../../features/tow/dispatchService";
 import { useTruckLabels } from "../../features/tow/truckBits";
+import { setDutyOnline } from "../../features/shared/onDuty";
 
 const WAITING = ["REQUESTED"];
 const ACTIVE = ["ACCEPTED", "EN_ROUTE", "IN_PROGRESS"];
@@ -27,7 +28,8 @@ export default function DriverHome() {
   const toggle = async () => {
     if (!d || busy) return;
     setBusy(true); setError(null);
-    try { await driverApi.setOffline(!d.offline); await state.reload(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    // Online = his position goes to the company and the tow admins about every 60 s while the app is open (driver/_layout)
+    try { await driverApi.setOffline(!d.offline); setDutyOnline(d.offline && d.approval === "APPROVED"); await state.reload(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
   const statusTone: Record<string, Tone> = { FREE: "success", BUSY: "accent", OFFLINE: "neutral", NO_TRUCK: "warning", UNAPPROVED: "warning" };
   const statusLabel: Record<string, string> = { FREE: t("Free", "متاح"), BUSY: t("Busy", "مشغول"), OFFLINE: t("Offline", "غير متصل"), NO_TRUCK: t("No truck ready", "لا شاحنة جاهزة"), UNAPPROVED: t("Licence not approved", "الرخصة غير معتمدة") };
@@ -61,6 +63,7 @@ export default function DriverHome() {
             [t("Plate", "اللوحة"), d.truck?.plate]]} />
         </Block>
       ) : null}
+      {d && !d.offline ? <Note icon="radio-outline">{t("Online: your company and MOTEXA see where you are (about every minute, only while MOTEXA is open). Go offline to stop sharing.", "متصل: ترى شركتك وموتكسا موقعك (كل دقيقة تقريبًا، فقط أثناء فتح موتكسا). اقطع الاتصال لإيقاف المشاركة.")}</Note> : null}
       {past.length ? <Section title={t("Recent", "الأخيرة")}><View>{past.map(row)}</View></Section> : null}
       <AppearanceSection />
       <LogOut />

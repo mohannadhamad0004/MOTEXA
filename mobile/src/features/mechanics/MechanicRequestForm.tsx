@@ -8,7 +8,7 @@ import { currentCar } from "../catalog/myCar";
 import { MAPS_AVAILABLE, PinMap } from "../shared/maps";
 import { LocationProblem, reverseGeocode, useCurrentLocation } from "../shared/useCurrentLocation";
 import { useSkillLabel } from "./mechanicBits";
-import { CustomerMechanicRequest, customerMechanicRequests } from "./mechanicsService";
+import { CustomerMechanicRequest, ServiceMode, customerMechanicRequests } from "./mechanicsService";
 import { Card as GCard, Chip as GChip, Field, GButton, GIconName, GText } from "../../components/garage";
 import { gType, useGarageTheme } from "../../theme/garage";
 
@@ -47,9 +47,11 @@ const PHONE_OK = (v: string) => /^[0-9+()\-\s]{6,20}$/.test(v) && v.replace(/\D/
  * All state and rules of the mechanic service request form. Used by the full screen (customer/mechanicrequest/new)
  * and by the panel on the Mechanics map page. A service request to one verified mechanic; no price, no promised time.
  */
-export function useMechanicRequestForm(mechanic: { id: string; city: string }) {
+export function useMechanicRequestForm(mechanic: { id?: string; garageId?: string; city: string }) {
   const { t } = useL();
   const car = currentCar();
+  // ON_SITE = the mechanic comes to the customer (his GPS position or a pin is required); WORKSHOP = he brings the car
+  const [mode, setMode] = useState<ServiceMode>("ON_SITE");
   const [skill, setSkill] = useState<string | null>(null);
   const [make, setMake] = useState(car?.make ?? "");
   const [model, setModel] = useState(car?.model ?? "");
@@ -132,12 +134,14 @@ export function useMechanicRequestForm(mechanic: { id: string; city: string }) {
     if (y !== undefined && !(Number.isInteger(y) && y >= 1950 && y <= new Date().getFullYear() + 1)) return fail(t("The car year is not valid.", "سنة السيارة غير صحيحة."));
     if (problem.trim().length < 10) return fail(t("Describe the problem in at least 10 characters.", "صف المشكلة في 10 أحرف على الأقل."));
     if (where.trim().length < 3) return fail(t("Enter where the car is.", "أدخل مكان السيارة."));
+    if (mode === "ON_SITE" && !spot) return fail(t("For an on-site visit, use your current location or place the pin on the map.", "للزيارة في موقعك، استخدم موقعك الحالي أو ضع الدبوس على الخريطة."));
     if (phone.trim() && !PHONE_OK(phone.trim())) return fail(t("The phone number is not valid. Leave it empty to skip it.", "رقم الهاتف غير صحيح. اتركه فارغًا لتخطيه."));
     setBusy(true);
     setErr(null);
     try {
       return await customerMechanicRequests.create({
-        mechanicId: mechanic.id,
+        ...(mechanic.garageId ? { garageId: mechanic.garageId } : { mechanicId: mechanic.id }),
+        serviceMode: mode,
         ...(skill ? { skill } : {}),
         carMake: make.trim(),
         carModel: model.trim(),
@@ -156,7 +160,7 @@ export function useMechanicRequestForm(mechanic: { id: string; city: string }) {
     }
   };
 
-  return { loc, spot, place, useHere, editWhere, removePin, startPin, finding, busy, err, submit, skill, setSkill, make, setMake, model, setModel, year, setYear, problem, setProblem, where, when, setWhen, phone, setPhone };
+  return { mode, setMode, loc, spot, place, useHere, editWhere, removePin, startPin, finding, busy, err, submit, skill, setSkill, make, setMake, model, setModel, year, setYear, problem, setProblem, where, when, setWhen, phone, setPhone };
 }
 export type MechanicForm = ReturnType<typeof useMechanicRequestForm>;
 

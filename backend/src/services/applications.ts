@@ -5,9 +5,9 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
 import { FINAL as FINAL_ORDER } from "./parts-orders.js";
 
-export const APPLY_KINDS = { mechanic: "MECHANIC", tow: "TOW", parts: "PARTS" } as const;
+export const APPLY_KINDS = { mechanic: "MECHANIC", tow: "TOW", parts: "PARTS", garage: "GARAGE" } as const;
 export type ApplyKind = (typeof APPLY_KINDS)[keyof typeof APPLY_KINDS];
-export const ROLE_FOR: Record<ApplyKind, "MECHANIC" | "TOW_PROVIDER" | "PARTS_PROVIDER"> = { MECHANIC: "MECHANIC", TOW: "TOW_PROVIDER", PARTS: "PARTS_PROVIDER" };
+export const ROLE_FOR: Record<ApplyKind, "MECHANIC" | "TOW_PROVIDER" | "PARTS_PROVIDER" | "GARAGE_OWNER"> = { MECHANIC: "MECHANIC", TOW: "TOW_PROVIDER", PARTS: "PARTS_PROVIDER", GARAGE: "GARAGE_OWNER" };
 
 /** The applications of an account, as { kind, status } (empty for most customers). */
 export async function applicationsOf(userId: string) {
@@ -17,12 +17,14 @@ export async function applicationsOf(userId: string) {
       mechanicProfile: { select: { verificationStatus: true } },
       towCompanyProfile: { select: { verificationStatus: true } },
       partsShopProfile: { select: { verificationStatus: true } },
+      garageProfile: { select: { verificationStatus: true } },
     },
   });
   const out: { kind: ApplyKind; status: string }[] = [];
   if (u?.mechanicProfile) out.push({ kind: "MECHANIC", status: u.mechanicProfile.verificationStatus });
   if (u?.towCompanyProfile) out.push({ kind: "TOW", status: u.towCompanyProfile.verificationStatus });
   if (u?.partsShopProfile) out.push({ kind: "PARTS", status: u.partsShopProfile.verificationStatus });
+  if (u?.garageProfile) out.push({ kind: "GARAGE", status: u.garageProfile.verificationStatus });
   return out;
 }
 
