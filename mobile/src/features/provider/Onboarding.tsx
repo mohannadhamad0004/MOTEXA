@@ -9,7 +9,7 @@ import { router, useFocusEffect } from "expo-router";
 import { ReactNode, useCallback, useRef, useState } from "react";
 import { View } from "react-native";
 import { ProviderButton, ProviderCard, ProviderChoice, ProviderNote } from "./kit";
-import { pickMechanicDocument } from "../../components/MechanicDocuments";
+import { pickMechanicDocument } from "../mechanics/documents";
 import { GText as Text } from "../../components/garage";
 import { Page } from "../../components/manage/Page";
 import { AppStatusChip, FormButton, FormPanel, IconField, cardStyle, useFormTheme } from "./formTheme";

@@ -18,7 +18,7 @@ import {refitPublishedAccessories} from "./accessory-autofit.js";
 import {importInclude,importShape,IMPORT_RUNNING} from "./vehicle3d-import-state.js";
 import {linkImportActions} from "./vehicle3d-link-imports.js";
 import {FINAL_MODEL_BYTES,fitForPhones} from "./vehicle3d-preparation.js";
-import {createSketchfabClient} from "./sketchfab-client.js";
+import {attributionText,createSketchfabClient} from "./sketchfab-client.js";
 const json=(v:unknown)=>JSON.parse(JSON.stringify(v)) as Prisma.InputJsonValue;
 const include=importInclude,shape=importShape;
 export function createImportService(client=createSketchfabClient()){
@@ -47,7 +47,10 @@ export function createImportService(client=createSketchfabClient()){
    // Source corrections are baked into prepared geometry exactly once. Other viewer settings remain configuration.
    // a heavy model (stored before auto-simplify, or uploaded) is simplified for phones here too: weight is never a reason to refuse
    const source=await fitForPhones(readFileSync(privatePath(r.rawModelPath)));
-   const normalized=await normalizeVehicle(source.bytes,lengthM,{preRotateX:checked.preRotateX,rotateY:checked.rotateY});
+   // an imported CC model keeps its creator credit and license inside the simplified copy (CC BY / CC BY-SA attribution, BY-SA same license)
+   const meta=r.sourceMetadata as {licenseClass?:string;licenseUrl?:string}|null;
+   const credit=r.sourceProvider==="SKETCHFAB"?attributionText({...rawConfig.credit,licenseClass:meta?.licenseClass??null,licenseUrl:meta?.licenseUrl??null}):undefined;
+   const normalized=await normalizeVehicle(source.bytes,lengthM,{preRotateX:checked.preRotateX,rotateY:checked.rotateY,credit});
    if(r.sourceProvider==="SKETCHFAB"&&normalized.bytes.length>FINAL_MODEL_BYTES)return fail("FINAL_ASSET_TOO_LARGE","The optimized model is larger than 8 MiB.",422);
    const config:ViewerConfig={...checked,preRotateX:0,rotateY:0};const prepared=`${randomUUID()}.glb`,configFile=path.join(PRIVATE_3D_DIR,prepared+".config.json");
    if(r.sourceProvider==="SKETCHFAB"){

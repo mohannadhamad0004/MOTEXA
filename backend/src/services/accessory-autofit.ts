@@ -87,6 +87,8 @@ function validRimRuntime(v: unknown): boolean {
     && Array.isArray(r.offsets) && r.offsets.length <= 4
     && r.offsets.every((o: Record<string, unknown>) => !!o && typeof o.wheel === "string" && o.wheel.length <= 40 && Array.isArray(o.delta) && o.delta.length === 3 && o.delta.every(n => num(n, 0.05)));
 }
+/** A saved manual correction (the admin's adj offsets) is on this fit row. */
+export const hasCorrection = (adj: unknown) => adj !== null && adj !== undefined;
 export function parseAdj(v: unknown): Adj | null {
   const a = v as Record<string, unknown>;
   if (!a || typeof a !== "object" || !num(a.x, 0.5) || !num(a.y, 0.5) || !num(a.z, 0.5) || !num(a.rx, 0.8) || !num(a.ry, 0.8) || !(typeof a.s === "number" && a.s >= 0.8 && a.s <= 1.25)) return null;
@@ -114,8 +116,10 @@ export async function computeFit(type: string, size: Record<string, number | nul
 type Acc = { id: string; accessoryType: string; privateModelPath: string | null; widthMm: number | null; lengthMm: number | null; rimInches: number | null };
 /** Store a computed fit. Already current = kept as is (computed once, the admin's correction stays). Else replaced: an approved correction
  *  that still passes the fit check (the viewer checked fit + correction: info.qa.correction) stays approved; one that fails is not dropped
- *  silently: it is taken off (customers never get it) and kept in fit.previousCorrection with its numbers, and audited. */
-export async function saveFit(a: Acc, generationId: string, key: string, fit: unknown) {
+ *  silently: it is taken off (customers never get it) and kept in fit.previousCorrection with its numbers, and audited. A saved correction
+ *  that is not approved and gets replaced is kept the same way (result "reset") with an ACCESSORY3D_FIT_CORRECTION_RESET audit row:
+ *  callers that must not reset one skip the car first (the bulk job does unless the admin included corrections). */
+export async function saveFit(a: Acc, generationId: string, key: string, fit: unknown, ctx: { actorId?: string | null; reason?: string; jobId?: string } = {}) {
   const version = fitVersion(a.accessoryType); if (!validFit(fit, version)) return fail("INVALID_FIT", "The viewer returned an invalid fit.", 500);
   const carRev = await carRevision(key, a.accessoryType); if (!carRev) return fail("NO_3D_CAR", "That generation has no published 3D car model.", 409);
   const data = { model3dKey: key, carRevision: carRev, partRevision: partRevision(a.privateModelPath), fitVersion: version, fit: fit as Prisma.InputJsonValue };
@@ -134,6 +138,11 @@ export async function saveFit(a: Acc, generationId: string, key: string, fit: un
     const previousCorrection = { adj: old.adj, approvedAt: old.approvedAt.toISOString(), approvedByUserId: old.approvedByUserId, result: "fails", ...(check ?? { reason: "not checked" }) };
     data.fit = { ...(fit as object), previousCorrection } as Prisma.InputJsonValue;
     await prisma.auditLog.create({ data: { actorId: old.approvedByUserId ?? null, action: "ACCESSORY3D_FIT_CORRECTION_FAILED", targetId: a.id, details: { generationId, ...previousCorrection } as Prisma.InputJsonValue } });
+  } else if (old && !old.approvedAt && hasCorrection(old.adj)) {
+    const previousCorrection = { adj: old.adj, result: "reset", reason: ctx.reason ?? "refit after a car or part change" };
+    data.fit = { ...(fit as object), previousCorrection } as Prisma.InputJsonValue;
+    await prisma.auditLog.create({ data: { actorId: ctx.actorId ?? null, action: "ACCESSORY3D_FIT_CORRECTION_RESET", targetId: a.id,
+      details: { generationId, adj: old.adj, reason: previousCorrection.reason, ...(ctx.jobId ? { jobId: ctx.jobId } : {}) } as Prisma.InputJsonValue } });
   }
   return prisma.accessoryAutoFit.upsert({ where: { accessoryId_generationId: { accessoryId: a.id, generationId } }, create: { accessoryId: a.id, generationId, ...data },
     update: { ...data, adj: Prisma.DbNull, approvedAt: null, approvedByUserId: null } });
@@ -294,10 +303,12 @@ export async function refitPublishedAccessories() {
   for (const a of rows) void refreshPublishedAccessory(a.id).catch(() => undefined);
 }
 /** Background: fit this accessory on every generation it fits that has a published 3D car (missing or stale fits only). */
-export function autoFitAccessory(accessoryId: string) {
+export function autoFitAccessory(accessoryId: string, compute: typeof computeFit = computeFit) {
   if (!running.has(accessoryId)) running.set(accessoryId, (async () => {
-    // a "Run auto-fit" job owns this accessory's fits while it is queued or running (no second, untracked run over the same cars)
-    if (await prisma.accessoryFitJob.count({ where: { accessoryId, status: { in: ["QUEUED", "RUNNING"] } } })) return;
+    // a "Run auto-fit" job owns this accessory's fits while it is queued or running (no second, untracked run over the same cars): this
+    // refit is not dropped, it is remembered on the job and runs when the job ends (done, stopped or cancelled)
+    const waiting = await prisma.accessoryFitJob.updateMany({ where: { accessoryId, status: { in: ["QUEUED", "RUNNING"] } }, data: { refitAfter: true } });
+    if (waiting.count) return;
     const a = await prisma.productAccessory3D.findUnique({ where: { id: accessoryId }, include: { product: { select: { isUniversal: true } }, fits: { include: { generation: true } }, autoFits: true } });
     if (!a?.privateModelPath || (!testProviderRuntime() && (a.generationMode === "mock" || a.provider === "MOCK"))) return;
     for (const f of await fittedOn(a)) {
@@ -307,7 +318,7 @@ export function autoFitAccessory(accessoryId: string) {
       const corr = row?.approvedAt && row.adj ? parseAdj(row.adj) : null; // an approved correction is re-checked on the new fit
       try {
         const partBefore = partRevision(a.privateModelPath), carBefore = await carRevision(key, a.accessoryType);
-        const computed = await computeFit(a.accessoryType, { widthMm: a.widthMm, lengthMm: a.lengthMm, rimInches: a.rimInches }, a.privateModelPath, key, corr);
+        const computed = await compute(a.accessoryType, { widthMm: a.widthMm, lengthMm: a.lengthMm, rimInches: a.rimInches }, a.privateModelPath, key, corr);
         if (partBefore !== partRevision(a.privateModelPath) || carBefore !== await carRevision(key, a.accessoryType)) continue;
         await saveFit(a, f.generationId, key, computed);
         await prisma.auditLog.create({ data: { action: "ACCESSORY3D_FIT_REFRESHED", targetId: a.id, details: { generationId: f.generationId, previousVersion: row?.fitVersion ?? null, fitVersion: fitVersion(a.accessoryType) } } });
@@ -441,14 +452,15 @@ export function createAutoFitService(options:{compute?:typeof computeFit}={}) {
     },
     /** Take the approval off (customers stop seeing it). The correction (adj) stays as the suggestion. One audit row per car. */
     unapprove: async (uid: string, accessoryId: string, generationId: string) => {
-      forgetFitRows(accessoryId);
-      return prisma.$transaction(async tx => {
+      const u = await prisma.$transaction(async tx => {
         await tx.$queryRaw`SELECT "id" FROM "ProductAccessory3D" WHERE "id"=${accessoryId} FOR UPDATE`;
         const now = await tx.accessoryAutoFit.findUnique({ where: { accessoryId_generationId: { accessoryId, generationId } } });
         if (!now || !now.approvedAt) return fail("FIT_NOT_APPROVED", "This fit is not approved.", 409);
         await tx.auditLog.create({ data: { actorId: uid, action: "ACCESSORY3D_FIT_UNAPPROVED", targetId: accessoryId, details: { generationId } } });
         return tx.accessoryAutoFit.update({ where: { accessoryId_generationId: { accessoryId, generationId } }, data: { approvedAt: null, approvedByUserId: null } });
       });
+      forgetFitRows(accessoryId);
+      return u;
     },
     /** Bulk review on one accessory. "approve" only takes fits whose state is exactly "passed" (checked again here, whatever the client sent);
      *  "unapprove" only takes "approved" ones. Each car goes through the same single approve / unapprove logic (so each writes its own audit row);
@@ -477,6 +489,7 @@ export function createAutoFitService(options:{compute?:typeof computeFit}={}) {
       return (await fitEligibility(accessoryId,generationId,privateModelPath)).autoFit;
     },
     rerun:async(uid:string,accessoryId:string)=>{
+      if(await prisma.accessoryFitJob.count({where:{accessoryId,status:{in:["QUEUED","RUNNING"]}}}))return fail("FIT_JOB_RUNNING","A fit run is in progress for this accessory. Wait for it to finish or cancel it first.",409);
       if(running.has(accessoryId)){await running.get(accessoryId);return {success:true};}
       const job=(async()=>{
       const a=await prisma.productAccessory3D.findUnique({where:{id:accessoryId},include:{autoFits:true}});
@@ -485,7 +498,7 @@ export function createAutoFitService(options:{compute?:typeof computeFit}={}) {
         const previous=a.autoFits.find(f=>f.generationId===g.id), correction=previous?.approvedAt&&previous.adj?parseAdj(previous.adj):null;
         const fit=await(options.compute??computeFit)(a.accessoryType,{widthMm:a.widthMm,lengthMm:a.lengthMm,rimInches:a.rimInches},a.privateModelPath,g.model3dKey,correction);
         // Explicit rerun makes the previous review stale; it never carries a correction to unverified geometry.
-        await prisma.accessoryAutoFit.updateMany({where:{accessoryId,generationId:g.id},data:{fitVersion:-1}});await saveFit(a,g.id,g.model3dKey,fit);
+        await prisma.accessoryAutoFit.updateMany({where:{accessoryId,generationId:g.id},data:{fitVersion:-1}});await saveFit(a,g.id,g.model3dKey,fit,{actorId:uid,reason:"re-run auto-fit"});
         await prisma.accessoryAutoFit.updateMany({where:{accessoryId,generationId:g.id},data:{approvedAt:null,approvedByUserId:null}}); // the admin reviews every explicit rerun again (a kept correction stays as the suggestion)
       }
       await prisma.auditLog.create({data:{actorId:uid,action:"ACCESSORY3D_REFIT",targetId:accessoryId}});forgetFitRows(accessoryId);

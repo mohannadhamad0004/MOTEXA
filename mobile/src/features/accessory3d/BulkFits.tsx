@@ -18,7 +18,7 @@ import { Car3DView } from "../car3d/Car3DView";
 import { useCatalogModelKey } from "../car3d/runtimeModels";
 import { threeDError } from "../vehicleCatalog/lifecycleText";
 import { ACCESSORY_TYPE_LABELS, FIT_STATE_LABELS, adminAccessoryApi, type FitFilter, type FitJob, type FitJobSummary, type FitRow, type FitsPage, type FitState } from "./api";
-import { MAX_PICKED, NONE, ALL_MATCHING, atLimit, etaText, isSelected, num, selectedCount, selectionBody, toggle, toggleRows, type Selection } from "./fitSelection";
+import { MAX_PICKED, NONE, ALL_MATCHING, atLimit, etaText, isSelected, num, rowBlocked, selectedCount, selectionBody, toggle, toggleRows, type Selection } from "./fitSelection";
 import { fitKit } from "./screens";
 
 type T = (en: string, ar: string) => string;
@@ -50,6 +50,8 @@ const ERRORS: Record<string, [string, string]> = {
   FIT_JOB_RUNNING: ["A fit run is already in progress for this accessory.", "يوجد تشغيل تركيب قيد التنفيذ لهذه القطعة."],
   NOTHING_TO_RUN: ["No car in this selection needs a fit run.", "لا توجد سيارة في هذا التحديد تحتاج إلى تشغيل التركيب."],
   CONFIRM_RESET_COUNT: ["The number of approved fits changed. Check it and confirm again.", "تغيّر عدد التركيبات المعتمدة. تحقّق منه وأكّد مجددًا."],
+  CONFIRM_CORRECTION_RESET_COUNT: ["The number of saved corrections changed. Check it and confirm again.", "تغيّر عدد التصحيحات المحفوظة. تحقّق منه وأكّد مجددًا."],
+  FIT_JOB_NOT_RESUMABLE: ["Only a stopped run with cars left can be resumed.", "لا يمكن استئناف إلا تشغيل متوقف بقيت فيه سيارات."],
   FIT_JOB_NOT_RUNNING: ["This run is not running any more.", "هذا التشغيل لم يعد قيد التنفيذ."],
   INVALID_SELECTION: ["Choose cars, or select all matching the filter.", "اختر سيارات، أو حدّد كل ما يطابق الفلتر."],
 };
@@ -93,7 +95,7 @@ export function BulkFits() {
   return <BulkFitsList accessoryId={String(accessoryId)} />;
 }
 
-type Confirm = { kind: "approve"; approvable: number; skipped: Record<string, number>; error?: string } | { kind: "fit"; summary: FitJobSummary; include: boolean; error?: string };
+type Confirm = { kind: "approve"; approvable: number; skipped: Record<string, number>; error?: string } | { kind: "fit"; summary: FitJobSummary; include: boolean; includeCorrections: boolean; error?: string };
 
 function BulkFitsList({ accessoryId }: { accessoryId: string }) {
   const { t, isArabic } = useL();
@@ -156,7 +158,7 @@ function BulkFitsList({ accessoryId }: { accessoryId: string }) {
   };
   const body = selectionBody(sel, filter);
   const askApprove = () => work(async () => { const r = await adminAccessoryApi.approveFits(accessoryId, body, true); setConfirm({ kind: "approve", approvable: r.approvable ?? 0, skipped: r.skipped }); });
-  const askFit = () => work(async () => { const r = await adminAccessoryApi.startFitJob(accessoryId, body, { dryRun: true }); setConfirm({ kind: "fit", summary: r.summary, include: false }); });
+  const askFit = () => work(async () => { const r = await adminAccessoryApi.startFitJob(accessoryId, body, { dryRun: true }); setConfirm({ kind: "fit", summary: r.summary, include: false, includeCorrections: false }); });
   const approve = () => work(async () => {
     const r = await adminAccessoryApi.approveFits(accessoryId, body);
     const n = r.approved ?? 0, k = skippedTotal(r.skipped);
@@ -165,14 +167,16 @@ function BulkFitsList({ accessoryId }: { accessoryId: string }) {
     await load("refresh");
   }, msg => setConfirm(c => (c ? { ...c, error: msg } : c)));
   const runFit = (c: Extract<Confirm, { kind: "fit" }>) => work(async () => {
-    const r = await adminAccessoryApi.startFitJob(accessoryId, body, c.include ? { includeApproved: true, confirmApprovedReset: c.summary.approvedSkipped } : {});
+    const r = await adminAccessoryApi.startFitJob(accessoryId, body, { ...(c.include ? { includeApproved: true, confirmApprovedReset: c.summary.approvedSkipped } : {}),
+      ...(c.includeCorrections ? { includeCorrections: true, confirmCorrectionReset: c.summary.correctionsSkipped } : {}) });
     setJob(r.job); setHiddenJob(null); setConfirm(null); setSel(NONE); setResult(null);
   }, async msg => {
     // the approved count changed under the sheet: show the new numbers before anything is reset
     const fresh = await adminAccessoryApi.startFitJob(accessoryId, body, { dryRun: true }).catch(() => null);
-    setConfirm({ kind: "fit", summary: fresh?.summary ?? c.summary, include: c.include, error: msg });
+    setConfirm({ kind: "fit", summary: fresh?.summary ?? c.summary, include: c.include, includeCorrections: c.includeCorrections, error: msg });
   });
   const cancelJob = () => work(async () => { if (job) { await adminAccessoryApi.cancelFitJob(accessoryId, job.id); setJob(await adminAccessoryApi.currentFitJob(accessoryId)); await load("refresh"); } });
+  const resumeJob = () => work(async () => { if (job) { setJob(await adminAccessoryApi.resumeFitJob(accessoryId, job.id)); setHiddenJob(null); } });
 
   // ---- one row's ⋮ menu (one shared sheet) and the on-demand 3D preview
   const [menu, setMenu] = useState<FitRow | null>(null), [preview, setPreview] = useState<FitRow | null>(null);
@@ -191,6 +195,10 @@ function BulkFitsList({ accessoryId }: { accessoryId: string }) {
       ? { key: "refit", label: t("Re-run auto-fit on this car", "إعادة التركيب التلقائي على هذه السيارة"), icon: "refresh-outline", destructive: true, disabled: jobActive, hint: jobActive ? t("A fit run is in progress.", "يوجد تشغيل تركيب قيد التنفيذ.") : undefined,
           confirm: { title: t("Re-run an approved fit?", "إعادة تشغيل تركيب معتمد؟"), message: t(`The approval of ${name} is reset: customers with this car lose "View on my car" for this part until you approve it again.`, `يُلغى اعتماد ${name}: يفقد العملاء أصحاب هذه السيارة «اعرضها على سيارتي» لهذه القطعة حتى تعتمدها مجددًا.`), confirmLabel: t("Reset 1 approval and re-run", "إلغاء اعتماد واحد وإعادة التشغيل") },
           success: t("Auto-fit started.", "بدأ التركيب التلقائي."), run: async () => { setJob((await adminAccessoryApi.startFitJob(accessoryId, one, { includeApproved: true, confirmApprovedReset: 1 })).job); setHiddenJob(null); }, error: e => errText(e, t) }
+      : r.status === "has_correction"
+      ? { key: "refit", label: t("Reset the correction and re-run auto-fit", "حذف التصحيح وإعادة التركيب التلقائي"), icon: "refresh-outline", destructive: true, disabled: jobActive, hint: jobActive ? t("A fit run is in progress.", "يوجد تشغيل تركيب قيد التنفيذ.") : undefined,
+          confirm: { title: t("Reset the saved correction?", "حذف التصحيح المحفوظ؟"), message: t(`The manual correction saved for ${name} is reset (kept in the record) and a fresh auto-fit waits for your review.`, `يُحذف التصحيح اليدوي المحفوظ لـ${name} (ويبقى في السجل) وينتظر تركيب تلقائي جديد مراجعتك.`), confirmLabel: t("Reset 1 correction and re-run", "حذف تصحيح واحد وإعادة التشغيل") },
+          success: t("Auto-fit started.", "بدأ التركيب التلقائي."), run: async () => { setJob((await adminAccessoryApi.startFitJob(accessoryId, one, { includeCorrections: true, confirmCorrectionReset: 1 })).job); setHiddenJob(null); }, error: e => errText(e, t) }
       : { key: "refit", label: t("Run auto-fit on this car", "تشغيل التركيب التلقائي على هذه السيارة"), icon: "refresh-outline", disabled: jobActive, hint: jobActive ? t("A fit run is in progress.", "يوجد تشغيل تركيب قيد التنفيذ.") : undefined,
           success: t("Auto-fit started.", "بدأ التركيب التلقائي."), run: async () => { setJob((await adminAccessoryApi.startFitJob(accessoryId, one, {})).job); setHiddenJob(null); }, error: e => errText(e, t) });
     if (r.status === "approved") out.push({ key: "unapprove", label: t("Unapprove", "إلغاء الاعتماد"), icon: "close-circle-outline", destructive: true,
@@ -204,7 +212,7 @@ function BulkFitsList({ accessoryId }: { accessoryId: string }) {
   const onMenu = useCallback((r: FitRow) => setMenu(r), []);
   const limit = atLimit(sel);
   const renderItem = useCallback((item: FitRow) => (
-    <FitRowView r={item} on={isSelected(sel, item.generationId)} blocked={limit && !isSelected(sel, item.generationId)} active={twoPane && preview?.generationId === item.generationId} table={table} onToggle={onToggle} onOpen={onOpen} onMenu={onMenu} />
+    <FitRowView r={item} on={isSelected(sel, item.generationId)} blocked={rowBlocked(sel, item.generationId)} active={twoPane && preview?.generationId === item.generationId} table={table} onToggle={onToggle} onOpen={onOpen} onMenu={onMenu} />
   ), [sel, limit, twoPane, preview?.generationId, table, onToggle, onOpen, onMenu]);
 
   const onScreen = cars.map(c => c.generationId), allOnScreen = !sel.all && cars.length > 0 && onScreen.every(id => sel.ids.has(id));
@@ -237,7 +245,7 @@ function BulkFitsList({ accessoryId }: { accessoryId: string }) {
           </Rail>
         </>}
         above={<>
-          {job && hiddenJob !== job.id && (jobActive || recent(job)) ? <JobCard job={job} busy={busy} onCancel={() => void cancelJob()} onHide={() => setHiddenJob(job.id)} /> : null}
+          {job && hiddenJob !== job.id && (jobActive || recent(job)) ? <JobCard job={job} busy={busy} onCancel={() => void cancelJob()} onResume={() => void resumeJob()} onHide={() => setHiddenJob(job.id)} /> : null}
           {a?.computing ? <Note>{t("Fits are being computed after publishing. The list follows.", "يجري حساب التركيب بعد النشر. تتحدّث القائمة تلقائيًا.")}</Note> : null}
           {result ? <Note tone={result.tone} icon="checkmark-circle-outline">{result.text}</Note> : null}
         </>}
@@ -254,7 +262,8 @@ function BulkFitsList({ accessoryId }: { accessoryId: string }) {
             <SelectBanner text={allOnScreen ? t(`The ${num(cars.length)} cars on screen are selected.`, `تم تحديد السيارات المعروضة (${num(cars.length)}).`) : null}
               action={t(`Select all ${num(total)} matching the filter`, `تحديد كل السيارات المطابقة للفلتر (${num(total)})`)} onPress={() => setSel(ALL_MATCHING)} />
           ) : null}
-          {limit ? <GText soft style={[gType.tiny, align]}>{t(`At most ${MAX_PICKED} cars can be picked one by one. Use "Select all matching" for more.`, `يمكن اختيار ${MAX_PICKED} سيارة كحد أقصى واحدة تلو الأخرى. استخدم «تحديد كل ما يطابق» للمزيد.`)}</GText> : null}
+          {limit && sel.all ? <Note tone="warning" icon="information-circle-outline">{t(`At most ${MAX_PICKED} cars can be left out of "all matching". Narrow the filter to leave out more.`, `يمكن استبعاد ${MAX_PICKED} سيارة كحد أقصى من «كل ما يطابق». ضيّق الفلتر لاستبعاد المزيد.`)}</Note>
+            : limit ? <GText soft style={[gType.tiny, align]}>{t(`At most ${MAX_PICKED} cars can be picked one by one. Use "Select all matching" for more.`, `يمكن اختيار ${MAX_PICKED} سيارة كحد أقصى واحدة تلو الأخرى. استخدم «تحديد كل ما يطابق» للمزيد.`)}</GText> : null}
         </>}
         items={cars} keyOf={r => r.generationId} renderItem={renderItem}
         loading={loading} error={error} onRetry={() => void load("reset")}
@@ -330,7 +339,7 @@ function Facets({ page, filter, setFilter }: { page: FitsPage | null; filter: Fi
 }
 
 /** The running (or just finished) "Run auto-fit" job: progress bar, counts, an estimate; it keeps running when the screen is left. */
-function JobCard({ job, busy, onCancel, onHide }: { job: FitJob; busy: boolean; onCancel: () => void; onHide: () => void }) {
+function JobCard({ job, busy, onCancel, onResume, onHide }: { job: FitJob; busy: boolean; onCancel: () => void; onResume: () => void; onHide: () => void }) {
   const { t, isArabic } = useL();
   const { g, row, align } = useGarageTheme();
   const active = job.status === "QUEUED" || job.status === "RUNNING", pct = job.total ? Math.min(1, job.position / job.total) : 0;
@@ -352,9 +361,14 @@ function JobCard({ job, busy, onCancel, onHide }: { job: FitJob; busy: boolean; 
       </View>
       <GText soft style={[gType.caption, align]}>{[eta, stats].filter(Boolean).join(" · ") || t("Starting…", "جارٍ البدء…")}</GText>
       {job.includeApproved && active ? <Note tone="warning">{t("Approved fits are being re-run too: those cars need your approval again.", "يُعاد تشغيل التركيبات المعتمدة أيضًا: تحتاج تلك السيارات إلى اعتمادك مجددًا.")}</Note> : null}
-      {job.status === "FAILED" ? <Note tone="danger">{job.error === "FIT_CHECKER_UNAVAILABLE" ? t("The fit checker could not run on the server, so the run stopped. The remaining cars were not changed.", "تعذّر تشغيل فاحص التركيب على الخادم فتوقف التشغيل. لم تتغير السيارات المتبقية.") : t("The run stopped: this accessory is no longer ready for fitting.", "توقف التشغيل: لم تعد هذه القطعة جاهزة للتركيب.")}</Note> : null}
+      {job.includeCorrections && active ? <Note tone="warning">{t("Saved manual corrections are being reset too (each one is kept in the record).", "يُعاد ضبط التصحيحات اليدوية المحفوظة أيضًا (يبقى كل منها في السجل).")}</Note> : null}
+      {job.status === "FAILED" ? <Note tone="danger">{job.error === "FIT_CHECKER_UNAVAILABLE" ? t("The fit checker failed on 5 cars in a row, so the run stopped. Those cars and the ones after them were not changed. Resume to try them again.", "فشل فاحص التركيب على 5 سيارات متتالية فتوقف التشغيل. لم تتغير تلك السيارات ولا التي بعدها. استأنف لإعادة المحاولة.") : t("The run stopped: this accessory is no longer ready for fitting.", "توقف التشغيل: لم تعد هذه القطعة جاهزة للتركيب.")}</Note> : null}
       {active ? <GText soft style={[gType.tiny, align]}>{t("You can leave this screen: the run continues on the server.", "يمكنك مغادرة هذه الشاشة: يستمر التشغيل على الخادم.")}</GText> : null}
       {active ? <GButton variant="secondary" icon="stop-circle-outline" label={t("Cancel run", "إلغاء التشغيل")} busy={busy} disabled={busy} onPress={onCancel} />
+        : job.status === "FAILED" && job.position < job.total ? <View style={[row, { gap: 8 }]}>
+          <GButton flex variant="ghost" label={t("Hide", "إخفاء")} onPress={onHide} />
+          <GButton flex icon="play-outline" label={t("Resume run", "استئناف التشغيل")} busy={busy} disabled={busy} onPress={onResume} />
+        </View>
         : <GButton variant="ghost" label={t("Hide", "إخفاء")} onPress={onHide} />}
     </Card>
   );
@@ -380,13 +394,13 @@ function ConfirmSheet({ confirm, busy, onClose, setConfirm, onApprove, onRun }: 
       </Sheet>
     );
   }
-  const s = confirm.summary, reset = confirm.include ? s.approvedSkipped : 0, runs = s.toRun + reset;
+  const s = confirm.summary, reset = confirm.include ? s.approvedSkipped : 0, resetCorr = confirm.includeCorrections ? s.correctionsSkipped : 0, runs = s.toRun + reset + resetCorr;
   return (
     <Sheet visible onClose={onClose} title={t("Run auto-fit?", "تشغيل التركيب التلقائي؟")} closeLabel={t("Close", "إغلاق")}>
       <View style={{ gap: 12 }}>
         <GText style={[gType.body, align]}>{runs
           ? t(`${carsWord(runs, false)} will be fitted again by the real viewer. The new fits wait for your review.`, `ستُركّب القطعة من جديد على ${carsWord(runs, true)} بالعارض الحقيقي. تنتظر التركيبات الجديدة مراجعتك.`)
-          : t("Every selected car is approved, so nothing runs unless you include approved fits.", "كل السيارات المحددة معتمدة، فلن يُشغَّل شيء ما لم تُضمّن التركيبات المعتمدة.")}</GText>
+          : t("Every selected car is approved or has a saved correction, so nothing runs unless you include them below.", "كل السيارات المحددة معتمدة أو عليها تصحيح محفوظ، فلن يُشغَّل شيء ما لم تُضمّنها أدناه.")}</GText>
         {s.approvedSkipped ? <>
           {!confirm.include ? <Note icon="shield-checkmark-outline">{s.approvedSkipped === 1
             ? t("1 approved fit is skipped and stays approved.", "سيتم تخطي تركيب واحد معتمد ويبقى معتمدًا.")
@@ -397,10 +411,20 @@ function ConfirmSheet({ confirm, busy, onClose, setConfirm, onApprove, onRun }: 
             ? t('1 approved fit will lose its approval. Customers with this car lose "View on my car" for this part until you approve it again.', "سيفقد تركيب معتمد واحد اعتماده. يفقد العملاء أصحاب هذه السيارة «اعرضها على سيارتي» لهذه القطعة حتى تعتمده مجددًا.")
             : t(`${num(reset)} approved fits will lose their approval. Customers with these cars lose "View on my car" for this part until you approve them again.`, `ستفقد ${fitsWord(reset, true)} معتمدة اعتمادها. يفقد العملاء أصحاب هذه السيارات «اعرضها على سيارتي» لهذه القطعة حتى تعتمدها مجددًا.`)}</Note> : null}
         </> : null}
+        {s.correctionsSkipped ? <>
+          {!confirm.includeCorrections ? <Note icon="construct-outline">{s.correctionsSkipped === 1
+            ? t("1 car with a saved manual correction is skipped and keeps its correction.", "سيتم تخطي سيارة واحدة عليها تصحيح يدوي محفوظ ويبقى تصحيحها.")
+            : t(`${num(s.correctionsSkipped)} cars with a saved manual correction are skipped and keep their corrections.`, `سيتم تخطي ${carsWord(s.correctionsSkipped, true)} عليها تصحيحات يدوية محفوظة وتبقى تصحيحاتها.`)}</Note> : null}
+          <Toggle label={t("Also reset saved manual corrections (a fresh auto-fit replaces them)", "حذف التصحيحات اليدوية المحفوظة أيضًا (يحلّ محلها تركيب تلقائي جديد)")}
+            value={confirm.includeCorrections} onChange={v => setConfirm({ ...confirm, includeCorrections: v, error: undefined })} />
+          {confirm.includeCorrections ? <Note tone="danger" icon="warning-outline">{resetCorr === 1
+            ? t("1 saved correction will be reset. It stays in the record, but the car gets a fresh auto-fit to review.", "سيُحذف تصحيح محفوظ واحد. يبقى في السجل، لكن السيارة تحصل على تركيب تلقائي جديد للمراجعة.")
+            : t(`${num(resetCorr)} saved corrections will be reset. They stay in the record, but those cars get a fresh auto-fit to review.`, `ستُحذف ${num(resetCorr)} تصحيحات محفوظة. تبقى في السجل، لكن تلك السيارات تحصل على تركيب تلقائي جديد للمراجعة.`)}</Note> : null}
+        </> : null}
         {runs > 50 ? <GText soft style={[gType.caption, align]}>{t("Many cars take a while: the run continues on the server and shows its progress here, even after you leave.", "تستغرق السيارات الكثيرة وقتًا: يستمر التشغيل على الخادم ويعرض تقدّمه هنا حتى بعد المغادرة.")}</GText> : null}
         {confirm.error ? <Note tone="danger">{confirm.error}</Note> : null}
-        <GButton variant={reset ? "danger" : "primary"} icon="refresh-outline" busy={busy} disabled={busy || !runs}
-          label={reset ? t(`Re-run ${num(runs)} and reset ${num(reset)} ${reset === 1 ? "approval" : "approvals"}`, `إعادة تشغيل ${num(runs)} وإلغاء ${num(reset)} اعتماد`) : t(`Run auto-fit on ${carsWord(runs, false)}`, `تشغيل التركيب على ${carsWord(runs, true)}`)}
+        <GButton variant={reset || resetCorr ? "danger" : "primary"} icon="refresh-outline" busy={busy} disabled={busy || !runs}
+          label={reset || resetCorr ? t(`Re-run ${num(runs)} and reset ${num(reset + resetCorr)}`, `إعادة تشغيل ${num(runs)} وإلغاء ${num(reset + resetCorr)}`) : t(`Run auto-fit on ${carsWord(runs, false)}`, `تشغيل التركيب على ${carsWord(runs, true)}`)}
           onPress={() => onRun(confirm)} />
         <GButton variant="ghost" label={t("Cancel", "إلغاء")} disabled={busy} onPress={onClose} />
       </View>

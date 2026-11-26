@@ -6,12 +6,12 @@ import { DeptDirectory } from "./screens";
 
 export const TowDirectoryRoute = () => (
   <DepartmentProvider force="MANAGE_TOWING">
-    <DeptDirectory />
+    <DeptDirectory back />
   </DepartmentProvider>
 );
 export const ShopsDirectoryRoute = () => (
   <DepartmentProvider force="MANAGE_SPARE_PARTS">
-    <DeptDirectory />
+    <DeptDirectory back />
   </DepartmentProvider>
 );
 export function TowReviewRoute() {

@@ -70,7 +70,7 @@ export async function readSafeGLB(bytes: Buffer, maxTriangles: number, limits: {
   return { doc, io, scene, triangles };
 }
 
-export async function normalizeVehicle(bytes: Buffer, lengthM: number, options: {preRotateX?: number; rotateY?: number; stripPrivateMetadata?: boolean} = {}) {
+export async function normalizeVehicle(bytes: Buffer, lengthM: number, options: {preRotateX?: number; rotateY?: number; stripPrivateMetadata?: boolean; /** creator credit + license written into asset.copyright (imported CC models) */ credit?: string} = {}) {
   const { doc, io, scene, triangles } = await readSafeGLB(bytes, 500_000);
   if (!Number.isFinite(lengthM) || lengthM < 2.5 || lengthM > 8) return fail("INVALID_GLB", "Vehicle length must be between 2.5 and 8 metres.");
   const dimensions = () => {
@@ -112,6 +112,7 @@ export async function normalizeVehicle(bytes: Buffer, lengthM: number, options: 
   const materials=doc.getRoot().listMaterials().map(m=>({alphaMode:m.getAlphaMode(),doubleSided:m.getDoubleSided()}));
   const warnings=["Vehicle identity, front direction, upright orientation, wheels, glazing and scenery require visual verification."];
   if (doc.getRoot().listNodes().filter(n=>n.getMesh()).length>150) warnings.push("Many separate mesh nodes: inspect for detached parts or scenery.");
+  if (options.credit && !options.stripPrivateMetadata) (doc.getRoot().getAsset() as Record<string,unknown>).copyright = options.credit;
   const encoded=Buffer.from(await io.writeBinary(doc));
   const output = options.stripPrivateMetadata?stripGLBMetadata(encoded):encoded;
   if (output.length > MAX_MODEL_BYTES) return fail("INVALID_GLB", "Normalized model exceeds the configured size limit.");

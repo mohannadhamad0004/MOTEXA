@@ -1,84 +1,49 @@
-import { Async, EmptyState } from "../../../components/ui/Feedback";
-import { ItemRow } from "../../../components/ItemActionsMenu";
-import { inboxActions } from "../../../features/mechanics/inboxActions";
-import { DashboardLayout } from "../../../components/layout/DashboardLayout";
-import { Segmented } from "../../../components/ui/Chip";
+// The mechanic's service requests = List: search, ONE chip row New · Active · Past with counts (`?filter=` from the home's Needs-you
+// row and tiles), compact rows (customer, car, skill, time, status), ⋮ = the step the current status allows. Re-reads every 15 s.
+import { router, useLocalSearchParams, type Href } from "expo-router";
+import { useEffect, useState } from "react";
+import { FilterChips, ManagePage, ManageRow } from "../../../components/manage/ManagePage";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
-import { Text } from "../../../components/ui/Text";
-import { useTheme } from "../../../theme/useTheme";
-import { router } from "expo-router";
-import { useState } from "react";
-import { View } from "react-native";
-import { fmtDateTime } from "../../../features/requests/requestBits";
-import { MechanicStatusBadge, useSkillLabel } from "../../../features/mechanics/mechanicBits";
+import { inboxActions } from "../../../features/mechanics/inboxActions";
+import { useMechanicStatusLabels, useSkillLabel } from "../../../features/mechanics/mechanicBits";
 import { MechanicRequestStatus, REFRESH_MS, mechanicInbox } from "../../../features/mechanics/mechanicsService";
+import { mechTone } from "../../../features/requests/garageBits";
+import { fmtDateTime } from "../../../features/requests/requestBits";
 
-type Tab = "NEW" | "ACTIVE" | "PAST";
+type Tab = "new" | "active" | "past";
 // What a mechanic thinks in: waiting for an answer, on a job, finished.
-const INBOX_GROUPS: Record<Tab, MechanicRequestStatus[]> = {
-  NEW: ["REQUESTED"],
-  ACTIVE: ["ACCEPTED", "IN_PROGRESS"],
-  PAST: ["COMPLETED", "DECLINED", "CANCELLED"],
-};
+const GROUPS: Record<Tab, MechanicRequestStatus[]> = { new: ["REQUESTED"], active: ["ACCEPTED", "IN_PROGRESS"], past: ["COMPLETED", "DECLINED", "CANCELLED"] };
+const isTab = (v?: string): v is Tab => v === "new" || v === "active" || v === "past";
 
-// The mechanic's inbox. Re-reads the server every 15 s while this screen is open.
 export default function MechanicInbox() {
-  const { c: col } = useTheme();
-  const { t, row, align } = useL();
-  const skillLabel = useSkillLabel();
-  const [tab, setTab] = useState<Tab>("NEW");
-  const [pulling, setPulling] = useState(false);
+  const { t } = useL();
+  const skill = useSkillLabel();
+  const L = useMechanicStatusLabels();
+  const params = useLocalSearchParams<{ filter?: string }>();
+  const [tab, setTab] = useState<Tab>(isTab(params.filter) ? params.filter : "new"), [q, setQ] = useState("");
+  useEffect(() => { if (isTab(params.filter)) setTab(params.filter); }, [params.filter]);
   const state = useLoad(() => mechanicInbox.list(), [], REFRESH_MS);
-  const all = state.data ?? [];
-  const count = (g: Tab) => all.filter((r) => INBOX_GROUPS[g].includes(r.status)).length;
-
+  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const found = (state.data ?? []).filter((r) => words.every((w) => `${r.customerName} ${r.vehicle.make} ${r.vehicle.model} ${r.skill ? skill(r.skill) : ""} ${r.problemDescription}`.toLowerCase().includes(w)));
+  const count = (g: Tab) => found.filter((r) => GROUPS[g].includes(r.status)).length;
+  const rows = found.filter((r) => GROUPS[tab].includes(r.status));
   return (
-    <DashboardLayout hero="mechanic"
-      onRefresh={() => {
-        setPulling(true);
-        state.reload().finally(() => setPulling(false));
-      }}
-      refreshing={pulling}
-      title={t("Service requests", "طلبات الخدمة")} subtitle={t("Requests from customers", "طلبات من العملاء")} back
-    >
-      <Segmented
-        value={tab}
-        onChange={setTab}
-        options={[
-          { key: "NEW", label: t("New", "جديدة"), count: count("NEW") },
-          { key: "ACTIVE", label: t("Active", "نشطة"), count: count("ACTIVE") },
-          { key: "PAST", label: t("Past", "سابقة"), count: count("PAST") },
-        ]}
-      />
-      <Async state={state}>
-        {(data) => {
-          const list = data.filter((r) => INBOX_GROUPS[tab].includes(r.status));
-          return !list.length ? (
-            <EmptyState
-              icon="construct-outline"
-              text={tab === "NEW" ? t("No new requests.", "لا توجد طلبات جديدة.") : tab === "ACTIVE" ? t("No active jobs.", "لا توجد أعمال نشطة.") : t("Nothing here yet.", "لا يوجد شيء هنا بعد.")}
-            />
-          ) : (
-            list.map((r) => (
-              <ItemRow key={r.id} title={r.customerName} style={{ marginBottom: 10 }} onPress={() => router.push(`/mechanic/requests/${r.id}`)} actions={inboxActions(t, r, state.reload)}>
-                <View style={[row, { justifyContent: "space-between", alignItems: "flex-start", gap: 10 }]}>
-                  <View style={{ flex: 1 }}>
-                    <Text numberOfLines={1} style={[{ color: col.text, fontSize: 15, fontWeight: "800" }, align]}>{r.customerName}</Text>
-                    <Text numberOfLines={1} style={[{ color: col.textMuted, fontSize: 12, marginTop: 3 }, align]}>
-                      {r.vehicle.make} {r.vehicle.model}
-                      {r.skill ? ` · ${skillLabel(r.skill)}` : ""}
-                    </Text>
-                  </View>
-                  <MechanicStatusBadge value={r.status} />
-                </View>
-                <Text numberOfLines={2} style={[{ color: col.textDim, fontSize: 12, marginTop: 10 }, align]}>{r.problemDescription}</Text>
-                <Text style={[{ color: col.textDim, fontSize: 10, marginTop: 8 }, align]}>{fmtDateTime(r.updatedAt)}</Text>
-              </ItemRow>
-            ))
-          );
-        }}
-      </Async>
-    </DashboardLayout>
+    <ManagePage title={t("Service requests", "طلبات الخدمة")}
+      line={state.data ? t(`${count("new")} new · ${count("active")} active`, `${count("new")} جديدة · ${count("active")} نشطة`) : undefined}
+      search={{ value: q, onChange: setQ, placeholder: t("Customer, car, skill or problem", "العميل أو السيارة أو المهارة أو المشكلة") }}
+      filters={<FilterChips value={tab} onChange={setTab} filters={[
+        { key: "new", label: t("New", "جديدة"), count: state.data ? count("new") : undefined },
+        { key: "active", label: t("Active", "نشطة"), count: state.data ? count("active") : undefined },
+        { key: "past", label: t("Past", "سابقة"), count: state.data ? count("past") : undefined },
+      ]} />}
+      items={rows} keyOf={(r) => r.id}
+      renderItem={(r) => <ManageRow title={r.customerName} status={{ label: L[r.status], tone: mechTone(r.status) }}
+        sub={[`${r.vehicle.make} ${r.vehicle.model}`, r.skill ? skill(r.skill) : null, fmtDateTime(r.updatedAt)].filter(Boolean).join(" · ")}
+        onPress={() => router.push(`/mechanic/requests/${r.id}` as Href)} actions={inboxActions(t, r, state.reload)} />}
+      loading={!state.data && !state.error} error={state.error} onRetry={() => void state.reload()}
+      empty={{ text: q ? t("Nothing matches.", "لا توجد نتائج مطابقة.") : tab === "new" ? t("No new requests.", "لا توجد طلبات جديدة.") : tab === "active" ? t("No active jobs.", "لا توجد أعمال نشطة.") : t("Nothing here yet.", "لا يوجد شيء هنا بعد."),
+        action: q ? { label: t("Clear search", "مسح البحث"), onPress: () => setQ("") } : undefined }}
+      onRefresh={() => void state.reload()} refreshing={false} detailHint={t("Tap a request to open it.", "اضغط على طلب لفتحه.")} />
   );
 }

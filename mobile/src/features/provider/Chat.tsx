@@ -8,7 +8,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { InTabs } from "../../components/layout/ProviderLayout";
 import { ProviderHeader } from "../../components/layout/ProviderHeader";
-import { pickMechanicDocument } from "../../components/MechanicDocuments";
+import { pickMechanicDocument } from "../mechanics/documents";
 import { Text } from "../../components/MotexaVisual";
 import { Avatar, cardStyle, useDT } from "../department/ui";
 import { privateImageSource } from "../shared/api";

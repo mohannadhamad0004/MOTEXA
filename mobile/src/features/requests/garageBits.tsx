@@ -1,11 +1,10 @@
-// Customer request pieces in the garage style: chat thread, timeline mapping, status tones. Provider screens keep requestBits.
+// Request pieces in the garage style: chat thread (customer), timeline mapping and status tones (everyone).
 import { useState } from "react";
 import { TextInput, View } from "react-native";
 import { Bubble, DateSeparator, GButton, GText, Note, SystemPill, TimelineStep, Tone } from "../../components/garage";
-import type { TimelineItem } from "../../components/blueprint";
 import { useL } from "../../core/hooks/useL";
 import { gShape, useGarageTheme } from "../../theme/garage";
-import { fmtDateTime } from "./requestBits";
+import { fmtDateTime, type TimelineItem } from "./requestBits";
 import type { InquiryStatus, ThreadMessage, TowStatus } from "./requestsService";
 
 /** buildTimeline() items -> garage Timeline steps (same real times; later steps without one). */

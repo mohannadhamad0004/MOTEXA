@@ -1,1 +1,1 @@
-export {default} from '../../components/MechanicApplication';
+export { default } from "../../features/mechanics/MechanicHome";

@@ -181,7 +181,8 @@ const SHOP_FILTERS: { k: ShopFilter; en: string; ar: string }[] = [
 ];
 const ORDER: Record<string, number> = { PENDING: 0, NEEDS_CHANGES: 1, DRAFT: 2, APPROVED: 3, REJECTED: 4 };
 const CATEGORY = new Map(CATALOG_GROUPS.flatMap(g => g.categories).map(c => [c.key, c]));
-export function PartsShopsPage() {
+/** `back`: opened outside the department tabs (/admin/shops). */
+export function PartsShopsPage({ back = false }: { back?: boolean }) {
   const { t, isArabic } = useL();
   const state = useLoad(async () => {
     const [shops, pending] = await Promise.all([api<{ shops: Shop[] }>("GET", "/admin/parts/shops").then(r => r.shops), review.list("PARTS", "NEW")]);
@@ -197,7 +198,7 @@ export function PartsShopsPage() {
   const count = (k: ShopFilter) => matching.filter(s => k === "ALL" || s.verificationStatus === k).length;
   const toReview = (data?.shops ?? []).filter(s => s.verificationStatus === "PENDING").length;
   return (
-    <ManagePage title={t("Parts shops", "متاجر قطع الغيار")} back={false} tabBar
+    <ManagePage title={t("Parts shops", "متاجر قطع الغيار")} back={back} tabBar={!back}
       line={data ? t(`${data.shops.length} shops · ${toReview} to review`, `${data.shops.length} متجر · ${toReview} للمراجعة`) : undefined}
       actions={[{ key: "map", label: t("Show on map", "عرض على الخريطة"), icon: "map-outline", run: () => go("/dept/directory-map") }]}
       search={{ value: q, onChange: setQ, placeholder: t("Shop, brand, owner, phone, city or category", "المتجر أو العلامة أو المالك أو الهاتف أو المدينة أو الفئة") }}

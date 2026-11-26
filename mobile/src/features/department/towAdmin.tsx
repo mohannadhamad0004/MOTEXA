@@ -83,7 +83,8 @@ const FILTERS: { k: Filter; en: string; ar: string }[] = [
 const expiredDocs = (x: Truck) => x.documents.filter((d) => !!d.expiresAt && new Date(d.expiresAt).getTime() < Date.now()).length;
 
 /** Every tow company: search (name, owner, phone, plate), one status chip row with counts, to-review first, ⋮ = the shared review actions. */
-export function TowCompaniesPage() {
+/** `back`: opened outside the department tabs (/admin/tow). */
+export function TowCompaniesPage({ back = false }: { back?: boolean }) {
   const { t, isArabic } = useL();
   const state = useLoad(async () => {
     const [companies, trucks, pending] = await Promise.all([towAdminService.listCompanies(NOACTOR) as Promise<Company[]>, towAdminService.listTrucks(NOACTOR), review.list("TOW", "NEW")]);
@@ -101,7 +102,7 @@ export function TowCompaniesPage() {
   const rank = (c: Company) => (c.verification === "PENDING" ? 0 : c.pendingTruckCount ? 1 : c.verification === "NEEDS_CHANGES" ? 2 : 3);
   const rows = found.filter((c) => filter === "ALL" || c.verification === filter).sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
   return (
-    <ManagePage title={t("Tow companies", "شركات السحب")} back={false} tabBar
+    <ManagePage title={t("Tow companies", "شركات السحب")} back={back} tabBar={!back}
       line={data ? t(`${data.companies.length} companies · ${data.trucks.length} trucks`, `${data.companies.length} شركات · ${data.trucks.length} شاحنات`) : undefined}
       actions={[{ key: "map", label: t("Show on map", "عرض على الخريطة"), icon: "map-outline", run: () => go("/dept/directory-map") }]}
       search={{ value: q, onChange: setQ, placeholder: t("Company, owner, phone or plate", "الشركة أو المالك أو الهاتف أو اللوحة") }}

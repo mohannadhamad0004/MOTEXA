@@ -92,8 +92,8 @@ export type FitsPage = {
 /** picked rows (at most 500) or everything matching the filter minus a few unticked rows: never thousands of ids */
 export type FitSelectionBody = { generationIds: string[] } | { filter: FitFilter; exclude: string[] };
 export type FitJob = { id: string; status: "QUEUED" | "RUNNING" | "DONE" | "CANCELLED" | "FAILED"; total: number; position: number; done: number; skipped: number; errors: number;
-  includeApproved: boolean; error: string | null; createdAt: string; startedAt: string | null; finishedAt: string | null; etaSeconds: number | null };
-export type FitJobSummary = { toRun: number; approvedSkipped: number; approvedReset: number; notATarget: number };
+  includeApproved: boolean; includeCorrections: boolean; error: string | null; createdAt: string; startedAt: string | null; finishedAt: string | null; etaSeconds: number | null };
+export type FitJobSummary = { toRun: number; approvedSkipped: number; approvedReset: number; correctionsSkipped: number; correctionsReset: number; notATarget: number };
 export type BulkFitsResult = { action: "approve" | "unapprove"; done: { generationId: string; name: string }[]; skipped: { generationId: string; name: string; code: string }[] };
 export type { ZoneBox } from "../car3d/modelConfig";
 /** none = not split yet (running in the background), stale = the model file changed, single = one piece (zones only). */
@@ -172,10 +172,11 @@ export const adminAccessoryApi = {
   },
   approveFits: (accessoryId: string, sel: FitSelectionBody, dryRun = false) =>
     api<{ approvable?: number; approved?: number; skipped: Record<string, number> }>("POST", `${adm}/${accessoryId}/fits/approve`, { ...sel, dryRun }),
-  startFitJob: (accessoryId: string, sel: FitSelectionBody, o: { includeApproved?: boolean; confirmApprovedReset?: number; dryRun?: boolean }) =>
+  startFitJob: (accessoryId: string, sel: FitSelectionBody, o: { includeApproved?: boolean; confirmApprovedReset?: number; includeCorrections?: boolean; confirmCorrectionReset?: number; dryRun?: boolean }) =>
     api<{ job: FitJob | null; summary: FitJobSummary }>("POST", `${adm}/${accessoryId}/fits/jobs`, { ...sel, ...o }),
   currentFitJob: async (accessoryId: string) => (await api<{ job: FitJob | null }>("GET", `${adm}/${accessoryId}/fits/jobs/current`)).job,
   cancelFitJob: (accessoryId: string, jobId: string) => api("POST", `${adm}/${accessoryId}/fits/jobs/${jobId}/cancel`),
+  resumeFitJob: async (accessoryId: string, jobId: string) => (await api<{ job: FitJob | null }>("POST", `${adm}/${accessoryId}/fits/jobs/${jobId}/resume`)).job,
   bulkFits: (accessoryId: string, action: "approve" | "unapprove", generationIds: string[]) => api<BulkFitsResult>("POST", `/admin/parts/accessory-3d/${accessoryId}/fits/bulk`, { action, generationIds }),
   segment: async (key: string) => (await api<{ partMap: PartMapDetail }>("POST", `/admin/parts/part-maps/${key}/segment`)).partMap,
 };

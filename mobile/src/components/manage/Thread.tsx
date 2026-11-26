@@ -12,7 +12,7 @@ import type { Attachment, Message } from "../../features/provider/api";
 import { bi } from "../../features/provider/labels";
 import { useDocViewer } from "../../features/provider/ui";
 import { gShape, gType, useGarageTheme } from "../../theme/garage";
-import { pickMechanicDocument } from "../MechanicDocuments";
+import { pickMechanicDocument } from "../../features/mechanics/documents";
 import { EmptyState, GIcon, GText, SkeletonRows } from "../garage";
 import type { Crumb } from "../../core/nav/crumbs";
 import type { ItemAction } from "../ItemActionsMenu";

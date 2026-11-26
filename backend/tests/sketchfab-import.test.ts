@@ -1,7 +1,9 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {crc32,deflateRawSync} from "node:zlib";
-import {createSketchfabClient,parseSketchfabUrl,classifyLicense,inspectMetadata,allowedDownloadUrl,MAX_SOURCE_BYTES,sketchfabAuthorizations} from "../src/services/sketchfab-client.js";
+import {createSketchfabClient,parseSketchfabUrl,classifyLicense,inspectMetadata,allowedDownloadUrl,MAX_SOURCE_BYTES,sketchfabAuthorizations,assertImportAllowed,attributionText,LICENSE_RESTRICTED_TEXT} from "../src/services/sketchfab-client.js";
+import {normalizeVehicle} from "../src/services/vehicle3d-validation.js";
+import {mockVehicleGLB} from "../src/services/vehicle3d-generation.js";
 import {readModelArchive,convertSketchfabAsset} from "../src/services/vehicle3d-archive.js";
 import {importShape,failureDetail} from "../src/services/vehicle3d-import-state.js";
 import {readSafeGLB,Vehicle3DError} from "../src/services/vehicle3d-validation.js";
@@ -23,7 +25,7 @@ test("Sketchfab parser accepts model pages and query strings; rejects unsupporte
  for(const value of [url,url+"/?utm_source=fixture#view",`https://www.sketchfab.com/3d-models/${uid}/`,`https://sketchfab.com/3d-models/mercedes_benz-s600-${uid}`,` https://sketchfab.com/3d-models/${uid.toUpperCase()} `])assert.equal(parseSketchfabUrl(value).uid,uid);
  for(const value of ["https://other.example/3d-models/car-"+uid,"https://sketchfab.com/3d-models/no-uid","https://sketchfab.com/users/"+uid,"https://sketchfab.com.evil.test/3d-models/"+uid,`https://x@sketchfab.com/3d-models/${uid}`,`http://sketchfab.com/3d-models/${uid}`,`https://sketchfab.com:8443/3d-models/${uid}`,`https://sketchfab.com/3d-models/${uid}/embed`,`https://sketchfab.com/3d-models/x-${uid}e`,`https://sketchfab.com/3d-models/x-${uid.slice(1)}`,null])assert.throws(()=>parseSketchfabUrl(value),{code:"INVALID_SKETCHFAB_URL"});
 });
-test("license gate accepts any Creative Commons license (CC0 and every CC BY variant); refuses Standard / Editorial, unknown and contradictions; triangles are info only",()=>{
+test("license classifier names every Creative Commons license (CC0 and every CC BY variant); Standard / Editorial, unknown and contradictions are none; triangles are info only",()=>{
  for(const [slug,cls] of [["cc0","CC0"],["by","CC BY"],["by-sa","CC BY-SA"],["cc-by-4.0","CC BY"],["by-sa-3.0","CC BY-SA"],["by-nc","CC BY-NC"],["by-nc-sa","CC BY-NC-SA"],["by-nd","CC BY-ND"],["by-nc-nd","CC BY-NC-ND"],["cc-by-nc-4.0","CC BY-NC"]])assert.equal(classifyLicense({slug}),cls,slug);
  for(const slug of ["editorial","standard","st","ed","proprietary","all-rights-reserved","unknown","by-something","by-sa-nc","by-nd-sa"])assert.equal(classifyLicense({slug}),null,slug);
  assert.equal(classifyLicense({url:"https://creativecommons.org/licenses/by-sa/4.0/"}),"CC BY-SA");
@@ -39,7 +41,7 @@ test("license gate accepts any Creative Commons license (CC0 and every CC BY var
  assert.equal(inspectMetadata(model({isPurchasable:true}),uid).refusalCode,"LICENSE_NOT_ALLOWED");
  assert.equal(inspectMetadata(model({license:{slug:"st",label:"Standard"}}),uid).refusalCode,"LICENSE_NOT_ALLOWED");
  assert.equal(classifyLicense({slug:"cc-by-2.5"}),"CC BY");
- for(const slug of ["cc0","by","by-sa","by-nc","by-nd","by-nc-sa","by-nc-nd"])assert.equal(inspectMetadata(model({license:{slug}}),uid).allowed,true,slug);
+ for(const slug of ["cc0","by","by-sa"])assert.equal(inspectMetadata(model({license:{slug}}),uid).allowed,true,slug);
  for(const faceCount of [1_186_481,2_000_000,25_000_000]){const heavy=inspectMetadata(model({faceCount}),uid);assert.equal(heavy.allowed,true);assert.equal(heavy.refusalCode,null);assert.equal(heavy.triangles,faceCount);}
  assert.equal(inspectMetadata(model(),uid).triangles,null);
  assert.deepEqual(inspectMetadata(model({tags:[{name:"Mercedes",slug:"mercedes"},{slug:"w202"},"c-class",{name:"bad\u0000tag"},{name:"Mercedes"},null,{}]}),uid).tags,["Mercedes","w202","c-class","bad tag"]);
@@ -150,4 +152,28 @@ test("heavy models are simplified for phones: the budget is reached, small parts
  const glb=Buffer.from(await new NodeIO().writeBinary(car().d)),fit=await fitForPhones(glb,10_000);
  assert.ok(fit.simplified&&fit.simplified.after<=10_000);assert.ok((await readSafeGLB(fit.bytes,10_000)).triangles<=10_000,"the simplified GLB is valid and within the budget");
  assert.equal((await fitForPhones(glb,1_000_000)).bytes,glb,"the same bytes when it already fits");
+});
+
+test("#3 only CC0, CC BY and CC BY-SA are imported: NonCommercial / NoDerivatives are refused at the link check, in plain words, and again before the download",async()=>{
+ for(const slug of ["cc0","by","by-sa"]){const m=inspectMetadata(model({license:{slug}}),uid);assert.deepEqual([m.allowed,m.refusalCode],[true,null],slug);assert.doesNotThrow(()=>assertImportAllowed(m));}
+ for(const slug of ["by-nc","by-nd","by-nc-sa","by-nc-nd","cc-by-nc-4.0"]){
+  const m=inspectMetadata(model({license:{slug,label:"CC"}}),uid);
+  assert.deepEqual([m.allowed,m.refusalCode],[false,"LICENSE_RESTRICTED"],slug);
+  assert.ok(m.licenseClass?.startsWith("CC BY-N"),"the refused license is still named for the screen");
+  assert.throws(()=>assertImportAllowed(m),(e:any)=>e.code==="LICENSE_RESTRICTED"&&e.message===LICENSE_RESTRICTED_TEXT);
+ }
+ assert.match(LICENSE_RESTRICTED_TEXT,/^This license doesn't allow MOTEXA to simplify or show the model commercially\./);
+ // the link was checked while it was CC BY; by the time of the import it is NonCommercial: the fresh check before the download refuses it
+ let count=0;const client=createSketchfabClient({accessToken:"test",fetcher:(async()=>{count++;return Response.json(model({license:{slug:"by-nc",url:"https://creativecommons.org/licenses/by-nc/4.0/"}}));})as typeof fetch});
+ await assert.rejects(client.download(inspectMetadata(model(),uid)),{code:"LICENSE_RESTRICTED"});assert.equal(count,1,"no download link was requested");
+});
+test("#3 CC BY-SA: the simplified copy carries the creator credit and the license inside the file (glTF asset.copyright)",async()=>{
+ const credit=attributionText({title:"Test car",author:"Fixture artist",url,license:"CC Attribution-ShareAlike",licenseClass:"CC BY-SA",licenseUrl:"https://creativecommons.org/licenses/by-sa/4.0/"});
+ assert.match(credit,/"Test car" by Fixture artist/);assert.match(credit,/CC BY-SA \(https:\/\/creativecommons\.org\/licenses\/by-sa\/4\.0\/\)/);assert.match(credit,/same CC BY-SA license/);
+ assert.doesNotMatch(attributionText({title:"T",author:"A",url,license:"CC Attribution",licenseClass:"CC BY"}),/same CC BY-SA/);
+ const out=await normalizeVehicle(await mockVehicleGLB(),4.5,{credit});
+ const asset=(await new NodeIO().readBinary(out.bytes)).getRoot().getAsset() as Record<string,unknown>;
+ assert.equal(asset.copyright,credit,"the credit is in the simplified file itself");
+ const stripped=await normalizeVehicle(await mockVehicleGLB(),4.5);
+ assert.equal(((await new NodeIO().readBinary(stripped.bytes)).getRoot().getAsset() as Record<string,unknown>).copyright,undefined,"nothing invented without a credit");
 });

@@ -1,12 +1,28 @@
 # 10 — One UI system for provider and admin screens
 
-> **DRAFT — waiting for approval (2026-11-25).** Nothing below is built yet except `ManagePage` / `ManageRow` (Accessory fitting is
-> the approved reference). Once approved, every new or touched provider / admin page must follow this file.
+> **Approved 2026-11-25, built 2026-11-26.** Every provider / admin page below is on these templates; `mobile/tests/ui-system.test.mjs`
+> fails when a page reachable from `app/dept`, `app/admin`, `app/provider`, `app/driver` or `app/mechanic` imports an old frame or kit
+> again (by import text and by resolved file). Every new or touched provider / admin page must follow this file.
 
 **Scope**: every screen of the parts shop, tow company, tow driver, mechanic, every department admin and the super admin, plus provider
 onboarding. The customer side (and `work-with-motexa`, auth, `dev/*`) keeps its own Garage look. Built only from `components/manage/*`
-and the Garage kit (`components/garage/*`, `theme/garage.ts`); `components/ui/*`, `features/provider/portal/ui`, `DashboardLayout` /
-`ProviderLayout` heroes and blueprint pieces are phased out page by page.
+and the Garage kit (`components/garage/*`, `theme/garage.ts`). Forbidden there: `components/ui/*`, `components/blueprint/*`,
+`theme/useTheme`, `MotexaVisual`, `BrandSurfaces`, `EditorialUI`, `InteractiveButton`, `LoadingState`, `PremiumUI`, `MechanicUI`, the
+`ProviderLayout` / `ProviderHeader` frames and the `DeptPage` / `GaragePage` / `MechanicPage` frames (the customer side still uses some
+of them).
+
+## 0. The kit (what to import)
+
+| Need | Piece | File |
+|---|---|---|
+| any page | `Page` (← back + trail, title block with one line and ⋮, scroll / `list` / `hero` modes, sticky `footer`, `tabBar`, `trail`, `scrollRef`) | `components/manage/Page.tsx` |
+| Detail bodies | `Block`, `Facts`, `CheckRow`, `History`, `DocRows`, `Loaded` (skeleton → error + Retry → content), `LogOut` (asks first) | `Page.tsx` |
+| Dashboards | Mo hero (`HeroLayout`, departments: `AdminHero`), `NeedsRow` (hidden at 0), `Kpis` ("—" until real), shortcut `ManageEntry` rows | `Page.tsx`, `features/department/adminHero.tsx` |
+| Lists | `ManagePage` (header, segmented `tabs`, search, `filters`, `above`, rows, bulk bar, sheet / side panel), `ManageRow` (+ `actions` ⋮, `leading`), `FilterChips`, `ManageEntry`, `appStatus` | `components/manage/ManagePage.tsx` |
+| Forms | `SmartPicker` ("+ Add '…'"), `StepperHeader`, `StepFooter`, `useDiscardGuard`, `ReasonSheet`, Garage `Field` / `Toggle` / `Chip` | `components/manage/Form.tsx`, `components/garage` |
+| Inbox | `ThreadRow` (in a `ManagePage`), `ThreadPage` (polling, mark read, attachments, ⋮, `closed` note) | `components/manage/Thread.tsx` |
+| ⋮ menus | `ItemAction[]` (confirm / reason / choices, toast) | `components/ItemActionsMenu.tsx` |
+| trail | `core/nav/crumbs.ts` (labels + logical parents; every new sub-page path gets a label or an override there) | |
 
 ## 1. Pick one template per page
 
@@ -64,14 +80,16 @@ Maps are a Detail whose body is the full-bleed map. Settings / profile hubs are 
 
 | Role | Dashboard | List | Detail | Form | Inbox |
 |---|---|---|---|---|---|
-| **Parts admin** (`dept/*`) | `(tabs)/index`, `3d/index` | `(tabs)/requests` (Applications), `(tabs)/directory`, `3d/vehicles`, `3d/accessories`, `3d/requests`, `3d-submissions`, `accessory3d`, `vehicle3d`, `vehicles` (catalog), `vehicles/requests`, `orders`, `accessory-zones` + `accessory-fits` (done) | `review/[kind]/[id]`, `3d/vehicles/[key]`, `3d-submissions/[id]`, `accessory3d/[id]`, `vehicle3d/[id]`, `vehicles/[id]`, `vehicles/imports/[id]`, `orders/[id]`, part-map / zone editors, fit review; maps `map`, `directory-map`, `orders/map` | `3d/add` (absorbs `vehicles/imports/new`), `edit/product/[id]`, `edit/shop/[id]`, `(tabs)/profile` | `(tabs)/messages`, `thread/[kind]/[id]` |
-| **Tow admin** (`dept/*`) | `(tabs)/index` | `tows/index`, `tows/drivers`, `tows/history`, `tows/reports` + the shared dept tabs | `tows/[id]` | `edit/company/[id]`, `edit/truck/[id]` | shared dept tabs |
-| **Mechanics admin** (`dept/*`) | `(tabs)/index` | shared dept tabs | `mechanic-requests/[id]` | — | shared dept tabs |
-| **Super admin** (`admin/*`) | `(tabs)/index` | `(tabs)/providers`, `(tabs)/requests`, `admin-management` (+ invite as a Form sheet), `departments`, `shops/index`, `tow/index`, `(tabs)/more` (entry rows) | `shops/[id]`, `tow/[id]` | `profile` | — |
-| **Parts shop** (`provider/parts/*`) | `(tabs)/index`, `analytics` | `(tabs)/products`, `(tabs)/orders`, `orders/list`, `inquiries/index`, `inventory`, `3d/index`, `3d/submissions`, `(tabs)/profile` (entry rows) | `products/[id]`, `orders/[id]`, `inquiries/[id]`, `3d/preview/[productId]`; map `orders/map/[id]` | `[id]` (add / edit part), `products/edit/[id]`, `accessory-3d/[productId]` (step flow), `business`, `delivery`, `categories`, `fitment`, `media`, `settings` | `(tabs)/messages`, `orders/chat/[id]` |
-| **Tow company** (`provider/tow/*`) | `(tabs)/index`, `stats` | `(tabs)/jobs`, `(tabs)/fleet`, `requests/index`, `dispatch/index` (+ `active`), `drivers`, `trucks`, `history`, `(tabs)/profile` (entry rows) | `requests/[id]`, `dispatch/[id]`; map `live` | `[id]` (truck), `availability`, `service-area`, `company`, `media`, `settings` | `(tabs)/messages` |
-| **Tow driver** (`driver/*`) | `index` | — | `job/[id]` (its steps as a step flow) | — | `job/chat` |
-| **Mechanic** (`mechanic/*`) | `index` (home; the application form while applying) | `requests/index` | `requests/[id]` | — | — |
-| **Onboarding** (`provider/onboarding/*`) | — | — | — | `index` (step flow), `location` | `messages` |
+| **Parts admin** (`dept/*`) | `(tabs)/index`, `3d/index` | `(tabs)/requests` (Shop applications \| 3D requests), `(tabs)/directory`, `3d/vehicles`, `3d/accessories`, `3d/requests`, `3d-submissions`, `accessory3d`, `vehicle3d`, `vehicles` (catalog), `vehicles/requests`, `orders`, `accessory-zones`, `accessory-fits`, `(tabs)/messages` (Inbox), `(tabs)/profile` (entry rows) | `review/[kind]/[id]`, `3d/vehicles/[key]`, `3d-submissions/[id]`, `accessory3d/[id]`, `vehicle3d/[id]`, `vehicles/[id]`, `vehicles/imports/[id]`, `orders/[id]`, part-map / zone editors, fit review; maps `map`, `directory-map`, `orders/map` | `3d/add` (also replaces the old `vehicles/imports/new`), `edit/product/[id]` (step flow), `edit/shop/[id]` | `thread/[kind]/[id]` |
+| **Tow admin** (`dept/*`) | `(tabs)/index` | `(tabs)/requests`, `(tabs)/directory`, `tows/drivers`, `tows/history`, `tows/reports` + the shared dept tabs | `tows/[id]`, `review/truck/[id]`; map `tows/index` | `edit/company/[id]`, `edit/truck/[id]` | shared dept tabs |
+| **Mechanics admin** (`dept/*`) | `(tabs)/index` | `(tabs)/requests` (Mechanic requests \| Applications), `(tabs)/directory` (verified mechanics) + the shared dept tabs | `review/mechanic/[userId]` (application review), `mechanic-requests/[id]` | — | shared dept tabs |
+| **Super admin** (`admin/*`) | `(tabs)/index` | `(tabs)/providers`, `(tabs)/requests`, `admin-management` (invite = a Form sheet), `(tabs)/more` (entry rows), `shops/index`, `tow/index` (the dept directory pages with ←) | `profile` (read only: no edit endpoint), `shops/[id]`, `tow/[id]` | — | — |
+| **Parts shop** (`provider/parts/*`) | `(tabs)/index`, `analytics` | `(tabs)/products`, `inventory`, `fitment`, `(tabs)/orders`, `orders/list`, `inquiries/index`, `3d/index`, `3d/submissions`, `categories`, `(tabs)/profile` + `settings` (entry rows) | `products/[id]`, `orders/[id]`, `3d/preview/[productId]`; map `orders/map/[id]` | `[id]` + `products/edit/[id]` (step flow), `accessory-3d/[productId]` (step flow), `business`, `delivery`, `media` | `(tabs)/messages`, `motexa`, `orders/chat/[id]`, `inquiries/[id]` |
+| **Tow company** (`provider/tow/*`) | `(tabs)/index`, `stats` | `(tabs)/jobs` (= `dispatch`, `active`, `history`), `(tabs)/fleet` (= `drivers`, `trucks`), `(tabs)/profile` + `settings` (entry rows) | `requests/[id]`, `dispatch/[id]`, `[id]` (truck); maps `live`, `service-area` | driver / truck wizards, `availability`, `company`, `media` | `(tabs)/messages`, `motexa` |
+| **Tow driver** (`driver/*`) | `index` | — | `job/[id]` (its steps, one confirmed step in the footer) | — | `job/chat` |
+| **Mechanic** (`mechanic/*`) | `index` once approved / while waiting | `requests/index` | `requests/[id]` | `index` while applying (step flow) | — |
+| **Onboarding** (`provider/onboarding/*`) | — | — | `location` (map) | `index` (step flow) | `messages` |
 
 `provider/parts/preview` and `provider/tow/preview` stay in the customer look on purpose: they show the shop / company as customers see it.
+Removed on the way (no screen used them): `provider/tow/requests/index` (Jobs is the list), `dept/vehicles/imports/new` (Add 3D model),
+`admin/departments` (every department admin lands in `/dept`, which has the department switcher).

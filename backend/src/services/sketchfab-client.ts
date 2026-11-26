@@ -1,12 +1,20 @@
 import {fail, digest, Vehicle3DError} from "./vehicle3d-validation.js";
 
 export const MAX_SOURCE_BYTES = 128 * 1024 * 1024;
-export type AcceptedLicense = "CC0" | "CC BY" | "CC BY-SA" | "CC BY-ND" | "CC BY-NC" | "CC BY-NC-SA" | "CC BY-NC-ND";
+/** Every Creative Commons license the classifier recognises (what the model says it is). */
+export type CcLicense = "CC0" | "CC BY" | "CC BY-SA" | "CC BY-ND" | "CC BY-NC" | "CC BY-NC-SA" | "CC BY-NC-ND";
+/** The ones MOTEXA may use: it simplifies the model (a derivative) and shows it in a commercial app, so NonCommercial (NC) and
+ *  NoDerivatives (ND) are refused. CC BY / CC BY-SA keep the creator credit (and BY-SA its license) on the simplified copy. */
+export type AcceptedLicense = "CC0" | "CC BY" | "CC BY-SA";
+export const ACCEPTED_LICENSES: readonly AcceptedLicense[] = ["CC0", "CC BY", "CC BY-SA"];
+export const isAcceptedLicense = (c: string | null | undefined): c is AcceptedLicense => !!c && (ACCEPTED_LICENSES as readonly string[]).includes(c);
+export const LICENSE_RESTRICTED_TEXT = "This license doesn't allow MOTEXA to simplify or show the model commercially. Choose a model with a CC0, CC BY or CC BY-SA license.";
 export type SketchfabInspection = {
   uid: string; title: string; author: string; authorUrl: string | null; url: string;
   thumbnail: string | null; license: string; licenseUrl: string | null;
-  licenseClass: AcceptedLicense | null; downloadable: boolean; allowed: boolean;
-  refusalCode: "NOT_DOWNLOADABLE" | "LICENSE_NOT_ALLOWED" | null; inspectedAt: string;
+  /** the license as classified (also a refused NC / ND one, so the screen can name it); allowed only for ACCEPTED_LICENSES */
+  licenseClass: CcLicense | null; downloadable: boolean; allowed: boolean;
+  refusalCode: "NOT_DOWNLOADABLE" | "LICENSE_NOT_ALLOWED" | "LICENSE_RESTRICTED" | null; inspectedAt: string;
   /** Sketchfab's face count: shown as info only, never a reason to refuse (heavy models are simplified for phones). */
   triangles: number | null;
   /** the model's Sketchfab tags (plain text, at most 30): the app suggests the car's brand / model / generation from them and the title */
@@ -32,21 +40,21 @@ const text = (s: unknown, max = 200) => typeof s === "string" ? s.replace(/[\x00
 function safeUrl(value: unknown, hosts: readonly string[]): string | null {
   try { const u = new URL(String(value)); return u.protocol === "https:" && !u.username && !u.password && !u.port && !u.search && hosts.includes(u.hostname) ? u.href : null; } catch { return null; }
 }
-/** Any Creative Commons license (CC0 and every CC BY variant) from complete identifiers, never permissive prefix matches.
- *  Sketchfab Standard / Editorial, unknown and contradictory evidence are refused. */
+/** Which Creative Commons license (CC0 and every CC BY variant) from complete identifiers, never permissive prefix matches.
+ *  Sketchfab Standard / Editorial, unknown and contradictory evidence are null. Whether MOTEXA may use it: isAcceptedLicense. */
 const CC_SLUG = /^(?:cc-)?(by(?:-nc)?(?:-sa|-nd)?)(?:-(?:1[.]0|2[.][05]|3[.]0|4[.]0))?$/;
 const CC_PATH = /^\/licenses\/(by(?:-nc)?(?:-sa|-nd)?)\/(?:1\.0|2\.[05]|3\.0|4\.0)\/?$/;
-export function classifyLicense(license: unknown): AcceptedLicense | null {
+export function classifyLicense(license: unknown): CcLicense | null {
   if (!license || typeof license !== "object") return null;
   const l = license as Record<string, unknown>;
   const slug = text(l.slug).toLowerCase().replace(/_/g,"-"), bySlug = CC_SLUG.exec(slug);
-  const fromSlug: AcceptedLicense | null = /^(?:cc0|cc-zero)(?:-1[.]0)?$/.test(slug) ? "CC0" : bySlug ? `CC ${bySlug[1]!.toUpperCase()}` as AcceptedLicense : null;
+  const fromSlug: CcLicense | null = /^(?:cc0|cc-zero)(?:-1[.]0)?$/.test(slug) ? "CC0" : bySlug ? `CC ${bySlug[1]!.toUpperCase()}` as CcLicense : null;
   const url = text(l.url,1000);
-  let fromUrl: AcceptedLicense | null = null;
+  let fromUrl: CcLicense | null = null;
   if (url) {
     try { const u = new URL(url); if (!["http:","https:"].includes(u.protocol) || u.hostname !== "creativecommons.org" || u.username || u.password || u.port || u.search || u.hash) return null;
       const byUrl = CC_PATH.exec(u.pathname);
-      fromUrl = /^\/publicdomain\/zero\/1\.0\/?$/.test(u.pathname) ? "CC0" : byUrl ? `CC ${byUrl[1]!.toUpperCase()}` as AcceptedLicense : null;
+      fromUrl = /^\/publicdomain\/zero\/1\.0\/?$/.test(u.pathname) ? "CC0" : byUrl ? `CC ${byUrl[1]!.toUpperCase()}` as CcLicense : null;
     } catch { return null; }
     if (!fromUrl) return null;
   }
@@ -63,7 +71,7 @@ export function inspectMetadata(m: any, uid: string, now = new Date()): Sketchfa
     return fail("SKETCHFAB_UNAVAILABLE", "Sketchfab returned invalid model metadata.",502);
   const licenseClass = classifyLicense(m.license), downloadable = m.isDownloadable === true;
   const paid = typeof m.price === "number" && m.price > 0 || m.isPurchasable === true;
-  const refusalCode = !downloadable ? "NOT_DOWNLOADABLE" : !licenseClass || paid ? "LICENSE_NOT_ALLOWED" : null;
+  const refusalCode = !downloadable ? "NOT_DOWNLOADABLE" : !licenseClass || paid ? "LICENSE_NOT_ALLOWED" : !isAcceptedLicense(licenseClass) ? "LICENSE_RESTRICTED" : null;
   const licenseUrl = text(m.license?.url,1000);
   const thumbnail = (Array.isArray(m.thumbnails?.images) ? [...m.thumbnails.images] : [])
     .sort((a,b)=>Math.abs((a.width??0)-640)-Math.abs((b.width??0)-640))
@@ -79,7 +87,15 @@ export function inspectMetadata(m: any, uid: string, now = new Date()): Sketchfa
 }
 export function assertImportAllowed(m: SketchfabInspection) {
   if (!m.downloadable) return fail("MODEL_NOT_DOWNLOADABLE", "The creator has not allowed downloads of this model on Sketchfab, so MOTEXA cannot import it.",409);
-  if (!m.allowed || !m.licenseClass) return fail("LICENSE_NOT_ALLOWED", "This model does not have a Creative Commons license, so MOTEXA cannot use it. Choose a model with any CC license.",409);
+  if (m.licenseClass && !isAcceptedLicense(m.licenseClass)) return fail("LICENSE_RESTRICTED", LICENSE_RESTRICTED_TEXT, 409);
+  if (!m.allowed || !isAcceptedLicense(m.licenseClass)) return fail("LICENSE_NOT_ALLOWED", "This model does not have a Creative Commons license, so MOTEXA cannot use it. Choose a model with a CC0, CC BY or CC BY-SA license.",409);
+}
+/** The credit written into the simplified copy (glTF asset.copyright): creator, source, license; CC BY-SA also states that the adaptation
+ *  keeps the same license. */
+export function attributionText(c: {title: string; author: string; url: string; license: string; licenseClass?: string | null; licenseUrl?: string | null}): string {
+  const license = c.licenseClass ?? c.license, link = c.licenseUrl ? ` (${c.licenseUrl})` : "";
+  const sa = c.licenseClass === "CC BY-SA" ? " This adapted copy (simplified for phones by MOTEXA) is licensed under the same CC BY-SA license." : " Simplified for phones by MOTEXA.";
+  return `"${c.title}" by ${c.author} (${c.url}), licensed under ${license}${link}.${sa}`.slice(0, 1000);
 }
 /** Only download hosts documented/used by Sketchfab. No arbitrary S3 bucket or user-supplied URL. */
 export function allowedDownloadUrl(value: unknown): URL {

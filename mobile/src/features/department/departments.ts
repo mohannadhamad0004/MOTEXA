@@ -13,7 +13,7 @@ import type { Kind as ProviderKind } from "../provider/api";
 
 type IconName = keyof typeof Ionicons.glyphMap;
 export type DeptKey = "MANAGE_TOWING" | "MANAGE_SPARE_PARTS" | "MANAGE_MECHANICS";
-/** What a review route can open. `mechanic` is handled by Diala's review screen (no route of ours). */
+/** What a review route can open (mechanic = a mechanic application, by its user id). */
 export type ReviewKind = "company" | "truck" | "shop" | "mechanic";
 export type Status = "DRAFT" | "PENDING" | "NEEDS_CHANGES" | "APPROVED" | "REJECTED";
 export type T = (en: string, ar: string) => string;

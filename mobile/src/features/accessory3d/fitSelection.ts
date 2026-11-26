@@ -28,6 +28,9 @@ export function toggleRows(s: Selection, rows: string[]): Selection {
   return { all: false, ids: new Set([...s.ids, ...rows].slice(0, MAX_PICKED)) };
 }
 export const atLimit = (s: Selection) => (s.all ? s.exclude.size : s.ids.size) >= MAX_PICKED;
+/** At the limit a row's checkbox only goes the way that does not grow the list: picked mode can untick, "all matching" mode can tick
+ *  an excluded row back (unticking one more would be the 501st left out, which the server refuses). */
+export const rowBlocked = (s: Selection, id: string) => atLimit(s) && (s.all ? isSelected(s, id) : !isSelected(s, id));
 
 export function selectionBody(s: Selection, filter: FitFilter): FitSelectionBody {
   return s.all ? { filter, exclude: [...s.exclude] } : { generationIds: [...s.ids] };

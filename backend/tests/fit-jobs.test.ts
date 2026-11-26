@@ -4,8 +4,8 @@
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { prisma } from "../src/prisma.js";
-import { createAutoFitService, forgetFitRows } from "../src/services/accessory-autofit.js";
-import { cancelFitJob, createFitJob, currentFitJob, fitJobView, processNextFitJob } from "../src/services/accessory-fit-jobs.js";
+import { autoFitAccessory, createAutoFitService, forgetFitRows } from "../src/services/accessory-autofit.js";
+import { cancelFitJob, createFitJob, currentFitJob, fitJobView, processNextFitJob, resumeFitJob } from "../src/services/accessory-fit-jobs.js";
 
 after(() => prisma.$disconnect());
 const s = createAutoFitService();
@@ -25,9 +25,31 @@ async function restore(accessoryId: string, saved: Awaited<ReturnType<typeof pri
 }
 const admin = async () => (await prisma.user.findFirstOrThrow({ where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } } })).id;
 const stored = (saved: { generationId: string; fit: unknown }[], id: string) => saved.find(r => r.generationId === id)!.fit;
+type Cars = Awaited<ReturnType<typeof s.fitsFor>>["cars"];
+type Saved = Awaited<ReturnType<typeof prisma.accessoryAutoFit.findMany>>;
+/** `n` test-only cars that share a real car's 3D model, each with a copy of its current fit (like the 5,000-car test); `compute` = a stand-in
+ *  for the headless checker that returns that fit. `drop` removes them (call it before restore). */
+async function testCars(accessoryId: string, cars: Cars, saved: Saved, n: number) {
+  const source = cars.find(c => c.status === "passed" || c.status === "approved");
+  if (!source) return null;
+  const src = saved.find(x => x.generationId === source.generationId)!;
+  const gen = await prisma.vehicleGeneration.findUniqueOrThrow({ where: { id: source.generationId } });
+  const tag = `ZZFIT${Date.now()}`;
+  await prisma.vehicleGeneration.createMany({ data: Array.from({ length: n }, (_, i) => ({ vehicleId: gen.vehicleId, code: `${tag}-${String(i).padStart(2, "0")}`, nameEn: `${tag} ${i}`, nameAr: `${tag} ${i}`,
+    yearFrom: 2000, yearTo: 2005, model3dKey: gen.model3dKey, isPublished: true })) });
+  const ids = (await prisma.vehicleGeneration.findMany({ where: { code: { startsWith: tag } }, orderBy: { code: "asc" }, select: { id: true } })).map(g => g.id);
+  await prisma.accessoryAutoFit.createMany({ data: ids.map(generationId => ({ accessoryId, generationId, model3dKey: src.model3dKey, carRevision: src.carRevision, partRevision: src.partRevision,
+    fitVersion: src.fitVersion, fit: src.fit as object })) });
+  forgetFitRows(accessoryId);
+  const seen: string[] = [];
+  const compute = async (_t: string, _s: unknown, _f: string, key: string) => { seen.push(key); return key === src.model3dKey ? src.fit : undefined; };
+  const drop = async () => { await prisma.accessoryAutoFit.deleteMany({ where: { generationId: { in: ids } } }); await prisma.vehicleGeneration.deleteMany({ where: { code: { startsWith: tag } } }); };
+  return { ids, key: src.model3dKey, compute, seen, drop };
+}
+const fitOf = (accessoryId: string, generationId: string) => prisma.accessoryAutoFit.findUniqueOrThrow({ where: { accessoryId_generationId: { accessoryId, generationId } } });
 
 test("the job's estimate: average time of the cars fitted so far x the cars left; none before the first one", () => {
-  const base = { id: "j", accessoryId: "a", createdById: "u", targets: [], includeApproved: false, error: null, leaseToken: null, leaseUntil: null, createdAt: new Date(), startedAt: new Date(), finishedAt: null, updatedAt: new Date() };
+  const base = { id: "j", accessoryId: "a", createdById: "u", targets: [], includeApproved: false, includeCorrections: false, refitAfter: false, error: null, leaseToken: null, leaseUntil: null, createdAt: new Date(), startedAt: new Date(), finishedAt: null, updatedAt: new Date() };
   assert.equal(fitJobView({ ...base, status: "RUNNING", total: 100, position: 0, done: 0, skipped: 0, errors: 0, workMs: 0 }).etaSeconds, null);
   assert.equal(fitJobView({ ...base, status: "RUNNING", total: 100, position: 10, done: 8, skipped: 2, errors: 0, workMs: 80_000 }).etaSeconds, 900, "10 s per fitted car x 90 left");
   assert.equal(fitJobView({ ...base, status: "DONE", total: 100, position: 100, done: 100, skipped: 0, errors: 0, workMs: 1_000_000 }).etaSeconds, null);
@@ -81,7 +103,7 @@ test("Run auto-fit: approved fits are skipped by default; including them needs t
   try {
     const pick = [passed[0]!.generationId, passed[1]!.generationId, approved[0]!.generationId];
     const dry = await createFitJob(uid, a.id, { generationIds: pick, dryRun: true });
-    assert.deepEqual(dry.summary, { toRun: 2, approvedSkipped: 1, approvedReset: 0, notATarget: 0 });
+    assert.deepEqual(dry.summary, { toRun: 2, approvedSkipped: 1, approvedReset: 0, correctionsSkipped: 0, correctionsReset: 0, notATarget: 0 });
     await assert.rejects(createFitJob(uid, a.id, { generationIds: pick, includeApproved: true }), { code: "CONFIRM_RESET_COUNT" }, "an approval is never reset without the confirmed count");
     await assert.rejects(createFitJob(uid, a.id, { generationIds: pick, includeApproved: true, confirmApprovedReset: 2 }), { code: "CONFIRM_RESET_COUNT" });
     await assert.rejects(createFitJob(uid, a.id, { generationIds: [approved[0]!.generationId] }), { code: "NOTHING_TO_RUN" });
@@ -140,12 +162,12 @@ test("a job resumes where it stopped after a lost lease, can be cancelled, skips
     j = (await currentFitJob(a.id)).job!;
     assert.deepEqual({ id: j.id, done: j.done, skipped: j.skipped }, { id: late.job!.id, done: 0, skipped: 1 });
     assert.ok((await prisma.accessoryAutoFit.findUniqueOrThrow({ where: { accessoryId_generationId: { accessoryId: a.id, generationId: passed[2]!.generationId } } })).approvedAt);
-    // the checker cannot run at all: the job stops after 5 errors instead of failing every car
+    // the checker cannot run at all: the job stops after 5 failures in a row instead of failing every car; the 5 are handed back
     await restore(a.id, saved);
     await createFitJob(uid, a.id, { generationIds: passed.slice(0, 6).map(c => c.generationId) });
     await processNextFitJob({ compute: (async () => { throw new Error("browser missing"); }) as never });
     j = (await currentFitJob(a.id)).job!;
-    assert.deepEqual({ status: j.status, error: j.error, errors: j.errors, position: j.position }, { status: "FAILED", error: "FIT_CHECKER_UNAVAILABLE", errors: 5, position: 5 });
+    assert.deepEqual({ status: j.status, error: j.error, errors: j.errors, position: j.position }, { status: "FAILED", error: "FIT_CHECKER_UNAVAILABLE", errors: 0, position: 0 });
   } finally { await restore(a.id, saved); }
 });
 
@@ -201,4 +223,92 @@ test("Accessory fits by car (read-only summary): per-car counts use the same sta
   const mine = one.fits!.find(f => f.accessoryId === a.id && f.generationId === cars[0]!.generationId);
   assert.equal(mine?.status, cars[0]!.status);
   assert.ok(one.fits!.every(f => typeof f.productName === "string" && f.generation.length > 0));
+});
+
+test("#1 a saved manual correction is never overwritten by a bulk run unless explicitly included with the confirmed count; a reset is audited", async t => {
+  const r = await rim(); if (!r) return t.skip("no published universal rim in this database");
+  const { a, cars, saved } = r, uid = await admin(), tc = await testCars(a.id, cars, saved, 3);
+  if (!tc) return t.skip("no car with a current fit to copy");
+  const adj = { x: 0.01, y: 0, z: 0, rx: 0, ry: 0, s: 1 };
+  const [corrected, plain, late] = tc.ids as [string, string, string];
+  try {
+    await prisma.accessoryAutoFit.update({ where: { accessoryId_generationId: { accessoryId: a.id, generationId: corrected } }, data: { adj } });
+    forgetFitRows(a.id);
+    const dry = await createFitJob(uid, a.id, { generationIds: [corrected, plain], dryRun: true });
+    assert.deepEqual(dry.summary, { toRun: 1, approvedSkipped: 0, approvedReset: 0, correctionsSkipped: 1, correctionsReset: 0, notATarget: 0 });
+    await assert.rejects(createFitJob(uid, a.id, { generationIds: [corrected, plain], includeCorrections: true }), { code: "CONFIRM_CORRECTION_RESET_COUNT" });
+    await assert.rejects(createFitJob(uid, a.id, { generationIds: [corrected, plain], includeCorrections: true, confirmCorrectionReset: 2 }), { code: "CONFIRM_CORRECTION_RESET_COUNT" });
+    await assert.rejects(createFitJob(uid, a.id, { generationIds: [corrected] }), { code: "NOTHING_TO_RUN" }, "a corrected car alone is never run by default");
+    // default: the corrected car is left out, the other one is fitted
+    await createFitJob(uid, a.id, { generationIds: [corrected, plain] });
+    await processNextFitJob({ compute: tc.compute as never });
+    assert.equal((await currentFitJob(a.id)).job!.done, 1);
+    assert.deepEqual((await fitOf(a.id, corrected)).adj, adj, "the correction is untouched");
+    // a correction saved AFTER the job was created is protected too (checked again when the car's turn comes)
+    const lateJob = await createFitJob(uid, a.id, { generationIds: [late] });
+    await prisma.accessoryAutoFit.update({ where: { accessoryId_generationId: { accessoryId: a.id, generationId: late } }, data: { adj } });
+    await processNextFitJob({ compute: tc.compute as never });
+    const lj = (await currentFitJob(a.id)).job!;
+    assert.deepEqual({ id: lj.id, done: lj.done, skipped: lj.skipped }, { id: lateJob.job!.id, done: 0, skipped: 1 });
+    assert.deepEqual((await fitOf(a.id, late)).adj, adj);
+    // explicitly included with the confirmed count: reset, kept in the fit's record, one audit row naming the car and the job
+    const inc = await createFitJob(uid, a.id, { generationIds: [corrected], includeCorrections: true, confirmCorrectionReset: 1 });
+    assert.equal(inc.summary.correctionsReset, 1);
+    await processNextFitJob({ compute: tc.compute as never });
+    const after = await fitOf(a.id, corrected);
+    assert.equal(after.adj, null, "the correction was reset");
+    assert.deepEqual((after.fit as { previousCorrection?: { adj: unknown } }).previousCorrection?.adj, adj, "and kept in the fit's record");
+    const audit = await prisma.auditLog.findFirst({ where: { action: "ACCESSORY3D_FIT_CORRECTION_RESET", targetId: a.id, actorId: uid }, orderBy: { createdAt: "desc" } });
+    assert.deepEqual({ generationId: (audit?.details as { generationId?: string })?.generationId, jobId: (audit?.details as { jobId?: string })?.jobId }, { generationId: corrected, jobId: inc.job!.id });
+  } finally { await tc.drop(); await restore(a.id, saved); }
+});
+
+test("#2 the job stops after 5 failures in a row at ANY point (not only at the start), hands those cars back, and Resume finishes it", async t => {
+  const r = await rim(); if (!r) return t.skip("no published universal rim in this database");
+  const { a, cars, saved } = r, uid = await admin(), tc = await testCars(a.id, cars, saved, 8);
+  if (!tc) return t.skip("no car with a current fit to copy");
+  let calls = 0;
+  // the first 2 cars fit, then the checker dies for every car
+  const flaky = async (...args: Parameters<typeof tc.compute>) => { calls++; if (calls > 2) throw new Error("browser crashed"); return tc.compute(...args); };
+  try {
+    const { job } = await createFitJob(uid, a.id, { generationIds: tc.ids });
+    await processNextFitJob({ compute: flaky as never });
+    let j = (await currentFitJob(a.id)).job!;
+    assert.deepEqual({ status: j.status, error: j.error, done: j.done, errors: j.errors, position: j.position }, { status: "FAILED", error: "FIT_CHECKER_UNAVAILABLE", done: 2, errors: 0, position: 2 },
+      "stopped after 2 fitted cars (the old rule only stopped when nothing had been fitted yet); the 5 failed cars are handed back for a retry");
+    assert.equal(calls, 7, "2 fitted + 5 failures, then no other car was tried");
+    const failed = await prisma.auditLog.findFirstOrThrow({ where: { action: "ACCESSORY3D_FIT_JOB_FAILED", targetId: a.id }, orderBy: { createdAt: "desc" } });
+    assert.equal((failed.details as { cause?: string }).cause, "browser crashed", "the reason is on record");
+    await assert.rejects(resumeFitJob(uid, a.id, "00000000-0000-0000-0000-000000000000"), { code: "FIT_JOB_NOT_RESUMABLE" });
+    j = (await resumeFitJob(uid, a.id, job!.id)).job!;
+    assert.equal(j.status, "QUEUED");
+    await assert.rejects(resumeFitJob(uid, a.id, job!.id), { code: "FIT_JOB_NOT_RESUMABLE" }, "only a stopped run can be resumed");
+    await processNextFitJob({ compute: tc.compute as never });
+    j = (await currentFitJob(a.id)).job!;
+    assert.deepEqual({ status: j.status, done: j.done, errors: j.errors, position: j.position }, { status: "DONE", done: 8, errors: 0, position: 8 });
+    assert.ok(await prisma.auditLog.findFirst({ where: { action: "ACCESSORY3D_FIT_JOB_RESUMED", targetId: a.id, actorId: uid } }));
+  } finally { await tc.drop(); await restore(a.id, saved); }
+});
+
+test("#4 a car-update refit that meets a running job is not skipped: it waits on the job and runs when the job ends", async t => {
+  const r = await rim(); if (!r) return t.skip("no published universal rim in this database");
+  const { a, cars, saved } = r, uid = await admin(), tc = await testCars(a.id, cars, saved, 2);
+  if (!tc) return t.skip("no car with a current fit to copy");
+  const [jobCar, staleCar] = tc.ids as [string, string];
+  try {
+    const { job } = await createFitJob(uid, a.id, { generationIds: [jobCar] });
+    // the car's model changed: its stored fit is stale now (what refitPublishedAccessories reacts to)
+    await prisma.accessoryAutoFit.update({ where: { accessoryId_generationId: { accessoryId: a.id, generationId: staleCar } }, data: { fitVersion: -1 } });
+    await autoFitAccessory(a.id, tc.compute as never);
+    assert.deepEqual(tc.seen, [], "nothing is fitted next to the queued job");
+    assert.equal((await prisma.accessoryFitJob.findUniqueOrThrow({ where: { id: job!.id } })).refitAfter, true, "the refit is remembered on the job");
+    await processNextFitJob({ compute: tc.compute as never });
+    await autoFitAccessory(a.id, tc.compute as never); // = the refit the job started when it ended (a no-op if that one already finished)
+    assert.notEqual((await fitOf(a.id, staleCar)).fitVersion, -1, "the stale fit was computed again after the job");
+    assert.equal((await prisma.accessoryFitJob.findUniqueOrThrow({ where: { id: job!.id } })).refitAfter, false);
+    assert.ok(await prisma.auditLog.findFirst({ where: { action: "ACCESSORY3D_FIT_REFRESHED", targetId: a.id, details: { path: ["generationId"], equals: staleCar } } }));
+    // the explicit re-run is refused while a job owns the accessory (it would write the same fits at the same time)
+    await createFitJob(uid, a.id, { generationIds: [jobCar] });
+    await assert.rejects(s.rerun(uid, a.id), { code: "FIT_JOB_RUNNING" });
+  } finally { await tc.drop(); await restore(a.id, saved); }
 });

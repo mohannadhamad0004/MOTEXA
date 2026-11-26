@@ -9,7 +9,7 @@ import { requireApprovedProvider } from "../services/provider-onboarding.js";
 import { createAccessory3DService, parseKitPart, prepareManualAccessory } from "../services/accessory3d.js";
 import { createPartMapService } from "../services/car-part-map.js";
 import { autoFitAccessory, createAutoFitService } from "../services/accessory-autofit.js";
-import { cancelFitJob, createFitJob, currentFitJob } from "../services/accessory-fit-jobs.js";
+import { cancelFitJob, createFitJob, currentFitJob, resumeFitJob } from "../services/accessory-fit-jobs.js";
 import { Vehicle3DError } from "../services/vehicle3d-validation.js";
 
 export function createAccessory3DRouter(service = createAccessory3DService(), partMaps = createPartMapService(), autoFits = createAutoFitService(), guards = { auth: requireAuth, provider: requirePartsProvider, approved: requireApprovedProvider, admin: requirePartsAdmin, customer: requireCustomer }) {
@@ -88,6 +88,7 @@ export function createAccessory3DRouter(service = createAccessory3DService(), pa
   router.post(a + "/:id/fits/jobs", ...admin, selectionJson, handle(async (req, res, uid) => { const r = await createFitJob(uid, p(req, "id"), req.body ?? {}); res.status(r.job ? 202 : 200).json(r); }));
   router.get(a + "/:id/fits/jobs/current", ...admin, handle(async (req, res) => res.json(await currentFitJob(p(req, "id")))));
   router.post(a + "/:id/fits/jobs/:jobId/cancel", ...admin, handle(async (req, res, uid) => res.json(await cancelFitJob(uid, p(req, "id"), p(req, "jobId")))));
+  router.post(a + "/:id/fits/jobs/:jobId/resume", ...admin, handle(async (req, res, uid) => res.json(await resumeFitJob(uid, p(req, "id"), p(req, "jobId")))));
   router.put("/admin/parts/auto-fits/:accessoryId/:generationId", ...admin, json, handle(async (req, res, uid) => res.json({ fit: await autoFits.approve(uid, p(req, "accessoryId"), p(req, "generationId"), req.body ?? {}) })));
 
   const c = "/catalog/products/:productId/accessory-3d";

@@ -1539,6 +1539,10 @@ model AccessoryFitJob {
   targets          Json
   /// true = approved fits are re-run too (they lose their approval until reviewed again)
   includeApproved  Boolean               @default(false)
+  /// true = cars with a saved manual correction (adj, not approved) are re-run too and lose that correction (audited per car)
+  includeCorrections Boolean             @default(false)
+  /// a car-update refit of this accessory had to wait for this job: it runs when the job ends (done, failed or cancelled)
+  refitAfter       Boolean               @default(false)
   total            Int
   /// how many targets were handled (done + skipped + errors); the next one is targets[position]
   position         Int                   @default(0)

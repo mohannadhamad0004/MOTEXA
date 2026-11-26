@@ -151,7 +151,7 @@ export function MoClip({ clip, width = HERO_BOX.w, box, framing = { focusX: 0.5,
   const played = useRef(false);
   const replay = useCallback(() => {
     if (reduced) return toEnd();
-    if (once && played.current) return;
+    if (once && played.current) return toEnd(); // left mid-clip and came back: rest on the last frame, never a frozen middle one
     played.current = true;
     setEnded(false);
     call(() => {

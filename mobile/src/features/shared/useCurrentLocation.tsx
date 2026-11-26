@@ -1,11 +1,11 @@
 import { createLocationLifetime } from "./locationPolicy";
 import * as Location from "expo-location";
 import { useFocusEffect } from "expo-router";
-import { AppState, Platform } from "react-native";
+import { AppState, Platform, View } from "react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
-import MotexaDialog from "../../components/MotexaDialog";
 import { isFreshLocation, LocationFix, Point, rememberLocation } from "../../core/constants/geo";
-import { GButton, Note } from "../../components/garage";
+import { GButton, GText, Note, Sheet } from "../../components/garage";
+import { gType, useGarageTheme } from "../../theme/garage";
 import { useL } from "../../core/hooks/useL";
 import { getForegroundPermission, hasLocationServices, LocationIssue, openLocationSettings, toLocationFix, watchForegroundLocation, WatchPurpose } from "./locationService";
 
@@ -49,6 +49,7 @@ export function useCurrentLocation(
   ownerId?: string | null
 ) {
   const { t } = useL();
+  const { row, align } = useGarageTheme();
   const [status, setStatus] = useState<Status>("idle");
   const [shown, setShown] = useState<MessagePair | null>(null);
   const message = shown ? t(shown[0], shown[1]) : null;
@@ -171,31 +172,32 @@ export function useCurrentLocation(
   }, [issue]);
 
   const dialog = (
-    <MotexaDialog
-      visible={explain}
-      type="confirm"
-      title={t("Use your location?", "استخدام موقعك؟")}
-      message={
-        purpose === "directions"
-          ? t(
-              "Use your location on this map or delivery pin. Any live map updates stop when you leave the map; location is never tracked in the background.",
-              "استخدم موقعك على هذه الخريطة أو لتحديد دبوس التوصيل. تتوقف تحديثات الخريطة المباشرة عند مغادرتها، ولا يتم تتبع الموقع في الخلفية."
-            )
-          : purpose === "signup"
-          ? t(
-              "MOTEXA reads your location once to register where your business operates. It is not tracked in the background.",
-              "يقرأ MOTEXA موقعك مرة واحدة لتسجيل مكان عملك. ولا يتتبعه في الخلفية."
-            )
-          : t(
-              "MOTEXA reads your location while this foreground map is open to find nearby services or mark your car. It is not tracked in the background.",
-              "يقرأ MOTEXA موقعك أثناء فتح الخريطة في المقدمة للعثور على الخدمات القريبة أو تحديد مكان سيارتك. ولا يتتبعه في الخلفية."
-            )
-      }
-      confirmText={t("Continue", "متابعة")}
-      cancelText={t("Not now", "ليس الآن")}
-      onConfirm={() => reply(true)}
-      onCancel={() => reply(false)}
-    />
+    <Sheet visible={explain} onClose={() => reply(false)} title={t("Use your location?", "استخدام موقعك؟")} closeLabel={t("Not now", "ليس الآن")}>
+      <View style={{ gap: 14 }}>
+        <GText soft style={[gType.bodySm, align]}>
+          {
+            purpose === "directions"
+              ? t(
+                  "Use your location on this map or delivery pin. Any live map updates stop when you leave the map; location is never tracked in the background.",
+                  "استخدم موقعك على هذه الخريطة أو لتحديد دبوس التوصيل. تتوقف تحديثات الخريطة المباشرة عند مغادرتها، ولا يتم تتبع الموقع في الخلفية."
+                )
+              : purpose === "signup"
+              ? t(
+                  "MOTEXA reads your location once to register where your business operates. It is not tracked in the background.",
+                  "يقرأ MOTEXA موقعك مرة واحدة لتسجيل مكان عملك. ولا يتتبعه في الخلفية."
+                )
+              : t(
+                  "MOTEXA reads your location while this foreground map is open to find nearby services or mark your car. It is not tracked in the background.",
+                  "يقرأ MOTEXA موقعك أثناء فتح الخريطة في المقدمة للعثور على الخدمات القريبة أو تحديد مكان سيارتك. ولا يتتبعه في الخلفية."
+                )
+          }
+        </GText>
+        <View style={[row, { gap: 10 }]}>
+          <GButton flex variant="secondary" label={t("Not now", "ليس الآن")} onPress={() => reply(false)} />
+          <GButton flex icon="locate-outline" label={t("Continue", "متابعة")} onPress={() => reply(true)} />
+        </View>
+      </View>
+    </Sheet>
   );
 
   const problemState: ProblemState = {

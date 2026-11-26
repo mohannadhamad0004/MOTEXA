@@ -1,7 +1,7 @@
 // Provider applications in /dept (tow companies and parts shops): the Messages tab (Inbox), one thread with an applicant, and the one
 // review route (company / shop = application review, truck = the truck review).
 import { Href, router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { StatusChip as GStatusChip } from "../../components/garage";
 import { FilterChips, ManagePage, appStatus } from "../../components/manage/ManagePage";
 import { ThreadPage, ThreadRow } from "../../components/manage/Thread";
@@ -11,6 +11,7 @@ import { Attachment, Kind, review } from "../provider/api";
 import { ApplicationReview as NewApplicationReview } from "./applicationReview";
 import { useDepartment } from "./DepartmentContext";
 import { ReviewKind } from "./departments";
+import { MechanicApplicationReview } from "./mechanicsAdmin";
 import { TruckReview } from "./review";
 
 const go = (path: string) => router.push(path as Href);
@@ -57,11 +58,9 @@ export function DeptThread({ kind, id }: { kind: Kind; id: string }) {
   );
 }
 
-/** The one review route. company / shop = application review; truck = the vehicle; mechanics have no screen of ours (Diala's review screen is the Requests tab). */
+/** The one review route. company / shop = application review; truck = the vehicle; mechanic = the mechanic application (id = its user). */
 export function ReviewScreen({ kind, id }: { kind: ReviewKind; id: string }) {
-  useEffect(() => {
-    if (kind === "mechanic") router.replace("/dept/requests" as Href);
-  }, [kind]);
+  if (kind === "mechanic") return <MechanicApplicationReview userId={id} />;
   if (kind === "company") return <NewApplicationReview kind="TOW" id={id} />;
   if (kind === "shop") return <NewApplicationReview kind="PARTS" id={id} />;
   if (kind === "truck") return <TruckReview id={id} />;

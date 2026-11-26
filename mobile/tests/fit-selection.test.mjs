@@ -1,5 +1,5 @@
 import { test } from 'node:test'; import assert from 'node:assert/strict';
-import { ALL_MATCHING, MAX_PICKED, NONE, atLimit, etaText, isSelected, num, selectedCount, selectionBody, toggle, toggleRows } from '../src/features/accessory3d/fitSelection.ts';
+import { ALL_MATCHING, MAX_PICKED, NONE, atLimit, etaText, isSelected, num, rowBlocked, selectedCount, selectionBody, toggle, toggleRows } from '../src/features/accessory3d/fitSelection.ts';
 
 test('bulk fits selection: picked rows are sent as ids, "all matching" as the filter minus unticked rows (never thousands of ids)', () => {
   let s = toggle(toggle(NONE, 'a'), 'b');
@@ -33,4 +33,16 @@ test('job estimate text: rounded up minutes, hours past 60, nothing before the f
   assert.equal(etaText(25 * 60, true), 'نحو 25 دقيقة متبقية');
   assert.equal(etaText(3600 + 5 * 60, true), 'نحو 1 ساعة و5 دقيقة متبقية');
   assert.equal(num(5000), '5,000'); assert.equal(num(999), '999'); assert.equal(num(1234567), '1,234,567');
+});
+
+test('at the limit a checkbox only goes the way the server accepts: "all matching" with 500 left out blocks unticking one more, but an excluded row can be ticked back', () => {
+  let all = ALL_MATCHING;
+  for (let i = 0; i < MAX_PICKED; i++) all = toggle(all, `x${i}`);
+  assert.ok(atLimit(all));
+  assert.equal(rowBlocked(all, 'still-selected'), true, 'unticking a 501st car would be ignored: the row is disabled instead');
+  assert.equal(rowBlocked(all, 'x0'), false, 'a left-out car can be ticked back');
+  let picked = NONE;
+  for (let i = 0; i < MAX_PICKED; i++) picked = toggle(picked, `p${i}`);
+  assert.equal(rowBlocked(picked, 'p0'), false); assert.equal(rowBlocked(picked, 'other'), true);
+  assert.equal(rowBlocked(NONE, 'any'), false);
 });
