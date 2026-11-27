@@ -1,4 +1,4 @@
-// Provider applications in /dept (tow companies and parts shops): the Messages tab (Inbox), one thread with an applicant, and the one
+// Provider applications in /dept (tow companies, parts shops and garages): the Messages tab (Inbox), one thread with an applicant, and the one
 // review route (company / shop = application review, truck = the truck review).
 import { Href, router } from "expo-router";
 import { useCallback, useState } from "react";
@@ -15,7 +15,7 @@ import { MechanicApplicationReview } from "./mechanicsAdmin";
 import { TruckReview } from "./review";
 
 const go = (path: string) => router.push(path as Href);
-const kindLabel = (t: (en: string, ar: string) => string, k: Kind) => (k === "TOW" ? t("Tow company", "شركة سحب") : t("Parts shop", "متجر قطع غيار"));
+const kindLabel = (t: (en: string, ar: string) => string, k: Kind) => (k === "TOW" ? t("Tow company", "شركة سحب") : k === "GARAGE" ? t("Garage", "كراج") : t("Parts shop", "متجر قطع غيار"));
 
 // ---------------------------------------------------------------- messages
 /** The Messages tab: one row per application that has a thread. */
@@ -63,6 +63,7 @@ export function ReviewScreen({ kind, id }: { kind: ReviewKind; id: string }) {
   if (kind === "mechanic") return <MechanicApplicationReview userId={id} />;
   if (kind === "company") return <NewApplicationReview kind="TOW" id={id} />;
   if (kind === "shop") return <NewApplicationReview kind="PARTS" id={id} />;
+  if (kind === "garage") return <NewApplicationReview kind="GARAGE" id={id} />;
   if (kind === "truck") return <TruckReview id={id} />;
   return null;
 }

@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
-import { PARTS_PURPOSES, PROVIDER_STORAGE_DIR, TOW_PURPOSES } from "../uploads/providerFiles.js";
+import { GARAGE_PURPOSES, PARTS_PURPOSES, PROVIDER_STORAGE_DIR, TOW_PURPOSES } from "../uploads/providerFiles.js";
 
 // Serves provider files. Every request is resolved by id in the ProviderFile table: there is no directory
 // listing and no raw storage path ever leaves the server.
@@ -32,7 +32,8 @@ router.get("/public/:id", async (req, res) => {
   }
 });
 
-// PRIVATE files: the owner, SUPER_ADMIN, or ADMIN with MANAGE_TOWING (tow files) / MANAGE_SPARE_PARTS (parts files).
+// PRIVATE files: the owner, SUPER_ADMIN, or ADMIN with MANAGE_TOWING (tow files) / MANAGE_SPARE_PARTS (parts files) /
+// MANAGE_MECHANICS (garage files: documents, mechanic ID photos, garage message attachments).
 router.get("/private/:id", requireAuth, async (req, res) => {
   try {
     const user = res.locals.authUser as { id: string; role: string };
@@ -42,14 +43,14 @@ router.get("/private/:id", requireAuth, async (req, res) => {
     let allowed = file.ownerUserId === user.id || user.role === "SUPER_ADMIN";
     if (!allowed && user.role === "ADMIN") {
       const permission = file.purpose === "MESSAGE_ATTACHMENT"
-        ? file.towCompanyId
-          ? "MANAGE_TOWING"
-          : "MANAGE_SPARE_PARTS"
+        ? file.towCompanyId ? "MANAGE_TOWING" : file.garageId ? "MANAGE_MECHANICS" : "MANAGE_SPARE_PARTS"
         : (TOW_PURPOSES as readonly string[]).includes(file.purpose)
         ? "MANAGE_TOWING"
         : (PARTS_PURPOSES as readonly string[]).includes(file.purpose)
           ? "MANAGE_SPARE_PARTS"
-          : null;
+          : (GARAGE_PURPOSES as readonly string[]).includes(file.purpose)
+            ? "MANAGE_MECHANICS"
+            : null;
       allowed = !!permission && !!(await prisma.adminPermission.findUnique({ where: { adminId_permission: { adminId: user.id, permission } } }));
     }
     if (!allowed) return res.status(403).json({ success: false, message: "You do not have access to this file." });

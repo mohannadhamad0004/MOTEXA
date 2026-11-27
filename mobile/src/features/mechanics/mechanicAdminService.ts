@@ -10,7 +10,8 @@ export type AdminRequestRow = {
   skill: string | null;
   vehicle: { make: string; model: string; year: number | null };
   customerName: string;
-  mechanic: { id: string; name: string; workshopName: string | null; city: string | null };
+  /** id / name are null while a garage request waits for its owner to assign a mechanic (workshopName / city = the garage's) */
+  mechanic: { id: string | null; name: string | null; workshopName: string | null; city: string | null };
   /** where the car is: nearest city to the customer's pin; null without a pin. The mechanic's own city is mechanic.city. */
   city: string | null;
   timeline: { status: MechanicRequestStatus; at: string }[];
@@ -26,7 +27,8 @@ export type AdminRequestDetail = AdminRequestRow & {
   location: { text: string | null; point: { lat: number; lng: number } | null; area?: string | null; approximate?: boolean };
   contactPhone: string | null;
 };
-export type AdminStats = { activeRequests: number; waiting: number; accepted: number; inProgress: number; pendingApplications: number; verifiedMechanics: number };
+export type AdminStats = { activeRequests: number; waiting: number; accepted: number; onTheWay: number; inProgress: number; pendingApplications: number; verifiedMechanics: number;
+  pendingGarages: number; approvedGarages: number; pendingGarageMechanics: number; onlineGarageMechanics: number };
 
 export const ACTIVE_STATUSES = ["REQUESTED", "ACCEPTED", "IN_PROGRESS"] as const;
 export const HISTORY_STATUSES = ["COMPLETED", "DECLINED", "CANCELLED"] as const;

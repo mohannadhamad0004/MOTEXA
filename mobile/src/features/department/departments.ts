@@ -14,7 +14,7 @@ import type { Kind as ProviderKind } from "../provider/api";
 type IconName = keyof typeof Ionicons.glyphMap;
 export type DeptKey = "MANAGE_TOWING" | "MANAGE_SPARE_PARTS" | "MANAGE_MECHANICS";
 /** What a review route can open (mechanic = a mechanic application, by its user id). */
-export type ReviewKind = "company" | "truck" | "shop" | "mechanic";
+export type ReviewKind = "company" | "truck" | "shop" | "mechanic" | "garage";
 export type Status = "DRAFT" | "PENDING" | "NEEDS_CHANGES" | "APPROVED" | "REJECTED";
 export type T = (en: string, ar: string) => string;
 
@@ -49,7 +49,7 @@ export type Dept = {
   endpoints: { stats: string; list: string[]; decide: string[] };
   stats: StatTile[];
   loadStats: () => Promise<Record<string, number>>;
-  /** which provider applications this department reviews (tow / parts); null for mechanics */
+  /** which provider applications this department reviews (tow / parts / garage) */
   provider: ProviderKind | null;
   /** applications = the New / Needs changes / Approved / Rejected tabs; screen = Diala's review screen (mechanics) */
   requests: { mode: "applications" } | { mode: "screen" };
@@ -210,7 +210,7 @@ const mechanics: Dept = {
     const [r, s] = await Promise.all([api<{ counts: Record<string, number> }>("GET", "/mechanics/admin"), api<{ stats: { activeRequests: number } }>("GET", "/admin/mechanics/stats")]);
     return { PENDING: r.counts.PENDING ?? 0, NEEDS_COMPLETION: r.counts.NEEDS_COMPLETION ?? 0, VERIFIED: r.counts.VERIFIED ?? 0, ACTIVE_REQUESTS: s.stats.activeRequests };
   },
-  provider: null,
+  provider: "GARAGE", // garage applications (their Messages threads); mechanic applications have their own screens
   requests: { mode: "screen" },
   directory: {
     titleEn: "Verified mechanics",
@@ -224,7 +224,7 @@ const mechanics: Dept = {
       return r.profiles.map((p) => ({ id: p.userId, kind: "mechanic" as const, title: p.user.fullName, subtitle: [p.user.email, p.city].filter(Boolean).join(" · "), meta: p.specializations.slice(0, 3), status: "APPROVED" as const }));
     },
   },
-  review: { kinds: [] },
+  review: { kinds: ["mechanic", "garage"] },
   shortcuts: [
     { id: "requests", en: "Requests", ar: "الطلبات", descEn: "Customer requests and professional applications", descAr: "طلبات الزبائن وطلبات الانضمام", icon: "clipboard-outline", photo: 1 },
     { id: "directory", en: "Verified mechanics", ar: "الميكانيكيون الموثّقون", descEn: "Approved mechanics on the platform", descAr: "الميكانيكيون المعتمدون في المنصة", icon: "people-outline", photo: 2 },

@@ -34,6 +34,10 @@ export function useMechanicStatusLabels() {
   return label;
 }
 
+/** The steps of a request: on site the mechanic goes on the way and arrives before starting; a workshop visit starts after accepting. */
+export const pathOf = (mode: string | null): MechanicRequestStatus[] =>
+  mode === "ON_SITE" ? ["REQUESTED", "ACCEPTED", "EN_ROUTE", "ARRIVED", "IN_PROGRESS", "COMPLETED"] : ["REQUESTED", "ACCEPTED", "IN_PROGRESS", "COMPLETED"];
+
 /** A mechanic application's status as the shared chip (mechanic home and the Mechanics admin use the same words). */
 const APP: Record<string, [Tone, string, string]> = {
   DRAFT: ["neutral", "Draft", "مسودة"], PENDING: ["accent", "Under review", "قيد المراجعة"], NEEDS_COMPLETION: ["warning", "Needs completion", "يحتاج استكمالًا"],

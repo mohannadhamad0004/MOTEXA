@@ -79,7 +79,7 @@ export default function MyRequests() {
       tone: mechTone(r.status),
       at: r.updatedAt,
       href: `/customer/mechanicrequest/${r.id}`,
-      active: ["REQUESTED", "ACCEPTED", "IN_PROGRESS"].includes(r.status),
+      active: ["REQUESTED", "ACCEPTED", "EN_ROUTE", "ARRIVED", "IN_PROGRESS"].includes(r.status),
       fresh: false,
     })),
   ].sort((a, b) => b.at.localeCompare(a.at));

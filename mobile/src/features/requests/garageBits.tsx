@@ -12,7 +12,7 @@ export const toSteps = (items: TimelineItem[]): TimelineStep[] =>
   items.map((it) => ({ label: it.label, at: it.at, state: it.state === "now" ? "current" : it.state === "next" ? "todo" : it.state === "failed" ? "failed" : "done" }));
 
 export const towTone = (s: TowStatus): Tone => ({ REQUESTED: "accent", ACCEPTED: "success", EN_ROUTE: "success", IN_PROGRESS: "success", COMPLETED: "success", DECLINED: "danger", CANCELLED: "neutral" } as const)[s];
-export const mechTone = (s: string): Tone => (({ REQUESTED: "accent", ACCEPTED: "success", IN_PROGRESS: "success", COMPLETED: "success", DECLINED: "danger", CANCELLED: "neutral" }) as Record<string, Tone>)[s] ?? "neutral";
+export const mechTone = (s: string): Tone => (({ REQUESTED: "accent", ACCEPTED: "success", EN_ROUTE: "success", ARRIVED: "success", IN_PROGRESS: "success", COMPLETED: "success", DECLINED: "danger", CANCELLED: "neutral" }) as Record<string, Tone>)[s] ?? "neutral";
 export const inquiryTone = (s: InquiryStatus): Tone => ({ OPEN: "accent", ANSWERED: "success", CLOSED: "neutral" } as const)[s];
 
 const dayKey = (iso: string) => iso.slice(0, 10);

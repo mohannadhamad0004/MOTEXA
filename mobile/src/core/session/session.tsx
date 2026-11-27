@@ -10,7 +10,7 @@ export type SessionUser = {
   status: string;
   adminPermissions: { permission: string }[];
   /** Work with MOTEXA: this account's provider applications (from /auth/me). */
-  applications?: { kind: "MECHANIC" | "TOW" | "PARTS"; status: string }[];
+  applications?: { kind: "MECHANIC" | "TOW" | "PARTS" | "GARAGE"; status: string }[];
 };
 
 /** A customer with a provider application of one of these kinds: may open that application's wizard (UX only; the server checks). */
@@ -19,6 +19,7 @@ export const isApplicant = (u: SessionUser, kinds: string[]) => u.role === "CUST
 // UX gating only. These are NOT security: real endpoints must enforce the same rules server-side.
 export const isPartsProvider = (u: SessionUser) => u.role === "PARTS_PROVIDER";
 export const isTowProvider = (u: SessionUser) => u.role === "TOW_PROVIDER";
+export const isGarageOwner = (u: SessionUser) => u.role === "GARAGE_OWNER";
 /** a tow driver login, or a company owner who also drives (the server checks the TowDriver link) */
 export const isTowDriver = (u: SessionUser) => u.role === "TOW_DRIVER" || u.role === "TOW_PROVIDER";
 const hasPerm = (u: SessionUser, p: string) =>

@@ -13,7 +13,7 @@ import { fmtDateTime } from "../../../features/requests/requestBits";
 
 type Tab = "new" | "active" | "past";
 // What a mechanic thinks in: waiting for an answer, on a job, finished.
-const GROUPS: Record<Tab, MechanicRequestStatus[]> = { new: ["REQUESTED"], active: ["ACCEPTED", "IN_PROGRESS"], past: ["COMPLETED", "DECLINED", "CANCELLED"] };
+const GROUPS: Record<Tab, MechanicRequestStatus[]> = { new: ["REQUESTED"], active: ["ACCEPTED", "EN_ROUTE", "ARRIVED", "IN_PROGRESS"], past: ["COMPLETED", "DECLINED", "CANCELLED"] };
 const isTab = (v?: string): v is Tab => v === "new" || v === "active" || v === "past";
 
 export default function MechanicInbox() {

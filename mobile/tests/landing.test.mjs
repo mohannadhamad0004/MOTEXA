@@ -7,6 +7,7 @@ import { landingFor } from "../src/core/session/landing.ts";
 const HOMES = [
   ["CUSTOMER", [], "/customer"],
   ["MECHANIC", [], "/mechanic"],
+  ["GARAGE_OWNER", [], "/garage"],
   ["PARTS_PROVIDER", [], "/provider/parts"],
   ["TOW_PROVIDER", [], "/provider/tow"],
   ["TOW_DRIVER", [], "/driver"],
@@ -24,7 +25,7 @@ test("every role lands on its own home, and the home exists", () => {
     assert.equal(landingFor(role, permissions), home, `${role} ${permissions}`);
     assert.ok(routeExists(home), `${home} has a screen`);
   }
-  assert.equal(new Set(HOMES.filter(([r]) => r !== "ADMIN").map(([, , h]) => h)).size, 6, "no two roles share a home (admins share /dept, scoped by permission)");
+  assert.equal(new Set(HOMES.filter(([r]) => r !== "ADMIN").map(([, , h]) => h)).size, 7, "no two roles share a home (admins share /dept, scoped by permission)");
 });
 
 test("no area for an admin without a department, or an unknown role", () => {

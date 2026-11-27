@@ -1,8 +1,8 @@
-// Client for the provider onboarding (tow companies and parts shops) and for the department review of those applications.
+// Client for the provider onboarding (tow companies, parts shops and garages) and for the department review of those applications.
 // Real backend only. Paths are relative to /api (core/config/api builds the URL).
 import { api } from "../../core/config/api";
 
-export type Kind = "TOW" | "PARTS";
+export type Kind = "TOW" | "PARTS" | "GARAGE";
 export type AppStatus = "DRAFT" | "PENDING" | "NEEDS_CHANGES" | "APPROVED" | "REJECTED";
 export type DocStatus = "PENDING" | "ACCEPTED" | "REJECTED";
 
@@ -64,8 +64,8 @@ export const notifications = {
   readAll: () => api("POST", "/notifications/read-all"),
 };
 
-// ---- the department's side (kind picks /tow or /parts; the server checks the permission)
-const base = (k: Kind) => `/admin/providers/${k === "TOW" ? "tow" : "parts"}`;
+// ---- the department's side (kind picks /tow, /parts or /garage (mechanics admins); the server checks the permission)
+const base = (k: Kind) => `/admin/providers/${k === "TOW" ? "tow" : k === "GARAGE" ? "garage" : "parts"}`;
 export type Tab = "NEW" | "NEEDS_CHANGES" | "APPROVED" | "REJECTED";
 export type ListRow = { id: string; name: string; ownerName: string; city: string; status: AppStatus; submittedAt: string | null; documents: number; pendingDocuments: number; unreadMessages: number };
 export type Thread = { id: string; name: string; status: AppStatus; last: string; lastFrom: string; at: string | null; unread: number };

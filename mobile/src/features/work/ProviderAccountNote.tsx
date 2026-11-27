@@ -3,16 +3,16 @@ import { Note } from "../../components/garage";
 import { useL } from "../../core/hooks/useL";
 import { useSessionUser } from "../../core/session/session";
 
-export type WorkKind = "MECHANIC" | "TOW" | "PARTS";
+export type WorkKind = "MECHANIC" | "TOW" | "PARTS" | "GARAGE";
 type T = (en: string, ar: string) => string;
 
 export const workKindLabel = (t: T, k: WorkKind) =>
-  k === "MECHANIC" ? t("Mechanic", "ميكانيكي") : k === "TOW" ? t("Tow company", "شركة سحب") : t("Parts shop", "متجر قطع غيار");
+  k === "MECHANIC" ? t("Mechanic", "ميكانيكي") : k === "TOW" ? t("Tow company", "شركة سحب") : k === "GARAGE" ? t("Garage", "كراج") : t("Parts shop", "متجر قطع غيار");
 
 export const providerAccountText = (t: T, k: WorkKind) =>
   t(
-    `After approval, this account becomes a ${k === "MECHANIC" ? "mechanic" : k === "TOW" ? "tow company" : "parts shop"} account: the customer screens (tow and mechanic requests, parts orders, My Garage) are no longer available on it. To keep booking as a customer, use a separate email.`,
-    `بعد الموافقة يصبح هذا الحساب حساب ${k === "MECHANIC" ? "ميكانيكي" : k === "TOW" ? "شركة سحب" : "متجر قطع غيار"}: لن تبقى شاشات الزبون (طلبات السحب والميكانيكي وطلبات القطع وكراجي) متاحة عليه. لمتابعة الحجز كزبون استخدم بريدًا إلكترونيًا آخر.`,
+    `After approval, this account becomes a ${k === "MECHANIC" ? "mechanic" : k === "TOW" ? "tow company" : k === "GARAGE" ? "garage" : "parts shop"} account: the customer screens (tow and mechanic requests, parts orders, My Garage) are no longer available on it. To keep booking as a customer, use a separate email.`,
+    `بعد الموافقة يصبح هذا الحساب حساب ${k === "MECHANIC" ? "ميكانيكي" : k === "TOW" ? "شركة سحب" : k === "GARAGE" ? "كراج" : "متجر قطع غيار"}: لن تبقى شاشات الزبون (طلبات السحب والميكانيكي وطلبات القطع وكراجي) متاحة عليه. لمتابعة الحجز كزبون استخدم بريدًا إلكترونيًا آخر.`,
   );
 
 /** Label + tone of an application status (mechanic and provider status names). */

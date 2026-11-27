@@ -164,6 +164,25 @@ export function useMechanicRequestForm(mechanic: { id?: string; garageId?: strin
 }
 export type MechanicForm = ReturnType<typeof useMechanicRequestForm>;
 
+/** On site (the mechanic comes; a GPS point or pin is required) or at the workshop (the customer brings the car; pin optional). */
+export function ModeChips({ form }: { form: MechanicForm }) {
+  const { t } = useL();
+  const { row, align } = useGarageTheme();
+  return (
+    <View style={{ gap: 6, marginBottom: 12 }}>
+      <View style={[row, { gap: 8, flexWrap: "wrap" }]}>
+        <GChip icon="car-outline" label={t("On site", "في موقعي")} on={form.mode === "ON_SITE"} onPress={() => form.setMode("ON_SITE")} />
+        <GChip icon="business-outline" label={t("At the workshop", "في الورشة")} on={form.mode === "WORKSHOP"} onPress={() => form.setMode("WORKSHOP")} />
+      </View>
+      <GText soft style={[gType.tiny, align]}>
+        {form.mode === "ON_SITE"
+          ? t("The mechanic comes to the car: your location or a pin on the map is required.", "يأتي الميكانيكي إلى السيارة: موقعك أو دبوس على الخريطة مطلوب.")
+          : t("You bring the car to the workshop. A pin is optional.", "تُحضر السيارة إلى الورشة. الدبوس اختياري.")}
+      </GText>
+    </View>
+  );
+}
+
 /** The form fields (skills come from this mechanic's approved skills). */
 export function MechanicRequestFields({ form, skills, pinMap, numbered = true }: { form: MechanicForm; skills: string[]; pinMap: boolean; numbered?: boolean }) {
   const { t } = useL();
@@ -210,6 +229,7 @@ export function MechanicRequestFields({ form, skills, pinMap, numbered = true }:
         "04",
         t("Where and when", "المكان والوقت"),
         <Card>
+          <ModeChips form={form} />
           {form.loc.dialog}
           <Button
             variant="ghost"
@@ -219,7 +239,7 @@ export function MechanicRequestFields({ form, skills, pinMap, numbered = true }:
             onPress={form.useHere}
           />
           <LocationProblem loc={form.loc} />
-          <Input label={t("Where is the car?", "أين السيارة؟")} value={form.where} onChangeText={form.editWhere} multiline maxLength={300} />
+          <Input label={form.mode === "ON_SITE" ? t("Where is the car?", "أين السيارة؟") : t("Your area", "منطقتك")} value={form.where} onChangeText={form.editWhere} multiline maxLength={300} />
           {MAPS_AVAILABLE && pinMap && form.spot ? (
             <>
               <PinMap point={form.spot} onChange={(p) => form.place(p, false)} />
@@ -250,7 +270,7 @@ export function MechanicRequestFields({ form, skills, pinMap, numbered = true }:
         t("Contact (optional)", "التواصل (اختياري)"),
         <Card>
           <Input label={t("Phone number", "رقم الهاتف")} value={form.phone} onChangeText={form.setPhone} keyboardType="phone-pad" maxLength={20} />
-          <Text style={[{ color: c.soft, fontSize: 11, marginTop: -8 }, align]}>{t("Shared only with this mechanic.", "يُشارك مع هذا الميكانيكي فقط.")}</Text>
+          <Text style={[{ color: c.soft, fontSize: 11, marginTop: -8 }, align]}>{t("Shared only with the mechanic doing the job.", "يُشارك مع الميكانيكي المنفّذ فقط.")}</Text>
         </Card>
       )}
     </>

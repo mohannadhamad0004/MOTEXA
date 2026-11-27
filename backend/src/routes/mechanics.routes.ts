@@ -129,9 +129,10 @@ router.get("/options", (_req, res) =>
 );
 router.get("/me", async (_req, res) => {
   const userId = own(res);
-  // Every mechanic account has a profile: one created without it (older dev accounts) starts as a draft application.
-  // Never for a customer: their application starts only through POST /apply/mechanic (active-work check, confirmation).
-  if (res.locals.authUser.role === "MECHANIC" && !(await prisma.mechanicProfile.findUnique({ where: { userId }, select: { id: true } })))
+  // Every independent mechanic account has a profile: one created without it (older dev accounts) starts as a draft application.
+  // Never for a customer (their application starts only through POST /apply/mechanic) and never for a GARAGE mechanic: his garage
+  // added him and MOTEXA reviews his ID instead (GET /mechanic/me/duty), so he gets 404 here.
+  if (res.locals.authUser.role === "MECHANIC" && !(await prisma.mechanicProfile.findUnique({ where: { userId }, select: { id: true } })) && !(await prisma.garageMechanic.findUnique({ where: { userId }, select: { id: true } })))
     await prisma.mechanicProfile
       .create({ data: { userId, specializations: [], verificationStatus: "DRAFT" } })
       .catch((e) => {

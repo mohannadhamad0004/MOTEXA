@@ -8,7 +8,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { test } from "node:test";
 
 const SRC = resolve("src");
-const AREAS = ["app/dept", "app/admin", "app/provider", "app/driver", "app/mechanic"];
+const AREAS = ["app/dept", "app/admin", "app/provider", "app/driver", "app/mechanic", "app/garage"];
 const CUSTOMER_LOOK = new Set(["app/provider/parts/preview.tsx", "app/provider/tow/preview.tsx"]);
 /** old frames by name, old kits by path */
 const OLD_NAMES = ["DeptPage", "DeptHero", "DeptHead", "GaragePage", "GarageHero", "DashboardLayout", "ProviderLayout", "MechanicPage"];

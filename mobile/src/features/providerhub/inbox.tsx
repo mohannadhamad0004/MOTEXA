@@ -1,4 +1,4 @@
-// Messages of both provider roles = Inbox (docs/guide/10-ui-system.md): the thread with the MOTEXA team and, for a parts shop, each
+// Messages of the provider roles (tow company, parts shop, garage owner) = Inbox (docs/guide/10-ui-system.md): the thread with the MOTEXA team and, for a parts shop, each
 // order's chat with its customer; unread first. A row opens the thread (ThreadPage, message box at the bottom).
 import { router, type Href } from "expo-router";
 import { useCallback, useState } from "react";
@@ -14,7 +14,7 @@ import type { ProviderArea } from "../provider/portal/types";
 type Row = { id: string; name: string; last: string; at: string | null; unread: number; to: string };
 const pick = (text: string, ar: boolean) => (text.split("||")[ar && text.includes("||") ? 1 : 0] ?? "").trim();
 
-export function ProviderInbox({ area }: { area: ProviderArea }) {
+export function ProviderInbox({ area }: { area: ProviderArea | "garage" }) {
   const { t, isArabic } = useL();
   const motexa = useLoad(() => onboarding.messages(), [], 15000);
   // the shop's order chats: new and active orders, and finished ones with unread messages
@@ -26,7 +26,7 @@ export function ProviderInbox({ area }: { area: ProviderArea }) {
   const [q, setQ] = useState(""), [show, setShow] = useState<"ALL" | "UNREAD">("ALL");
   const last = motexa.data?.messages[motexa.data.messages.length - 1];
   const all: Row[] = [
-    ...(motexa.data ? [{ id: "motexa", name: t("MOTEXA team", "فريق موتكسا"), last: last ? `${last.from === "PROVIDER" ? t("You: ", "أنت: ") : ""}${pick(last.body, isArabic)}` : t("Write to us any time.", "راسلنا في أي وقت."), at: last?.at ?? null, unread: motexa.data.unread, to: `/provider/${area}/motexa` }] : []),
+    ...(motexa.data ? [{ id: "motexa", name: t("MOTEXA team", "فريق موتكسا"), last: last ? `${last.from === "PROVIDER" ? t("You: ", "أنت: ") : ""}${pick(last.body, isArabic)}` : t("Write to us any time.", "راسلنا في أي وقت."), at: last?.at ?? null, unread: motexa.data.unread, to: area === "garage" ? "/garage/motexa" : `/provider/${area}/motexa` }] : []),
     ...(orders.data ?? []).map((o) => ({ id: o.id, name: `${o.customer.firstName} · ${t("order", "طلب")} ${o.id.slice(0, 6).toUpperCase()}`,
       last: `${o.items.map((i) => `${i.name} ×${i.quantity}`).join(", ")} · ${formatPrice(o.total)}`, at: o.updatedAt, unread: o.unread, to: `/provider/parts/orders/chat/${o.id}` })),
   ];

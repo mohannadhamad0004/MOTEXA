@@ -1,12 +1,13 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
-import { Card, Chip, EmptyState, ErrorState, GaragePage, HeroLayout, GButton, GIcon, GText, IconButton, Note, OptionSheet, Rail, SearchBar, SkeletonRows, StatusChip, Tap } from "../../../components/garage";
+import { Card, Chip, EmptyState, ErrorState, GaragePage, HeroLayout, GButton, GIcon, GText, IconButton, Note, OptionSheet, Rail, SearchBar, SkeletonRows, StatusChip, Tabs, Tap } from "../../../components/garage";
 import { CITIES, cityLabel } from "../../../core/constants/cities";
 import { Point, locationMemory, roundPoint } from "../../../core/constants/geo";
 import { useL } from "../../../core/hooks/useL";
+import { useLoad } from "../../../core/hooks/useLoad";
 import { useSkillLabel } from "../../../features/mechanics/mechanicBits";
-import { MECHANIC_SKILLS, MechanicRow, mechanicCatalog } from "../../../features/mechanics/mechanicsService";
+import { GarageCard as GarageRow, MECHANIC_SKILLS, MechanicRow, garageCatalog, mechanicCatalog } from "../../../features/mechanics/mechanicsService";
 import { InitialBubble, SkillChips } from "../../../features/requests/garageBits";
 import { LocationProblem, useCurrentLocation } from "../../../features/shared/useCurrentLocation";
 import { gShape, gType, useGarageTheme } from "../../../theme/garage";
@@ -43,6 +44,39 @@ function MechanicCard({ m }: { m: MechanicRow }) {
   );
 }
 
+/** One verified garage: name, city (+ distance), services, how many of its mechanics are free now. */
+function GarageCard({ x }: { x: GarageRow }) {
+  const { g, row, align } = useGarageTheme();
+  const { t, isArabic } = useL();
+  const skillLabel = useSkillLabel();
+  const name = isArabic && x.nameAr ? x.nameAr : x.name;
+  return (
+    <Card onPress={() => router.push(`/customer/garages/${x.id}`)} label={name} pad={14}>
+      <View style={[row, { gap: 12, alignItems: "flex-start" }]}>
+        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: g.tint, alignItems: "center", justifyContent: "center" }}>
+          <GIcon name="business-outline" size={22} color={g.accentText} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+          <GText numberOfLines={2} style={[gType.label, { fontWeight: "800", fontSize: 16 }, align]}>{name}</GText>
+          <View style={[row, { alignItems: "center", gap: 4, flexWrap: "wrap" }]}>
+            <GIcon name="location-outline" size={13} color={g.soft} />
+            <GText soft numberOfLines={1} style={[gType.caption, { flexShrink: 1 }]}>{[cityLabel(x.city, isArabic), x.open24h ? t("Open 24/7", "مفتوح 24/7") : x.workingHours].filter(Boolean).join(" · ")}</GText>
+            {x.distanceKm != null ? <GText soft style={[gType.caption, { writingDirection: "ltr" }]}>{`· ${kmText(x.distanceKm, isArabic)}`}</GText> : null}
+          </View>
+          <View style={{ marginTop: 8 }}>
+            <SkillChips skills={x.services} label={skillLabel} />
+          </View>
+          <View style={[row, { marginTop: 8, gap: 8, flexWrap: "wrap" }]}>
+            <StatusChip tone="success" icon="shield-checkmark" label={t("Verified by MOTEXA", "موثّق من موتكسا")} />
+            <StatusChip tone={x.freeCount ? "success" : "neutral"} label={`${x.freeCount}/${x.mechanicsCount} ${t("free now", "متاح الآن")}`} />
+          </View>
+        </View>
+        <GIcon name="chevron-forward" size={16} color={g.soft} flip />
+      </View>
+    </Card>
+  );
+}
+
 export default function CustomerMechanics() {
   const { g, row } = useGarageTheme();
   const { t, isArabic } = useL();
@@ -55,6 +89,16 @@ export default function CustomerMechanics() {
   const [me, setMe] = useState<Point | null>(locationMemory.current);
   const loc = useCurrentLocation();
   const filtered = !!(name.trim() || city || skill);
+  // Mechanics | Garages: same search, city, skill and position; a garage request lets the owner pick the mechanic
+  const params = useLocalSearchParams<{ seg?: string }>();
+  const [seg, setSeg] = useState<"mechanics" | "garages">(params.seg === "garages" ? "garages" : "mechanics");
+  const [gName, setGName] = useState("");
+  useEffect(() => { const h = setTimeout(() => setGName(name.trim()), 350); return () => clearTimeout(h); }, [name]);
+  const garages = useLoad(async () => {
+    if (seg !== "garages") return null;
+    const p = me ? roundPoint(me) : null;
+    return garageCatalog.list({ q: gName, city, skill: skill ?? undefined, ...(p ? { lat: p.lat, lng: p.lng } : {}) });
+  }, [seg, gName, city, skill, me]);
 
   const [items, setItems] = useState<MechanicRow[]>([]);
   const [page, setPage] = useState(1);
@@ -124,8 +168,12 @@ export default function CustomerMechanics() {
 
 
   const where = me ? t("near you", "بالقرب منك") : city ? `${t("in", "في")} ${cityLabel(city, isArabic)}` : "";
-  const line =
-    total === null
+  const gCount = garages.data?.length ?? null;
+  const line = seg === "garages"
+    ? gCount === null
+      ? t("Looking for garages…", "جارٍ البحث عن كراجات…")
+      : `${gCount} ${gCount === 1 ? t("verified garage", "كراج موثّق") : t("verified garages", "كراجات موثّقة")}${where ? " " + where : ""}`
+    : total === null
       ? t("Looking for mechanics…", "جارٍ البحث عن ميكانيكيين…")
       : total === 0
         ? t("No verified mechanics found", "لا يوجد ميكانيكيون موثّقون")
@@ -139,7 +187,7 @@ export default function CustomerMechanics() {
       tabs
       entry="mechanics"
       refreshing={refreshing}
-      onRefresh={() => run("refresh")}
+      onRefresh={() => (seg === "garages" ? void garages.reload() : run("refresh"))}
       hero={
         <HeroLayout
           config={{
@@ -154,9 +202,12 @@ export default function CustomerMechanics() {
       }
     >
       {loc.dialog}
+      <View style={{ marginBottom: 12 }}>
+        <Tabs value={seg} onChange={setSeg} options={[{ key: "mechanics", label: t("Mechanics", "الميكانيكيون") }, { key: "garages", label: t("Garages", "الكراجات") }]} />
+      </View>
       <View style={[row, { alignItems: "center", gap: 10 }]}>
         <View style={{ flex: 1 }}>
-          <SearchBar value={name} onChangeText={setName} placeholder={t("Mechanic or workshop name", "اسم الميكانيكي أو الورشة")} />
+          <SearchBar value={name} onChangeText={setName} placeholder={seg === "garages" ? t("Garage name", "اسم الكراج") : t("Mechanic or workshop name", "اسم الميكانيكي أو الورشة")} />
         </View>
         <IconButton icon="location-outline" label={t("City", "المدينة")} onPress={() => setCityOpen(true)} tone={city ? "accent" : "card"} />
       </View>
@@ -172,13 +223,13 @@ export default function CustomerMechanics() {
         <Rail gap={8}>
           <Chip label={t("All", "الكل")} on={!skill} onPress={() => setSkill(null)} />
           {skillKeys.map((k) => (
-            <Chip key={k} label={skillLabel(k)} on={skill === k} count={counts?.[k]} onPress={() => setSkill(skill === k ? null : k)} />
+            <Chip key={k} label={skillLabel(k)} on={skill === k} count={seg === "mechanics" ? counts?.[k] : undefined} onPress={() => setSkill(skill === k ? null : k)} />
           ))}
         </Rail>
       </View>
 
       <View style={[row, { marginTop: 12, alignItems: "center", flexWrap: "wrap", gap: 8, minHeight: 34 }]}>
-        <GText soft style={[gType.caption, { fontWeight: "700" }]}>{total !== null ? `${total} ${total === 1 ? t("mechanic", "ميكانيكي") : t("mechanics", "ميكانيكيين")}` : " "}</GText>
+        <GText soft style={[gType.caption, { fontWeight: "700" }]}>{seg === "garages" ? (gCount !== null ? `${gCount} ${gCount === 1 ? t("garage", "كراج") : t("garages", "كراجات")}` : " ") : total !== null ? `${total} ${total === 1 ? t("mechanic", "ميكانيكي") : t("mechanics", "ميكانيكيين")}` : " "}</GText>
         {city ? (
           <Tap label={cityLabel(city, isArabic)} onPress={() => setCity("")} style={[row, { minHeight: 34, alignItems: "center", gap: 6, paddingHorizontal: 12, borderRadius: gShape.pill, backgroundColor: g.tint }]}>
             <GText style={[gType.caption, { fontWeight: "700" }]}>{cityLabel(city, isArabic)}</GText>
@@ -188,7 +239,21 @@ export default function CustomerMechanics() {
       </View>
 
       <View style={{ marginTop: 8, gap: 12 }}>
-        {loading && !items.length ? (
+        {seg === "garages" ? (
+          garages.loading && !garages.data ? (
+            <SkeletonRows count={4} />
+          ) : garages.error && !garages.data ? (
+            <ErrorState text={garages.error} onRetry={garages.reload} retryLabel={t("Retry", "إعادة المحاولة")} />
+          ) : !garages.data?.length ? (
+            <EmptyState
+              photo="empty.search"
+              text={filtered ? t("No garages match these filters", "لا توجد كراجات تطابق هذه التصفية") : t("No verified garages are available yet.", "لا توجد كراجات موثّقة بعد.")}
+              action={filtered ? { label: t("Clear filters", "مسح التصفية"), onPress: clearAll } : undefined}
+            />
+          ) : (
+            garages.data.map((x) => <GarageCard key={x.id} x={x} />)
+          )
+        ) : loading && !items.length ? (
           <SkeletonRows count={4} />
         ) : error && !items.length ? (
           <ErrorState text={error} onRetry={() => run("replace")} retryLabel={t("Retry", "إعادة المحاولة")} />

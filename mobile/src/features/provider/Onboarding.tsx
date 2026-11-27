@@ -1,4 +1,4 @@
-// Provider onboarding for tow companies and parts shops, in the look of the mechanic onboarding (Diala's mechanic UI kit).
+// Provider onboarding for tow companies, parts shops and garages, in the look of the mechanic onboarding (Diala's mechanic UI kit).
 //   DRAFT           -> vertical stepper: 1 Information, 2 Documents, 3 Review and submit (saved on the server after each step)
 //   PENDING         -> status screen: timeline + messages, nothing editable
 //   NEEDS_CHANGES   -> status screen with what the reviewer flagged + "Fix and resubmit" (opens the stepper again)
@@ -25,6 +25,8 @@ import { Application, Doc, Info, TruckRow, onboarding } from "./api";
 import { actionLabel, appStatusLabel, bi, docLabel, docStatusLabel, fmtDay, fmtTime, keyLabel, truckTypeLabel } from "./labels";
 import { VerticalStepper, useDocViewer } from "./ui";
 import { useSessionUser } from "../shared/session";
+import { MECHANIC_SKILLS } from "../mechanics/mechanicsService";
+import { useSkillLabel } from "../mechanics/mechanicBits";
 import { ProviderAccountNote, applicationStatus } from "../work/ProviderAccountNote";
 
 /** A customer applicant (Work with MOTEXA) goes back to their customer account from here; providers have their own area. */
@@ -69,8 +71,11 @@ function Wrap({ children }: { children: ReactNode }) {
 function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: Application) => void; onNext: () => void }) {
   const m = useFormTheme();
   const tow = app.kind === "TOW";
+  const garage = app.kind === "GARAGE";
+  const skillLabel = useSkillLabel();
   const i = app.info;
   const flagged = new Set(app.flaggedFields);
+  const [services, setServices] = useState<string[]>(i.services ?? []);
   const [f, setF] = useState({
     name: i.name ?? "",
     nameAr: i.nameAr ?? "",
@@ -81,6 +86,7 @@ function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: App
     workingHours: i.workingHours && i.workingHours !== "24/7" ? i.workingHours : "",
     brands: (i.brands ?? []).join(", "),
     count: i.truckCountClaimed ? String(i.truckCountClaimed) : "",
+    description: i.description ?? "",
   });
   const [cities, setCities] = useState<string[]>(i.serviceCities ?? []);
   const [truckTypes, setTruckTypes] = useState<string[]>(i.truckTypes ?? []);
@@ -108,6 +114,7 @@ function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: App
     try {
       const body: Info = { name: f.name, nameAr: f.nameAr, ownerName: f.ownerName, phone: f.phone, city: f.city, address: f.address, baseLat: pin?.lat ?? null, baseLng: pin?.lng ?? null };
       if (tow) Object.assign(body, { serviceCities: cities, open24h: open24, truckTypes, truckCountClaimed: f.count ? Number(f.count) : null, ...(open24 ? {} : { workingHours: f.workingHours }) });
+      else if (garage) Object.assign(body, { open24h: open24, description: f.description, ...(services.length ? { services } : {}), ...(open24 ? {} : { workingHours: f.workingHours }) });
       else Object.assign(body, { categories: cats, brands: f.brands.split(",").map((x: string) => x.trim()).filter(Boolean), workingHours: f.workingHours });
       onSaved(await onboarding.saveInfo(body));
       onNext();
@@ -123,8 +130,8 @@ function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: App
     <ProviderCard>
       <View style={{ gap: 13 }}>
         {error ? <ProviderNote error>{error}</ProviderNote> : null}
-        <IconField label={tow ? m.t("Company name", "اسم الشركة") : m.t("Shop name", "اسم المتجر")} icon="business-outline" value={f.name} onChangeText={set("name")} maxLength={120} />
-        <IconField label={tow ? m.t("Company name in Arabic", "اسم الشركة بالعربية") : m.t("Shop name in Arabic", "اسم المتجر بالعربية")} icon="text-outline" value={f.nameAr} onChangeText={set("nameAr")} maxLength={120} />
+        <IconField label={tow ? m.t("Company name", "اسم الشركة") : garage ? m.t("Garage name", "اسم الكراج") : m.t("Shop name", "اسم المتجر")} icon="business-outline" value={f.name} onChangeText={set("name")} maxLength={120} />
+        <IconField label={tow ? m.t("Company name in Arabic", "اسم الشركة بالعربية") : garage ? m.t("Garage name in Arabic", "اسم الكراج بالعربية") : m.t("Shop name in Arabic", "اسم المتجر بالعربية")} icon="text-outline" value={f.nameAr} onChangeText={set("nameAr")} maxLength={120} />
         <IconField label={m.t("Owner name", "اسم المالك")} icon="person-outline" value={f.ownerName} onChangeText={set("ownerName")} maxLength={120} />
         <Flag show={flagged.has("ownerName")} />
         <IconField label={m.t("Phone", "الهاتف")} icon="call-outline" value={f.phone} onChangeText={set("phone")} keyboardType="phone-pad" maxLength={24} />
@@ -166,6 +173,22 @@ function InfoStep({ app, onSaved, onNext }: { app: Application; onSaved: (a: App
             <IconField label={m.t("Number of trucks", "عدد الشاحنات")} icon="car-sport-outline" value={f.count} onChangeText={(v) => set("count")(v.replace(/[^0-9]/g, ""))} keyboardType="number-pad" maxLength={3} />
             <TrucksEditor app={app} onChanged={onSaved} />
             <Flag show={flagged.has("truck")} />
+          </>
+        ) : garage ? (
+          <>
+            <Label>{m.t("Services your garage offers", "الخدمات التي يقدمها كراجك")}</Label>
+            <Wrap>
+              {MECHANIC_SKILLS.map((k) => (
+                <ProviderChoice key={k} label={skillLabel(k)} selected={services.includes(k)} onPress={() => setServices(toggle(services, k))} />
+              ))}
+            </Wrap>
+            <Flag show={flagged.has("services")} />
+            <Label>{m.t("Working hours", "ساعات العمل")}</Label>
+            <ProviderChoice label={m.t("Open 24/7", "يعمل على مدار الساعة")} selected={open24} onPress={() => setOpen24(!open24)} icon={open24 ? "checkmark-circle" : "ellipse-outline"} />
+            {!open24 ? <IconField label={m.t("Hours (for example Sat-Thu 08:00-18:00)", "الساعات (مثال: السبت-الخميس 08:00-18:00)")} icon="time-outline" value={f.workingHours} onChangeText={set("workingHours")} maxLength={100} /> : null}
+            <Flag show={flagged.has("workingHours")} />
+            <IconField label={m.t("About your garage (optional)", "عن كراجك (اختياري)")} icon="document-text-outline" value={f.description} onChangeText={set("description")} maxLength={600} />
+            <Flag show={flagged.has("description")} />
           </>
         ) : (
           <>
@@ -304,7 +327,8 @@ function DocumentsStep({ app, onSaved, onNext }: { app: Application; onSaved: (a
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [expiry, setExpiry] = useState<Record<string, string>>({});
-  const kinds = tow ? app.requiredDocuments : ["STOREFRONT_PHOTO", ...app.requiredDocuments];
+  const kinds = app.kind === "PARTS" ? ["STOREFRONT_PHOTO", ...app.requiredDocuments] : app.requiredDocuments;
+  const PHOTO_KINDS = ["STOREFRONT_PHOTO", "WORKSHOP_PHOTO"];
   const docOf = (k: string) => app.documents.find((d) => d.kind === k);
 
   async function run(key: string, work: () => Promise<void>) {
@@ -329,10 +353,10 @@ function DocumentsStep({ app, onSaved, onNext }: { app: Application; onSaved: (a
   const pickCompany = (kind: string) =>
     run(kind, async () => {
       const expiresAt = checkExpiry(expiry[kind]);
-      if (kind === "STOREFRONT_PHOTO") {
+      if (PHOTO_KINDS.includes(kind)) {
         const uri = await pickImage();
         if (!uri) return;
-        await onboarding.upload({ kind, name: fileNameOf(uri, "storefront.jpg"), dataBase64: await localFileToBase64(uri), expiresAt });
+        await onboarding.upload({ kind, name: fileNameOf(uri, `${kind === "WORKSHOP_PHOTO" ? "workshop" : "storefront"}.jpg`), dataBase64: await localFileToBase64(uri), expiresAt });
         return;
       }
       const f = await pickMechanicDocument(kind);
@@ -364,7 +388,7 @@ function DocumentsStep({ app, onSaved, onNext }: { app: Application; onSaved: (a
         {m.t("JPEG, PNG or PDF, up to 5 MB. Documents are private: only you and the MOTEXA team can open them.", "JPEG أو PNG أو PDF حتى 5 ميغابايت. المستندات خاصة: لا يفتحها إلا أنت وفريق MOTEXA.")}
       </Text>
       {kinds.map((k) => (
-        <DocCard key={k} title={docLabel(m.t, k)} doc={docOf(k)} flagged={flagged.has(`doc:${k}`)} busy={busyKey === k} onPick={() => pickCompany(k)} expiry={expiry[k]} setExpiry={k === "STOREFRONT_PHOTO" ? undefined : (v) => setExpiry((c) => ({ ...c, [k]: v }))} />
+        <DocCard key={k} title={docLabel(m.t, k)} doc={docOf(k)} flagged={flagged.has(`doc:${k}`)} busy={busyKey === k} onPick={() => pickCompany(k)} expiry={expiry[k]} setExpiry={PHOTO_KINDS.includes(k) ? undefined : (v) => setExpiry((c) => ({ ...c, [k]: v }))} />
       ))}
       {tow
         ? app.trucks.map((t) => (
@@ -432,7 +456,7 @@ function ReviewStep({ app, onEdit, onSubmitted }: { app: Application; onEdit: (s
           {row(m.t("Address", "العنوان"), i.address)}
           {row(m.t("Map location", "الموقع على الخريطة"), i.baseLat != null ? m.t("Set", "محدد") : null)}
           {row(m.t("Working hours", "ساعات العمل"), i.open24h ? m.t("Open 24/7", "على مدار الساعة") : i.workingHours)}
-          {app.kind === "TOW" ? row(m.t("Trucks", "الشاحنات"), String(app.trucks.length)) : row(m.t("Categories", "الفئات"), String((i.categories ?? []).length))}
+          {app.kind === "TOW" ? row(m.t("Trucks", "الشاحنات"), String(app.trucks.length)) : app.kind === "GARAGE" ? row(m.t("Services", "الخدمات"), String((i.services ?? []).length)) : row(m.t("Categories", "الفئات"), String((i.categories ?? []).length))}
         </View>
         <ProviderButton secondary label={m.t("Edit information", "تعديل البيانات")} onPress={() => onEdit("info")} />
       </ProviderCard>
@@ -506,7 +530,7 @@ function StatusView({ app, onFix }: { app: Application; onFix: () => void }) {
             ? m.t("Application rejected", "تم رفض الطلب")
             : "";
   const flagged = app.flaggedFields.filter((k) => !k.startsWith("doc:"));
-  const home = app.kind === "TOW" ? "/provider/tow" : "/provider/parts";
+  const home = app.kind === "TOW" ? "/provider/tow" : app.kind === "GARAGE" ? "/garage" : "/provider/parts";
   const next =
     app.status === "PENDING"
       ? m.t("MOTEXA is reviewing your application. Until it is approved you cannot use the provider features that need approval. You will see the result here and get a notification.", "تراجع MOTEXA طلبك. إلى أن تتم الموافقة لا يمكنك استخدام ميزات المزوّد التي تتطلب الاعتماد. ستظهر النتيجة هنا وسيصلك إشعار.")
@@ -626,7 +650,7 @@ export default function Onboarding() {
     );
 
   const tow = app.kind === "TOW";
-  const title = tow ? m.t("Tow company application", "طلب شركة سحب") : m.t("Parts shop application", "طلب متجر قطع غيار");
+  const title = tow ? m.t("Tow company application", "طلب شركة سحب") : app.kind === "GARAGE" ? m.t("Garage application", "طلب كراج") : m.t("Parts shop application", "طلب متجر قطع غيار");
   const canEdit = app.status === "DRAFT" || (app.status === "NEEDS_CHANGES" && editing);
   const missing = new Set((app.missing ?? []).map((k) => (k.startsWith("doc:") ? "documents" : "info")));
 

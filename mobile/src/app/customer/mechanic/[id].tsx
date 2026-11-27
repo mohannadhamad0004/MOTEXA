@@ -74,7 +74,7 @@ export default function MechanicProfile() {
 
           <Section title={t("Workshop", "الورشة")}>
             <Card pad={12}>
-              {m.workshopName ? <ListRow icon="business-outline" title={t("Name", "الاسم")} sub={m.workshopName} /> : null}
+              {m.workshopName ? <ListRow icon="business-outline" title={m.garage ? t("Garage", "الكراج") : t("Name", "الاسم")} sub={m.workshopName} onPress={m.garage ? () => router.push(`/customer/garages/${m.garage!.id}`) : undefined} /> : null}
               {m.workshopAddress ? <ListRow divider icon="location-outline" title={t("Address", "العنوان")} sub={m.workshopAddress} /> : null}
               <ListRow divider={!!m.workshopName} icon="map-outline" title={t("City", "المدينة")} sub={cityLabel(m.city, isArabic)} />
               {m.yearsOfExperience != null ? <ListRow divider icon="ribbon-outline" title={t("Experience", "الخبرة")} sub={`${m.yearsOfExperience} ${t("years", "سنة")}`} /> : null}

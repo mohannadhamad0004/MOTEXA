@@ -1,6 +1,7 @@
-// Mechanics admin on the one UI system (docs/guide/10-ui-system.md): Home = Dashboard, Requests = List (segmented Mechanic requests |
-// Applications), application review = Detail (/dept/review/mechanic/<userId>), Directory = List of verified mechanics, one mechanic
-// request = Detail (/dept/mechanic-requests/<id>). Every number is real (GET /mechanics/admin counts, GET /admin/mechanics/stats);
+// Mechanics admin on the one UI system (docs/guide/10-ui-system.md): Home = Dashboard, Requests = List (segmented Requests |
+// Mechanics (applications) | Garages (applications)), application review = Detail (/dept/review/mechanic/<userId>, garages
+// /dept/review/garage/<id>), Directory = List of verified mechanics (+ entry rows to the garage mechanics' ID review and the live map),
+// one mechanic request = Detail (/dept/mechanic-requests/<id>). Every number is real (GET /mechanics/admin counts, GET /admin/mechanics/stats);
 // decisions use the same endpoints and the same "⋮" actions as before (mechanicActions.tsx).
 import { Href, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -22,6 +23,8 @@ import { fmtDateTime } from "../requests/requestBits";
 import { AdminHero } from "./adminHero";
 import { useDepartment } from "./DepartmentContext";
 import { mechanicApplicationActions } from "./mechanicActions";
+import { appStatus } from "../../components/manage/ManagePage";
+import { review as providerReview, type Tab as AppTab } from "../provider/api";
 
 type T = (en: string, ar: string) => string;
 type Tabbed = { value: string; options: { key: string; label: string; count?: number }[]; onChange: (k: string) => void };
@@ -38,6 +41,8 @@ export function MechanicsAdminHome() {
   const s = stats.data, c = counts.data;
   const needs = [
     c?.PENDING ? { icon: "person-add-outline" as const, title: t("Applications to review", "طلبات انضمام للمراجعة"), count: c.PENDING, to: "/dept/requests?seg=apps" } : null,
+    s?.pendingGarages ? { icon: "business-outline" as const, title: t("Garage applications to review", "طلبات كراجات للمراجعة"), count: s.pendingGarages, to: "/dept/requests?seg=garages" } : null,
+    s?.pendingGarageMechanics ? { icon: "id-card-outline" as const, title: t("Garage mechanics' IDs to check", "هويات ميكانيكيي الكراجات للتحقق"), count: s.pendingGarageMechanics, to: "/dept/garage-mechanics" } : null,
     s?.waiting ? { icon: "time-outline" as const, title: t("Requests waiting for a mechanic", "طلبات بانتظار رد الميكانيكي"), count: s.waiting, to: "/dept/requests?seg=requests&filter=waiting" } : null,
   ].filter((x): x is NonNullable<typeof x> => !!x);
   return (
@@ -62,25 +67,31 @@ export function MechanicsAdminHome() {
           <ManageEntry icon="clipboard-outline" title={t("Mechanic requests", "طلبات الخدمة")} sub={t("Customer requests to mechanics", "طلبات الزبائن إلى الميكانيكيين")} onPress={() => go("/dept/requests?seg=requests")} />
           <ManageEntry icon="person-add-outline" title={t("Applications", "طلبات الانضمام")} sub={t("Professional applications to review", "طلبات مهنية للمراجعة")} onPress={() => go("/dept/requests?seg=apps")} />
           <ManageEntry icon="people-outline" title={t("Verified mechanics", "الميكانيكيون الموثّقون")} onPress={() => go("/dept/directory")} />
+          <ManageEntry icon="id-card-outline" title={t("Garage mechanics", "ميكانيكيو الكراجات")} sub={s ? t(`${s.onlineGarageMechanics} online · ${s.approvedGarages} garages`, `${s.onlineGarageMechanics} متصل · ${s.approvedGarages} كراجات`) : undefined} onPress={() => go("/dept/garage-mechanics")} />
+          <ManageEntry icon="map-outline" title={t("Live map", "الخريطة المباشرة")} sub={t("Active jobs and garage mechanics online", "المهام النشطة وميكانيكيو الكراجات المتصلون")} onPress={() => go("/dept/mechanics-live")} />
         </View>
       </Section>
     </Page>
   );
 }
 
-// ---------------- Requests: mechanic requests | applications ----------------
+// ---------------- Requests: mechanic requests | mechanic applications | garage applications ----------------
+type Seg = "requests" | "apps" | "garages";
+const isSeg = (v?: string): v is Seg => v === "apps" || v === "requests" || v === "garages";
 export function MechanicsRequests() {
   const { t } = useL();
   const params = useLocalSearchParams<{ seg?: string; q?: string; filter?: string }>();
-  const [seg, setSeg] = useState<"requests" | "apps">(params.seg === "apps" ? "apps" : "requests");
+  const [seg, setSeg] = useState<Seg>(isSeg(params.seg) ? params.seg : "requests");
   // "View their requests" (⋮ of a mechanic) arrives with ?seg=requests&q=<name>, also when this screen is already open
-  useEffect(() => { if (params.seg === "apps" || params.seg === "requests") setSeg(params.seg); }, [params.seg, params.q, params.filter]);
+  useEffect(() => { if (isSeg(params.seg)) setSeg(params.seg); }, [params.seg, params.q, params.filter]);
   const stats = useStats(), counts = useAppCounts();
-  const tabs: Tabbed = { value: seg, onChange: (k) => setSeg(k as "requests" | "apps"), options: [
-    { key: "requests", label: t("Mechanic requests", "طلبات الخدمة"), count: stats.data?.activeRequests || undefined },
-    { key: "apps", label: t("Applications", "طلبات الانضمام"), count: counts.data?.PENDING || undefined },
+  // DECISION: three segments, so the labels are short (Requests · Mechanics · Garages); the counts are what waits for the admin
+  const tabs: Tabbed = { value: seg, onChange: (k) => setSeg(k as Seg), options: [
+    { key: "requests", label: t("Requests", "الطلبات"), count: stats.data?.activeRequests || undefined },
+    { key: "apps", label: t("Mechanics", "الميكانيكيون"), count: counts.data?.PENDING || undefined },
+    { key: "garages", label: t("Garages", "الكراجات"), count: stats.data?.pendingGarages || undefined },
   ] };
-  return seg === "apps" ? <ApplicationsList tabs={tabs} initial={params.filter} /> : <RequestsList tabs={tabs} initialQ={params.q} initial={params.filter} />;
+  return seg === "apps" ? <ApplicationsList tabs={tabs} initial={params.filter} /> : seg === "garages" ? <GarageApplications tabs={tabs} initial={params.filter} /> : <RequestsList tabs={tabs} initialQ={params.q} initial={params.filter} />;
 }
 
 /** "⋮" actions of a mechanic request: Open, and Cancel with a required reason while it is open (audited; both sides see the reason). */
@@ -114,7 +125,7 @@ function RequestsList({ tabs, initialQ = "", initial }: { tabs: Tabbed; initialQ
   const state = useLoad(() => mechanicAdmin.list(f.scope, f.status, q), [f.scope, f.status, q], 15_000);
   const stats = useStats();
   const s = stats.data;
-  const line = (r: AdminRequestRow) => [`${r.mechanic.name}${r.mechanic.city ? ` (${cityLabel(r.mechanic.city, isArabic)})` : ""}`, `${r.vehicle.make} ${r.vehicle.model}`,
+  const line = (r: AdminRequestRow) => [`${r.mechanic.name ?? `${r.mechanic.workshopName ?? ""} · ${t("no mechanic yet", "لا ميكانيكي بعد")}`}${r.mechanic.city ? ` (${cityLabel(r.mechanic.city, isArabic)})` : ""}`, `${r.vehicle.make} ${r.vehicle.model}`,
     r.city ? t(`car in ${cityLabel(r.city, false)}`, `السيارة في ${cityLabel(r.city, true)}`) : null, fmtDateTime(r.updatedAt)].filter(Boolean).join(" · ");
   return (
     <ManagePage title={t("Requests", "الطلبات")} back={false} tabBar tabs={tabs}
@@ -174,6 +185,33 @@ function ApplicationsList({ tabs, initial }: { tabs: Tabbed; initial?: string })
   );
 }
 
+/** Garage applications (the provider onboarding of kind GARAGE): ONE chip row New · Needs changes · Approved · Rejected with the server
+ *  counts, a local search; tap = the application review (documents, checklist, Approve / Request changes / Reject). */
+const APP_TABS: AppTab[] = ["NEW", "NEEDS_CHANGES", "APPROVED", "REJECTED"];
+function GarageApplications({ tabs, initial }: { tabs: Tabbed; initial?: string }) {
+  const { t, isArabic } = useL();
+  const [tab, setTab] = useState<AppTab>(APP_TABS.includes(initial as AppTab) ? (initial as AppTab) : "NEW"), [q, setQ] = useState("");
+  const state = useLoad(() => providerReview.list("GARAGE", tab), [tab], 30000);
+  const counts = useLoad(() => providerReview.counts("GARAGE"), [], 30000);
+  const c = counts.data?.counts;
+  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const rows = (state.data ?? []).filter((a) => words.every((w) => [a.name, a.ownerName, a.city, cityLabel(a.city, true)].join(" ").toLowerCase().includes(w)));
+  const label: Record<AppTab, string> = { NEW: t("New", "جديدة"), NEEDS_CHANGES: t("Needs changes", "تحتاج تعديلات"), APPROVED: t("Approved", "معتمدة"), REJECTED: t("Rejected", "مرفوضة") };
+  return (
+    <ManagePage title={t("Requests", "الطلبات")} back={false} tabBar tabs={tabs}
+      line={c ? t(`${c.NEW} new · ${c.NEEDS_CHANGES} need changes`, `${c.NEW} جديدة · ${c.NEEDS_CHANGES} تحتاج تعديلات`) : undefined}
+      search={{ value: q, onChange: setQ, placeholder: t("Garage, owner or city", "الكراج أو المالك أو المدينة") }}
+      filters={<FilterChips value={tab} onChange={setTab} filters={APP_TABS.map((k) => ({ key: k, label: label[k], count: c ? c[k] : undefined }))} />}
+      items={rows} keyOf={(a) => a.id}
+      renderItem={(a) => <ManageRow title={a.name} status={appStatus(a.status, t)}
+        sub={[a.ownerName, cityLabel(a.city, isArabic), a.pendingDocuments ? t(`${a.pendingDocuments} documents to check`, `${a.pendingDocuments} مستندات للتحقق`) : null, a.submittedAt?.slice(0, 10)].filter(Boolean).join(" · ")}
+        onPress={() => go(`/dept/review/garage/${a.id}`)} />}
+      loading={!state.data && !state.error} error={state.error} onRetry={() => void state.reload()}
+      empty={{ text: q ? t("Nothing matches.", "لا توجد نتائج مطابقة.") : t("No garage applications here. Drafts appear only after they are submitted.", "لا توجد طلبات كراجات هنا. المسودات تظهر فقط بعد إرسالها."), action: q ? { label: t("Clear search", "مسح البحث"), onPress: () => setQ("") } : undefined }}
+      onRefresh={() => { void state.reload(); void counts.reload(); }} refreshing={false} detailHint={t("Tap an application to review it.", "اضغط على طلب لمراجعته.")} />
+  );
+}
+
 // ---------------- Directory: verified mechanics ----------------
 export function MechanicsDirectory() {
   const { t, isArabic } = useL();
@@ -187,6 +225,10 @@ export function MechanicsDirectory() {
     <ManagePage title={t("Verified mechanics", "الميكانيكيون الموثّقون")} back={false} tabBar
       line={state.data ? t(`${state.data.length} mechanics`, `${state.data.length} ميكانيكيين`) : undefined}
       search={{ value: q, onChange: setQ, placeholder: t("Name, email, city or skill", "الاسم أو البريد أو المدينة أو المهارة") }}
+      above={<View style={{ gap: 8 }}>
+        <ManageEntry icon="id-card-outline" title={t("Garage mechanics", "ميكانيكيو الكراجات")} sub={t("Mechanics added by garages: ID review", "ميكانيكيون أضافتهم الكراجات: مراجعة الهوية")} onPress={() => go("/dept/garage-mechanics")} />
+        <ManageEntry icon="map-outline" title={t("Live map", "الخريطة المباشرة")} onPress={() => go("/dept/mechanics-live")} />
+      </View>}
       items={rows} keyOf={(p) => p.id}
       renderItem={(p) => <ManageRow title={p.user.fullName} sub={[cityLabel(p.city, isArabic), p.specializations.slice(0, 3).map(spec).join(t(", ", "، "))].filter(Boolean).join(" · ")}
         onPress={() => review(p.userId)} actions={mechanicApplicationActions(t, p, { open: () => review(p.userId), reload: () => state.reload() })} />}
@@ -306,7 +348,7 @@ export function AdminMechanicRequest({ id }: { id: string }) {
           <Block title={t("The request", "الطلب")}>
             <Facts rows={[
               [t("Customer", "الزبون"), r.customerName],
-              [t("Mechanic", "الميكانيكي"), [r.mechanic.name, r.mechanic.workshopName, r.mechanic.city ? cityLabel(r.mechanic.city, isArabic) : null].filter(Boolean).join(" · ")],
+              [t("Mechanic", "الميكانيكي"), [r.mechanic.name ?? t("Not assigned yet", "لم يُسند بعد"), r.mechanic.workshopName, r.mechanic.city ? cityLabel(r.mechanic.city, isArabic) : null].filter(Boolean).join(" · ")],
               [t("Car", "السيارة"), [r.vehicle.make, r.vehicle.model, r.vehicle.year].filter(Boolean).join(" ")],
               r.skill ? [t("Skill", "المهارة"), skill(r.skill)] : null,
               [t("Problem", "المشكلة"), r.problemDescription], [t("Preferred time", "الوقت المفضل"), r.preferredTime],

@@ -20,6 +20,8 @@ const LABELS: Record<string, [string, string]> = {
   // tow company
   "/provider/tow/jobs": ["Jobs", "المهام"], "/provider/tow/fleet": ["Fleet", "الأسطول"], "/provider/tow/messages": ["Messages", "الرسائل"], "/provider/tow/profile": ["Profile", "الملف"],
   "/provider/tow/dispatch": ["Dispatch", "التوزيع"],
+  // garage owner
+  "/garage/requests": ["Requests", "الطلبات"], "/garage/mechanics": ["Mechanics", "الميكانيكيون"], "/garage/messages": ["Messages", "الرسائل"], "/garage/profile": ["Profile", "الملف"],
   // mechanic, super admin
   "/mechanic/requests": ["Requests", "الطلبات"],
   "/admin/providers": ["Providers", "مقدمو الخدمة"], "/admin/requests": ["Requests", "الطلبات"], "/admin/more": ["More", "المزيد"],
@@ -44,6 +46,8 @@ const OVERRIDES: [RegExp, string][] = [
   [/^\/provider\/tow\/(drivers|trucks)$/, "/provider/tow/fleet"], [/^\/provider\/tow\/(live|active|history)$/, "/provider/tow/dispatch"],
   [/^\/provider\/tow\/(availability|service-area|company|media|settings|stats|preview)$/, "/provider/tow/profile"],
   [/^\/provider\/tow\/[0-9a-f]{8}-[0-9a-f-]{27}$/, "/provider/tow/fleet"], // a truck (/provider/tow/<uuid>)
+  [/^\/garage\/motexa$/, "/garage/messages"], [/^\/garage\/(info|live)$/, "/garage/profile"],
+  [/^\/dept\/garage-mechanics$/, "/dept/directory"], [/^\/dept\/mechanics-live$/, "/dept/requests"],
 ];
 
 export function parentOf(path: string): string | null {
@@ -72,6 +76,7 @@ export function areaRoot(path: string): Crumb {
   if (path.startsWith("/provider/onboarding")) return { href: "/provider/onboarding", en: "Application", ar: "الطلب" };
   if (path.startsWith("/driver")) return { href: "/driver", en: "Driver", ar: "السائق" };
   if (path.startsWith("/mechanic")) return { href: "/mechanic", en: "Mechanic", ar: "الميكانيكي" };
+  if (path.startsWith("/garage")) return { href: "/garage", en: "Garage", ar: "الكراج" };
   if (path.startsWith("/admin")) return { href: "/admin", en: "Super admin", ar: "المشرف العام" };
   return { href: "/dept", en: "Department", ar: "القسم" };
 }

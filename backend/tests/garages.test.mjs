@@ -98,6 +98,9 @@ test('only an APPROVED garage owner adds mechanics, only to his own garage; a ne
   assert.equal(row.garageId, gA.id, 'added to HIS garage'); assert.equal(row.approval, 'PENDING'); assert.equal(row.offline, true);
   assert.equal(await prisma.mechanicProfile.count({ where: { userId: m1.user.id } }), 0, 'never also an independent mechanic');
   assert.ok(await prisma.auditLog.findFirst({ where: { action: 'GARAGE_MECHANIC_ADDED', targetId: row.id, actorId: u.ownerA.id } }));
+  // his home is the garage-mechanic one: GET /mechanics/me never starts an independent application for him
+  assert.equal((await call(m1.tok, 'GET', '/mechanics/me')).status, 404);
+  assert.equal(await prisma.mechanicProfile.count({ where: { userId: m1.user.id } }), 0, 'no draft application created');
   // pending: no Online switch, no pings, not offered to customers
   assert.equal((await call(m1.tok, 'PUT', '/mechanic/me/availability', { offline: false })).status, 409);
   assert.equal((await call(m1.tok, 'POST', '/mechanic/me/location', NABLUS)).status, 409);
@@ -117,6 +120,14 @@ test('only an APPROVED garage owner adds mechanics, only to his own garage; a ne
   assert.equal((await call(tok.cust, 'POST', `/admin/garages/mechanics/${row.id}/review`, { decision: 'APPROVE' })).status, 403);
   const pending = (await call(tok.admin, 'GET', '/admin/garages/mechanics?approval=PENDING')).data.mechanics;
   assert.ok(pending.some((m) => m.id === row.id && m.idUri?.startsWith('/files/private/')), 'the admin sees the private ID');
+  // the private ID file itself: the owner and a mechanics admin may open it, a parts-only admin and the customer may not
+  const idUri = pending.find((m) => m.id === row.id).idUri;
+  const adminWith = (has, not) => prisma.user.findFirst({ where: { role: 'ADMIN', status: 'ACTIVE', adminPermissions: { some: { permission: has } }, ...(not ? { NOT: { adminPermissions: { some: { permission: not } } } } : {}) } });
+  const [mechAdmin, partsAdmin] = await Promise.all([adminWith('MANAGE_MECHANICS'), adminWith('MANAGE_SPARE_PARTS', 'MANAGE_MECHANICS')]);
+  assert.equal((await call(tok.ownerA, 'GET', idUri)).status, 200, 'the garage owner opens his mechanic\'s ID');
+  if (mechAdmin) assert.equal((await call(token(mechAdmin), 'GET', idUri)).status, 200, 'a mechanics admin opens a garage mechanic\'s ID');
+  if (partsAdmin) assert.equal((await call(token(partsAdmin), 'GET', idUri)).status, 403, 'a parts admin does not');
+  assert.equal((await call(tok.cust, 'GET', idUri)).status, 403);
   assert.equal((await call(tok.admin, 'POST', `/admin/garages/mechanics/${row.id}/review`, { decision: 'APPROVE' })).status, 200);
   assert.equal((await prisma.garageMechanic.findUniqueOrThrow({ where: { id: row.id } })).approval, 'APPROVED');
   assert.equal((await call(m1.tok, 'PUT', '/mechanic/me/availability', { offline: false })).status, 200, 'approved: may go online');

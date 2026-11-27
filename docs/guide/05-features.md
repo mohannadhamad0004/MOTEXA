@@ -45,22 +45,23 @@ whose application was approved. The old provider signup endpoints were deleted a
 they answer 404.
 
 **Screens**: customer Profile → `app/work-with-motexa.tsx` → the application wizard (`/mechanic` for mechanics,
-`/provider/onboarding` for tow / parts) → admin review in `app/dept/requests` + `app/dept/review/[kind]/[id]`.
+`/provider/onboarding` for tow / parts / garage) → admin review in `app/dept/requests` + `app/dept/review/[kind]/[id]`.
 
-**Start**: `POST /apply/:kind` (`routes/apply.routes.ts`), kind = `mechanic | tow | parts`.
+**Start**: `POST /apply/:kind` (`routes/apply.routes.ts`), kind = `mechanic | tow | parts | garage`.
 - Only a `CUSTOMER` (else 403). Both switches must be on: "this account becomes a provider account" and "I accept the terms".
 - One kind per account. Refused (409) while the customer still has an open tow request, mechanic request or parts order
   (`activeCustomerWork` in `services/applications.ts`), because a provider account can no longer see customer screens.
-- It creates a `DRAFT` profile on the same account: `MechanicProfile`, or `TowCompanyProfile` / `PartsShopProfile` with business name,
+- It creates a `DRAFT` profile on the same account: `MechanicProfile`, or `TowCompanyProfile` / `PartsShopProfile` / `GarageProfile` with business name,
   phone and a city from the list. The role does **not** change.
 
 **Fill in**
 - Mechanic (`routes/mechanics.routes.ts`): `PUT /mechanics/me` (city, phone, skills from `MECHANIC_SKILLS`, years, summary, service
   options: workshop / on site / online), `POST /mechanics/me/documents` (IDENTITY and optional CERTIFICATE; JPEG / PNG / PDF ≤ 5 MB,
   private), `POST /mechanics/me/submit` (needs a complete profile + identity document + accepting the privacy statement) → `PENDING`.
-- Tow / parts (`routes/provider-onboarding.routes.ts`, one rule set for both in `services/provider-onboarding.ts`):
-  `PUT /provider/onboarding/info`, `POST /provider/onboarding/documents` (tow: commercial registration, owner ID, driver licence;
-  parts: commercial registration, trade licence, owner ID), the business location on a map (`app/provider/onboarding/location.tsx`),
+- Tow / parts / garage (`routes/provider-onboarding.routes.ts`, one rule set for all three in `services/provider-onboarding.ts`):
+  `PUT /provider/onboarding/info` (garage: services from `MECHANIC_SKILLS`, working hours or open 24/7, description),
+  `POST /provider/onboarding/documents` (tow: commercial registration, owner ID, driver licence; parts: commercial registration, trade
+  licence, owner ID; garage: commercial registration, owner ID, workshop photo), the business location on a map (`app/provider/onboarding/location.tsx`),
   trucks with their photo and documents (`POST /tow/me/trucks`, tow only), `POST /provider/onboarding/submit` → `PENDING`.
   A message thread with the department's admins (`/provider/messages`) stays after approval.
 
@@ -70,21 +71,22 @@ they answer 404.
   REACTIVATE`. Approval is refused unless the profile is complete, the identity document exists, the interview PASSED, **and this admin
   opened the current identity document** (an audit row `MECHANIC_DOCUMENT_VIEWED` must exist). The admin must send the
   `submissionVersion` they saw, so a changed application must be reloaded first.
-- Tow / parts admins (`routes/provider-review.routes.ts`, mounted twice: `/admin/providers/tow` behind `requireTowAdmin`,
-  `/admin/providers/parts` behind `requirePartsAdmin`): accept / reject each document (`PATCH …/documents/:docId`), request changes
+- Tow / parts admins and, for garages, the mechanics admin (`routes/provider-review.routes.ts`, mounted three times:
+  `/admin/providers/tow` behind `requireTowAdmin`, `/admin/providers/parts` behind `requirePartsAdmin`, `/admin/providers/garage` behind
+  `requireMechanicsAdmin`): accept / reject each document (`PATCH …/documents/:docId`), request changes
   (flag fields + a required message → `NEEDS_CHANGES`), reject (reason required) or approve. **The approval checklist is enforced on the
   server** (`checklist()`): valid phone, location set, every required document ACCEPTED, and for tow at least one truck whose photo,
-  registration and insurance / operating licence are accepted; for parts at least one category. Trucks that qualify are approved
+  registration and insurance / operating licence are accepted; for parts at least one category; for a garage at least one service. Trucks that qualify are approved
   together with the company.
 
 **Promotion**: inside the approving transaction, `promoteApplicant()` changes the role `CUSTOMER → MECHANIC / TOW_PROVIDER /
-PARTS_PROVIDER` and increments `sessionVersion`, so the person's sessions end and the next sign-in lands in the provider area. It is
+PARTS_PROVIDER / GARAGE_OWNER` and increments `sessionVersion`, so the person's sessions end and the next sign-in lands in the provider area. It is
 audited as `ROLE_PROMOTED`, and the applicant gets a notification (and a system message in the thread).
 
 **Admins themselves** (invited, not applying) are in §8.
 
-**Tables**: `MechanicProfile`, `MechanicDocument`, `TowCompanyProfile`, `Truck`, `PartsShopProfile`, `ProviderFile`, `ProviderMessage`,
-`Notification`, `AuditLog`, `User`.
+**Tables**: `MechanicProfile`, `MechanicDocument`, `TowCompanyProfile`, `Truck`, `PartsShopProfile`, `GarageProfile`, `ProviderFile`,
+`ProviderMessage`, `Notification`, `AuditLog`, `User`.
 
 **Partial / open** (from `docs/agents/STATUS.md`): an approved provider who is later rejected or suspended is **not** turned back into a
 customer; open part inquiries do not block an application.
@@ -316,8 +318,15 @@ real ratings, available trucks), `GET /catalog/tow/drivers?lat&lng` (free driver
 - The customer, the company owner (`app/provider/tow/live.tsx`) and tow admins see the live point; it is marked stale after 2 minutes.
 - When the job ends (completed / cancelled / reassigned) the trail is **deleted** and the driver's last point cleared (`endTrail`);
   only the distance summary stays.
-- Before a job, a free driver is shown at his truck's base (or the company base, or the city centre), rounded to ~110 m: there is no
-  idle tracking.
+- Customers see a free driver at his truck's base (or the company base, or the city centre), rounded to ~110 m: never his on-duty point.
+- **On duty (Online)**: a tow driver who is Online and approved shares his position about every 60 s (`POST /driver/me/location`, sent
+  by `OnDutySharing` in `app/driver/_layout.tsx`, which re-reads the Online switch every 60 s). Refused while Offline or unapproved;
+  pings closer than 30 s are ignored; only the **latest** point is stored (`services/presence.ts`), going Offline clears it, and it is
+  marked stale after 3 minutes. It goes to his own company (`GET /tow/me/live`: the Live map with green "Online now" pins; dispatch
+  "nearest available" = `GET /tow/me/requests/:id/nearest`, free drivers by distance to the pickup from the fresh live point, else their
+  base) and to tow admins (`GET /admin/tow/online`, on the Active tows map). Never to customers.
+- **Expo Go tracks only in the foreground; background needs a development build.** Every location share above (job pings and on-duty
+  pings) runs only while the app is open on the phone; in the background or with the screen off, the last point simply goes stale.
 
 ### 6.5 Chat, rating, report
 `routes/tow-job-extras.routes.ts`: chat customer ↔ assigned driver only while the job is active (the owner can read); after COMPLETED
@@ -335,23 +344,32 @@ driver licences, reports; companies and trucks: review, edit, add a truck, **arc
 
 ## 7. Mechanics
 
-**Customer screens**: `app/customer/(tabs)/mechanics.tsx`, `mechanics/map.tsx`, `mechanic/[id].tsx`, `mechanicrequest/new.tsx`
-(`features/mechanics/MechanicRequestForm.tsx`), `mechanicrequest/[id].tsx`.
-**Mechanic screens**: `app/mechanic/index.tsx`, `requests/index.tsx`, `requests/[id].tsx`.
+**Customer screens**: `app/customer/(tabs)/mechanics.tsx` (segmented Mechanics | Garages, `?seg=garages`), `mechanics/map.tsx`,
+`mechanic/[id].tsx`, `garages/[id].tsx`, `mechanicrequest/new.tsx` (`features/mechanics/MechanicRequestForm.tsx`), `mechanicrequest/[id].tsx`.
+**Mechanic screens**: `app/mechanic/index.tsx` (a garage mechanic gets `features/mechanics/GarageMechanicHome.tsx`), `requests/index.tsx`,
+`requests/[id].tsx`.
+**Garage owner screens**: `app/garage/*` (§7.1).
 
 **Public mechanics** (`routes/catalog-mechanics.routes.ts`): `publicMechanic` = role MECHANIC, account ACTIVE, profile VERIFIED. List with
 search, city, skill, sort by name or nearest. Shown: name, workshop name, city, skills, years; the detail adds the workshop address.
-**Never**: phone, email, national id, documents, review / interview notes. Distance today is always from the **city centre**: MOTEXA
-stores no workshop coordinates yet (`distanceSource: "city"`).
+Approved mechanics of approved garages are listed too: **first name only**, with the garage as the workshop.
+**Never**: phone, email, national id, documents, review / interview notes. Distance: from the garage's pin for a garage mechanic
+(`distanceSource: "base"`), from the **city centre** for an independent mechanic (no workshop coordinates are stored: `"city"`).
 
 **Requests** (`routes/mechanic-requests.routes.ts`):
-- `POST /requests/mechanic`: mechanic, optional skill (must be one of the mechanic's), car make / model / year, problem (10–1000
-  chars), location text + optional pin, preferred time (free text), optional phone. Max 3 open requests with one mechanic.
-- State machine: `REQUESTED → ACCEPTED → IN_PROGRESS → COMPLETED`; the mechanic may decline (optional reason); the customer may cancel
-  while REQUESTED / ACCEPTED. Each step is one conditional update + an audit row. A mechanic who is no longer public cannot answer.
+- `POST /requests/mechanic`: `mechanicId` (an independent mechanic or an approved garage mechanic) **or** `garageId` (the owner assigns
+  one of his mechanics, §7.1), `serviceMode` **ON_SITE** (the mechanic comes) or **WORKSHOP** (the customer goes), optional skill (one of
+  the mechanic's / garage's), car make / model / year, problem (10–1000 chars), location text + pin, preferred time (free text), optional
+  phone. **On site the pin is required** ("share your current location or set it on the map"; the form reads the position once by
+  itself); for a workshop visit it is optional. Max 3 open requests with one mechanic or garage.
+- State machine: on site `REQUESTED → ACCEPTED → EN_ROUTE (On the way) → ARRIVED → IN_PROGRESS → COMPLETED`; workshop visit (and older
+  requests) `REQUESTED → ACCEPTED → IN_PROGRESS → COMPLETED`. The mechanic may decline (optional reason; a garage mechanic who declines
+  gives the request back to his garage); the customer may cancel while REQUESTED / ACCEPTED. Each step is one conditional update + an audit row. A mechanic who is no longer public cannot answer.
 - **Privacy** (`mechanicView`): before accepting, the mechanic sees the customer's **first name only**, the car, the problem, the nearest
   city to the pin and the pin **rounded to 0.01° (~1 km)**, marked approximate — no address, no phone. The exact address, pin and phone
-  (if typed) are shown **only while ACCEPTED / IN_PROGRESS**; afterwards it goes back to approximate. The customer never sees the
+  (if typed) are shown **only during the active job** (ACCEPTED … IN_PROGRESS), to the assigned mechanic and his garage owner; afterwards
+  it goes back to approximate. The customer sees the mechanic's **live point only on his own request while he is on the way / arrived**
+  (§7.2). The customer never sees the
   mechanic's phone or email. Tested in `backend/tests/mechanic-request-privacy.test.mjs`.
 - There is **no chat, no price and no rating** for mechanic requests.
 
@@ -360,7 +378,43 @@ stats, active / history lists (search by customer, mechanic, workshop or city �
 phone), detail with **the same location rule as the mechanic** (every open is audited, `MECHANIC_REQUEST_ADMIN_VIEWED`), and cancel with
 a required reason (audited, both sides notified and shown the reason).
 
-**Tables**: `User`, `MechanicProfile`, `MechanicDocument`, `MechanicRequest`, `Notification`, `AuditLog`.
+### 7.1 Garages
+A garage is the tow-company pattern for mechanics (`services/garage-staff.ts`, `routes/garages.routes.ts`).
+- **Becoming one**: Work with MOTEXA kind `garage` (§2): services, hours or 24/7, description, pin, documents (commercial registration,
+  owner ID, workshop photo); the **mechanics admin** reviews it (`/dept/review/garage/<id>`); approval makes the account `GARAGE_OWNER`.
+- **Mechanics**: the approved owner adds each mechanic (`POST /garage/me/mechanics`: name, email, phone, skills, private ID photo,
+  optional photo). Each one is a **new** `MECHANIC` login (an existing account is refused with a neutral message, so nobody is an
+  independent and a garage mechanic at once) with a password the owner sets or, without one, an email invitation to set it; it is **PENDING until a mechanics admin approves his ID**
+  (`/dept/garage-mechanics`, `POST /admin/garages/mechanics/:id/review`: approve / request changes / reject / suspend). A pending
+  mechanic has no Online switch and is not shown to customers. Only an APPROVED owner adds, and only to his own garage (tested).
+  The private ID photo opens for the owner, mechanics admins and the super admin only (`GET /files/private/:id`).
+- **Status** per mechanic: UNAPPROVED, OFFLINE (his own switch), BUSY (an accepted … in-progress job), FREE.
+- **Requests to the garage**: the owner sees the request with the mechanic's location rule (area only before assigning);
+  `GET /garage/me/requests/:id` suggests **nearest available** (free mechanics with the request's skill, by distance from their fresh live
+  point, else the garage pin). He assigns (`…/assign`, may reassign until the mechanic is on the way) or declines with a reason (`…/decline`).
+- **Customers** (`GET /catalog/garages[/:id]`): approved garages with services, hours, the pin **rounded to 3 decimals (~100 m)** and their
+  approved mechanics by first name; never a live point.
+- **Owner app** `app/garage/*`: Home (free · busy · offline, requests to assign, active jobs), Requests, Mechanics (add / edit / resend
+  invitation), Messages (the MOTEXA thread), Profile (garage info, live map, history, documents). Live map: `GET /garage/me/live`.
+
+### 7.2 Mechanic location
+- **During an on-site job** (EN_ROUTE / ARRIVED / IN_PROGRESS) the assigned mechanic's job screen sends his position about every 10 s
+  (`POST /mechanic/requests/:id/location`; ignored closer than 5 s; refused for a workshop visit or outside the job). It is stored as the
+  request's live point + a short path (`MechanicJobTrail`, newest 300). The app draws the road route from him to the customer.
+- The **customer** sees that live point and the route on his status page **only while the mechanic is on the way / arrived** (marked
+  stale after 3 minutes); otherwise the approximate area map.
+- When the job ends (completed / declined / cancelled) the path and the live point are **deleted** (`endMechanicTrail`).
+- **Garage mechanics on duty**: while Online and approved, `OnDutySharing` (in `app/mechanic/_layout.tsx`, garage mechanics only) sends
+  the latest point about every 60 s (`POST /mechanic/me/location`; same rules as tow drivers in §6.4: latest point only, Offline clears it,
+  stale after 3 min). It goes to his garage owner and the mechanics admins only. **Independent mechanics share only during their active
+  job**, never on duty.
+- **Mechanics admin live map** (`/dept/mechanics-live`, `GET /admin/mechanics/live`): every online garage mechanic + every active mechanic
+  job (with the mechanic's location rule).
+- Expo Go tracks only in the foreground; background needs a development build (§6.4).
+- Tested in `backend/tests/garages.test.mjs` (privacy, garage flow, pings, nearest, one-or-the-other, trail cleanup, private ID file).
+
+**Tables**: `User`, `MechanicProfile`, `MechanicDocument`, `MechanicRequest`, `MechanicJobTrail`, `GarageProfile`, `GarageMechanic`,
+`ProviderFile`, `Notification`, `AuditLog`.
 
 ---
 
@@ -385,7 +439,8 @@ switch department (`DepartmentContext.tsx`).
 - **Spare parts**: shop review, product hiding (`PATCH /admin/parts/products/:id/visibility` with a reason), admin edits, orders
   (read only), and everything 3D: the vehicle catalog (brands, models, generations), Sketchfab / file imports, car models (configure,
   hide / show, delete with an impact preview), customer car requests, accessory review, zones, part maps, auto-fits, shop credits.
-- **Mechanics**: applications (interview + decision) and request supervision.
+- **Mechanics**: applications (interview + decision), garage applications, garage mechanic ID review, request supervision and the live
+  map of online garage mechanics and active jobs.
 Admins **decide**; they do not silently edit provider data. Where an admin does edit (trucks, products, shop fields), the audit action
 gets an `ADMIN_` prefix and `byAdmin: true`.
 

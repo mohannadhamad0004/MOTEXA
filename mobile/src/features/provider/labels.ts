@@ -15,6 +15,7 @@ const DOC: Record<string, [string, string]> = {
   DRIVER_LICENCE: ["Driver licence", "رخصة السائق"],
   TRADE_LICENCE: ["Trade / municipal licence", "رخصة المهن / البلدية"],
   STOREFRONT_PHOTO: ["Storefront photo", "صورة واجهة المتجر"],
+  WORKSHOP_PHOTO: ["Workshop photo", "صورة الورشة"],
   TRUCK_PHOTO: ["Truck photo", "صورة الشاحنة"],
   TRUCK_REGISTRATION: ["Vehicle licence", "رخصة المركبة"],
   TRUCK_INSURANCE: ["Insurance", "التأمين"],
@@ -24,6 +25,7 @@ const DOC: Record<string, [string, string]> = {
   INSURANCE: ["Insurance", "التأمين"],
   TOW_COMPANY_DOCUMENT: ["Company document", "مستند الشركة"],
   PARTS_SHOP_DOCUMENT: ["Shop document", "مستند المتجر"],
+  GARAGE_DOCUMENT: ["Garage document", "مستند الكراج"],
 };
 export const docLabel = (t: T, kind: string) => (DOC[kind] ? t(...DOC[kind]) : t("Document", "مستند"));
 
@@ -58,6 +60,8 @@ const FIELD: Record<string, [string, string]> = {
   category: ["Categories", "الفئات"],
   truckCountClaimed: ["Number of trucks", "عدد الشاحنات"],
   open24h: ["Working hours", "ساعات العمل"],
+  services: ["Services", "الخدمات"],
+  description: ["Description", "الوصف"],
 };
 /** A field key, a `doc:KIND` key (flagged / checklist / missing) or a `rejected:PURPOSE` key. */
 export function keyLabel(t: T, key: string) {

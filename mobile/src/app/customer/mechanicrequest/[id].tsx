@@ -5,7 +5,7 @@ import { Card, ErrorState, GaragePage, HeroLayout, GButton, GText, ListRow, Note
 import { cityCentre, cityLabel } from "../../../core/constants/cities";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
-import { useMechanicStatusLabels, useSkillLabel } from "../../../features/mechanics/mechanicBits";
+import { pathOf, useMechanicStatusLabels, useSkillLabel } from "../../../features/mechanics/mechanicBits";
 import { MechanicRequestStatus, REFRESH_MS, customerMechanicRequests } from "../../../features/mechanics/mechanicsService";
 import { shortId } from "../../../features/requests/activeRequest";
 import { InitialBubble, mechTone, toSteps } from "../../../features/requests/garageBits";
@@ -15,7 +15,6 @@ import { MAPS_AVAILABLE } from "../../../features/shared/maps";
 import { RouteSummary, useRoute } from "../../../features/shared/useRoute";
 import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 
-const PATH: MechanicRequestStatus[] = ["REQUESTED", "ACCEPTED", "IN_PROGRESS", "COMPLETED"];
 
 // The customer's view of one service request. Re-reads the server every 15 s while this screen is open; the page is never
 // remounted by that (same keys), so the status simply changes in place.
@@ -48,12 +47,14 @@ export default function MechanicRequestScreen() {
   };
 
   const r = state.data;
-  // MOTEXA stores no workshop coordinates yet: the other end of the route is the mechanic's city centre (approximate)
   // a garage request has no mechanic until the owner assigns one: the garage stands in
   const mech = r ? (r.mechanic ?? { id: "", name: r.garage?.name ?? t("Garage", "كراج"), workshopName: r.garage?.name ?? null, city: null }) : null;
-  const provider = mech?.city ? cityCentre(mech.city) : null;
-  const { route, loading: routing } = useRoute(r?.id ?? null, r?.location.point ?? null, provider);
+  // while he is on the way / has arrived: his live point (only on this request); otherwise his city centre (approximate)
+  const live = r?.live ?? null;
+  const provider = live ?? (mech?.city ? cityCentre(mech.city) : null);
+  const { route, loading: routing } = useRoute(r ? `${r.id}:${live ? "live" : "city"}` : null, provider, r?.location.point ?? null, live ? 50 : 0);
   const canMap = MAPS_AVAILABLE && !!r?.location.point && !!provider;
+  const showMap = canMap && (!!live || mapOpen);
 
   const headline = (name: string, status: MechanicRequestStatus) =>
     ({
@@ -99,15 +100,21 @@ export default function MechanicRequestScreen() {
                 <GText soft numberOfLines={2} style={[gType.caption, align]}>{[mech!.workshopName, mech!.city ? cityLabel(mech!.city, isArabic) : null].filter(Boolean).join(" · ")}</GText>
               </View>
             </View>
-            {canMap ? <ListRow divider icon="map-outline" title={mapOpen ? t("Hide map", "إخفاء الخريطة") : t("View on map", "عرض على الخريطة")} onPress={() => setMapOpen(!mapOpen)} /> : null}
+            {canMap && !live ? <ListRow divider icon="map-outline" title={mapOpen ? t("Hide map", "إخفاء الخريطة") : t("View on map", "عرض على الخريطة")} onPress={() => setMapOpen(!mapOpen)} /> : null}
           </Card>
 
-          {canMap && mapOpen ? (
+          {showMap ? (
             <View style={{ marginTop: 12, borderRadius: gShape.card, overflow: "hidden" }}>
-              <RequestRouteMap reqId={r.id} kind="mech" height={280} provider={{ ...provider!, name: mech!.name }} pickup={r.location.point!} route={route} />
+              <RequestRouteMap reqId={r.id} kind="mech" height={280} provider={{ lat: provider!.lat, lng: provider!.lng, name: mech!.name }} providerStale={!!live?.stale} pickup={r.location.point!} route={route} />
               <View style={{ paddingTop: 8 }}>
                 <RouteSummary route={route} loading={routing} />
-                <GText soft style={[gType.tiny, align, { marginTop: 4 }]}>{t("The mechanic pin is approximate (city centre).", "دبوس الميكانيكي تقريبي (مركز المدينة).")}</GText>
+                <GText soft style={[gType.tiny, align, { marginTop: 4 }]}>
+                  {live
+                    ? live.stale
+                      ? t("Last known position: the mechanic's phone has not sent an update for a few minutes.", "آخر موقع معروف: لم يرسل هاتف الميكانيكي تحديثًا منذ بضع دقائق.")
+                      : t("Live position of your mechanic, shared only while he is on the way.", "الموقع المباشر للميكانيكي، يُشارك فقط أثناء قدومه.")
+                    : t("The mechanic pin is approximate (city centre).", "دبوس الميكانيكي تقريبي (مركز المدينة).")}
+                </GText>
               </View>
             </View>
           ) : null}
@@ -126,19 +133,20 @@ ${r.cancelReason}` : ""}`}</Note>
 
           <Section title={t("Status", "الحالة")}>
             <Card>
-              <Timeline steps={toSteps(buildTimeline(PATH, r.timeline, r.status, statusLabel))} />
-              {["REQUESTED", "ACCEPTED", "IN_PROGRESS"].includes(r.status) ? <GText soft style={[gType.tiny, align, { marginTop: 12 }]}>{t("Updates automatically", "يتحدّث تلقائياً")}</GText> : null}
+              <Timeline steps={toSteps(buildTimeline(pathOf(r.serviceMode), r.timeline, r.status, statusLabel))} />
+              {["REQUESTED", "ACCEPTED", "EN_ROUTE", "ARRIVED", "IN_PROGRESS"].includes(r.status) ? <GText soft style={[gType.tiny, align, { marginTop: 12 }]}>{t("Updates automatically", "يتحدّث تلقائياً")}</GText> : null}
             </Card>
           </Section>
 
           <Section title={t("Details", "التفاصيل")}>
             <Card pad={12}>
-              {r.skill ? <ListRow icon="construct-outline" title={t("Skill", "المهارة")} sub={skillLabel(r.skill)} /> : null}
-              <ListRow divider={!!r.skill} icon="car-sport-outline" title={t("Car", "السيارة")} sub={[r.vehicle.make, r.vehicle.model, r.vehicle.year].filter(Boolean).join(" ")} />
+              {r.serviceMode ? <ListRow icon={r.serviceMode === "ON_SITE" ? "car-outline" : "business-outline"} title={t("Where", "المكان")} sub={r.serviceMode === "ON_SITE" ? t("On site: the mechanic comes to the car", "في موقعك: يأتي الميكانيكي إلى السيارة") : t("At the workshop: you bring the car", "في الورشة: تُحضر السيارة")} /> : null}
+              {r.skill ? <ListRow divider={!!r.serviceMode} icon="construct-outline" title={t("Skill", "المهارة")} sub={skillLabel(r.skill)} /> : null}
+              <ListRow divider={!!r.skill || !!r.serviceMode} icon="car-sport-outline" title={t("Car", "السيارة")} sub={[r.vehicle.make, r.vehicle.model, r.vehicle.year].filter(Boolean).join(" ")} />
               <ListRow divider icon="alert-circle-outline" title={t("Problem", "المشكلة")} sub={r.problemDescription} />
               <ListRow divider icon="location-outline" title={t("Location", "الموقع")} sub={r.location.text ?? undefined} />
               {r.preferredTime ? <ListRow divider icon="time-outline" title={t("Preferred time", "الوقت المفضل")} sub={r.preferredTime} /> : null}
-              {r.contactPhone ? <ListRow divider icon="call-outline" title={t("Your phone", "هاتفك")} sub={`${r.contactPhone} · ${t("Shared only with this mechanic.", "يُشارك مع هذا الميكانيكي فقط.")}`} /> : null}
+              {r.contactPhone ? <ListRow divider icon="call-outline" title={t("Your phone", "هاتفك")} sub={`${r.contactPhone} · ${t("Shared only with the mechanic doing the job.", "يُشارك مع الميكانيكي المنفّذ فقط.")}`} /> : null}
             </Card>
           </Section>
 

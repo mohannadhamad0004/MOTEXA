@@ -1,4 +1,4 @@
-// Provider application review (/dept/review/shop|company/:id) on the Detail template: header (name, kind · owner, ⋮), status, messages,
+// Provider application review (/dept/review/shop|company|garage/:id) on the Detail template: header (name, kind · owner, ⋮), status, messages,
 // facts, location, documents (accept / reject each), the approval checklist, trucks or products, history. ONE primary action at the
 // bottom (Approve, enabled when the checklist passes; the server checks it again) with Request changes beside it; Reject is in ⋮.
 import { Image } from "expo-image";
@@ -24,6 +24,7 @@ import { useDocViewer } from "../provider/ui";
 import { privateImageSource } from "../shared/api";
 import { towAdminService } from "../tow/towService";
 import { productActions } from "./itemActions";
+import { useSkillLabel } from "../mechanics/mechanicBits";
 import { LocationRow } from "./LocationRow";
 import { truckActions } from "./towActions";
 
@@ -34,7 +35,9 @@ const CATALOG_FLAT = new Map(CATALOG_GROUPS.flatMap(g => g.categories).map(c => 
 const FIELDS: Record<Kind, string[]> = {
   TOW: ["name", "ownerName", "phone", "city", "address", "location", "workingHours", "serviceCities", "truckTypes", "truck"],
   PARTS: ["name", "ownerName", "phone", "city", "address", "location", "workingHours", "categories", "brands"],
+  GARAGE: ["name", "ownerName", "phone", "city", "address", "location", "workingHours", "services", "description"],
 };
+const KIND_LABEL: Record<Kind, [string, string]> = { TOW: ["Tow company", "شركة سحب"], PARTS: ["Parts shop", "متجر قطع غيار"], GARAGE: ["Garage", "كراج"] };
 type Decision = { status: "ACCEPTED" } | { status: "REJECTED"; reason: string };
 
 function usePrivate(uri: string, on = true) {
@@ -128,6 +131,7 @@ export function ApplicationReview({ kind, id }: { kind: Kind; id: string }) {
   const { t, isArabic } = useL();
   const { g, row, align } = useGarageTheme();
   const state = useLoad(() => review.get(kind, id), [kind, id], 15000);
+  const skill = useSkillLabel();
   const products = useLoad(async () => (kind === "PARTS" ? (await partsAdminService.getShop(NOACTOR, id)).products : []), [kind, id, state.data?.status]);
   // out-of-service state of the company's trucks (the review payload does not carry it)
   const fleet = useLoad(async () => (kind === "TOW" ? (await towAdminService.listTrucks(NOACTOR)).filter(x => x.companyId === id) : []), [kind, id, state.data?.status]);
@@ -144,11 +148,11 @@ export function ApplicationReview({ kind, id }: { kind: Kind; id: string }) {
   const reviewing = a?.status === "PENDING";
   const items = a?.checklist ?? [];
   const allOk = items.length > 0 && items.every(c => c.ok);
-  const front = kind === "PARTS" ? a?.documents.find(x => x.kind === "STOREFRONT_PHOTO" && x.mimeType.startsWith("image/")) : undefined;
+  const front = a?.documents.find(x => (kind === "PARTS" ? x.kind === "STOREFRONT_PHOTO" : kind === "GARAGE" && x.kind === "WORKSHOP_PHOTO") && x.mimeType.startsWith("image/"));
   const frontSrc = usePrivate(front?.uri ?? "", !!front);
   const decide = (docId: string) => (x: Decision) => review.decideDoc(kind, id, docId, x).then(() => state.reload()).then(() => undefined);
   const actions: ItemAction[] = a ? [
-    { key: "edit", label: kind === "PARTS" ? t("Edit shop details", "تعديل بيانات المتجر") : t("Edit company details", "تعديل بيانات الشركة"), icon: "create-outline", run: () => go(kind === "PARTS" ? `/dept/edit/shop/${id}` : `/dept/edit/company/${id}`) },
+    ...(kind !== "GARAGE" ? [{ key: "edit", label: kind === "PARTS" ? t("Edit shop details", "تعديل بيانات المتجر") : t("Edit company details", "تعديل بيانات الشركة"), icon: "create-outline" as const, run: () => go(kind === "PARTS" ? `/dept/edit/shop/${id}` : `/dept/edit/company/${id}`) }] : []),
     { key: "messages", label: t("Messages with the owner", "الرسائل مع المالك"), icon: "chatbubbles-outline", run: () => go(`/dept/thread/${kind}/${id}`) },
     ...(reviewing ? [{ key: "reject", label: t("Reject application", "رفض الطلب"), icon: "close-circle-outline" as const, run: () => setMode("reject") }] : []),
   ] : [];
@@ -168,7 +172,7 @@ export function ApplicationReview({ kind, id }: { kind: Kind; id: string }) {
   });
   const flagged = a?.flaggedFields.filter(k => !k.startsWith("doc:")) ?? [];
   return (
-    <Page title={i?.name ?? t("Application", "الطلب")} line={a ? `${kind === "TOW" ? t("Tow company", "شركة سحب") : t("Parts shop", "متجر قطع غيار")} · ${a.owner.fullName}` : undefined}
+    <Page title={i?.name ?? t("Application", "الطلب")} line={a ? `${t(...KIND_LABEL[kind])} · ${a.owner.fullName}` : undefined}
       actions={actions} footer={footer} onRefresh={() => void state.reload()} refreshing={state.loading && !!a}>
       {state.error && !a ? <Note tone="danger">{state.error}</Note> : null}
       {!a && !state.error ? <GText soft style={align}>{t("Loading…", "جارٍ التحميل…")}</GText> : null}
@@ -197,6 +201,9 @@ export function ApplicationReview({ kind, id }: { kind: Kind; id: string }) {
               [t("Coverage", "التغطية"), (i.serviceCities ?? []).map((c: string) => cityLabel(c, isArabic)).join(isArabic ? "، " : ", ")] as [string, string],
               [t("Truck types", "أنواع الشاحنات"), (i.truckTypes ?? []).map((k: string) => truckTypeLabel(t, k)).join(isArabic ? "، " : ", ")] as [string, string],
               [t("Trucks claimed", "عدد الشاحنات المعلن"), i.truckCountClaimed != null ? String(i.truckCountClaimed) : ""] as [string, string],
+            ] : kind === "GARAGE" ? [
+              [t("Services", "الخدمات"), (i.services ?? []).map((k: string) => skill(k)).join(isArabic ? "، " : ", ")] as [string, string],
+              [t("Description", "الوصف"), i.description] as [string, string],
             ] : [
               [t("Categories", "الفئات"), (i.categories ?? []).map((k: string) => { const c = CATALOG_FLAT.get(k); return c ? (isArabic ? c.ar : c.en) : ""; }).filter(Boolean).join(isArabic ? "، " : ", ")] as [string, string],
               [t("Main brands", "العلامات التجارية"), (i.brands ?? []).join(", ")] as [string, string],

@@ -11,14 +11,15 @@ import { gType, useGarageTheme } from "../theme/garage";
 
 const KINDS: { kind: WorkKind; path: string; icon: GIconName; en: string; ar: string }[] = [
   { kind: "MECHANIC", path: "mechanic", icon: "construct-outline", en: "Repairs at your workshop, on site or online.", ar: "إصلاح في ورشتك أو في الموقع أو عن بُعد." },
+  { kind: "GARAGE", path: "garage", icon: "business-outline", en: "Your garage and its mechanics receive service requests.", ar: "يستقبل كراجك وميكانيكيوه طلبات الخدمة." },
   { kind: "TOW", path: "tow", icon: "car-outline", en: "Receive tow requests for your trucks.", ar: "استقبل طلبات السحب لشاحناتك." },
   { kind: "PARTS", path: "parts", icon: "cube-outline", en: "Sell car parts to MOTEXA customers.", ar: "بِع قطع السيارات لزبائن MOTEXA." },
 ];
 /** Where each application is filled in (the existing wizards; open to the customer applicant). */
-const WIZARD: Record<WorkKind, Href> = { MECHANIC: "/mechanic", TOW: "/provider/onboarding" as Href, PARTS: "/provider/onboarding" as Href };
+const WIZARD: Record<WorkKind, Href> = { MECHANIC: "/mechanic", TOW: "/provider/onboarding" as Href, PARTS: "/provider/onboarding" as Href, GARAGE: "/provider/onboarding" as Href };
 
 /**
- * Work with MOTEXA: mechanics, tow companies and parts shops apply from a signed-in CUSTOMER account (Profile, or the sign-in
+ * Work with MOTEXA: mechanics, garages, tow companies and parts shops apply from a signed-in CUSTOMER account (Profile, or the sign-in
  * screen link). The application is filled in with the existing wizards; the role changes only when that department's admin approves.
  */
 export default function WorkWithMotexa() {
@@ -26,7 +27,7 @@ export default function WorkWithMotexa() {
   const { t } = useL();
   const back = () => (router.canGoBack() ? router.back() : router.replace("/auth/login"));
   return (
-    <GaragePage hero={<GarageHero variant="detail" title={t("Work with MOTEXA", "اعمل مع MOTEXA")} line={t("Mechanics, tow companies and parts shops", "ميكانيكيون وشركات سحب ومتاجر قطع غيار")} onBack={back} backLabel={t("Back", "رجوع")} />}>
+    <GaragePage hero={<GarageHero variant="detail" title={t("Work with MOTEXA", "اعمل مع MOTEXA")} line={t("Mechanics, garages, tow companies and parts shops", "ميكانيكيون وكراجات وشركات سحب ومتاجر قطع غيار")} onBack={back} backLabel={t("Back", "رجوع")} />}>
       {s.status === "loading" ? <SkeletonRows count={3} /> : s.status === "ready" && s.user.role === "CUSTOMER" ? <Apply user={s.user} /> : <NotCustomer signedIn={s.status === "ready"} />}
     </GaragePage>
   );
@@ -138,7 +139,7 @@ function Apply({ user }: { user: SessionUser }) {
         <Section title={workKindLabel(t, kind)}>
           {kind !== "MECHANIC" && (
             <Card>
-              <Field label={kind === "TOW" ? t("Company name", "اسم الشركة") : t("Shop name", "اسم المتجر")} value={businessName} onChangeText={setBusinessName} maxLength={120} />
+              <Field label={kind === "TOW" ? t("Company name", "اسم الشركة") : kind === "GARAGE" ? t("Garage name", "اسم الكراج") : t("Shop name", "اسم المتجر")} value={businessName} onChangeText={setBusinessName} maxLength={120} />
               <Field label={t("Business phone", "هاتف النشاط")} value={phone} onChangeText={setPhone} keyboardType="phone-pad" maxLength={24} />
               <GText style={[gType.label, align, { marginBottom: 8 }]}>{t("City", "المدينة")}</GText>
               <View style={[row, { flexWrap: "wrap", gap: 8 }]}>

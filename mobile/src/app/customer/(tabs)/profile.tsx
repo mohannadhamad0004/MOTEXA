@@ -70,7 +70,7 @@ export default function CustomerProfile() {
           <ListRow
             icon="briefcase-outline"
             title={work ? `${workKindLabel(t, work.kind)}: ${applicationStatus(t, work.status)[0]}` : t("Become a provider", "كن مزوّد خدمة")}
-            sub={work ? t("Open your application", "افتح طلبك") : t("Apply as a mechanic, tow company or parts shop", "قدّم كميكانيكي أو شركة سحب أو متجر قطع غيار")}
+            sub={work ? t("Open your application", "افتح طلبك") : t("Apply as a mechanic, garage, tow company or parts shop", "قدّم كميكانيكي أو كراج أو شركة سحب أو متجر قطع غيار")}
             onPress={() => router.push("/work-with-motexa" as never)}
           />
         </Card>

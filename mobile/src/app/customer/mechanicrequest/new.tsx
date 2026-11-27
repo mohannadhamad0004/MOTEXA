@@ -1,27 +1,39 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import { Card, Chip, ErrorState, Field, GaragePage, HeroLayout, GButton, GIcon, GText, Note, SkeletonBlock, StepperHeader, StickyActionBar } from "../../../components/garage";
 import { cityLabel } from "../../../core/constants/cities";
 import { useL } from "../../../core/hooks/useL";
 import { useLoad } from "../../../core/hooks/useLoad";
 import { useSkillLabel } from "../../../features/mechanics/mechanicBits";
-import { useMechanicRequestForm } from "../../../features/mechanics/MechanicRequestForm";
-import { mechanicCatalog } from "../../../features/mechanics/mechanicsService";
+import { ModeChips, useMechanicRequestForm } from "../../../features/mechanics/MechanicRequestForm";
+import { garageCatalog, mechanicCatalog } from "../../../features/mechanics/mechanicsService";
 import { MAPS_AVAILABLE, PinMap } from "../../../features/shared/maps";
 import { LocationProblem } from "../../../features/shared/useCurrentLocation";
 import { gShape, gType, useGarageTheme } from "../../../theme/garage";
 
-// A service request to one verified mechanic, as three steps (car + skill, problem, where / when / contact). The rules and the
-// final validation are the shared form hook; nothing here is a price or a promise of a time.
+// A service request to one verified mechanic OR to a garage (its owner assigns one of his mechanics), as three steps (car + skill,
+// problem, on site / workshop + where / when / contact). On site needs the customer's GPS point or a pin; the place step reads the
+// position once by itself. The rules and the final validation are the shared form hook; nothing here is a price or a promised time.
 export default function NewMechanicRequest() {
-  const { mechanicId } = useLocalSearchParams<{ mechanicId: string }>();
+  const { mechanicId, garageId } = useLocalSearchParams<{ mechanicId?: string; garageId?: string }>();
   const { t, isArabic } = useL();
   const { g, align } = useGarageTheme();
   const skillLabel = useSkillLabel();
-  const state = useLoad(() => mechanicCatalog.get(mechanicId), [mechanicId]);
-  const form = useMechanicRequestForm({ id: mechanicId, city: state.data?.city ?? "" });
   const [step, setStep] = useState(0);
+  const state = useLoad(
+    async () => (garageId ? garageCatalog.get(garageId).then((x) => ({ name: isArabic && x.nameAr ? x.nameAr : x.name, city: x.city, skills: x.services })) : mechanicCatalog.get(mechanicId ?? "")),
+    [mechanicId, garageId]
+  );
+  const form = useMechanicRequestForm({ id: mechanicId, garageId, city: state.data?.city ?? "" });
+  // on reaching the place step for an on-site visit, read the position once (the form asks for permission first)
+  const located = useRef(false);
+  useEffect(() => {
+    if (step === 2 && form.mode === "ON_SITE" && !form.spot && !located.current) {
+      located.current = true;
+      void form.useHere();
+    }
+  }, [step, form.mode, form.spot]); // eslint-disable-line react-hooks/exhaustive-deps
   const [stepErr, setStepErr] = useState<string | null>(null);
   const [sentId, setSentId] = useState<string | null>(null);
   const steps = [t("Car", "السيارة"), t("Problem", "المشكلة"), t("Place & time", "المكان والوقت")];
@@ -42,7 +54,7 @@ export default function NewMechanicRequest() {
 
   return (
     <GaragePage
-      hero={<HeroLayout config={{ tab: "mechanics", title: t("Request service", "طلب خدمة"), line: m ? `${m.name} · ${cityLabel(m.city, isArabic)}` : undefined, top: { label: t("Mechanic", "ميكانيكي"), back, actions: [] } }} />}
+      hero={<HeroLayout config={{ tab: "mechanics", title: t("Request service", "طلب خدمة"), line: m ? `${m.name} · ${cityLabel(m.city, isArabic)}` : undefined, top: { label: garageId ? t("Garage", "كراج") : t("Mechanic", "ميكانيكي"), back, actions: [] } }} />}
       bottom={
         m && !sentId ? (
           <StickyActionBar>
@@ -62,7 +74,7 @@ export default function NewMechanicRequest() {
             <GIcon name="checkmark-circle" size={36} color={g.success} />
           </View>
           <GText style={[gType.title, { textAlign: "center" }]}>{t("Request sent", "تم إرسال الطلب")}</GText>
-          <GText soft style={[gType.bodySm, { textAlign: "center" }]}>{t(`${m.name} will accept or decline it. You can follow its status here.`, `سيقبل ${m.name} الطلب أو يرفضه. يمكنك متابعة حالته هنا.`)}</GText>
+          <GText soft style={[gType.bodySm, { textAlign: "center" }]}>{garageId ? t(`${m.name} will assign one of its mechanics or decline. You can follow its status here.`, `سيُسند ${m.name} أحد ميكانيكييه أو يرفض الطلب. يمكنك متابعة حالته هنا.`) : t(`${m.name} will accept or decline it. You can follow its status here.`, `سيقبل ${m.name} الطلب أو يرفضه. يمكنك متابعة حالته هنا.`)}</GText>
           <GButton icon="arrow-forward" label={t("View request", "عرض الطلب")} onPress={() => router.replace(`/customer/mechanicrequest/${sentId}`)} />
         </Card>
       ) : (
@@ -94,23 +106,28 @@ export default function NewMechanicRequest() {
           ) : (
             <>
               <Card>
+                <ModeChips form={form} />
                 {form.loc.dialog}
                 <GButton variant="secondary" icon="locate-outline" label={form.finding || form.loc.locating ? t("Finding your location…", "جارٍ تحديد موقعك…") : t("Use my current location", "استخدم موقعي الحالي")} disabled={form.finding || form.loc.locating} onPress={form.useHere} />
                 <View style={{ height: 10 }} />
                 <LocationProblem loc={form.loc} />
-                <Field label={t("Where is the car?", "أين السيارة؟")} value={form.where} onChangeText={form.editWhere} multiline maxLength={300} />
+                <Field label={form.mode === "ON_SITE" ? t("Where is the car?", "أين السيارة؟") : t("Your area", "منطقتك")} value={form.where} onChangeText={form.editWhere} multiline maxLength={300} />
                 {MAPS_AVAILABLE && form.spot ? (
                   <View style={{ marginBottom: 12, borderRadius: gShape.small, overflow: "hidden" }}>
                     <PinMap point={form.spot} onChange={(p) => form.place(p, false)} />
                     <GText soft style={[gType.tiny, align, { marginVertical: 6 }]}>{t("Tap the map or drag the pin to adjust the point.", "اضغط على الخريطة أو اسحب الدبوس لتعديل النقطة.")}</GText>
                     <GButton variant="ghost" icon="trash-outline" label={t("Remove the pin", "إزالة الدبوس")} onPress={form.removePin} />
                   </View>
+                ) : MAPS_AVAILABLE ? (
+                  <View style={{ marginBottom: 12 }}>
+                    <GButton variant="ghost" icon="map-outline" label={t("Set it on the map", "حدّده على الخريطة")} onPress={form.startPin} />
+                  </View>
                 ) : null}
                 <Field label={t("Preferred time (optional)", "الوقت المفضل (اختياري)")} value={form.when} onChangeText={form.setWhen} maxLength={100} placeholder={t("e.g. Tomorrow after 4 pm", "مثال: غدًا بعد الرابعة عصرًا")} />
               </Card>
               <Card style={{ marginTop: 12 }}>
                 <Field label={t("Phone number (optional)", "رقم الهاتف (اختياري)")} value={form.phone} onChangeText={form.setPhone} keyboardType="phone-pad" maxLength={20} />
-                <GText soft style={[gType.tiny, align, { marginTop: -6 }]}>{t("Shared only with this mechanic.", "يُشارك مع هذا الميكانيكي فقط.")}</GText>
+                <GText soft style={[gType.tiny, align, { marginTop: -6 }]}>{t("Shared only with the mechanic doing the job.", "يُشارك مع الميكانيكي المنفّذ فقط.")}</GText>
               </Card>
             </>
           )}

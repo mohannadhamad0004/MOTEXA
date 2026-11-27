@@ -39,19 +39,21 @@ export function useActiveRequest() {
     });
   }
   for (const r of mechs.data ?? []) {
-    const i = { REQUESTED: 0, ACCEPTED: 1, IN_PROGRESS: 2 }[r.status as string];
+    const i = { REQUESTED: 0, ACCEPTED: 1, EN_ROUTE: 2, ARRIVED: 2, IN_PROGRESS: 2 }[r.status as string];
     if (i === undefined) continue;
     const name = (r.mechanic?.name ?? r.garage?.name ?? "");
+    // the third stage is whatever is happening now: on the way, arrived or working
+    const third = r.status === "EN_ROUTE" ? t("On the way", "في الطريق") : r.status === "ARRIVED" ? t("Arrived", "وصل") : t("In progress", "قيد التنفيذ");
     const title = [
       t(`Waiting for ${name} to answer`, `بانتظار رد ${name}`),
       t(`${name} accepted your request`, `${name} قبل طلبك`),
-      t(`${name} is working on your car`, `${name} يعمل على سيارتك`),
+      r.status === "EN_ROUTE" ? t(`${name} is on the way`, `${name} في الطريق إليك`) : r.status === "ARRIVED" ? t(`${name} has arrived`, `وصل ${name}`) : t(`${name} is working on your car`, `${name} يعمل على سيارتك`),
     ][i];
     all.push({
       key: "mech" + r.id, at: r.updatedAt, tag: t("Active mechanic request", "طلب ميكانيكي نشط"), id: r.id, title, index: i, href: `/customer/mechanicrequest/${r.id}`,
-      labels: [t("Requested", "تم الطلب"), t("Accepted", "مقبول"), t("In progress", "قيد التنفيذ"), t("Completed", "مكتمل")],
+      labels: [t("Requested", "تم الطلب"), t("Accepted", "مقبول"), third, t("Completed", "مكتمل")],
       who: name,
-      stage: [t("Requested", "تم الطلب"), t("Accepted", "مقبول"), t("In progress", "قيد التنفيذ")][i],
+      stage: [t("Requested", "تم الطلب"), t("Accepted", "مقبول"), third][i],
     });
   }
   for (const q of asks.data ?? []) {

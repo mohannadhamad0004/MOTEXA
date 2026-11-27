@@ -23,7 +23,9 @@ import { fmtDateTime } from "../requests/requestBits";
 import { ProviderAccountNote } from "../work/ProviderAccountNote";
 import { MechanicDocs, pickMechanicDocument } from "./documents";
 import { mechanicAppStatus } from "./mechanicBits";
-import { mechanicInbox } from "./mechanicsService";
+import { mechanicDuty, mechanicInbox } from "./mechanicsService";
+import { ACTIVE_JOB, GarageMechanicHome } from "./GarageMechanicHome";
+import { useLoad } from "../../core/hooks/useLoad";
 
 type Form = {
   city: string; phoneNumber: string; specializations: string[]; yearsOfExperience: string; experienceSummary: string;
@@ -44,7 +46,19 @@ const toForm = (p: MechanicProfile): Form => ({
 const splitAreas = (s: string) => s.split(/[,،]/).map((v) => v.trim()).filter(Boolean);
 const go = (path: string) => router.push(path as Href);
 
+/** A garage mechanic (his garage added him) has his own home; an independent mechanic / applicant has the application + dashboard. */
 export default function MechanicHome() {
+  const customer = useSessionUser().role === "CUSTOMER";
+  const { t } = useL();
+  const duty = useLoad(() => (customer ? Promise.resolve(null) : mechanicDuty.get()), [customer], 30_000);
+  // only the first read shows a skeleton: a later focus reload must not unmount the independent home (and its unsaved form)
+  const settled = useRef(false);
+  if (!duty.loading) settled.current = true;
+  if (!settled.current) return <Page title={t("Mechanic", "ميكانيكي")} back={false}><SkeletonRows count={5} /></Page>;
+  return duty.data ? <GarageMechanicHome duty={duty.data} reload={duty.reload} /> : <IndependentHome />;
+}
+
+function IndependentHome() {
   const customer = useSessionUser().role === "CUSTOMER"; // Work with MOTEXA applicant: still a customer account until approval
   const { t } = useL();
   const { g, align } = useGarageTheme();
@@ -56,7 +70,7 @@ export default function MechanicHome() {
   const apply = (p: MechanicProfile) => { setProfile(p); setForm(toForm(p)); };
   /** the inbox counts; a failure only hides the numbers (the inbox screen shows its own error) */
   const loadInbox = (): Promise<Counts | null> => customer ? Promise.resolve(null) : mechanicInbox.list().then((rows) => ({
-    waiting: rows.filter((r) => r.status === "REQUESTED").length, active: rows.filter((r) => r.status === "ACCEPTED" || r.status === "IN_PROGRESS").length,
+    waiting: rows.filter((r) => r.status === "REQUESTED").length, active: rows.filter((r) => ACTIVE_JOB.includes(r.status)).length,
     done: rows.filter((r) => r.status === "COMPLETED").length, total: rows.length,
   })).catch(() => null);
   async function refresh() {
